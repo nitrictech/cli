@@ -23,7 +23,10 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/nitrictech/newcli/pkg/cmd/build"
+	"github.com/nitrictech/newcli/pkg/cmd/deployment"
+	"github.com/nitrictech/newcli/pkg/cmd/provider"
 	"github.com/nitrictech/newcli/pkg/cmd/stack"
+	"github.com/nitrictech/newcli/pkg/cmd/target"
 )
 
 var cfgFile string
@@ -61,7 +64,10 @@ func init() {
 
 	// Register Subcommands
 	rootCmd.AddCommand(build.RootCommand())
+	rootCmd.AddCommand(deployment.RootCommand())
+	rootCmd.AddCommand(provider.RootCommand())
 	rootCmd.AddCommand(stack.RootCommand())
+	rootCmd.AddCommand(target.RootCommand())
 	rootCmd.AddCommand(versionCmd)
 }
 

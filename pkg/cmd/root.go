@@ -18,6 +18,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -27,9 +28,14 @@ import (
 	"github.com/nitrictech/newcli/pkg/cmd/provider"
 	"github.com/nitrictech/newcli/pkg/cmd/stack"
 	"github.com/nitrictech/newcli/pkg/cmd/target"
+	"github.com/nitrictech/newcli/pkg/output"
 )
 
-var cfgFile string
+const configFileName = ".nitric-config"
+
+var (
+	cfgFile string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -52,17 +58,9 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
+	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.nitric.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	// Register Subcommands
 	rootCmd.AddCommand(build.RootCommand())
 	rootCmd.AddCommand(deployment.RootCommand())
 	rootCmd.AddCommand(provider.RootCommand())
@@ -83,8 +81,9 @@ func initConfig() {
 
 		// Search config in home directory with name ".nitric" (without extension).
 		viper.AddConfigPath(home)
+		viper.AddConfigPath(path.Join(home, ".config", "nitric"))
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".nitric")
+		viper.SetConfigName(".nitric-config")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

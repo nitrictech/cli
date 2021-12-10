@@ -1,8 +1,12 @@
 package target
 
 import (
-	"github.com/fatih/color"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/nitrictech/newcli/pkg/output"
+	"github.com/nitrictech/newcli/pkg/target"
 )
 
 var targetCmd = &cobra.Command{
@@ -13,16 +17,14 @@ var targetCmd = &cobra.Command{
 `,
 }
 
-// Flags
-var force bool
-
 var targetListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List configured targets",
 	Long:  `Lists configured taregts.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		notice := color.New(color.Bold, color.FgGreen).PrintlnFunc()
-		notice("Don't forget this... %v", force)
+		targets := map[string]target.Target{}
+		cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("targets"), &targets))
+		output.Print(targets)
 	},
 	Args: cobra.MaximumNArgs(2),
 }

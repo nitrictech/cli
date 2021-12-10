@@ -1,8 +1,11 @@
 package build
 
 import (
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	"github.com/nitrictech/newcli/pkg/build"
+	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/target"
 )
 
 var buildCmd = &cobra.Command{
@@ -14,12 +17,14 @@ var buildCmd = &cobra.Command{
 }
 
 var buildCreateCmd = &cobra.Command{
-	Use:   "create [name]",
+	Use:   "create",
 	Short: "create a new application build",
 	Long:  `Creates a new Nitric application build.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		notice := color.New(color.Bold, color.FgGreen).PrintlnFunc()
-		notice("Don't forget this... %v")
+		t := target.FromOptions()
+		s, err := stack.FromOptions()
+		cobra.CheckErr(err)
+		cobra.CheckErr(build.BuildCreate(s, t))
 	},
 	Args: cobra.MaximumNArgs(2),
 }
@@ -29,14 +34,17 @@ var buildListCmd = &cobra.Command{
 	Short: "list builds done for this stack",
 	Long:  `Lists Nitric application builds done for this stack.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		notice := color.New(color.Bold, color.FgGreen).PrintlnFunc()
-		notice("Don't forget this... %v")
+		//s, err := stack.FromOptions()
+		//cobra.CheckErr(err)
+		//s.BuildList()
 	},
 	Args: cobra.MaximumNArgs(2),
 }
 
 func init() {
 	buildCmd.AddCommand(buildCreateCmd)
+	target.AddOptions(buildCreateCmd, true)
+	stack.AddOptions(buildCreateCmd)
 	buildCmd.AddCommand(buildListCmd)
 }
 

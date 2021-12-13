@@ -115,6 +115,27 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+	ensureConfigDefaults()
+}
+
+func ensureConfigDefaults() {
+	needsWrite := false
+	aliases := viper.GetStringMap("aliases")
+	if _, ok := aliases["new"]; !ok {
+		needsWrite = true
+		aliases["new"] = "stack create"
+		viper.Set("aliases", aliases)
+	}
+	targets := viper.GetStringMap("targets")
+	if _, ok := targets["local"]; !ok {
+		needsWrite = true
+		targets["local"] = map[string]string{"provider": "local"}
+		viper.Set("targets", targets)
+	}
+	if needsWrite {
+		fmt.Println("updating configfile to include defaults")
+		viper.WriteConfig()
+	}
 }
 
 func addAliases() {

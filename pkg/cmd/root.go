@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -56,8 +58,6 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
 
@@ -67,6 +67,8 @@ func init() {
 	rootCmd.AddCommand(stack.RootCommand())
 	rootCmd.AddCommand(target.RootCommand())
 	rootCmd.AddCommand(versionCmd)
+
+	initConfig()
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -91,5 +93,24 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+
+	aliases := map[string]string{}
+	cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("aliases"), &aliases))
+	for n, aliasString := range aliases {
+		alias := &cobra.Command{
+			Use:   n,
+			Short: "alias for: " + aliasString,
+			Long:  "Custom alias command for " + aliasString,
+			Run: func(cmd *cobra.Command, args []string) {
+				newArgs := []string{os.Args[0]}
+				newArgs = append(newArgs, strings.Split(aliasString, " ")...)
+				newArgs = append(newArgs, args...)
+				os.Args = newArgs
+				rootCmd.Execute()
+			},
+			DisableFlagParsing: true, // the real command will parse the flags
+		}
+		rootCmd.AddCommand(alias)
 	}
 }

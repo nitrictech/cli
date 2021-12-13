@@ -74,8 +74,13 @@ An example of the format is:
 }
 
 func init() {
+	initConfig()
+
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
+	rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
+	})
 
 	rootCmd.AddCommand(build.RootCommand())
 	rootCmd.AddCommand(deployment.RootCommand())
@@ -84,8 +89,7 @@ func init() {
 	rootCmd.AddCommand(target.RootCommand())
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(configHelpTopic)
-
-	initConfig()
+	addAliases()
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -111,7 +115,9 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+}
 
+func addAliases() {
 	aliases := map[string]string{}
 	cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("aliases"), &aliases))
 	for n, aliasString := range aliases {

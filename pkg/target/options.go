@@ -4,6 +4,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/nitrictech/newcli/pkg/pflagext"
 )
 
 var (
@@ -36,8 +38,23 @@ func FromOptions() *Target {
 }
 
 func AddOptions(cmd *cobra.Command, providerOnly bool) {
-	cmd.Flags().StringVarP(&target, "target", "t", "local", "use this to refer to a target in the configuration")
-	cmd.Flags().StringVarP(&target, "provider", "p", "local", "the provider to deploy to")
+	targetsMap := viper.GetStringMap("targets")
+	targets := []string{}
+	for k := range targetsMap {
+		targets = append(targets, k)
+	}
+
+	cmd.Flags().VarP(pflagext.NewStringEnumVar(&target, targets, "local"), "target", "t", "use this to refer to a target in the configuration")
+	cmd.RegisterFlagCompletionFunc("target", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return targets, cobra.ShellCompDirectiveDefault
+	})
+
+	providers := []string{"local", "aws", "azure", "gcp", "digitalocean"}
+	cmd.Flags().VarP(pflagext.NewStringEnumVar(&provider, providers, "local"), "provider", "p", "the provider to deploy to")
+	cmd.RegisterFlagCompletionFunc("provider", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return providers, cobra.ShellCompDirectiveDefault
+	})
+
 	if !providerOnly {
 		cmd.Flags().StringVarP(&target, "name", "n", "", "The name of the deployment")
 		cmd.Flags().StringVarP(&target, "region", "r", "", "the region to deploy to")

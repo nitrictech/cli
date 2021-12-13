@@ -80,12 +80,9 @@ var stackCreateCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(2),
 }
 
-func init() {
+func RootCommand() *cobra.Command {
 	stackCreateCmd.Flags().BoolVarP(&force, "force", "f", false, "force stack creation, even in non-empty directories.")
 	stackCmd.AddCommand(stackCreateCmd)
-}
-
-func RootCommand() *cobra.Command {
 	return stackCmd
 }
 

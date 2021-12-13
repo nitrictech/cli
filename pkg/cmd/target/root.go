@@ -29,10 +29,7 @@ var targetListCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(2),
 }
 
-func init() {
-	targetCmd.AddCommand(targetListCmd)
-}
-
 func RootCommand() *cobra.Command {
+	targetCmd.AddCommand(targetListCmd)
 	return targetCmd
 }

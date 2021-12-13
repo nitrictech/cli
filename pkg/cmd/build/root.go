@@ -41,13 +41,10 @@ var buildListCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(2),
 }
 
-func init() {
+func RootCommand() *cobra.Command {
 	buildCmd.AddCommand(buildCreateCmd)
 	target.AddOptions(buildCreateCmd, true)
 	stack.AddOptions(buildCreateCmd)
 	buildCmd.AddCommand(buildListCmd)
-}
-
-func RootCommand() *cobra.Command {
 	return buildCmd
 }

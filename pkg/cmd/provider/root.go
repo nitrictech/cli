@@ -24,10 +24,7 @@ var providerListCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(2),
 }
 
-func init() {
-	providerCmd.AddCommand(providerListCmd)
-}
-
 func RootCommand() *cobra.Command {
+	providerCmd.AddCommand(providerListCmd)
 	return providerCmd
 }

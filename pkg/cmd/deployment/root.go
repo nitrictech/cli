@@ -37,11 +37,8 @@ var deploymentListCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(2),
 }
 
-func init() {
+func RootCommand() *cobra.Command {
 	deploymentCmd.AddCommand(deploymentCreateCmd)
 	deploymentCmd.AddCommand(deploymentListCmd)
-}
-
-func RootCommand() *cobra.Command {
 	return deploymentCmd
 }

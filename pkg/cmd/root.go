@@ -43,18 +43,34 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "nitric",
 	Short: "helper CLI for nitric applications",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long:  ``,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
+}
+
+var configHelpTopic = &cobra.Command{
+	Use:   "configuration",
+	Short: "Configuraton help",
+	Long: `nitric CLI can be configured (using yaml format) in the following locations:
+${HOME}/.nitric-config.yaml
+${HOME}/.config/nitric/.nitric-config.yaml
+
+An example of the format is:
+  aliases:
+    new: stack create
+
+  targets:
+    local:
+      provider: local
+    test-app:
+      region: eastus
+      provider: aws
+      name: myApp
+  `,
 }
 
 func init() {
@@ -67,6 +83,7 @@ func init() {
 	rootCmd.AddCommand(stack.RootCommand())
 	rootCmd.AddCommand(target.RootCommand())
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(configHelpTopic)
 
 	initConfig()
 }

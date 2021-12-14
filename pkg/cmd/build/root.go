@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/build"
+	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
 )
@@ -46,13 +47,15 @@ var buildCreateCmd = &cobra.Command{
 }
 
 var buildListCmd = &cobra.Command{
-	Use:   "list [name] [template]",
+	Use:   "list",
 	Short: "list builds done for this stack",
 	Long:  `Lists Nitric application builds done for this stack.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		//s, err := stack.FromOptions()
-		//cobra.CheckErr(err)
-		//s.BuildList()
+		s, err := stack.FromOptions()
+		cobra.CheckErr(err)
+		out, err := build.BuildList(s)
+		cobra.CheckErr(err)
+		output.Print(out)
 	},
 	Args: cobra.MaximumNArgs(2),
 }
@@ -62,5 +65,6 @@ func RootCommand() *cobra.Command {
 	target.AddOptions(buildCreateCmd, true)
 	stack.AddOptions(buildCreateCmd)
 	buildCmd.AddCommand(buildListCmd)
+	stack.AddOptions(buildListCmd)
 	return buildCmd
 }

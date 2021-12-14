@@ -17,14 +17,18 @@
 package build
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type ContainerRuntime interface {
 	Build(dockerfile, path, imageTag, provider string, buildArgs map[string]string) error
+	ListImages(stackName, containerName string) ([]Image, error)
 }
 
 func DiscoverContainerRuntime() (ContainerRuntime, error) {
@@ -59,6 +63,42 @@ func (p *podman) Build(dockerfile, path, imageTag, provider string, buildArgs ma
 	return cmd.Run()
 }
 
+func (p *podman) ListImages(stackName, containerName string) ([]Image, error) {
+	args := []string{"images", "-n", "-f", fmt.Sprintf("reference=localhost/%s-%s-*", stackName, containerName), "--format", "json"}
+
+	cmd := exec.Command("podman", args...)
+	var outb bytes.Buffer
+	cmd.Stdout = &outb
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+	podmanImages := []map[string]interface{}{}
+	err = json.Unmarshal(outb.Bytes(), &podmanImages)
+	if err != nil {
+		return nil, err
+	}
+	images := []Image{}
+	for _, i := range podmanImages {
+		names, ok := i["Names"].([]interface{})
+		if !ok {
+			fmt.Println(err)
+			continue
+		}
+		nameParts := strings.Split(names[0].(string), ":")
+		images = append(images, Image{
+			ID:         i["Id"].(string),
+			Repository: nameParts[0],
+			Tag:        nameParts[1],
+			CreatedAt:  i["CreatedAt"].(string),
+		})
+	}
+	return images, err
+}
+
 type docker struct{}
 
 var _ ContainerRuntime = &docker{}
@@ -76,4 +116,8 @@ func (d *docker) Build(dockerfile, path, imageTag, provider string, buildArgs ma
 	cmd.Stdin = os.Stdin
 	cmd.Env = append(os.Environ(), "DOCKER_BUILDKIT=1")
 	return cmd.Run()
+}
+
+func (d *docker) ListImages(stackName, containerName string) ([]Image, error) {
+	return nil, nil
 }

@@ -18,7 +18,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
+	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -27,20 +30,20 @@ import (
 	"github.com/nitrictech/newcli/pkg/cmd/provider"
 	"github.com/nitrictech/newcli/pkg/cmd/stack"
 	"github.com/nitrictech/newcli/pkg/cmd/target"
+	"github.com/nitrictech/newcli/pkg/output"
 )
 
-var cfgFile string
+const configFileName = ".nitric-config"
+
+var (
+	cfgFile string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "nitric",
 	Short: "helper CLI for nitric applications",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long:  ``,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -49,26 +52,40 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
+var configHelpTopic = &cobra.Command{
+	Use:   "configuration",
+	Short: "Configuraton help",
+	Long: `nitric CLI can be configured (using yaml format) in the following locations:
+${HOME}/.nitric-config.yaml
+${HOME}/.config/nitric/.nitric-config.yaml
+
+An example of the format is:
+  aliases:
+    new: stack create
+
+  targets:
+    local:
+      provider: local
+    test-app:
+      region: eastus
+      provider: aws
+      name: myApp
+  `,
+}
+
 func init() {
-	cobra.OnInitialize(initConfig)
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
+	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.nitric.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	// Register Subcommands
 	rootCmd.AddCommand(build.RootCommand())
 	rootCmd.AddCommand(deployment.RootCommand())
 	rootCmd.AddCommand(provider.RootCommand())
 	rootCmd.AddCommand(stack.RootCommand())
 	rootCmd.AddCommand(target.RootCommand())
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(configHelpTopic)
+
+	initConfig()
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -83,8 +100,9 @@ func initConfig() {
 
 		// Search config in home directory with name ".nitric" (without extension).
 		viper.AddConfigPath(home)
+		viper.AddConfigPath(path.Join(home, ".config", "nitric"))
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".nitric")
+		viper.SetConfigName(".nitric-config")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -92,5 +110,24 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+
+	aliases := map[string]string{}
+	cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("aliases"), &aliases))
+	for n, aliasString := range aliases {
+		alias := &cobra.Command{
+			Use:   n,
+			Short: "alias for: " + aliasString,
+			Long:  "Custom alias command for " + aliasString,
+			Run: func(cmd *cobra.Command, args []string) {
+				newArgs := []string{os.Args[0]}
+				newArgs = append(newArgs, strings.Split(aliasString, " ")...)
+				newArgs = append(newArgs, args...)
+				os.Args = newArgs
+				rootCmd.Execute()
+			},
+			DisableFlagParsing: true, // the real command will parse the flags
+		}
+		rootCmd.AddCommand(alias)
 	}
 }

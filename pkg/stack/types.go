@@ -2,17 +2,43 @@ package stack
 
 import (
 	"io/ioutil"
+	"path"
 
 	"gopkg.in/yaml.v2"
 )
+
+type Triggers struct {
+	Topics []string `yaml:"topics,omitempty"`
+}
+
+type ComputeUnit struct {
+	name string `yaml:"-"` //nolint:structcheck,unused
+
+	contextDirectory string `yaml:"-"` //nolint:structcheck,unused
+
+	// Context is the directory containing the code for the fuction
+	Context string `yaml:"context,omitempty"`
+
+	// Triggers used to invoke this compute unit, e.g. Topic Subscriptions
+	Triggers Triggers `yaml:"triggers,omitempty"`
+
+	// The memory of the compute instance in MB
+	Memory int `yaml:"memory,omitempty"`
+
+	// The minimum number of instances to keep alive
+	MinScale int `yaml:"minScale,omitempty"`
+
+	// The maximum number of instances to scale to
+	MaxScale int `yaml:"maxScale,omitempty"`
+
+	// Allow the user to specify a custom unique tag for the function
+	Tag string `yaml:"tag,omitempty"`
+}
 
 type Function struct {
 	// The location of the function handler
 	// relative to context
 	Handler string `yaml:"handler"`
-
-	// TODO(Angus) not in the TypeScript
-	Memory int `yaml:"memory,omitempty"`
 
 	// The build pack version of the membrane used for the function build
 	Version string `yaml:"version,omitempty"`
@@ -31,11 +57,15 @@ type Function struct {
 	// invokable without authentication
 	// would use public, but its reserved by typescript
 	External bool `yaml:"external"`
+
+	ComputeUnit `yaml:"inline"`
 }
 
 type Container struct {
 	Dockerfile string   `yaml:"dockerfile"`
 	Args       []string `yaml:"args,omitempty"`
+
+	ComputeUnit `yaml:"inline"`
 }
 
 // A subset of a NitricEvent
@@ -83,6 +113,7 @@ type Entrypoint struct {
 }
 
 type Stack struct {
+	dir         string
 	Name        string                 `yaml:"name"`
 	Functions   map[string]Function    `yaml:"functions,omitempty"`
 	Collections map[string]interface{} `yaml:"collections,omitempty"`
@@ -102,12 +133,35 @@ func FromFile(name string) (*Stack, error) {
 		return nil, err
 	}
 
-	stack := &Stack{}
+	stack := &Stack{dir: path.Dir(name)}
 	err = yaml.Unmarshal(yamlFile, stack)
 	if err != nil {
 		return nil, err
 	}
+	for name, fn := range stack.Functions {
+		fn.name = name
+		if fn.Context != "" {
+			fn.contextDirectory = path.Join(stack.Path(), fn.Context)
+		} else {
+			fn.contextDirectory = stack.Path()
+		}
+		stack.Functions[name] = fn
+	}
+	for name, c := range stack.Containers {
+		c.name = name
+		if c.Context != "" {
+			c.contextDirectory = path.Join(stack.Path(), c.Context)
+		} else {
+			c.contextDirectory = stack.Path()
+		}
+		stack.Containers[name] = c
+	}
+
 	return stack, nil
+}
+
+func (s *Stack) Path() string {
+	return s.dir
 }
 
 func (s *Stack) ToFile(name string) error {

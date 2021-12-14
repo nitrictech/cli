@@ -17,6 +17,7 @@
 package build
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -52,4 +53,46 @@ func BuildCreate(s *stack.Stack, t *target.Target) error {
 		}
 	}
 	return nil
+}
+
+type Image struct {
+	ID         string `yaml:"id"`
+	Repository string `yaml:"repository,omitempty"`
+	Tag        string `yaml:"tag,omitempty`
+	CreatedAt  string `yaml:CreatedAt`
+}
+
+type StackImages struct {
+	Name       string             `yaml:"name"`
+	Functions  map[string][]Image `yaml:"functionImages,omitempty"`
+	Containers map[string][]Image `yaml:"containerImages,omitempty"`
+}
+
+func BuildList(s *stack.Stack) (*StackImages, error) {
+	cr, err := DiscoverContainerRuntime()
+	if err != nil {
+		return nil, err
+	}
+	si := &StackImages{
+		Name:       s.Name,
+		Functions:  map[string][]Image{},
+		Containers: map[string][]Image{},
+	}
+	for n, f := range s.Functions {
+		images, err := cr.ListImages(s.Name, f.Name())
+		if err != nil {
+			fmt.Println("Error: ", err)
+		} else {
+			si.Functions[n] = images
+		}
+	}
+	for n, c := range s.Containers {
+		images, err := cr.ListImages(s.Name, c.Name())
+		if err != nil {
+			fmt.Println("Error: ", err)
+		} else {
+			si.Functions[n] = images
+		}
+	}
+	return si, nil
 }

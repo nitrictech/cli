@@ -19,6 +19,7 @@ package stack
 import (
 	"io/ioutil"
 	"path"
+	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 )
@@ -32,7 +33,7 @@ type ComputeUnit struct {
 
 	contextDirectory string `yaml:"-"` //nolint:structcheck,unused
 
-	// Context is the directory containing the code for the fuction
+	// Context is the directory containing the code for the function
 	Context string `yaml:"context,omitempty"`
 
 	// Triggers used to invoke this compute unit, e.g. Topic Subscriptions
@@ -74,14 +75,14 @@ type Function struct {
 	// would use public, but its reserved by typescript
 	External bool `yaml:"external"`
 
-	ComputeUnit `yaml:"inline"`
+	ComputeUnit `yaml:",inline"`
 }
 
 type Container struct {
 	Dockerfile string   `yaml:"dockerfile"`
 	Args       []string `yaml:"args,omitempty"`
 
-	ComputeUnit `yaml:"inline"`
+	ComputeUnit `yaml:",inline"`
 }
 
 // A subset of a NitricEvent
@@ -148,8 +149,11 @@ func FromFile(name string) (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	stack := &Stack{dir: path.Dir(name)}
+	dir, err := filepath.Abs(path.Dir(name))
+	if err != nil {
+		return nil, err
+	}
+	stack := &Stack{dir: dir}
 	err = yaml.Unmarshal(yamlFile, stack)
 	if err != nil {
 		return nil, err

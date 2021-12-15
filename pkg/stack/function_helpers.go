@@ -20,7 +20,7 @@ import (
 	"fmt"
 )
 
-const DefaulMembraneVersion = "v0.0.1-rc.3"
+const DefaulMembraneVersion = "v0.12.1-rc.5"
 
 func (f *Function) Name() string {
 	return f.name

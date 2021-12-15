@@ -14,33 +14,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package local
 
 import (
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
+	"io"
+	"os"
 )
 
-var providerCmd = &cobra.Command{
-	Use:   "provider",
-	Short: "Work with a provider",
-	Long: `List availabe providers, e.g.
-	nitric provider list
-`,
-}
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
 
-var providerListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list providers",
-	Long:  `Lists Nitric providers.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		notice := color.New(color.Bold, color.FgGreen).PrintlnFunc()
-		notice("Don't forget this... %v")
-	},
-	Args: cobra.MaximumNArgs(0),
-}
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
 
-func RootCommand() *cobra.Command {
-	providerCmd.AddCommand(providerListCmd)
-	return providerCmd
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+	return out.Close()
 }

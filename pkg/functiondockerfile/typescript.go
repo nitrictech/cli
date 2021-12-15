@@ -32,7 +32,6 @@ func typescriptGenerator(f *stack.Function, version, provider string, w io.Write
 	if err != nil {
 		return err
 	}
-	withMembrane(con, version, provider)
 
 	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "typescript"}})
 	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "ts-node"}})
@@ -42,8 +41,12 @@ func typescriptGenerator(f *stack.Function, version, provider string, w io.Write
 		"set", "-ex;",
 		"yarn", "install", "--production", "--frozen-lockfile", "--cache-folder", "/tmp/.cache;",
 		"rm", "-rf", "/tmp/.cache;"}})
+
+	withMembrane(con, version, provider)
+
+	con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
 	con.Config(dockerfile.ConfigOptions{
-		Cmd: []string{"node", f.Handler},
+		Cmd: []string{"ts-node", "-T", f.Handler},
 	})
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err

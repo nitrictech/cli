@@ -14,33 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package types
 
-import (
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
-)
-
-var providerCmd = &cobra.Command{
-	Use:   "provider",
-	Short: "Work with a provider",
-	Long: `List availabe providers, e.g.
-	nitric provider list
-`,
-}
-
-var providerListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list providers",
-	Long:  `Lists Nitric providers.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		notice := color.New(color.Bold, color.FgGreen).PrintlnFunc()
-		notice("Don't forget this... %v")
-	},
-	Args: cobra.MaximumNArgs(0),
-}
-
-func RootCommand() *cobra.Command {
-	providerCmd.AddCommand(providerListCmd)
-	return providerCmd
+type Provider interface {
+	Apply(deploymentName string) error
+	Delete(deploymentName string) error
+	List() (interface{}, error)
+	//Status()
 }

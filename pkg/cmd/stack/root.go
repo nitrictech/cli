@@ -18,6 +18,7 @@ package stack
 
 import (
 	"errors"
+	"fmt"
 	"path"
 	"regexp"
 	"strings"
@@ -51,7 +52,7 @@ nitric stack create
 }
 
 var stackCreateCmd = &cobra.Command{
-	Use:   "create [name] [template]",
+	Use:   "create [stackName] [templateName]",
 	Short: "create a new application stack",
 	Long:  `Creates a new Nitric application stack from a template.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -67,6 +68,18 @@ var stackCreateCmd = &cobra.Command{
 			Message: "Choose a template:",
 			Options: dirs,
 			Default: "go-stack",
+		}
+		templateNameQu.Validate = func(ans interface{}) error {
+			a, ok := ans.(string)
+			if !ok {
+				return errors.New("wrong type, need a string")
+			}
+			for _, d := range dirs {
+				if d == a {
+					return nil
+				}
+			}
+			return fmt.Errorf("%s not in %v", a, dirs)
 		}
 
 		var qs = []*survey.Question{}

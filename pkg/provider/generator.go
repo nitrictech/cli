@@ -17,30 +17,17 @@
 package provider
 
 import (
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
+	"github.com/nitrictech/newcli/pkg/provider/local"
+	"github.com/nitrictech/newcli/pkg/provider/types"
+	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/target"
 )
 
-var providerCmd = &cobra.Command{
-	Use:   "provider",
-	Short: "Work with a provider",
-	Long: `List availabe providers, e.g.
-	nitric provider list
-`,
-}
-
-var providerListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list providers",
-	Long:  `Lists Nitric providers.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		notice := color.New(color.Bold, color.FgGreen).PrintlnFunc()
-		notice("Don't forget this... %v")
-	},
-	Args: cobra.MaximumNArgs(0),
-}
-
-func RootCommand() *cobra.Command {
-	providerCmd.AddCommand(providerListCmd)
-	return providerCmd
+func NewProvider(s *stack.Stack, t *target.Target) (types.Provider, error) {
+	switch t.Provider {
+	case "local":
+		return local.New(s, t)
+	default:
+		return nil, nil
+	}
 }

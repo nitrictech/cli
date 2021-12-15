@@ -14,33 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+// +build !linux
 
-import (
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
-)
+package containerengine
 
-var providerCmd = &cobra.Command{
-	Use:   "provider",
-	Short: "Work with a provider",
-	Long: `List availabe providers, e.g.
-	nitric provider list
-`,
-}
+import "errors"
 
-var providerListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list providers",
-	Long:  `Lists Nitric providers.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		notice := color.New(color.Bold, color.FgGreen).PrintlnFunc()
-		notice("Don't forget this... %v")
-	},
-	Args: cobra.MaximumNArgs(0),
-}
-
-func RootCommand() *cobra.Command {
-	providerCmd.AddCommand(providerListCmd)
-	return providerCmd
+func newPodman() (ContainerEngine, error) {
+	return nil, errors.New("podman only available on Linux")
 }

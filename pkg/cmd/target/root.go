@@ -42,7 +42,7 @@ var targetListCmd = &cobra.Command{
 		cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("targets"), &targets))
 		output.Print(targets)
 	},
-	Args: cobra.MaximumNArgs(2),
+	Args: cobra.MaximumNArgs(0),
 }
 
 func RootCommand() *cobra.Command {

@@ -21,13 +21,14 @@ import (
 	"os"
 	"path"
 
+	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/functiondockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
 )
 
-func BuildCreate(s *stack.Stack, t *target.Target) error {
-	cr, err := DiscoverContainerRuntime()
+func Create(s *stack.Stack, t *target.Target) error {
+	cr, err := containerengine.Discover()
 	if err != nil {
 		return err
 	}
@@ -36,6 +37,7 @@ func BuildCreate(s *stack.Stack, t *target.Target) error {
 		if err != nil {
 			return err
 		}
+		defer os.Remove(fh.Name())
 		err = functiondockerfile.Generate(&f, f.VersionString(s), t.Provider, fh)
 		if err != nil {
 			return err
@@ -55,28 +57,21 @@ func BuildCreate(s *stack.Stack, t *target.Target) error {
 	return nil
 }
 
-type Image struct {
-	ID         string `yaml:"id"`
-	Repository string `yaml:"repository,omitempty"`
-	Tag        string `yaml:"tag,omitempty`
-	CreatedAt  string `yaml:CreatedAt`
-}
-
 type StackImages struct {
-	Name       string             `yaml:"name"`
-	Functions  map[string][]Image `yaml:"functionImages,omitempty"`
-	Containers map[string][]Image `yaml:"containerImages,omitempty"`
+	Name       string                             `yaml:"name"`
+	Functions  map[string][]containerengine.Image `yaml:"functionImages,omitempty"`
+	Containers map[string][]containerengine.Image `yaml:"containerImages,omitempty"`
 }
 
-func BuildList(s *stack.Stack) (*StackImages, error) {
-	cr, err := DiscoverContainerRuntime()
+func List(s *stack.Stack) (*StackImages, error) {
+	cr, err := containerengine.Discover()
 	if err != nil {
 		return nil, err
 	}
 	si := &StackImages{
 		Name:       s.Name,
-		Functions:  map[string][]Image{},
-		Containers: map[string][]Image{},
+		Functions:  map[string][]containerengine.Image{},
+		Containers: map[string][]containerengine.Image{},
 	}
 	for n, f := range s.Functions {
 		images, err := cr.ListImages(s.Name, f.Name())

@@ -41,7 +41,7 @@ func golangGenerator(f *stack.Function, version, provider string, w io.Writer) e
 		WorkingDir: "/app/",
 	})
 
-	buildCon.Copy(dockerfile.CopyOptions{Src: "go.mod *.sum", Dest: "."})
+	buildCon.Copy(dockerfile.CopyOptions{Src: "go.mod *.sum", Dest: "./"})
 	buildCon.Run(dockerfile.RunOptions{Command: []string{"go", "mod", "download"}})
 	buildCon.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
 	buildCon.Run(dockerfile.RunOptions{Command: []string{"CGO_ENABLED=0", "GOOS=linux", "go", "build", "-o", "/bin/main", f.Handler}})

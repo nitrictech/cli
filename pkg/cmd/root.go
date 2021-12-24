@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
@@ -110,12 +111,9 @@ func initConfig() {
 		viper.SetConfigName(".nitric-config")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	viper.AutomaticEnv()
+	viper.ReadInConfig()
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
 	ensureConfigDefaults()
 }
 
@@ -127,12 +125,20 @@ func ensureConfigDefaults() {
 		aliases["new"] = "stack create"
 		viper.Set("aliases", aliases)
 	}
+
 	targets := viper.GetStringMap("targets")
 	if _, ok := targets["local"]; !ok {
 		needsWrite = true
 		targets["local"] = map[string]string{"provider": "local"}
 		viper.Set("targets", targets)
 	}
+
+	to := viper.GetDuration("build_timeout")
+	if to == 0 {
+		needsWrite = true
+		viper.Set("build_timeout", 5*time.Minute)
+	}
+
 	if needsWrite {
 		fmt.Println("updating configfile to include defaults")
 		viper.WriteConfig()

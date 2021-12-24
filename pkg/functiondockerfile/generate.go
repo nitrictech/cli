@@ -31,9 +31,13 @@ type FunctionDockerfile interface {
 }
 
 func withMembrane(con dockerfile.ContainerState, version, provider string) {
-	fetchFrom := fmt.Sprintf("https://github.com/nitrictech/nitric/releases/download/%s/membrane-%s", version, provider)
+	membraneName := "membrane-" + provider
+	if provider == "local" {
+		membraneName = "membrane-dev"
+	}
+	fetchFrom := fmt.Sprintf("https://github.com/nitrictech/nitric/releases/download/%s/%s", version, membraneName)
 	if version == "latest" {
-		fetchFrom = fmt.Sprintf("https://github.com/nitrictech/nitric/releases/%s/download/membrane-%s", version, provider)
+		fetchFrom = fmt.Sprintf("https://github.com/nitrictech/nitric/releases/%s/download/%s", version, membraneName)
 	}
 	con.Add(dockerfile.AddOptions{Src: fetchFrom, Dest: "/usr/local/bin/membrane"})
 	con.Run(dockerfile.RunOptions{Command: []string{"chmod", "+x-rw", "/usr/local/bin/membrane"}})

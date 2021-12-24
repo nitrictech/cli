@@ -14,6 +14,8 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: 1.16.7
+    - name: Install deps
+      run: sudo apt-get install -y btrfs-progs libdevmapper-dev libgpgme-dev libbtrfs-dev
     - name: Run Lint
       run: make lint
     - name: Run Tests

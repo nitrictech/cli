@@ -41,9 +41,9 @@ var buildCreateCmd = &cobra.Command{
 		t := target.FromOptions()
 		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
-		cobra.CheckErr(build.BuildCreate(s, t))
+		cobra.CheckErr(build.Create(s, t))
 	},
-	Args: cobra.MaximumNArgs(2),
+	Args: cobra.MaximumNArgs(0),
 }
 
 var buildListCmd = &cobra.Command{
@@ -53,11 +53,11 @@ var buildListCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
-		out, err := build.BuildList(s)
+		out, err := build.List(s)
 		cobra.CheckErr(err)
 		output.Print(out)
 	},
-	Args: cobra.MaximumNArgs(2),
+	Args: cobra.MaximumNArgs(0),
 }
 
 func RootCommand() *cobra.Command {

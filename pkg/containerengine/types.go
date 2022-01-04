@@ -21,8 +21,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/containers/podman/v3/pkg/domain/entities"
-	"github.com/containers/podman/v3/pkg/specgen"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/spf13/viper"
 )
 
@@ -38,10 +39,10 @@ type ContainerEngine interface {
 	ListImages(stackName, containerName string) ([]Image, error)
 	Pull(rawImage string) error
 	NetworkCreate(name string) error
-	CreateWithSpec(s *specgen.SpecGenerator) (string, error)
+	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error
 	CopyFromArchive(nameOrID string, path string, reader io.Reader) error
-	ContainersListByLabel(match map[string]string) ([]entities.ListContainer, error)
+	ContainersListByLabel(match map[string]string) ([]types.Container, error)
 	RemoveByLabel(name, value string) error
 	ContainerExec(containerName string, cmd []string, workingDir string) error
 }

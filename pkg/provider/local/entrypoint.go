@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"strings"
 
-	nettypes "github.com/containers/podman/v3/libpod/network/types"
-	"github.com/containers/podman/v3/pkg/specgen"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/consul/sdk/freeport"
+
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/utils"
 )
@@ -75,28 +76,22 @@ func (l *local) entrypoint(deploymentName, entrypointName string, e *stack.Entry
 		return err
 	}
 
-	s := specgen.NewSpecGenerator("nginx", false)
-	s.Name = "entry-" + entrypointName + "-" + deploymentName
-	s.Labels = l.labels(deploymentName, "gateway")
-	if l.network != "bridge" {
-		//		s.Aliases = map[string][]string{
-		//			l.network: {"api-" + apiName},
-		//		}
-		s.ContainerNetworkConfig.CNINetworks = []string{l.network}
-	}
-	s.PortMappings = []nettypes.PortMapping{
-		{
-			ContainerPort: httpPort,
-			HostPort:      port,
-			Protocol:      "tcp",
+	cID, err := l.cr.ContainerCreate(&container.Config{
+		Image:  "nginx",
+		Labels: l.labels(deploymentName, "gateway"),
+		ExposedPorts: nat.PortSet{
+			nat.Port(fmt.Sprintf("%d/tcp", httpPort)): struct{}{},
 		},
-	}
-	s.PublishExposedPorts = true
-	s.Expose = map[uint16]string{
-		httpPort: "tcp",
-	}
-
-	cID, err := l.cr.CreateWithSpec(s)
+	}, &container.HostConfig{
+		PortBindings: nat.PortMap{
+			nat.Port(fmt.Sprintf("%d/tcp", httpPort)): []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d/tcp", port),
+				},
+			},
+		},
+		NetworkMode: container.NetworkMode(l.network),
+	}, nil, "entry-"+entrypointName+"-"+deploymentName)
 	if err != nil {
 		return err
 	}

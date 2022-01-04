@@ -17,12 +17,15 @@
 package local
 
 import (
+	"fmt"
 	"os"
 	"path"
 
-	nettypes "github.com/containers/podman/v3/libpod/network/types"
-	"github.com/containers/podman/v3/pkg/specgen"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/consul/sdk/freeport"
+
 	"github.com/nitrictech/newcli/pkg/utils"
 )
 
@@ -50,27 +53,26 @@ func (l *local) gateway(deploymentName, apiName, apiFile string) error {
 		return err
 	}
 
-	s := specgen.NewSpecGenerator(devAPIGatewayImageName, false)
-	s.Name = "api-" + apiName + "-" + deploymentName
-	s.Labels = l.labels(deploymentName, "gateway")
-	s.PortMappings = []nettypes.PortMapping{
-		{
-			ContainerPort: gatewayPort,
-			HostPort:      port,
-			Protocol:      "tcp",
+	cID, err := l.cr.ContainerCreate(&container.Config{
+		Image:  devAPIGatewayImageName,
+		Labels: l.labels(deploymentName, "gateway"),
+		ExposedPorts: nat.PortSet{
+			nat.Port(fmt.Sprintf("%d/tcp", gatewayPort)): struct{}{},
 		},
-	}
-	s.PublishExposedPorts = true
-	s.Expose = map[uint16]string{
-		gatewayPort: "tcp",
-	}
-	if l.network != "bridge" {
-		s.Aliases = map[string][]string{
-			l.network: {"api-" + apiName},
-		}
-		s.ContainerNetworkConfig.CNINetworks = []string{l.network}
-	}
-	cID, err := l.cr.CreateWithSpec(s)
+	}, &container.HostConfig{
+		PortBindings: nat.PortMap{
+			nat.Port(fmt.Sprintf("%d/tcp", gatewayPort)): []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d/tcp", port),
+				},
+			},
+		},
+		NetworkMode: container.NetworkMode(l.network),
+	}, &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			l.network: {Aliases: []string{"api-" + apiName}},
+		},
+	}, "api-"+apiName+"-"+deploymentName)
 	if err != nil {
 		return err
 	}

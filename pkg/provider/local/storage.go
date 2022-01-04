@@ -21,10 +21,11 @@ import (
 	"os"
 	"path"
 
-	nettypes "github.com/containers/podman/v3/libpod/network/types"
-	"github.com/containers/podman/v3/pkg/specgen"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 )
 
@@ -43,44 +44,49 @@ func (l *local) storage(deploymentName string) error {
 	port := uint16(ports[0])
 	consolePort := uint16(ports[1])
 
-	minioImage := "minio/minio:latest"
+	minioImage := "docker.io/minio/minio:latest"
 	err = l.cr.Pull(minioImage)
 	if err != nil {
 		return err
 	}
 
-	s := specgen.NewSpecGenerator(minioImage, false)
-	s.Name = "minio-" + deploymentName
-	s.Labels = l.labels(deploymentName, "storage")
-	s.Command = []string{"minio", "server", "/nitric/buckets", "--console-address", fmt.Sprintf(":%d", consolePort)}
-	s.Mounts = []specs.Mount{
-		{
-			Destination: devVolume,
-			Source:      nitricRunDir, // volume.name,
-			Type:        "bind",
+	cID, err := l.cr.ContainerCreate(&container.Config{
+		Image:  minioImage,
+		Cmd:    []string{"minio", "server", "/nitric/buckets", "--console-address", fmt.Sprintf(":%d", consolePort)},
+		Labels: l.labels(deploymentName, "storage"),
+		ExposedPorts: nat.PortSet{
+			nat.Port(fmt.Sprintf("%d/tcp", minioPort)):        struct{}{},
+			nat.Port(fmt.Sprintf("%d/tcp", minioConsolePort)): struct{}{},
 		},
-	}
-	s.PortMappings = []nettypes.PortMapping{
-		{
-			ContainerPort: minioPort,
-			HostPort:      port,
-			Protocol:      "tcp",
+		Volumes: map[string]struct{}{
+			devVolume: {},
 		},
-		{
-			ContainerPort: minioConsolePort,
-			HostPort:      consolePort,
-			Protocol:      "tcp",
+	}, &container.HostConfig{
+		PortBindings: nat.PortMap{
+			nat.Port(fmt.Sprintf("%d/tcp", minioPort)): []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d/tcp", port),
+				},
+			},
+			nat.Port(fmt.Sprintf("%d/tcp", minioConsolePort)): []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d/tcp", consolePort),
+				},
+			},
 		},
-	}
-	s.ContainerNetworkConfig.CNINetworks = []string{l.network}
-	s.PublishExposedPorts = true
-	s.Expose = map[uint16]string{
-		minioPort:        "tcp",
-		minioConsolePort: "tcp",
-	}
-	cID, err := l.cr.CreateWithSpec(s)
+		Mounts: []mount.Mount{
+			{
+				Source: nitricRunDir,
+				Type:   mount.TypeBind,
+				Target: devVolume,
+			},
+		},
+		NetworkMode: container.NetworkMode(l.network),
+	}, &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{},
+	}, "minio-"+deploymentName)
 	if err != nil {
-		return errors.WithMessage(err, "create")
+		return err
 	}
 	return l.cr.Start(cID)
 }

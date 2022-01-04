@@ -20,9 +20,9 @@ package containerengine
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -60,26 +60,15 @@ func newPodman() (ContainerEngine, error) {
 		return nil, errors.New("both podman and docker found, will use docker")
 	}
 
-	cmd = exec.Command("sudo", "systemctl", "is-active", "podman.socket")
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil || cmd.ProcessState.ExitCode() != 0 {
-		fmt.Println("podman.socket not available, starting..")
-		cmd = exec.Command("sudo", "systemctl", "start", "podman.socket")
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Run()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	//socket := "unix:" + os.Getenv("XDG_RUNTIME_DIR") + "/podman/podman.sock"
+	//export DOCKER_HOST=unix:///run/user/1000/podman/podman.sock
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
+		return nil, err
+	}
+	// Test the connection
+	_, err = cli.ContainerList(context.Background(), types.ContainerListOptions{})
+	if err != nil {
+		fmt.Println("podman socket not running, please execute 'sudo systemctl start podman.socket'")
 		return nil, err
 	}
 	fmt.Println("podman found")
@@ -87,17 +76,8 @@ func newPodman() (ContainerEngine, error) {
 	return &podman{docker: &docker{cli: cli}}, err
 }
 
-func (p *podman) Build(dockerfile, path, imageTag, provider string, buildArgs map[string]string) error {
-	args := []string{"build", path, "-f", dockerfile, "-t", imageTag, "--progress", "plain", "--build-arg=PROVIDER=" + provider}
-
-	for key, val := range buildArgs {
-		args = append(args, "--build-arg="+key+"="+val)
-	}
-	cmd := exec.Command("podman", args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+func (p *podman) Build(dockerfile, path, imageTag string, buildArgs map[string]string) error {
+	return p.docker.Build(dockerfile, path, imageTag, buildArgs)
 }
 
 func (p *podman) ListImages(stackName, containerName string) ([]Image, error) {

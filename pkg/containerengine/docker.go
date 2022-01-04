@@ -25,7 +25,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -51,22 +50,11 @@ func newDocker() (ContainerEngine, error) {
 		return nil, err
 	}
 
-	cmd = exec.Command("systemctl", "is-active", "docker")
+	cmd = exec.Command("docker", "ps")
 	err = cmd.Run()
-	if err != nil || cmd.ProcessState.ExitCode() != 0 {
-		if runtime.GOOS == "linux" {
-			fmt.Println("docker service not running, starting..")
-			cmd = exec.Command("systemctl", "start", "docker")
-			cmd.Stdin = os.Stdin
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			err = cmd.Run()
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
+	if err != nil {
+		fmt.Println("docker daemon not running, please start it..")
+		return nil, err
 	}
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -77,9 +65,7 @@ func newDocker() (ContainerEngine, error) {
 	return &docker{cli: cli}, err
 }
 
-func (d *docker) Build(dockerfile, srcPath, imageTag, provider string, buildArgs map[string]string) error {
-	buildArgs["PROVIDER"] = provider
-
+func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), buildTimeout())
 	defer cancel()
 

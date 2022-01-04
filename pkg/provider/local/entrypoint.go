@@ -86,7 +86,7 @@ func (l *local) entrypoint(deploymentName, entrypointName string, e *stack.Entry
 		PortBindings: nat.PortMap{
 			nat.Port(fmt.Sprintf("%d/tcp", httpPort)): []nat.PortBinding{
 				{
-					HostPort: fmt.Sprintf("%d/tcp", port),
+					HostPort: fmt.Sprintf("%d", port),
 				},
 			},
 		},
@@ -117,6 +117,11 @@ func (l *local) entrypoint(deploymentName, entrypointName string, e *stack.Entry
 	}
 
 	for k, s := range l.s.Sites {
+		err = s.Build(l.s)
+		if err != nil {
+			return err
+		}
+
 		err = l.cr.ContainerExec(cID, []string{"mkdir", "-p", "/www/" + k}, "/")
 		if err != nil {
 			return err

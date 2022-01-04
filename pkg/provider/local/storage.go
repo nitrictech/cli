@@ -30,7 +30,6 @@ import (
 )
 
 func (l *local) storage(deploymentName string) error {
-	// Ensure the buckets directory exists
 	nitricRunDir := path.Join(l.s.Path(), runDir)
 	os.MkdirAll(nitricRunDir, runPerm)
 	for bName := range l.s.Buckets {
@@ -44,7 +43,7 @@ func (l *local) storage(deploymentName string) error {
 	port := uint16(ports[0])
 	consolePort := uint16(ports[1])
 
-	minioImage := "docker.io/minio/minio:latest"
+	minioImage := "minio/minio:latest"
 	err = l.cr.Pull(minioImage)
 	if err != nil {
 		return err
@@ -58,19 +57,16 @@ func (l *local) storage(deploymentName string) error {
 			nat.Port(fmt.Sprintf("%d/tcp", minioPort)):        struct{}{},
 			nat.Port(fmt.Sprintf("%d/tcp", minioConsolePort)): struct{}{},
 		},
-		Volumes: map[string]struct{}{
-			devVolume: {},
-		},
 	}, &container.HostConfig{
 		PortBindings: nat.PortMap{
 			nat.Port(fmt.Sprintf("%d/tcp", minioPort)): []nat.PortBinding{
 				{
-					HostPort: fmt.Sprintf("%d/tcp", port),
+					HostPort: fmt.Sprintf("%d", port),
 				},
 			},
 			nat.Port(fmt.Sprintf("%d/tcp", minioConsolePort)): []nat.PortBinding{
 				{
-					HostPort: fmt.Sprintf("%d/tcp", consolePort),
+					HostPort: fmt.Sprintf("%d", consolePort),
 				},
 			},
 		},

@@ -61,7 +61,7 @@ func (l *local) function(deploymentName string, f *stack.Function) error {
 		PortBindings: nat.PortMap{
 			nat.Port(fmt.Sprintf("%d/tcp", functionPort)): []nat.PortBinding{
 				{
-					HostPort: fmt.Sprintf("%d/tcp", port),
+					HostPort: fmt.Sprintf("%d", port),
 				},
 			},
 		},

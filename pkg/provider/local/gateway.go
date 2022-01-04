@@ -63,7 +63,7 @@ func (l *local) gateway(deploymentName, apiName, apiFile string) error {
 		PortBindings: nat.PortMap{
 			nat.Port(fmt.Sprintf("%d/tcp", gatewayPort)): []nat.PortBinding{
 				{
-					HostPort: fmt.Sprintf("%d/tcp", port),
+					HostPort: fmt.Sprintf("%d", port),
 				},
 			},
 		},
@@ -79,7 +79,6 @@ func (l *local) gateway(deploymentName, apiName, apiFile string) error {
 
 	// Create staging dir for the build and add the api spec to be loaded by the gateway server
 	dirName := createAPIDirectory(apiName)
-
 	err = copyFile(apiDocument, path.Join(dirName, "openapi.json"))
 	if err != nil {
 		return err

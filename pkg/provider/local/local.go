@@ -126,7 +126,7 @@ func (l *local) List() (interface{}, error) {
 	for _, c := range res {
 		ports := []int{}
 		for _, p := range c.Ports {
-			ports = append(ports, int(p.HostPort))
+			ports = append(ports, int(p.PublicPort))
 		}
 		cons = append(cons, containerSummary{
 			Image:  c.Image,

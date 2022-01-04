@@ -7,7 +7,7 @@ GOLANGCI_LINT ?= GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) go run github.com/go
 
 .PHONY: build
 build:
-	go build -o bin/nitric ./pkg/cmd/
+	CGO_ENABLED=0 go build -o bin/nitric ./pkg/cmd/
 
 .PHONY: fmt
 fmt:

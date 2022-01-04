@@ -4,10 +4,7 @@ go 1.16
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/containers/buildah v1.23.1
-	github.com/containers/image/v5 v5.17.1-0.20211207161909-6f3c8453e1a7 // indirect
-	github.com/containers/podman/v3 v3.4.4
-	github.com/cri-o/ocicni v0.2.1-0.20210621164014-d0acc7862283
+	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0
@@ -16,13 +13,18 @@ require (
 	github.com/google/go-github/v41 v41.0.0
 	github.com/hashicorp/consul/sdk v0.8.0
 	github.com/jhoonb/archivex v0.0.0-20201016144719-6a343cdae81d
+	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/nitrictech/boxygen v0.0.1-rc.7.0.20211212231606-62c668408f91
-	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
+	golang.org/x/net v0.0.0-20211105192438-b53810dc28af // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
+	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
+	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
+	google.golang.org/genproto v0.0.0-20211005153810-c76a74d43a8e // indirect
+	google.golang.org/grpc v1.41.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
 

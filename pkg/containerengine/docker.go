@@ -28,16 +28,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containers/podman/v3/pkg/domain/entities"
-	"github.com/containers/podman/v3/pkg/specgen"
-	"github.com/cri-o/ocicni/pkg/ocicni"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
 	"github.com/jhoonb/archivex"
 	"github.com/pkg/errors"
 )
@@ -55,31 +50,22 @@ func newDocker() (ContainerEngine, error) {
 		return nil, err
 	}
 
-	cmd = exec.Command("systemctl", "is-active", "docker")
+	cmd = exec.Command("docker", "ps")
 	err = cmd.Run()
-	if err != nil || cmd.ProcessState.ExitCode() != 0 {
-		fmt.Println("docker service not running, starting..")
-		cmd = exec.Command("systemctl", "start", "docker")
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Run()
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		fmt.Println("docker daemon not running, please start it..")
+		return nil, err
 	}
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return &docker{cli: cli}, err
 }
 
-func (d *docker) Build(dockerfile, srcPath, imageTag, provider string, buildArgs map[string]string) error {
-	buildArgs["PROVIDER"] = provider
-
+func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), buildTimeout())
 	defer cancel()
 
@@ -138,6 +124,7 @@ type ErrorDetail struct {
 
 type Line struct {
 	Stream string `json:"stream"`
+	Status string `json:"status"`
 }
 
 func print(rd io.Reader) error {
@@ -184,8 +171,13 @@ func (d *docker) ListImages(stackName, containerName string) ([]Image, error) {
 }
 
 func (d *docker) Pull(rawImage string) error {
-	_, err := d.cli.ImagePull(context.Background(), rawImage, types.ImagePullOptions{})
-	return err
+	resp, err := d.cli.ImagePull(context.Background(), rawImage, types.ImagePullOptions{})
+	if err != nil {
+		return errors.WithMessage(err, "Pull")
+	}
+	defer resp.Close()
+	print(resp)
+	return nil
 }
 
 func (d *docker) NetworkCreate(name string) error {
@@ -198,88 +190,8 @@ func (d *docker) NetworkCreate(name string) error {
 	return err
 }
 
-func (d *docker) ContainerCreate(name string) error {
-	config := container.Config{}
-
-	_, err := d.cli.ContainerCreate(context.Background(), &config, nil, nil, nil, name)
-	return err
-}
-
-func createArgsFromSpec(s *specgen.SpecGenerator) (*container.Config, *container.HostConfig, *network.NetworkingConfig, error) {
-	exposedPorts := nat.PortSet{}
-	for i, p := range s.Expose {
-		port, err := nat.NewPort(p, fmt.Sprintf("%d", i))
-		if err != nil {
-			return nil, nil, nil, errors.WithMessage(err, "newport")
-		}
-		exposedPorts[port] = struct{}{}
-	}
-	env := []string{}
-	for k, v := range s.Env {
-		env = append(env, k+"="+v)
-	}
-	mounts := []mount.Mount{}
-	vols := map[string]struct{}{}
-	for _, m := range s.Mounts {
-		mounts = append(mounts, mount.Mount{
-			Source: m.Source,
-			Type:   mount.Type(m.Type),
-			Target: m.Destination,
-		})
-		vols[m.Destination] = struct{}{}
-	}
-
-	config := &container.Config{
-		Image:        s.Image,
-		Labels:       s.Labels,
-		Cmd:          s.Command,
-		Env:          env,
-		ExposedPorts: exposedPorts,
-		Volumes:      vols,
-		Hostname:     s.Hostname,
-		User:         s.User,
-	}
-	pb := nat.PortMap{}
-	for _, pm := range s.PortMappings {
-		port, err := nat.NewPort(pm.Protocol, fmt.Sprintf("%d", pm.ContainerPort))
-		if err != nil {
-			return nil, nil, nil, errors.WithMessage(err, "newport")
-		}
-		pb[port] = []nat.PortBinding{
-			{
-				HostIP:   pm.HostIP,
-				HostPort: fmt.Sprintf("%d/%s", pm.HostPort, pm.Protocol),
-			},
-		}
-	}
-
-	hostConfig := &container.HostConfig{
-		PortBindings: pb,
-		Mounts:       mounts,
-	}
-	if len(s.ContainerNetworkConfig.CNINetworks) > 0 {
-		hostConfig.NetworkMode = container.NetworkMode(s.ContainerNetworkConfig.CNINetworks[0])
-	}
-
-	networkingConfig := &network.NetworkingConfig{
-		EndpointsConfig: make(map[string]*network.EndpointSettings),
-	}
-	for key, alias := range s.ContainerNetworkConfig.Aliases {
-		networkingConfig.EndpointsConfig[key] = &network.EndpointSettings{
-			Aliases: alias,
-		}
-	}
-
-	return config, hostConfig, networkingConfig, nil
-}
-
-func (d *docker) CreateWithSpec(s *specgen.SpecGenerator) (string, error) {
-	config, hostConfig, networkingConfig, err := createArgsFromSpec(s)
-	if err != nil {
-		return "", errors.WithMessage(err, "ContainerArgs")
-	}
-
-	resp, err := d.cli.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, nil, s.Name)
+func (d *docker) ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error) {
+	resp, err := d.cli.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, nil, name)
 	if err != nil {
 		return "", errors.WithMessage(err, "ContainerCreate")
 	}
@@ -294,7 +206,7 @@ func (d *docker) CopyFromArchive(nameOrID string, path string, reader io.Reader)
 	return d.cli.CopyToContainer(context.Background(), nameOrID, path, reader, types.CopyToContainerOptions{})
 }
 
-func (d *docker) ContainersListByLabel(match map[string]string) ([]entities.ListContainer, error) {
+func (d *docker) ContainersListByLabel(match map[string]string) ([]types.Container, error) {
 	opts := types.ContainerListOptions{
 		All:     true,
 		Filters: filters.NewArgs(),
@@ -303,29 +215,7 @@ func (d *docker) ContainersListByLabel(match map[string]string) ([]entities.List
 		opts.Filters.Add("label", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	res, err := d.cli.ContainerList(context.Background(), opts)
-	if err != nil {
-		return nil, err
-	}
-	cons := []entities.ListContainer{}
-	for _, con := range res {
-		pmList := []ocicni.PortMapping{}
-		for _, p := range con.Ports {
-			pmList = append(pmList, ocicni.PortMapping{
-				HostPort: int32(p.PublicPort),
-			})
-		}
-		cons = append(cons, entities.ListContainer{
-			ID:      con.ID,
-			Command: []string{con.Command},
-			Image:   con.Image,
-			Status:  con.Status,
-			State:   con.State,
-			Labels:  con.Labels,
-			Ports:   pmList,
-		})
-	}
-	return cons, err
+	return d.cli.ContainerList(context.Background(), opts)
 }
 
 func (d *docker) RemoveByLabel(name, value string) error {
@@ -346,4 +236,28 @@ func (d *docker) RemoveByLabel(name, value string) error {
 		}
 	}
 	return nil
+}
+
+func (d *docker) ContainerExec(containerName string, cmd []string, workingDir string) error {
+	rst, err := d.cli.ContainerExecCreate(context.Background(), containerName, types.ExecConfig{
+		WorkingDir: workingDir,
+		Cmd:        cmd,
+	})
+	if err != nil {
+		return err
+	}
+
+	for {
+		res, err := d.cli.ContainerExecInspect(context.Background(), rst.ID)
+		if err != nil {
+			return err
+		}
+		if res.Running {
+			continue
+		}
+		if res.ExitCode == 0 {
+			return nil
+		}
+		return fmt.Errorf("%s %v exited with %d", containerName, cmd, res.ExitCode)
+	}
 }

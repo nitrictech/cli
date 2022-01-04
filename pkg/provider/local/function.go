@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"path"
 
-	nettypes "github.com/containers/podman/v3/libpod/network/types"
-	"github.com/containers/podman/v3/pkg/specgen"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/nitrictech/newcli/pkg/stack"
 )
@@ -43,47 +44,43 @@ func (l *local) function(deploymentName string, f *stack.Function) error {
 	port := uint16(ports[0])
 	imageName := f.ImageTagName(l.s, l.t.Provider)
 
-	s := specgen.NewSpecGenerator(imageName, false)
-	s.Name = imageName + "-" + deploymentName
-	s.Labels = l.labels(deploymentName, "function")
-	s.PortMappings = []nettypes.PortMapping{
-		{
-			ContainerPort: functionPort,
-			HostPort:      port,
-			Protocol:      "tcp",
+	cID, err := l.cr.ContainerCreate(&container.Config{
+		Image:  imageName,
+		Labels: l.labels(deploymentName, "function"),
+		ExposedPorts: nat.PortSet{
+			nat.Port(fmt.Sprintf("%d/tcp", functionPort)): struct{}{},
 		},
-	}
-
-	s.PublishExposedPorts = true
-	s.Expose = map[uint16]string{
-		functionPort: "tcp",
-	}
-
-	s.Env = map[string]string{
-		"LOCAL_SUBSCRIPTIONS": "{}",
-		"NITRIC_DEV_VOLUME":   devVolume,
-		"MINIO_ENDPOINT":      fmt.Sprintf("http://minio-%s:9000", deploymentName),
-		"MINIO_ACCESS_KEY":    "minioadmin",
-		"MINIO_SECRET_KEY":    "minioadmin",
-	}
-
-	if l.network != "bridge" {
-		s.Aliases = map[string][]string{
-			l.network: {f.Name()},
-		}
-		s.ContainerNetworkConfig.CNINetworks = []string{l.network}
-	}
-	s.Mounts = []specs.Mount{
-		{
-			Type:        "bind",
-			Source:      nitricRunDir,
-			Destination: devVolume,
+		Env: []string{
+			"LOCAL_SUBSCRIPTIONS={}",
+			"NITRIC_DEV_VOLUME=" + devVolume,
+			"MINIO_ENDPOINT=" + fmt.Sprintf("http://minio-%s:9000", deploymentName),
+			"MINIO_ACCESS_KEY=minioadmin",
+			"MINIO_SECRET_KEY=minioadmin",
 		},
-	}
-
-	cID, err := l.cr.CreateWithSpec(s)
+	}, &container.HostConfig{
+		PortBindings: nat.PortMap{
+			nat.Port(fmt.Sprintf("%d/tcp", functionPort)): []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d", port),
+				},
+			},
+		},
+		Mounts: []mount.Mount{
+			{
+				Type:   "bind",
+				Source: nitricRunDir,
+				Target: devVolume,
+			},
+		},
+		NetworkMode: container.NetworkMode(l.network),
+	}, &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			l.network: {Aliases: []string{f.Name()}},
+		},
+	}, imageName+"-"+deploymentName)
 	if err != nil {
 		return err
 	}
+
 	return l.cr.Start(cID)
 }

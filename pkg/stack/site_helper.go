@@ -14,12 +14,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !linux
+package stack
 
-package containerengine
+import (
+	"os/exec"
+	"path"
+)
 
-import "errors"
-
-func newPodman() (ContainerEngine, error) {
-	return nil, errors.New("podman only available on Linux")
+func (s *Site) Build(st *Stack) error {
+	for _, script := range s.BuildScripts {
+		cmd := exec.Command(script)
+		cmd.Dir = path.Join(stackPath, s.Path)
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -19,6 +19,7 @@ package build
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 
 	"github.com/nitrictech/newcli/pkg/containerengine"
@@ -33,6 +34,15 @@ func Create(s *stack.Stack, t *target.Target) error {
 		return err
 	}
 	for _, f := range s.Functions {
+		for _, script := range f.BuildScripts {
+			cmd := exec.Command(script)
+			cmd.Dir = path.Join(s.Path(), f.Context)
+			err := cmd.Run()
+			if err != nil {
+				return err
+			}
+		}
+
 		fh, err := os.CreateTemp("", "Dockerfile.*")
 		if err != nil {
 			return err
@@ -42,14 +52,22 @@ func Create(s *stack.Stack, t *target.Target) error {
 		if err != nil {
 			return err
 		}
-		err = cr.Build(fh.Name(), f.ContextDirectory(), f.ImageTagName(s, t.Provider), t.Provider, map[string]string{})
+		buildArgs := map[string]string{"PROVIDER": t.Provider}
+		if buildArgs["PROVIDER"] == "local" {
+			buildArgs["PROVIDER"] = "dev"
+		}
+		err = cr.Build(fh.Name(), f.ContextDirectory(), f.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, c := range s.Containers {
-		err := cr.Build(path.Join(c.ContextDirectory(), c.Dockerfile), c.ContextDirectory(), c.ImageTagName(s, t.Provider), t.Provider, map[string]string{})
+		buildArgs := map[string]string{"PROVIDER": t.Provider}
+		if buildArgs["PROVIDER"] == "local" {
+			buildArgs["PROVIDER"] = "dev"
+		}
+		err := cr.Build(path.Join(c.ContextDirectory(), c.Dockerfile), c.ContextDirectory(), c.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}

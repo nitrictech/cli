@@ -43,6 +43,7 @@ type ContainerEngine interface {
 	CopyFromArchive(nameOrID string, path string, reader io.Reader) error
 	ContainersListByLabel(match map[string]string) ([]entities.ListContainer, error)
 	RemoveByLabel(name, value string) error
+	ContainerExec(containerName string, cmd []string, workingDir string) error
 }
 
 func Discover() (ContainerEngine, error) {

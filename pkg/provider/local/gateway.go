@@ -17,14 +17,13 @@
 package local
 
 import (
-	"bytes"
 	"os"
 	"path"
 
 	nettypes "github.com/containers/podman/v3/libpod/network/types"
 	"github.com/containers/podman/v3/pkg/specgen"
 	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/jhoonb/archivex"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 const (
@@ -84,32 +83,16 @@ func (l *local) gateway(deploymentName, apiName, apiFile string) error {
 		return err
 	}
 
-	tar := new(archivex.TarFile)
-	apiSpecTarReader := bytes.Buffer{}
-	err = tar.CreateWriter(apiName+".tar", &apiSpecTarReader)
+	apiSpecTarReader, err := utils.TarReaderFromPath(dirName)
 	if err != nil {
 		return err
 	}
-	err = tar.AddAll(dirName, false)
-	if err != nil {
-		return err
-	}
-	tar.Close()
 
 	// Write the open api file to this api gateway source
-	err = l.cr.CopyFromArchive(cID, "/", &apiSpecTarReader)
+	err = l.cr.CopyFromArchive(cID, "/", apiSpecTarReader)
 	if err != nil {
 		return err
 	}
 
 	return l.cr.Start(cID)
-
-	/* TODO do we need this?
-	return containerResult{
-		name: api.name,
-		type: "api",
-		container,
-		ports: [port],
-	},nil
-	*/
 }

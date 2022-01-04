@@ -183,3 +183,7 @@ func (p *podman) RemoveByLabel(name, value string) error {
 	}
 	return nil
 }
+
+func (p *podman) ContainerExec(containerName string, cmd []string, workingDir string) error {
+	return nil
+}

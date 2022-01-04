@@ -347,3 +347,27 @@ func (d *docker) RemoveByLabel(name, value string) error {
 	}
 	return nil
 }
+
+func (d *docker) ContainerExec(containerName string, cmd []string, workingDir string) error {
+	rst, err := d.cli.ContainerExecCreate(context.Background(), containerName, types.ExecConfig{
+		WorkingDir: workingDir,
+		Cmd:        cmd,
+	})
+	if err != nil {
+		return err
+	}
+
+	for {
+		res, err := d.cli.ContainerExecInspect(context.Background(), rst.ID)
+		if err != nil {
+			return err
+		}
+		if res.Running {
+			continue
+		}
+		if res.ExitCode == 0 {
+			return nil
+		}
+		return fmt.Errorf("%s %v exited with %d", containerName, cmd, res.ExitCode)
+	}
+}

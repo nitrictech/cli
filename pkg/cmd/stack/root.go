@@ -20,12 +20,15 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/newcli/pkg/codeconfig"
+	"github.com/nitrictech/newcli/pkg/functiondockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/templates"
 )
@@ -109,9 +112,45 @@ var stackCreateCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(2),
 }
 
+var stackDescribeCmd = &cobra.Command{
+	Use:   "describe [handler pattern]",
+	Short: "describe stack dependencies",
+	Long:  `Describes stack dependencies`,
+	Run: func(cmd *cobra.Command, args []string) {
+		files, err := filepath.Glob(args[0])
+
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("found files: %v\n", files)
+
+		// Run collection on each of the files
+		ctx, _ := filepath.Abs(".")
+
+		// Create a new stack
+		stack := codeconfig.NewStack()
+
+		// Generate dev images to run on
+		if err := functiondockerfile.GenerateBaseDevImages(files); err != nil {
+			panic(err)
+		}
+
+		for _, f := range files {
+			if err := codeconfig.Collect(ctx, f, stack); err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		fmt.Println("stack:" + stack.String())
+	},
+	Args: cobra.MaximumNArgs(2),
+}
+
 func RootCommand() *cobra.Command {
 	stackCreateCmd.Flags().BoolVarP(&force, "force", "f", false, "force stack creation, even in non-empty directories.")
 	stackCmd.AddCommand(stackCreateCmd)
+	stackCmd.AddCommand(stackDescribeCmd)
 	return stackCmd
 }
 

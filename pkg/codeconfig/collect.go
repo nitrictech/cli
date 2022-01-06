@@ -57,7 +57,7 @@ func Collect(ctx string, handler string, stack *Stack) error {
 			"nitric-ts-dev", "-T", handler,
 		)
 	} else {
-		return fmt.Errorf("")
+		return fmt.Errorf("unsupported artifact")
 	}
 
 	err = cmd.Run()

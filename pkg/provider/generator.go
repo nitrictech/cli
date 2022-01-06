@@ -28,6 +28,6 @@ func NewProvider(s *stack.Stack, t *target.Target) (types.Provider, error) {
 	case "local":
 		return local.New(s, t)
 	default:
-		return nil, nil
+		return nil, utils.NewNotSupportedErr(fmt.Sprintf("provider %s is not supported", t.Provider))
 	}
 }

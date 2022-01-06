@@ -61,7 +61,7 @@ func Generate(f *stack.Function, version, provider string, fwriter io.Writer) er
 	}
 	generator, ok := generators[rt]
 	if generator == nil || !ok {
-		return errors.New("could not build dockerfile from " + f.Handler + ", extension not supported")
+		return utils.NewNotSupportedErr("could not build dockerfile from " + f.Handler + ", extension not supported")
 	}
 	return generator(f, version, provider, fwriter)
 }

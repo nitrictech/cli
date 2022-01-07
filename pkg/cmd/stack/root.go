@@ -117,17 +117,17 @@ var stackDescribeCmd = &cobra.Command{
 	Short: "describe stack dependencies",
 	Long:  `Describes stack dependencies`,
 	Run: func(cmd *cobra.Command, args []string) {
-		files, err := filepath.Glob(args[0])
+		// Run collection on each of the files
+		ctx, _ := filepath.Abs(".")
+
+		files, err := filepath.Glob(filepath.Join(ctx, args[0]))
 
 		if err != nil {
 			panic(err)
 		}
 
 		fmt.Printf("found files: %v\n", files)
-
-		// Run collection on each of the files
-		ctx, _ := filepath.Abs(".")
-
+		
 		// Create a new stack
 		stack := codeconfig.NewStack()
 
@@ -137,7 +137,9 @@ var stackDescribeCmd = &cobra.Command{
 		}
 
 		for _, f := range files {
-			if err := codeconfig.Collect(ctx, f, stack); err != nil {
+			rel, _ := filepath.Rel(ctx, f)
+
+			if err := codeconfig.Collect(ctx, rel, stack); err != nil {
 				fmt.Println(err)
 			}
 		}

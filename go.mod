@@ -9,9 +9,12 @@ require (
 	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.13.0
+	github.com/go-openapi/strfmt v0.21.1 // indirect
 	github.com/golangci/golangci-lint v1.43.0
+	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github/v41 v41.0.0
 	github.com/hashicorp/consul/sdk v0.8.0
+	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jhoonb/archivex v0.0.0-20201016144719-6a343cdae81d
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mitchellh/mapstructure v1.4.2

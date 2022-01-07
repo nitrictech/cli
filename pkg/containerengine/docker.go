@@ -150,8 +150,8 @@ func print(rd io.Reader) error {
 }
 
 func (d *docker) ListImages(stackName, containerName string) ([]Image, error) {
-	opts := types.ImageListOptions{}
-	opts.Filters.Add("reference", fmt.Sprintf("localhost/%s-%s-*", stackName, containerName))
+	opts := types.ImageListOptions{Filters: filters.NewArgs()}
+	opts.Filters.Add("reference", fmt.Sprintf("%s-%s-*", stackName, containerName))
 	imageSummaries, err := d.cli.ImageList(context.Background(), opts)
 	if err != nil {
 		return nil, err
@@ -159,9 +159,10 @@ func (d *docker) ListImages(stackName, containerName string) ([]Image, error) {
 
 	imgs := []Image{}
 	for _, i := range imageSummaries {
-		nameParts := strings.Split(i.ID, ":")
+		nameParts := strings.Split(i.RepoTags[0], ":")
+		id := strings.Split(i.ID, ":")[1][0:12]
 		imgs = append(imgs, Image{
-			ID:         i.ID,
+			ID:         id,
 			Repository: nameParts[0],
 			Tag:        nameParts[1],
 			CreatedAt:  time.Unix(i.Created, 0).Local().String(),

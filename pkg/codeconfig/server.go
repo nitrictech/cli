@@ -77,6 +77,8 @@ func (s *Server) Declare(ctx context.Context, req *pb.ResourceDeclareRequest) (*
 		s.function.AddQueue(req.Resource.Name, req.GetQueue())
 	case pb.ResourceType_Topic:
 		s.function.AddTopic(req.Resource.Name, req.GetTopic())
+	case pb.ResourceType_Policy:
+		s.function.AddPolicy(req.GetPolicy())
 	}
 
 	tmpStack := &Stack{functions: []*Function{s.function}}

@@ -3,11 +3,14 @@ package codeconfig
 import (
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"strings"
 
-	v1 "github.com/nitrictech/apis/go/nitric/v1"
 	"google.golang.org/grpc"
+
+	v1 "github.com/nitrictech/apis/go/nitric/v1"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 // Collect - Collects information about a function for a nitric stack
@@ -42,6 +45,8 @@ func Collect(ctx string, handler string, stack *Stack) error {
 	// Select an image to use based on the handler
 	var cmd *exec.Cmd = nil
 
+	var localIp = utils.GetLocalIP()
+
 	if strings.HasSuffix(handler, ".ts") {
 		cmd = exec.Command(
 			"docker",
@@ -49,7 +54,7 @@ func Collect(ctx string, handler string, stack *Stack) error {
 			"--rm",
 			// setup host.docker.internal to route to host gateway
 			// to access rpc server hosted by local CLI run
-			"--add-host", "host.docker.internal:172.17.0.1",
+			"--add-host", "host.docker.internal:"+localIp,
 			// Set the address to the bound port
 			"-e", "SERVICE_ADDRESS=host.docker.internal:50051",
 			// Set the volume mount to bound context

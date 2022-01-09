@@ -75,37 +75,27 @@ func Create(s *stack.Stack, t *target.Target) error {
 	return nil
 }
 
-type StackImages struct {
-	Name       string                             `yaml:"name"`
-	Functions  map[string][]containerengine.Image `yaml:"functionImages,omitempty"`
-	Containers map[string][]containerengine.Image `yaml:"containerImages,omitempty"`
-}
-
-func List(s *stack.Stack) (*StackImages, error) {
+func List(s *stack.Stack) ([]containerengine.Image, error) {
 	cr, err := containerengine.Discover()
 	if err != nil {
 		return nil, err
 	}
-	si := &StackImages{
-		Name:       s.Name,
-		Functions:  map[string][]containerengine.Image{},
-		Containers: map[string][]containerengine.Image{},
-	}
-	for n, f := range s.Functions {
-		images, err := cr.ListImages(s.Name, f.Name())
+	images := []containerengine.Image{}
+	for _, f := range s.Functions {
+		imgs, err := cr.ListImages(s.Name, f.Name())
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {
-			si.Functions[n] = images
+			images = append(images, imgs...)
 		}
 	}
-	for n, c := range s.Containers {
-		images, err := cr.ListImages(s.Name, c.Name())
+	for _, c := range s.Containers {
+		imgs, err := cr.ListImages(s.Name, c.Name())
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {
-			si.Functions[n] = images
+			images = append(images, imgs...)
 		}
 	}
-	return si, nil
+	return images, nil
 }

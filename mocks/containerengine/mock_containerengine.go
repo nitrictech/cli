@@ -81,6 +81,21 @@ func (mr *MockContainerEngineMockRecorder) ContainerExec(arg0, arg1, arg2 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerExec", reflect.TypeOf((*MockContainerEngine)(nil).ContainerExec), arg0, arg1, arg2)
 }
 
+// ContainerWait mocks base method.
+func (m *MockContainerEngine) ContainerWait(arg0 string, arg1 container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerWait", arg0, arg1)
+	ret0, _ := ret[0].(<-chan container.ContainerWaitOKBody)
+	ret1, _ := ret[1].(<-chan error)
+	return ret0, ret1
+}
+
+// ContainerWait indicates an expected call of ContainerWait.
+func (mr *MockContainerEngineMockRecorder) ContainerWait(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerWait", reflect.TypeOf((*MockContainerEngine)(nil).ContainerWait), arg0, arg1)
+}
+
 // ContainersListByLabel mocks base method.
 func (m *MockContainerEngine) ContainersListByLabel(arg0 map[string]string) ([]types.Container, error) {
 	m.ctrl.T.Helper()

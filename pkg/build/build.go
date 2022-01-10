@@ -23,6 +23,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/nitrictech/newcli/pkg/codeconfig"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/functiondockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
@@ -91,7 +92,7 @@ func CreateBaseDev(handlers []string) error {
 	imagesToBuild := map[string]string{}
 	for _, h := range handlers {
 		lang := strings.Replace(path.Ext(h), ".", "", 1)
-		imagesToBuild[lang] = "nitric-" + lang + "-dev"
+		imagesToBuild[lang] = codeconfig.ImageNameFromExt(path.Ext(h))
 	}
 
 	for lang, imageTag := range imagesToBuild {

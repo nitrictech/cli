@@ -43,6 +43,7 @@ type ContainerEngine interface {
 	NetworkCreate(name string) error
 	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error
+	ContainerWait(containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error)
 	CopyFromArchive(nameOrID string, path string, reader io.Reader) error
 	ContainersListByLabel(match map[string]string) ([]types.Container, error)
 	RemoveByLabel(name, value string) error

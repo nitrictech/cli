@@ -142,7 +142,7 @@ var stackDescribeCmd = &cobra.Command{
 
 		fmt.Println("stack:" + stack.String())
 	},
-	Args: cobra.MaximumNArgs(2),
+	Args: cobra.ExactArgs(1),
 }
 
 func RootCommand() *cobra.Command {

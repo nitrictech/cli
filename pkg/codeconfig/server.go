@@ -27,7 +27,7 @@ import (
 )
 
 type Server struct {
-	function *Function
+	function *FunctionDependencies
 	pb.UnimplementedFaasServiceServer
 	pb.UnimplementedResourceServiceServer
 }
@@ -83,9 +83,9 @@ func (s *Server) Declare(ctx context.Context, req *pb.ResourceDeclareRequest) (*
 		s.function.AddPolicy(req.GetPolicy())
 	}
 
-	tmpStack := &Stack{functions: []*Function{s.function}}
+	cc := &codeConfig{functions: map[string]*FunctionDependencies{"": s.function}}
 	for a := range s.function.apis {
-		if spec, e := tmpStack.GetApiSpec(a); spec != nil {
+		if spec, e := cc.apiSpec(a); spec != nil {
 			fmt.Println("oaiSpec", spec)
 		} else {
 			fmt.Println("specErr", e.Error())
@@ -95,8 +95,8 @@ func (s *Server) Declare(ctx context.Context, req *pb.ResourceDeclareRequest) (*
 	return &pb.ResourceDeclareResponse{}, nil
 }
 
-// New - Creates a new deployment server
-func NewServer(function *Function) *Server {
+// NewServer - Creates a new deployment server
+func NewServer(function *FunctionDependencies) *Server {
 	return &Server{
 		function: function,
 	}

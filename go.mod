@@ -17,6 +17,7 @@ require (
 	github.com/google/go-github/v41 v41.0.0
 	github.com/hashicorp/consul/sdk v0.8.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
+	github.com/imdario/mergo v0.3.12
 	github.com/jhoonb/archivex v0.0.0-20201016144719-6a343cdae81d
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mitchellh/mapstructure v1.4.2

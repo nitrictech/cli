@@ -28,11 +28,11 @@ import (
 func TestCreateBaseDev(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	me := mock_containerengine.NewMockContainerEngine(ctrl)
-	me.EXPECT().Build(gomock.Any(), ".", "nitric-ts-dev", map[string]string{})
+	me.EXPECT().Build(gomock.Any(), "path/to/stack", "nitric-ts-dev", map[string]string{})
 
 	containerengine.MockEngine = me
 
-	if err := CreateBaseDev([]string{"foo.ts"}); err != nil {
+	if err := CreateBaseDev("path/to/stack", map[string]string{"ts": "nitric-ts-dev"}); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)
 	}
 }

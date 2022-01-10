@@ -100,6 +100,10 @@ func (p *podman) Start(nameOrID string) error {
 	return p.docker.Start(nameOrID)
 }
 
+func (p *podman) ContainerWait(containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+	return p.docker.ContainerWait(containerID, condition)
+}
+
 func (p *podman) CopyFromArchive(nameOrID string, path string, reader io.Reader) error {
 	return p.docker.CopyFromArchive(nameOrID, path, reader)
 }

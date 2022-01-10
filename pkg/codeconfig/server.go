@@ -96,7 +96,7 @@ func (s *Server) Declare(ctx context.Context, req *pb.ResourceDeclareRequest) (*
 }
 
 // New - Creates a new deployment server
-func New(function *Function) *Server {
+func NewServer(function *Function) *Server {
 	return &Server{
 		function: function,
 	}

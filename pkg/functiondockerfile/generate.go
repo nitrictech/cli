@@ -20,12 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path"
-	"strings"
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/stack"
 )
 
@@ -65,65 +62,15 @@ func Generate(f *stack.Function, version, provider string, fwriter io.Writer) er
 	return errors.New("could not build dockerfile from " + f.Handler + ", extension not supported")
 }
 
-const (
-	runtimeNode = "nitric-ts-dev"
-)
-
-// Generates base dev images for writing...
-// Generate based on handler extends
+// GenerateForCodeAsConfig dockerfiles for code-as-config
 // These will initially be generated without the membrane
-func GenerateBaseDevImages(handlers []string) error {
-	devImages := make(map[string]dockerfile.ContainerState)
-
-	ce, err := containerengine.Discover()
-	if err != nil {
-		return err
+func GenerateForCodeAsConfig(handler string, fwriter io.Writer) error {
+	switch path.Ext(handler) {
+	case ".js":
+		fallthrough
+	case ".ts":
+		return typescriptDevBaseGenerator(fwriter)
 	}
 
-	for _, h := range handlers {
-		switch path.Ext(h) {
-		case ".js":
-		case ".ts":
-			// Deduplicate images to be created
-			if devImages[runtimeNode] == nil {
-				i, err := typescriptDevBaseGenerator()
-
-				if err != nil {
-					return err
-				}
-
-				devImages[runtimeNode] = i
-			}
-		}
-	}
-
-	for k, v := range devImages {
-		f, err := os.CreateTemp("", fmt.Sprintf("%s.*.dockerfile", k))
-
-		if err != nil {
-			return err
-		}
-
-		defer func() {
-			f.Close()
-			os.Remove(f.Name())
-		}()
-
-		// Write to tmp files
-		if err := WriteContainerState(v, f); err != nil {
-			return err
-		}
-
-		if err := ce.Build(f.Name(), ".", k, map[string]string{}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func WriteContainerState(con dockerfile.ContainerState, wr io.Writer) error {
-	_, err := wr.Write([]byte(strings.Join(con.Lines(), "\n")))
-
-	return err
+	return errors.New("could not build dockerfile from " + handler + ", extension not supported")
 }

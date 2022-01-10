@@ -79,8 +79,8 @@ func (a *Api) AddWorker(worker *pb.ApiWorker) error {
 	return nil
 }
 
-// Function - Stores information about a Nitric Function, and it's dependencies
-type Function struct {
+// FunctionDependencies - Stores information about a Nitric Function, and it's dependencies
+type FunctionDependencies struct {
 	apis          map[string]*Api
 	subscriptions map[string]*pb.SubscriptionWorker
 	schedules     map[string]*pb.ScheduleWorker
@@ -92,27 +92,14 @@ type Function struct {
 	lock          sync.RWMutex
 }
 
-func (a *Function) String() string {
-	return fmt.Sprintf(`
-	  apis: %+v,
-	  subscriptions: %+v,
-		schedules: %+v,
-		buckets: %+v,
-		topics: %+v,
-		collections: %+v,
-		queues: %+v,
-		policies: %+v,
-	`, a.apis, a.subscriptions, a.schedules, a.buckets, a.topics, a.collections, a.queues, a.policies)
-}
-
 // AddPolicy - Adds an access policy dependency to the function
-func (a *Function) AddPolicy(p *pb.PolicyResource) {
+func (a *FunctionDependencies) AddPolicy(p *pb.PolicyResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	a.policies = append(a.policies, p)
 }
 
-func (a *Function) AddApiHandler(aw *pb.ApiWorker) error {
+func (a *FunctionDependencies) AddApiHandler(aw *pb.ApiWorker) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	if a.apis[aw.Api] == nil {
@@ -123,7 +110,7 @@ func (a *Function) AddApiHandler(aw *pb.ApiWorker) error {
 }
 
 // AddSubscriptionHandler - registers a handler in the function that subscribes to a topic of events
-func (a *Function) AddSubscriptionHandler(sw *pb.SubscriptionWorker) error {
+func (a *FunctionDependencies) AddSubscriptionHandler(sw *pb.SubscriptionWorker) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	// TODO: Determine if this subscription handler has a write policy to the same topic
@@ -139,7 +126,7 @@ func (a *Function) AddSubscriptionHandler(sw *pb.SubscriptionWorker) error {
 }
 
 // AddScheduleHandler - registers a handler in the function that runs on a schedule
-func (a *Function) AddScheduleHandler(sw *pb.ScheduleWorker) error {
+func (a *FunctionDependencies) AddScheduleHandler(sw *pb.ScheduleWorker) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	if a.schedules[sw.Key] != nil {
@@ -152,36 +139,36 @@ func (a *Function) AddScheduleHandler(sw *pb.ScheduleWorker) error {
 }
 
 // AddBucket - adds a storage bucket dependency to the function
-func (a *Function) AddBucket(name string, b *pb.BucketResource) {
+func (a *FunctionDependencies) AddBucket(name string, b *pb.BucketResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	a.buckets[name] = b
 }
 
 // AddTopic - adds a pub/sub topic dependency to the function
-func (a *Function) AddTopic(name string, t *pb.TopicResource) {
+func (a *FunctionDependencies) AddTopic(name string, t *pb.TopicResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	a.topics[name] = t
 }
 
 // AddCollection - adds a document database collection dependency to the function
-func (a *Function) AddCollection(name string, c *pb.CollectionResource) {
+func (a *FunctionDependencies) AddCollection(name string, c *pb.CollectionResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	a.collections[name] = c
 }
 
 // AddQueue - adds a queue dependency to the function
-func (a *Function) AddQueue(name string, q *pb.QueueResource) {
+func (a *FunctionDependencies) AddQueue(name string, q *pb.QueueResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	a.queues[name] = q
 }
 
 // NewFunction - creates a new Nitric Function, ready to register handlers and dependencies.
-func NewFunction() *Function {
-	return &Function{
+func NewFunction() *FunctionDependencies {
+	return &FunctionDependencies{
 		apis:          make(map[string]*Api),
 		subscriptions: make(map[string]*pb.SubscriptionWorker),
 		schedules:     make(map[string]*pb.ScheduleWorker),

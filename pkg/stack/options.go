@@ -38,6 +38,10 @@ func wrapStatError(err error) error {
 	return err
 }
 
+func StackPath() string {
+	return stackPath
+}
+
 func FromOptions() (*Stack, error) {
 	ss, err := os.Stat(stackPath)
 	if err != nil {
@@ -57,5 +61,5 @@ func FromOptions() (*Stack, error) {
 func AddOptions(cmd *cobra.Command) {
 	wd, err := os.Getwd()
 	cobra.CheckErr(err)
-	cmd.Flags().StringVarP(&stackPath, "stack", "s", wd, "path to the nitric.yaml stack")
+	cmd.Flags().StringVarP(&stackPath, "stack", "s", wd, "path to the stack")
 }

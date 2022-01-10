@@ -11,6 +11,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/getkin/kin-openapi v0.88.0
 	github.com/go-openapi/strfmt v0.21.1 // indirect
+	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.43.0
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github/v41 v41.0.0

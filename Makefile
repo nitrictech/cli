@@ -5,8 +5,12 @@ GOLANGCI_LINT_CACHE=${HOME}/.cache/golangci-lint
 endif
 GOLANGCI_LINT ?= GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) go run github.com/golangci/golangci-lint/cmd/golangci-lint
 
+.PHONY: generate
+generate:
+	@go run github.com/golang/mock/mockgen github.com/nitrictech/newcli/pkg/containerengine ContainerEngine > mocks/containerengine/mock_containerengine.go
+
 .PHONY: build
-build:
+build: generate
 	CGO_ENABLED=0 go build -o bin/nitric ./pkg/cmd/
 
 .PHONY: fmt
@@ -21,5 +25,12 @@ lint:
 test:
 	go test -v ./pkg/...
 
+generate_check: generate
+	@if [ -n "$$(git status --untracked-files=no --porcelain)" ]; then \
+        echo "'make generate' requires you to check in the following files:"; \
+		git ls-files -m ; \
+		exit 1 ; \
+    fi
+
 .PHONY: check
-check: lint test
+check: generate_check lint test

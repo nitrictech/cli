@@ -127,7 +127,7 @@ var stackDescribeCmd = &cobra.Command{
 		}
 
 		fmt.Printf("found files: %v\n", files)
-		
+
 		// Create a new stack
 		stack := codeconfig.NewStack()
 

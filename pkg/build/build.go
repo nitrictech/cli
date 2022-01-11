@@ -21,9 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 
-	"github.com/nitrictech/newcli/pkg/codeconfig"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/functiondockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
@@ -83,16 +81,10 @@ func Create(s *stack.Stack, t *target.Target) error {
 }
 
 // CreateBaseDev builds images for code-as-config
-func CreateBaseDev(handlers []string) error {
+func CreateBaseDev(stackPath string, imagesToBuild map[string]string) error {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return err
-	}
-
-	imagesToBuild := map[string]string{}
-	for _, h := range handlers {
-		lang := strings.Replace(path.Ext(h), ".", "", 1)
-		imagesToBuild[lang] = codeconfig.ImageNameFromExt(path.Ext(h))
 	}
 
 	for lang, imageTag := range imagesToBuild {
@@ -110,7 +102,7 @@ func CreateBaseDev(handlers []string) error {
 			return err
 		}
 
-		if err := ce.Build(f.Name(), ".", imageTag, map[string]string{}); err != nil {
+		if err := ce.Build(f.Name(), stackPath, imageTag, map[string]string{}); err != nil {
 			return err
 		}
 	}

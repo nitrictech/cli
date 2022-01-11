@@ -16,15 +16,37 @@
 
 package utils
 
-import "github.com/pkg/errors"
+import (
+	"strings"
+)
 
-// WrapError is just a convienance function to prevent checking of nils.
-func WrapError(errFirst, errSecond error) error {
-	if errFirst != nil && errSecond != nil {
-		return errors.Wrap(errFirst, errSecond.Error())
+func NewErrorList() *ErrorList {
+	return &ErrorList{}
+}
+
+// ErrorList is for when one error is not the cause of others.
+type ErrorList struct {
+	errs []error
+}
+
+func (e *ErrorList) Add(err error) {
+	if err == nil {
+		return
 	}
-	if errFirst != nil {
-		return errFirst
+	e.errs = append(e.errs, err)
+}
+
+func (e *ErrorList) Error() string {
+	msgs := []string{}
+	for _, m := range e.errs {
+		msgs = append(msgs, m.Error())
 	}
-	return errSecond
+	return strings.Join(msgs, "\n")
+}
+
+func (e *ErrorList) Aggregate() error {
+	if len(e.errs) == 0 {
+		return nil
+	}
+	return e
 }

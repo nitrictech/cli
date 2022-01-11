@@ -29,6 +29,7 @@ import (
 
 	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/codeconfig"
+	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/templates"
 )
@@ -117,30 +118,24 @@ var stackDescribeCmd = &cobra.Command{
 	Short: "describe stack dependencies",
 	Long:  `Describes stack dependencies`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Run collection on each of the files
-		ctx, _ := filepath.Abs(".")
-
-		files, err := filepath.Glob(filepath.Join(ctx, args[0]))
-		cobra.CheckErr(err)
-
-		fmt.Printf("found files: %v\n", files)
-
-		// Generate dev images to run on
-		err = build.CreateBaseDev(files)
-		cobra.CheckErr(err)
-
-		// Create a new stack
-		stack := codeconfig.NewStack()
-
-		for _, f := range files {
-			rel, _ := filepath.Rel(ctx, f)
-
-			if err := codeconfig.Collect(ctx, rel, stack); err != nil {
-				fmt.Println(err)
-			}
+		stackPath, err := filepath.Abs(stack.StackPath())
+		if err != nil {
+			cobra.CheckErr(err)
 		}
 
-		fmt.Println("stack:" + stack.String())
+		cc, err := codeconfig.New(stackPath, args[0])
+		cobra.CheckErr(err)
+
+		// Generate dev images to run on
+		err = build.CreateBaseDev(stackPath, cc.ImagesToBuild())
+		cobra.CheckErr(err)
+
+		err = cc.Collect()
+		cobra.CheckErr(err)
+
+		s, err := cc.ToStack()
+		cobra.CheckErr(err)
+		output.Print(s)
 	},
 	Args: cobra.ExactArgs(1),
 }
@@ -148,6 +143,8 @@ var stackDescribeCmd = &cobra.Command{
 func RootCommand() *cobra.Command {
 	stackCreateCmd.Flags().BoolVarP(&force, "force", "f", false, "force stack creation, even in non-empty directories.")
 	stackCmd.AddCommand(stackCreateCmd)
+
+	stack.AddOptions(stackDescribeCmd)
 	stackCmd.AddCommand(stackDescribeCmd)
 	return stackCmd
 }

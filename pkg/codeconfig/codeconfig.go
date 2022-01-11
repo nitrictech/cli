@@ -346,7 +346,11 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 
 		topicTriggers := make([]string, len(f.subscriptions), 0)
 		for k := range f.subscriptions {
-			topicTriggers = append(topicTriggers, k)
+			if f.topics[k] == nil {
+				errs.Add(fmt.Errorf("subscription to topic %s defined, but topic does not exist", k))
+			} else {
+				topicTriggers = append(topicTriggers, k)
+			}
 		}
 
 		s.Functions[name] = stack.Function{

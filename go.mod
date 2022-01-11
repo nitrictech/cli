@@ -10,6 +10,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.13.0
 	github.com/getkin/kin-openapi v0.88.0
+	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.43.0
 	github.com/google/go-github/v41 v41.0.0
 	github.com/hashicorp/consul/sdk v0.8.0

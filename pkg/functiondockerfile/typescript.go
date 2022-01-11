@@ -51,3 +51,23 @@ func typescriptGenerator(f *stack.Function, version, provider string, w io.Write
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err
 }
+
+// typescriptDevBaseGenerator generates a base image for code-as-config
+func typescriptDevBaseGenerator(w io.Writer) error {
+	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+		From:   "node:alpine",
+		Ignore: []string{"node_modules/", ".nitric/", ".git/", ".idea/"},
+	})
+	if err != nil {
+		return err
+	}
+
+	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "typescript", "ts-node", "nodemon"}})
+	con.Config(dockerfile.ConfigOptions{
+		Entrypoint: []string{"ts-node"},
+		WorkingDir: "/app/",
+	})
+
+	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+	return err
+}

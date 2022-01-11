@@ -21,7 +21,9 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
+	"github.com/nitrictech/newcli/pkg/codeconfig"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/functiondockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
@@ -47,7 +49,12 @@ func Create(s *stack.Stack, t *target.Target) error {
 		if err != nil {
 			return err
 		}
-		defer os.Remove(fh.Name())
+
+		defer func() {
+			fh.Close()
+			os.Remove(fh.Name())
+		}()
+
 		err = functiondockerfile.Generate(&f, f.VersionString(s), t.Provider, fh)
 		if err != nil {
 			return err
@@ -72,6 +79,42 @@ func Create(s *stack.Stack, t *target.Target) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// CreateBaseDev builds images for code-as-config
+func CreateBaseDev(handlers []string) error {
+	ce, err := containerengine.Discover()
+	if err != nil {
+		return err
+	}
+
+	imagesToBuild := map[string]string{}
+	for _, h := range handlers {
+		lang := strings.Replace(path.Ext(h), ".", "", 1)
+		imagesToBuild[lang] = codeconfig.ImageNameFromExt(path.Ext(h))
+	}
+
+	for lang, imageTag := range imagesToBuild {
+		f, err := os.CreateTemp("", fmt.Sprintf("%s.*.dockerfile", lang))
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			f.Close()
+			os.Remove(f.Name())
+		}()
+
+		if err := functiondockerfile.GenerateForCodeAsConfig("handler."+lang, f); err != nil {
+			return err
+		}
+
+		if err := ce.Build(f.Name(), ".", imageTag, map[string]string{}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

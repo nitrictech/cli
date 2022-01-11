@@ -27,8 +27,8 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/codeconfig"
-	"github.com/nitrictech/newcli/pkg/functiondockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/templates"
 )
@@ -121,20 +121,16 @@ var stackDescribeCmd = &cobra.Command{
 		ctx, _ := filepath.Abs(".")
 
 		files, err := filepath.Glob(filepath.Join(ctx, args[0]))
-
-		if err != nil {
-			panic(err)
-		}
+		cobra.CheckErr(err)
 
 		fmt.Printf("found files: %v\n", files)
 
+		// Generate dev images to run on
+		err = build.CreateBaseDev(files)
+		cobra.CheckErr(err)
+
 		// Create a new stack
 		stack := codeconfig.NewStack()
-
-		// Generate dev images to run on
-		if err := functiondockerfile.GenerateBaseDevImages(files); err != nil {
-			panic(err)
-		}
 
 		for _, f := range files {
 			rel, _ := filepath.Rel(ctx, f)
@@ -146,7 +142,7 @@ var stackDescribeCmd = &cobra.Command{
 
 		fmt.Println("stack:" + stack.String())
 	},
-	Args: cobra.MaximumNArgs(2),
+	Args: cobra.ExactArgs(1),
 }
 
 func RootCommand() *cobra.Command {

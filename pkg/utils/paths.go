@@ -16,7 +16,12 @@
 
 package utils
 
-import "strings"
+import (
+	"log"
+	"os"
+	"path"
+	"strings"
+)
 
 // slashSplitter - used to split strings, with the same output regardless of leading or trailing slashes
 // e.g - strings.FieldsFunc("/one/two/three/", f) == strings.FieldsFunc("/one/two/three", f) == strings.FieldsFunc("one/two/three", f) == ["one" "two" "three"]
@@ -28,4 +33,20 @@ func slashSplitter(c rune) bool {
 // e.g - SplitPath("/one/two/three/") == SplitPath("/one/two/three") == SplitPath("one/two/three") == ["one" "two" "three"]
 func SplitPath(p string) []string {
 	return strings.FieldsFunc(p, slashSplitter)
+}
+
+// Gets the nitric home directory
+func NitricHome() string {
+	nitricHomeEnv := os.Getenv("NITRIC_HOME")
+
+	if nitricHomeEnv != "" {
+		return nitricHomeEnv
+	}
+
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return path.Join(dirname, ".nitric")
 }

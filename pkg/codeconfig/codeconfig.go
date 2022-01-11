@@ -97,6 +97,11 @@ func (c *codeConfig) Collect() error {
 	return nil
 }
 
+type apiHandler struct {
+	worker *v1.ApiWorker
+	target string
+}
+
 // apiSpec produces an open api v3 spec for the requests API name
 func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	doc := &openapi3.T{
@@ -111,11 +116,16 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	doc.OpenAPI = "3.0.1"
 
 	// Compile an API specification from the functions in the stack for the given API name
-	workers := make([]*v1.ApiWorker, 0)
+	workers := make([]*apiHandler, 0)
 
 	// Collect all workers
-	for _, f := range c.functions {
-		workers = append(workers, f.apis[api].workers...)
+	for handler, f := range c.functions {
+		for _, w := range f.apis[api].workers {
+			workers = append(workers, &apiHandler{
+				target: containerNameFromHandler(handler),
+				worker: w,
+			})
+		}
 	}
 
 	// loop over workers to build new api specification
@@ -124,7 +134,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	for _, w := range workers {
 		params := make(openapi3.Parameters, 0)
 		normalizedPath := ""
-		for _, p := range strings.Split(w.Path, "/") {
+		for _, p := range strings.Split(w.worker.Path, "/") {
 			if strings.HasPrefix(p, ":") {
 				paramName := strings.Replace(p, ":", "", -1)
 				params = append(params, &openapi3.ParameterRef{
@@ -150,7 +160,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 			doc.Paths[normalizedPath] = pathItem
 		}
 
-		for _, m := range w.Methods {
+		for _, m := range w.worker.Methods {
 			if pathItem.Operations() != nil && pathItem.Operations()[m] != nil {
 				// If the operation already exists we should fail
 				// NOTE: This should not happen as operations are stored in a map
@@ -158,10 +168,17 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				return nil, fmt.Errorf("found conflicting operations")
 			}
 
-			// See if the path already exists
 			doc.AddOperation(normalizedPath, m, &openapi3.Operation{
 				OperationID: normalizedPath + m,
 				Responses:   openapi3.NewResponses(),
+				ExtensionProps: openapi3.ExtensionProps{
+					Extensions: map[string]interface{}{
+						"x-nitric-target": map[string]interface{}{
+							"type": "function",
+							"name": containerNameFromHandler(w.target),
+						},
+					},
+				},
 			})
 		}
 	}

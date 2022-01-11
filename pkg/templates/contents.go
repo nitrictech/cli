@@ -20,125 +20,129 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
+	"path"
 	"path/filepath"
-	"strings"
 
-	"github.com/google/go-github/v41/github"
-	"golang.org/x/oauth2"
+	"github.com/hashicorp/go-getter"
+	"gopkg.in/yaml.v2"
+
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
-type RepoContent interface {
-	ListSubDirectories(path string) ([]string, error)
-	DownloadDirectoryContents(path string, destDirectory string, force bool) error
+type Template struct {
+	Name string `yaml:"name"`
+	Path string `yaml:"path"`
 }
 
-type repoContent struct {
-	client *github.Client
-	repo   string
-	owner  string
+type TemplatesConfig struct {
+	Templates []Template
 }
 
-func NewRepoContent(owner, repo string) RepoContent {
-	ctx := context.Background()
+const (
+	rawGitHubURL        = "https://raw.githubusercontent.com"
+	templatesRepo       = "nitrictech/stack-templates"
+	templatesRepoGitURL = "github.com/nitrictech/stack-templates.git"
+)
 
-	token := os.Getenv("GITHUB_AUTH_TOKEN")
-	var tc *http.Client
-	if token != "" {
-		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-		tc = oauth2.NewClient(ctx, ts)
-	} else {
-		fmt.Println("Attempting to download from github without a GITHUB_AUTH_TOKEN")
-	}
+var configPath = path.Join(utils.NitricHome(), "store", "repositories.yml")
 
-	return &repoContent{
-		repo:   repo,
-		owner:  owner,
-		client: github.NewClient(tc),
-	}
-}
+func ReadTemplatesConfig() (*TemplatesConfig, error) {
+	var config *TemplatesConfig
 
-func (r *repoContent) ListSubDirectories(path string) ([]string, error) {
-	_, directoryContent, _, err := r.client.Repositories.GetContents(context.Background(), r.owner, r.repo, path, nil)
+	// Open YAML file
+	file, err := os.Open(configPath)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
-	var subdirs []string
-	for _, c := range directoryContent {
-		switch *c.Type {
-		case "file":
-		case "dir":
-			if !strings.HasPrefix(*c.Path, ".") && strings.Contains(*c.Path, "-stack") {
-				subdirs = append(subdirs, *c.Path)
-			}
+	// Decode YAML file to struct
+	if file != nil {
+		decoder := yaml.NewDecoder(file)
+		if err := decoder.Decode(&config); err != nil {
+			return nil, err
 		}
 	}
-	return subdirs, nil
+
+	return config, nil
 }
 
-func (r *repoContent) DownloadDirectoryContents(path string, destDir string, force bool) error {
+func officialStackName(name string) string {
+	return "official/" + name
+}
+
+func ListTemplates() (TemplatesConfig, error) {
+	client := &getter.Client{
+		Ctx: context.Background(),
+		//define the destination to where the directory will be stored. This will create the directory if it doesnt exist
+		Dst: configPath,
+		//the repository with a subdirectory I would like to clone only
+		Src:  rawGitHubURL + "/" + path.Join(templatesRepo, "main/repository.yaml"),
+		Mode: getter.ClientModeFile,
+		//define the type of detectors go getter should use, in this case only github is needed
+
+		//provide the getter needed to download the files
+		Getters: map[string]getter.Getter{
+			"https": &getter.HttpGetter{},
+		},
+	}
+
+	// download file
+	if err := client.Get(); err != nil {
+		return TemplatesConfig{}, fmt.Errorf("Error getting path %s: %v", client.Src, err)
+	}
+
+	var config, err = ReadTemplatesConfig()
+
+	if err != nil {
+		return TemplatesConfig{}, err
+	}
+
+	if config.Templates == nil {
+		return TemplatesConfig{}, errors.New("Templates array does not exist in respositories.yml")
+	}
+
+	var transformedConfig = TemplatesConfig{}
+
+	for _, template := range config.Templates {
+		transformedTemplate := Template{Name: officialStackName(template.Name), Path: filepath.Base(template.Path)}
+		transformedConfig.Templates = append(transformedConfig.Templates, transformedTemplate)
+	}
+
+	return transformedConfig, nil
+}
+
+func DownloadDirectoryContents(templatePath string, destDir string, force bool) error {
 	_, err := os.Stat(destDir)
 	if err == nil && !force {
 		return errors.New("stack directory already exists and isn't empty, choose a different name or use the --force flag to create in a non-empty directory")
 	}
 
-	_, directoryContent, _, err := r.client.Repositories.GetContents(context.Background(), r.owner, r.repo, path, nil)
-	if err != nil {
-		return err
+	client := &getter.Client{
+		Ctx: context.Background(),
+		//define the destination to where the directory will be stored. This will create the directory if it doesnt exist
+		Dst: destDir,
+		Dir: true,
+		//the repository with a subdirectory I would like to clone only
+		Src:  templatesRepoGitURL + "//" + templatePath,
+		Mode: getter.ClientModeDir,
+		//define the type of detectors go getter should use, in this case only github is needed
+		Detectors: []getter.Detector{
+			&getter.GitHubDetector{},
+		},
+		//provide the getter needed to download the files
+		Getters: map[string]getter.Getter{
+			"git": &getter.GitGetter{},
+		},
 	}
 
-	for _, c := range directoryContent {
-		local := filepath.Join(destDir, strings.Replace(*c.Path, path, "", 1))
+	// TODO add spinner
 
-		switch *c.Type {
-		case "file":
-			r.downloadFile(c, local, force)
-		case "dir":
-			err = r.DownloadDirectoryContents(*c.Path, local, force)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *repoContent) downloadFile(content *github.RepositoryContent, localPath string, force bool) error {
-	rc, _, err := r.client.Repositories.DownloadContents(context.Background(), r.owner, r.repo, *content.Path, nil)
-	if err != nil {
-		return err
-	}
-	defer rc.Close()
-
-	b, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return err
+	// downloads files
+	if err := client.Get(); err != nil {
+		return fmt.Errorf("Error getting path %s: %v", client.Src, err)
 	}
 
-	err = os.MkdirAll(filepath.Dir(localPath), 0755)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(localPath)
-	if err == nil && !force {
-		return errors.New("file already exists re-run with --force to create, disregarding existing contents")
-	}
-	fmt.Println(localPath)
-	f, err := os.Create(localPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	n, err := f.Write(b)
-	if err != nil {
-		return err
-	}
-	if n != *content.Size {
-		return fmt.Errorf("number of bytes differ, %d vs %d\n", n, *content.Size)
-	}
 	return nil
 }

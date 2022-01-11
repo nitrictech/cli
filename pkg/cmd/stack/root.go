@@ -65,21 +65,36 @@ var stackCreateCmd = &cobra.Command{
 			TemplateName string
 		}{}
 
-		rc := templates.NewRepoContent("nitrictech", "stack-templates")
-		dirs, err := rc.ListSubDirectories("")
+		templatesConfig, err := templates.ListTemplates()
+
 		cobra.CheckErr(err)
+
+		templatesList := templatesConfig.Templates
+
+		var dirs []string
+
+		for _, template := range templatesList {
+			dirs = append(dirs, template.Name)
+		}
+
 		templateNameQu.Prompt = &survey.Select{
 			Message: "Choose a template:",
 			Options: dirs,
-			Default: "go-stack",
+			Default: "typescript-stack",
 		}
 		templateNameQu.Validate = func(ans interface{}) error {
+			if len(args) < 2 {
+				return nil
+			}
+
 			a, ok := ans.(string)
+
 			if !ok {
 				return errors.New("wrong type, need a string")
 			}
-			for _, d := range dirs {
-				if d == a {
+
+			for _, d := range templatesList {
+				if d.Path == a {
 					return nil
 				}
 			}
@@ -98,6 +113,7 @@ var stackCreateCmd = &cobra.Command{
 			answers.TemplateName = args[1]
 		} else {
 			qs = append(qs, &templateNameQu)
+			args = []string{} // reassign args to ensure validation works correctly.
 		}
 
 		if len(qs) > 0 {
@@ -105,7 +121,21 @@ var stackCreateCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
-		err = rc.DownloadDirectoryContents(answers.TemplateName, "./"+answers.StackName, force)
+		var templatePath string
+
+		for i := range templatesList {
+			if templatesList[i].Name == answers.TemplateName || templatesList[i].Path == answers.TemplateName {
+				templatePath = templatesList[i].Path
+				break
+			}
+		}
+
+		if templatePath == "" {
+			err = errors.New(fmt.Sprintf("path for template %v not found", answers.TemplateName))
+			cobra.CheckErr(err)
+		}
+
+		err = templates.DownloadDirectoryContents(templatePath, "./"+answers.StackName, force)
 		cobra.CheckErr(err)
 		err = setStackName(answers.StackName)
 		cobra.CheckErr(err)

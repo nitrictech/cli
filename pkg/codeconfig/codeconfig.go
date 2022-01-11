@@ -280,8 +280,8 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 	}
 	errs := utils.NewErrorList()
 	for handler, f := range c.functions {
-		name := strings.Replace(path.Base(handler), path.Ext(handler), "", 1)
-		s.Functions[name] = stack.Function{Handler: handler}
+		name := containerNameFromHandler(handler)
+
 		for k, v := range f.apis {
 			if current, ok := s.Apis[k]; ok {
 				if current != v.workers[0].String() {
@@ -342,6 +342,20 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			} else {
 				s.Topics[k] = v.String()
 			}
+		}
+
+		topicTriggers := make([]string, len(f.subscriptions), 0)
+		for k := range f.subscriptions {
+			topicTriggers = append(topicTriggers, k)
+		}
+
+		s.Functions[name] = stack.Function{
+			Handler: handler,
+			ComputeUnit: stack.ComputeUnit{
+				Triggers: stack.Triggers{
+					Topics: topicTriggers,
+				},
+			},
 		}
 	}
 

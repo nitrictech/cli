@@ -30,6 +30,7 @@ import (
 
 	v1 "github.com/nitrictech/apis/go/nitric/v1"
 	"github.com/nitrictech/newcli/pkg/containerengine"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 func ImageNameFromExt(ext string) string {
@@ -109,18 +110,20 @@ func Collect(ctx string, handler string, stack *Stack) error {
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
 	select {
 	case done := <-waitChan:
-		if done.Error != nil || done.StatusCode != 0 {
-			fmt.Printf("error executing container (code %d) %v\n", done.StatusCode, done.Error)
+		msg := ""
+		if done.Error != nil {
+			msg = done.Error.Message
+		}
+		if msg != "" || done.StatusCode != 0 {
+			err = utils.WrapError(err, fmt.Errorf("error executing container (code %d) %s", done.StatusCode, msg))
 		}
 	case cErr := <-cErrChan:
-		if err != nil {
-			fmt.Printf("error waiting for container %v\n", cErr)
-		}
+		err = utils.WrapError(err, cErr)
 	}
 
 	// 3 - When the container exits stop the server
 	grpcSrv.Stop()
-	err = <-errChan
+	err = utils.WrapError(err, <-errChan)
 
 	// 4 - Add the function to the stack
 	stack.AddFunction(fun)

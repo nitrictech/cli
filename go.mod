@@ -16,6 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github/v41 v41.0.0
 	github.com/hashicorp/consul/sdk v0.8.0
+	github.com/hashicorp/go-getter v1.5.11
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/imdario/mergo v0.3.12
 	github.com/jhoonb/archivex v0.0.0-20201016144719-6a343cdae81d
@@ -27,7 +28,6 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
 	golang.org/x/net v0.0.0-20211105192438-b53810dc28af // indirect
-	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	google.golang.org/genproto v0.0.0-20211005153810-c76a74d43a8e // indirect

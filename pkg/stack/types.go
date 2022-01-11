@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v2"
 )
 
@@ -139,6 +140,7 @@ type Stack struct {
 	Topics      map[string]interface{} `yaml:"topics,omitempty"`
 	Queues      map[string]interface{} `yaml:"queues,omitempty"`
 	Schedules   map[string]Schedule    `yaml:"schedules,omitempty"`
+	apiDocs     map[string]*openapi3.T `yaml:"-"`
 	Apis        map[string]string      `yaml:"apis,omitempty"`
 	Sites       map[string]Site        `yaml:"sites,omitempty"`
 	EntryPoints map[string]Entrypoint  `yaml:"entrypoints,omitempty"`
@@ -175,6 +177,15 @@ func FromFile(name string) (*Stack, error) {
 			c.contextDirectory = stack.Path()
 		}
 		stack.Containers[name] = c
+	}
+
+	// Attempt to populate documents from api file references
+	for k, v := range stack.Apis {
+		if doc, err := openapi3.NewLoader().LoadFromFile(filepath.Join(stack.dir, v)); err != nil {
+			return nil, err
+		} else {
+			stack.apiDocs[k] = doc
+		}
 	}
 
 	return stack, nil

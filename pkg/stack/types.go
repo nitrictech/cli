@@ -146,6 +146,10 @@ type Stack struct {
 	EntryPoints map[string]Entrypoint  `yaml:"entrypoints,omitempty"`
 }
 
+func (s *Stack) SetApiDoc(name string, doc *openapi3.T) {
+	s.apiDocs[name] = doc
+}
+
 func FromFile(name string) (*Stack, error) {
 	yamlFile, err := ioutil.ReadFile(name)
 	if err != nil {

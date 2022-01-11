@@ -282,14 +282,14 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 	for handler, f := range c.functions {
 		name := containerNameFromHandler(handler)
 
-		for k, v := range f.apis {
-			if current, ok := s.Apis[k]; ok {
-				if current != v.workers[0].String() {
-					errs.Add(fmt.Errorf("API %s has mulitple values %s %s", k, current, v.workers[0].String()))
-				}
-			} else {
-				s.Apis[k] = v.workers[0].String()
+		for k := range f.apis {
+			spec, err := c.apiSpec(k)
+
+			if err != nil {
+				return nil, fmt.Errorf("could not build spec for api: %s; %v", k, err)
 			}
+
+			s.SetApiDoc(k, spec)
 		}
 		for k, v := range f.buckets {
 			if current, ok := s.Buckets[k]; ok {

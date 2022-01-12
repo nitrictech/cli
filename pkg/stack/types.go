@@ -147,6 +147,10 @@ type Stack struct {
 }
 
 func (s *Stack) SetApiDoc(name string, doc *openapi3.T) {
+	if s.apiDocs == nil {
+		s.apiDocs = make(map[string]*openapi3.T)
+	}
+
 	s.apiDocs[name] = doc
 }
 
@@ -188,6 +192,10 @@ func FromFile(name string) (*Stack, error) {
 		if doc, err := openapi3.NewLoader().LoadFromFile(filepath.Join(stack.dir, v)); err != nil {
 			return nil, err
 		} else {
+			if stack.apiDocs == nil {
+				stack.apiDocs = make(map[string]*openapi3.T)
+			}
+
 			stack.apiDocs[k] = doc
 		}
 	}

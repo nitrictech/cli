@@ -36,7 +36,6 @@ const (
 
 var (
 	target    string
-	name      string
 	provider  string
 	region    string
 	Providers = []string{Local, Aws, Azure, Gcp, Digitalocean}
@@ -45,21 +44,18 @@ var (
 func FromOptions() *Target {
 	t := Target{}
 	if target == "" {
-		t.Name = DefaultTarget
+		target = DefaultTarget
 		t.Provider = DefaultProvider
+		if provider != "" {
+			t.Provider = provider
+		}
+		if region != "" {
+			t.Region = region
+		}
 	} else {
 		targets := map[string]Target{}
 		cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("targets"), &targets))
 		t = targets[target]
-	}
-	if name != "" {
-		t.Name = name
-	}
-	if provider != "" {
-		t.Provider = provider
-	}
-	if region != "" {
-		t.Region = region
 	}
 	return &t
 }
@@ -82,7 +78,6 @@ func AddOptions(cmd *cobra.Command, providerOnly bool) {
 	})
 
 	if !providerOnly {
-		cmd.Flags().StringVarP(&target, "name", "n", "", "The name of the deployment")
-		cmd.Flags().StringVarP(&target, "region", "r", "", "the region to deploy to")
+		cmd.Flags().StringVarP(&region, "region", "r", "", "the region to deploy to")
 	}
 }

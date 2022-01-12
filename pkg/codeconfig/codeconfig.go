@@ -298,6 +298,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 	errs := utils.NewErrorList()
 	for handler, f := range c.functions {
 		name := containerNameFromHandler(handler)
+		topicTriggers := make([]string, len(f.subscriptions)+len(f.schedules), 0)
 
 		for k := range f.apis {
 			spec, err := c.apiSpec(k)
@@ -336,10 +337,42 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			}
 		}
 		for k, v := range f.schedules {
+			// Create a new topic target
+			// replace spaced with hyphens
+			topicName := strings.ToLower(strings.ReplaceAll(k, " ", "-"))
+			s.Topics[topicName] = ""
+
+			topicTriggers = append(topicTriggers, topicName)
+
+			var exp string
+			if v.GetCron() != nil {
+				exp = v.GetCron().Cron
+			} else if v.GetRate() != nil {
+				e, err := utils.RateToCron(v.GetRate().Rate)
+
+				if err != nil {
+					errs.Add(fmt.Errorf("schedule expresson %s is invalid; %v", v.GetRate().Rate, err))
+					continue
+				}
+
+				exp = e
+			} else {
+				errs.Add(fmt.Errorf("schedule %s is invalid", v.String()))
+				continue
+			}
+
 			newS := stack.Schedule{
-				Expression: v.String(),
-				Target:     stack.ScheduleTarget{},
-				Event:      stack.ScheduleEvent{},
+				Expression: exp,
+				Target: stack.ScheduleTarget{
+					Type: "topic",
+					Name: topicName,
+				},
+				Event: stack.ScheduleEvent{
+					PayloadType: "io.nitric.schedule",
+					Payload: map[string]interface{}{
+						"schedule": k,
+					},
+				},
 			}
 			if current, ok := s.Schedules[k]; ok {
 				if err := mergo.Merge(&current, &newS); err != nil {
@@ -361,7 +394,6 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			}
 		}
 
-		topicTriggers := make([]string, len(f.subscriptions), 0)
 		for k := range f.subscriptions {
 			if f.topics[k] == nil {
 				errs.Add(fmt.Errorf("subscription to topic %s defined, but topic does not exist", k))

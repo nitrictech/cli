@@ -107,6 +107,14 @@ type Schedule struct {
 	Event  ScheduleEvent  `yaml:"event"`
 }
 
+type Collection struct{}
+
+type Bucket struct{}
+
+type Topic struct{}
+
+type Queue struct{}
+
 // A static site deployment with Nitric
 // We also support server rendered applications
 type Site struct {
@@ -134,11 +142,11 @@ type Stack struct {
 	dir         string
 	Name        string                 `yaml:"name"`
 	Functions   map[string]Function    `yaml:"functions,omitempty"`
-	Collections map[string]interface{} `yaml:"collections,omitempty"`
+	Collections map[string]Collection  `yaml:"collections,omitempty"`
 	Containers  map[string]Container   `yaml:"containers,omitempty"`
-	Buckets     map[string]interface{} `yaml:"buckets,omitempty"`
-	Topics      map[string]interface{} `yaml:"topics,omitempty"`
-	Queues      map[string]interface{} `yaml:"queues,omitempty"`
+	Buckets     map[string]Bucket      `yaml:"buckets,omitempty"`
+	Topics      map[string]Topic       `yaml:"topics,omitempty"`
+	Queues      map[string]Queue       `yaml:"queues,omitempty"`
 	Schedules   map[string]Schedule    `yaml:"schedules,omitempty"`
 	apiDocs     map[string]*openapi3.T `yaml:"-"`
 	Apis        map[string]string      `yaml:"apis,omitempty"`

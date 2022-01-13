@@ -308,10 +308,10 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		Name:        path.Base(c.stackPath),
 		Functions:   map[string]stack.Function{},
 		Containers:  map[string]stack.Container{},
-		Collections: map[string]interface{}{},
-		Buckets:     map[string]interface{}{},
-		Topics:      map[string]interface{}{},
-		Queues:      map[string]interface{}{},
+		Collections: map[string]stack.Collection{},
+		Buckets:     map[string]stack.Bucket{},
+		Topics:      map[string]stack.Topic{},
+		Queues:      map[string]stack.Queue{},
 		Schedules:   map[string]stack.Schedule{},
 		Apis:        map[string]string{},
 		Sites:       map[string]stack.Site{},
@@ -331,38 +331,20 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 
 			s.SetApiDoc(k, spec)
 		}
-		for k, v := range f.buckets {
-			if current, ok := s.Buckets[k]; ok {
-				if current != v.String() {
-					errs.Add(fmt.Errorf("bucket %s has mulitple values %s %s", k, current, v.String()))
-				}
-			} else {
-				s.Buckets[k] = v.String()
-			}
+		for k := range f.buckets {
+			s.Buckets[k] = stack.Bucket{}
 		}
-		for k, v := range f.collections {
-			if current, ok := s.Collections[k]; ok {
-				if current != v.String() {
-					errs.Add(fmt.Errorf("collection %s has mulitple values %s %s", k, current, v.String()))
-				}
-			} else {
-				s.Collections[k] = v.String()
-			}
+		for k := range f.collections {
+			s.Collections[k] = stack.Collection{}
 		}
-		for k, v := range f.queues {
-			if current, ok := s.Queues[k]; ok {
-				if current != v.String() {
-					errs.Add(fmt.Errorf("queue %s has mulitple values %s %s", k, current, v.String()))
-				}
-			} else {
-				s.Queues[k] = v.String()
-			}
+		for k := range f.queues {
+			s.Queues[k] = stack.Queue{}
 		}
 		for k, v := range f.schedules {
 			// Create a new topic target
 			// replace spaced with hyphens
 			topicName := strings.ToLower(strings.ReplaceAll(k, " ", "-"))
-			s.Topics[topicName] = ""
+			s.Topics[topicName] = stack.Topic{}
 
 			topicTriggers = append(topicTriggers, topicName)
 
@@ -407,14 +389,8 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			}
 		}
 
-		for k, v := range f.topics {
-			if current, ok := s.Topics[k]; ok {
-				if current != v.String() {
-					errs.Add(fmt.Errorf("topic %s has mulitple values %s %s", k, current, v.String()))
-				}
-			} else {
-				s.Topics[k] = v.String()
-			}
+		for k := range f.topics {
+			s.Topics[k] = stack.Topic{}
 		}
 
 		for k := range f.subscriptions {

@@ -83,18 +83,38 @@ func imageNameFromExt(ext string) string {
 
 // Collect - Collects information about all functions for a nitric stack
 func (c *codeConfig) Collect() error {
-	for _, f := range c.files {
-		rel, err := filepath.Rel(c.stackPath, f)
-		if err != nil {
-			return err
-		}
+	wg := sync.WaitGroup{}
+	errs := sync.Map{}
 
-		err = c.collectOne(rel)
-		if err != nil {
-			return err
-		}
+	for _, f := range c.files {
+		wg.Add(1)
+
+		// run files in parallel
+		go func(file string) {
+			defer wg.Done()
+			rel, err := filepath.Rel(c.stackPath, file)
+			if err != nil {
+				errs.Store(rel, err)
+				return
+			}
+
+			err = c.collectOne(rel)
+			if err != nil {
+				errs.Store(rel, err)
+				return
+			}
+		}(f)
 	}
-	return nil
+
+	wg.Wait()
+
+	errList := utils.NewErrorList()
+	errs.Range(func(k, v interface{}) bool {
+		errList.Add(v.(error))
+		return true
+	})
+
+	return errList.Aggregate()
 }
 
 type apiHandler struct {
@@ -196,10 +216,12 @@ func (c *codeConfig) collectOne(handler string) error {
 	v1.RegisterResourceServiceServer(grpcSrv, srv)
 	v1.RegisterFaasServiceServer(grpcSrv, srv)
 
-	lis, err := net.Listen("tcp", ":50051")
+	lis, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return err
 	}
+
+	port := lis.Addr().(*net.TCPAddr).Port
 
 	defer lis.Close()
 
@@ -234,7 +256,7 @@ func (c *codeConfig) collectOne(handler string) error {
 	cID, err := ce.ContainerCreate(&container.Config{
 		Image: imageNameFromExt(path.Ext(handler)), // Select an image to use based on the handler
 		// Set the address to the bound port
-		Env: []string{"SERVICE_ADDRESS=host.docker.internal:50051"},
+		Env: []string{fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port)},
 		Cmd: strslice.StrSlice{"-T", handler},
 	}, hostConfig, nil, containerNameFromHandler(handler))
 	if err != nil {
@@ -298,7 +320,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 	errs := utils.NewErrorList()
 	for handler, f := range c.functions {
 		name := containerNameFromHandler(handler)
-		topicTriggers := make([]string, len(f.subscriptions)+len(f.schedules), 0)
+		topicTriggers := make([]string, 0, len(f.subscriptions)+len(f.schedules))
 
 		for k := range f.apis {
 			spec, err := c.apiSpec(k)
@@ -384,6 +406,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 				s.Schedules[k] = newS
 			}
 		}
+
 		for k, v := range f.topics {
 			if current, ok := s.Topics[k]; ok {
 				if current != v.String() {
@@ -395,7 +418,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		}
 
 		for k := range f.subscriptions {
-			if f.topics[k] == nil {
+			if _, ok := f.topics[k]; !ok {
 				errs.Add(fmt.Errorf("subscription to topic %s defined, but topic does not exist", k))
 			} else {
 				topicTriggers = append(topicTriggers, k)

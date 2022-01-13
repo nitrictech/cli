@@ -18,7 +18,6 @@ package codeconfig
 
 import (
 	"context"
-	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -81,15 +80,6 @@ func (s *Server) Declare(ctx context.Context, req *pb.ResourceDeclareRequest) (*
 		s.function.AddTopic(req.Resource.Name, req.GetTopic())
 	case pb.ResourceType_Policy:
 		s.function.AddPolicy(req.GetPolicy())
-	}
-
-	cc := &codeConfig{functions: map[string]*FunctionDependencies{"": s.function}}
-	for a := range s.function.apis {
-		if spec, e := cc.apiSpec(a); spec != nil {
-			fmt.Println("oaiSpec", spec)
-		} else {
-			fmt.Println("specErr", e.Error())
-		}
 	}
 
 	return &pb.ResourceDeclareResponse{}, nil

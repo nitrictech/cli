@@ -22,7 +22,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/nitrictech/apis/go/nitric/v1"
+	pb "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type Server struct {

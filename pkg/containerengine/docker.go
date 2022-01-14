@@ -203,6 +203,10 @@ func (d *docker) Start(nameOrID string) error {
 	return d.cli.ContainerStart(context.Background(), nameOrID, types.ContainerStartOptions{})
 }
 
+func (d *docker) Stop(nameOrID string, timeout *time.Duration) error {
+	return d.cli.ContainerStop(context.Background(), nameOrID, timeout)
+}
+
 func (d *docker) CopyFromArchive(nameOrID string, path string, reader io.Reader) error {
 	return d.cli.CopyToContainer(context.Background(), nameOrID, path, reader, types.CopyToContainerOptions{})
 }

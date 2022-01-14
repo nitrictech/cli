@@ -22,15 +22,15 @@ require (
 	github.com/jhoonb/archivex v0.0.0-20201016144719-6a343cdae81d
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mitchellh/mapstructure v1.4.2
-	github.com/nitrictech/apis v0.13.0-rc.4
 	github.com/nitrictech/boxygen v0.0.1-rc.7.0.20211212231606-62c668408f91
+	github.com/nitrictech/nitric v0.13.0-rc.7
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
 	golang.org/x/net v0.0.0-20211105192438-b53810dc28af // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
-	google.golang.org/genproto v0.0.0-20211005153810-c76a74d43a8e // indirect
+	golang.org/x/tools v0.1.8 // indirect
 	google.golang.org/grpc v1.41.0
 	gopkg.in/yaml.v2 v2.4.0
 )

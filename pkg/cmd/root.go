@@ -30,6 +30,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/cmd/build"
 	"github.com/nitrictech/newcli/pkg/cmd/deployment"
 	"github.com/nitrictech/newcli/pkg/cmd/provider"
+	"github.com/nitrictech/newcli/pkg/cmd/run"
 	"github.com/nitrictech/newcli/pkg/cmd/stack"
 	"github.com/nitrictech/newcli/pkg/cmd/target"
 	"github.com/nitrictech/newcli/pkg/output"
@@ -89,6 +90,7 @@ func init() {
 	rootCmd.AddCommand(provider.RootCommand())
 	rootCmd.AddCommand(stack.RootCommand())
 	rootCmd.AddCommand(target.RootCommand())
+	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(configHelpTopic)
 	addAliases()

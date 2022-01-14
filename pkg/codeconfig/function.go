@@ -23,7 +23,7 @@ import (
 
 	"github.com/nitrictech/newcli/pkg/utils"
 
-	pb "github.com/nitrictech/apis/go/nitric/v1"
+	pb "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type Api struct {

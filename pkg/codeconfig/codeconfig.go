@@ -33,10 +33,10 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
-	v1 "github.com/nitrictech/apis/go/nitric/v1"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/utils"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 // CodeConfig - represents a collection of related functions and their shared dependencies.

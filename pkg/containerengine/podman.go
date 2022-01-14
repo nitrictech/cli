@@ -23,6 +23,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -96,6 +97,10 @@ func (p *podman) ContainerCreate(config *container.Config, hostConfig *container
 
 func (p *podman) Start(nameOrID string) error {
 	return p.docker.Start(nameOrID)
+}
+
+func (p *podman) Stop(nameOrID string, timeout *time.Duration) error {
+	return p.docker.Stop(nameOrID, timeout)
 }
 
 func (p *podman) ContainerWait(containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {

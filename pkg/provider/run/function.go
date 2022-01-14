@@ -24,6 +24,10 @@ func (f *Function) Name() string {
 	return strings.Replace(filepath.Base(f.handler), filepath.Ext(f.handler), "", 1)
 }
 
+func runTimeFromHandler(handler string) string {
+	return strings.Replace(filepath.Ext(handler), ".", "", -1)
+}
+
 func (f *Function) Start() error {
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
@@ -74,10 +78,9 @@ type FunctionOpts struct {
 }
 
 func NewFunction(opts FunctionOpts) (*Function, error) {
-
 	var runtime Runtime = RuntimeTypescript
 
-	switch Runtime(filepath.Ext(opts.Handler)) {
+	switch Runtime(runTimeFromHandler(opts.Handler)) {
 	case RuntimeTypescript:
 		runtime = RuntimeTypescript
 	case RuntimeJavascript:
@@ -102,9 +105,11 @@ func FunctionsFromHandlers(runCtx string, handlers []string) ([]*Function, error
 	}
 
 	for _, h := range handlers {
+		relativeHandlerPath, _ := filepath.Rel(runCtx, h)
+
 		if f, err := NewFunction(FunctionOpts{
 			RunCtx:          runCtx,
-			Handler:         h,
+			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,
 		}); err != nil {
 			return nil, err

@@ -7,6 +7,7 @@ package mock_containerengine
 import (
 	io "io"
 	reflect "reflect"
+	time "time"
 
 	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
@@ -194,4 +195,18 @@ func (m *MockContainerEngine) Start(arg0 string) error {
 func (mr *MockContainerEngineMockRecorder) Start(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockContainerEngine)(nil).Start), arg0)
+}
+
+// Stop mocks base method.
+func (m *MockContainerEngine) Stop(arg0 string, arg1 *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Stop", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockContainerEngineMockRecorder) Stop(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockContainerEngine)(nil).Stop), arg0, arg1)
 }

@@ -8,6 +8,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/fasthttp/router v1.4.5
 	github.com/fatih/color v1.13.0
 	github.com/getkin/kin-openapi v0.88.0
 	github.com/go-openapi/strfmt v0.21.1 // indirect
@@ -27,6 +28,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
+	github.com/valyala/fasthttp v1.32.0
 	golang.org/x/net v0.0.0-20211105192438-b53810dc28af // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect

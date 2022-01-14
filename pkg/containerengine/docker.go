@@ -79,7 +79,8 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	if err != nil {
 		return err
 	}
-	if strings.Contains(dockerfile, "/tmp") {
+
+	if strings.Contains(dockerfile, os.TempDir()) {
 		// copy the generated dockerfile into the tar.
 		df, err := os.Open(dockerfile)
 		if err != nil {

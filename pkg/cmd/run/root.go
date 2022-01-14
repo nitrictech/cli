@@ -45,14 +45,15 @@ var runCmd = &cobra.Command{
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		files, err := filepath.Glob(args[0])
+		ctx, _ := filepath.Abs(".")
+
+		files, err := filepath.Glob(filepath.Join(ctx,  args[0]))
 
 		if err != nil {
 			cobra.CheckErr(err)
 		}
 
 		// Prepare development images
-		ctx, _ := filepath.Abs(".")
 		if err := build.CreateBaseDev(ctx, map[string]string{
 			"ts": "nitric-ts-dev",
 		}); err != nil {

@@ -21,15 +21,10 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"syscall"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/nitrictech/newcli/pkg/build"
-	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/provider/run"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
@@ -55,8 +50,6 @@ var runCmd = &cobra.Command{
 		if err != nil {
 			cobra.CheckErr(err)
 		}
-
-		ce, err := containerengine.Discover()
 
 		// Prepare development images
 		ctx, _ := filepath.Abs(".")
@@ -134,41 +127,13 @@ var runCmd = &cobra.Command{
 
 		time.Sleep(time.Second * time.Duration(2))
 
-		// Start the functions
-		// cids := make([]string, 0)
-		fmt.Println("found files:", files)
-		for i, f := range files {
-			hostConfig := &container.HostConfig{
-				AutoRemove: true,
-				Mounts: []mount.Mount{
-					{
-						Type:   "bind",
-						Source: ctx,
-						Target: "/app",
-					},
-				},
-			}
-			if runtime.GOOS == "linux" {
-				// setup host.docker.internal to route to host gateway
-				// to access rpc server hosted by local CLI run
-				hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
-			}
+		functions, err := run.FunctionsFromHandlers(".", files)
+		if err != nil {
+			cobra.CheckErr(err)
+		}
 
-			cID, err := ce.ContainerCreate(&container.Config{
-				Image: "nitric-ts-dev", // Select an image to use based on the handler
-				// Set the address to the bound port
-				Env:        []string{fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", 50051)},
-				Entrypoint: strslice.StrSlice{"nodemon"},
-				Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,json", "--exec", "ts-node -T " + "/app/" + f},
-			}, hostConfig, nil, fmt.Sprintf("test-container-%d", i))
-
-			if err != nil {
-				cobra.CheckErr(err)
-			}
-
-			// cids = append(cids, cID)
-
-			err = ce.Start(cID)
+		for _, f := range functions {
+			err = f.Start()
 		}
 
 		fmt.Println("Local running, use ctrl-C to stop")

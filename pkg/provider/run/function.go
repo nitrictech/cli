@@ -109,7 +109,7 @@ func NewFunction(opts FunctionOpts) (*Function, error) {
 		runtime: runtime,
 		handler: opts.Handler,
 		runCtx:  opts.RunCtx,
-		ce: opts.ContainerEngine,
+		ce:      opts.ContainerEngine,
 	}, nil
 }
 

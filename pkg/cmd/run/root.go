@@ -24,6 +24,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/provider/run"
 	"github.com/nitrictech/nitric/pkg/membrane"
@@ -31,7 +33,6 @@ import (
 	gateway_plugin "github.com/nitrictech/nitric/pkg/plugins/gateway/dev"
 	minio "github.com/nitrictech/nitric/pkg/plugins/storage/minio"
 	"github.com/nitrictech/nitric/pkg/worker"
-	"github.com/spf13/cobra"
 )
 
 var runCmd = &cobra.Command{
@@ -45,14 +46,15 @@ var runCmd = &cobra.Command{
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		files, err := filepath.Glob(args[0])
+		ctx, _ := filepath.Abs(".")
+
+		files, err := filepath.Glob(filepath.Join(ctx, args[0]))
 
 		if err != nil {
 			cobra.CheckErr(err)
 		}
 
 		// Prepare development images
-		ctx, _ := filepath.Abs(".")
 		if err := build.CreateBaseDev(ctx, map[string]string{
 			"ts": "nitric-ts-dev",
 		}); err != nil {
@@ -127,13 +129,17 @@ var runCmd = &cobra.Command{
 
 		time.Sleep(time.Second * time.Duration(2))
 
-		functions, err := run.FunctionsFromHandlers(".", files)
+		functions, err := run.FunctionsFromHandlers(ctx, files)
 		if err != nil {
 			cobra.CheckErr(err)
 		}
 
 		for _, f := range functions {
 			err = f.Start()
+
+			if err != nil {
+				cobra.CheckErr(err)
+			}
 		}
 
 		fmt.Println("Local running, use ctrl-C to stop")

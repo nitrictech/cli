@@ -1,3 +1,18 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package run
 
 import (
@@ -8,6 +23,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
+
 	"github.com/nitrictech/newcli/pkg/containerengine"
 )
 
@@ -22,6 +38,10 @@ type Function struct {
 
 func (f *Function) Name() string {
 	return strings.Replace(filepath.Base(f.handler), filepath.Ext(f.handler), "", 1)
+}
+
+func runTimeFromHandler(handler string) string {
+	return strings.Replace(filepath.Ext(handler), ".", "", -1)
 }
 
 func (f *Function) Start() error {
@@ -74,10 +94,9 @@ type FunctionOpts struct {
 }
 
 func NewFunction(opts FunctionOpts) (*Function, error) {
+	var runtime Runtime
 
-	var runtime Runtime = RuntimeTypescript
-
-	switch Runtime(filepath.Ext(opts.Handler)) {
+	switch Runtime(runTimeFromHandler(opts.Handler)) {
 	case RuntimeTypescript:
 		runtime = RuntimeTypescript
 	case RuntimeJavascript:
@@ -102,9 +121,11 @@ func FunctionsFromHandlers(runCtx string, handlers []string) ([]*Function, error
 	}
 
 	for _, h := range handlers {
+		relativeHandlerPath, _ := filepath.Rel(runCtx, h)
+
 		if f, err := NewFunction(FunctionOpts{
 			RunCtx:          runCtx,
-			Handler:         h,
+			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,
 		}); err != nil {
 			return nil, err

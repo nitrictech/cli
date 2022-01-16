@@ -30,7 +30,6 @@ import (
 	"github.com/nitrictech/newcli/pkg/provider/run"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
-	gateway_plugin "github.com/nitrictech/nitric/pkg/plugins/gateway/dev"
 	minio "github.com/nitrictech/nitric/pkg/plugins/storage/minio"
 	"github.com/nitrictech/nitric/pkg/worker"
 )
@@ -99,7 +98,7 @@ var runCmd = &cobra.Command{
 		})
 
 		// Start a new gateway plugin
-		gw, err := gateway_plugin.New()
+		gw, err := run.NewGateway()
 
 		if err != nil {
 			cobra.CheckErr(err)

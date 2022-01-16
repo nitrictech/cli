@@ -18,6 +18,7 @@
 package run
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -40,18 +41,18 @@ type BaseHttpGateway struct {
 	pool worker.WorkerPool
 }
 
-//func apiWorkerFilter (apiName string) func(w worker.Worker) bool {
-//	return func(w worker.Worker) bool {
-//		if api, ok := w.(*worker.RouteWorker); ok {
-//			return api.Api() == apiName
-//		}
+func apiWorkerFilter(apiName string) func(w worker.Worker) bool {
+	return func(w worker.Worker) bool {
+		if api, ok := w.(*worker.RouteWorker); ok {
+			return api.Api() == apiName
+		}
 
-//		return false
-//	}
-//}
+		return false
+	}
+}
 
 func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
-	apiName := ctx.UserValue("name")
+	apiName := ctx.UserValue("name").(string)
 	// Rewrite the URL of the request to remove the /api/{name} subroute
 	pathParts := utils.SplitPath(string(ctx.Path()))
 	// remove first two path parts
@@ -64,57 +65,32 @@ func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
 
 	httpReq := triggers.FromHttpRequest(ctx)
 
-	s.pool.GetWorker(&worker.GetWorkerOptions{
-		Http: httpReq,
-		//Filter: apiWorkerFilter(apiName),
+	worker, err := s.pool.GetWorker(&worker.GetWorkerOptions{
+		Http:   httpReq,
+		Filter: apiWorkerFilter(apiName),
 	})
 
-	// Filter workers by a specific named API
+	if err != nil {
+		ctx.Error("worker not found for api", 404)
+		return
+	}
 
+	resp, err := worker.HandleHttpRequest(httpReq)
+
+	if err != nil {
+		ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
+		return
+	}
+
+	if resp.Header != nil {
+		resp.Header.CopyTo(&ctx.Response.Header)
+	}
+
+	// Avoid content length header duplication
+	ctx.Response.Header.Del("Content-Length")
+	ctx.Response.SetStatusCode(resp.StatusCode)
+	ctx.Response.SetBody(resp.Body)
 }
-
-func (s *BaseHttpGateway) schedule(ctx *fasthttp.RequestCtx) {
-	scheduleName := ctx.UserValue("name")
-	// Filter workers by schedule workers
-}
-
-//func (s *BaseHttpGateway) httpHandler(pool worker.WorkerPool) func(ctx *fasthttp.RequestCtx) {
-//	return func(ctx *fasthttp.RequestCtx) {
-//		if s.mw != nil {
-//			if !s.mw(ctx, pool) {
-//				// middleware has indicated that is has processed the request
-//				// so we can exit here
-//				return
-//			}
-//		}
-
-//		httpTrigger := triggers.FromHttpRequest(ctx)
-//		wrkr, err := pool.GetWorker(&worker.GetWorkerOptions{
-//			Http: httpTrigger,
-//		})
-
-//		if err != nil {
-//			ctx.Error("Unable to get worker to handle request", 500)
-//			return
-//		}
-
-//		response, err := wrkr.HandleHttpRequest(httpTrigger)
-
-//		if err != nil {
-//			ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
-//			return
-//		}
-
-//		if response.Header != nil {
-//			response.Header.CopyTo(&ctx.Response.Header)
-//		}
-
-//		// Avoid content length header duplication
-//		ctx.Response.Header.Del("Content-Length")
-//		ctx.Response.SetStatusCode(response.StatusCode)
-//		ctx.Response.SetBody(response.Body)
-//	}
-//}
 
 func (s *BaseHttpGateway) Start(pool worker.WorkerPool) error {
 	s.pool = pool
@@ -123,12 +99,9 @@ func (s *BaseHttpGateway) Start(pool worker.WorkerPool) error {
 	r := router.New()
 	// Make a request for an API gateway
 	r.ANY("/apis/{name}/{any:*}", s.api)
-	// TODO: Make a request to a specific registered function
-	// r.ANY("/function/{name}/{any:*}", s.function)
-	// Make a request to trigger a schedule
-	r.POST("/schedules/{name}", s.schedule)
 
 	s.server = &fasthttp.Server{
+		ReadTimeout:     time.Second * 1,
 		IdleTimeout:     time.Second * 1,
 		CloseOnShutdown: true,
 		Handler:         r.Handler,
@@ -146,7 +119,7 @@ func (s *BaseHttpGateway) Stop() error {
 
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
-func New(mw HttpMiddleware) (gateway.GatewayService, error) {
+func NewGateway() (gateway.GatewayService, error) {
 	address := utils.GetEnv("GATEWAY_ADDRESS", ":9001")
 
 	return &BaseHttpGateway{

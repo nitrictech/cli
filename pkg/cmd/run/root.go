@@ -48,46 +48,30 @@ var runCmd = &cobra.Command{
 		ctx, _ := filepath.Abs(".")
 
 		files, err := filepath.Glob(filepath.Join(ctx, args[0]))
+		cobra.CheckErr(err)
 
-		if err != nil {
-			cobra.CheckErr(err)
-		}
-
-		// Prepare development images
-		if err := build.CreateBaseDev(ctx, map[string]string{
+		build.CreateBaseDev(ctx, map[string]string{
 			"ts": "nitric-ts-dev",
-		}); err != nil {
-			cobra.CheckErr(err)
-		}
+		})
+		cobra.CheckErr(err)
 
 		mio, err := run.NewMinio("./.nitric/run", "test-run")
-
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+		cobra.CheckErr(err)
 
 		// start minio
-		if err := mio.Start(); err != nil {
-			cobra.CheckErr(err)
-		}
+		mio.Start()
+		cobra.CheckErr(err)
 
-		if err := mio.Stop(); err != nil {
-			cobra.CheckErr(err)
-		}
 		// Connect dev storage
 		os.Setenv(minio.MINIO_ENDPOINT_ENV, fmt.Sprintf("localhost:%d", mio.GetApiPort()))
 		os.Setenv(minio.MINIO_ACCESS_KEY_ENV, "minioadmin")
 		os.Setenv(minio.MINIO_SECRET_KEY_ENV, "minioadmin")
 		sp, err := minio.New()
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+		cobra.CheckErr(err)
 
 		// Connect dev documents
 		dp, err := boltdb_service.New()
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+		cobra.CheckErr(err)
 
 		// Create a new Worker Pool
 		// TODO: We may want to override GetWorker on the default ProcessPool
@@ -99,10 +83,7 @@ var runCmd = &cobra.Command{
 
 		// Start a new gateway plugin
 		gw, err := run.NewGateway()
-
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+		cobra.CheckErr(err)
 
 		// Prepare development membrane to start
 		// This will start a single membrane that all
@@ -117,9 +98,7 @@ var runCmd = &cobra.Command{
 			TolerateMissingServices: true,
 		})
 
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+		cobra.CheckErr(err)
 
 		memerr := make(chan error)
 		go func(errch chan error) {
@@ -129,16 +108,14 @@ var runCmd = &cobra.Command{
 		time.Sleep(time.Second * time.Duration(2))
 
 		functions, err := run.FunctionsFromHandlers(ctx, files)
+		cobra.CheckErr(err)
 		if err != nil {
-			cobra.CheckErr(err)
+
 		}
 
 		for _, f := range functions {
 			err = f.Start()
-
-			if err != nil {
-				cobra.CheckErr(err)
-			}
+			cobra.CheckErr(err)
 		}
 
 		fmt.Println("Local running, use ctrl-C to stop")

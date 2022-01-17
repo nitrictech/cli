@@ -18,13 +18,13 @@ package templates
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/hashicorp/go-getter"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/newcli/pkg/utils"
@@ -90,17 +90,16 @@ func ListTemplates() (TemplatesConfig, error) {
 
 	// download file
 	if err := client.Get(); err != nil {
-		return TemplatesConfig{}, fmt.Errorf("Error getting path %s: %v", client.Src, err)
+		return TemplatesConfig{}, fmt.Errorf("error getting path %s: %v", client.Src, err)
 	}
 
 	var config, err = ReadTemplatesConfig()
-
 	if err != nil {
 		return TemplatesConfig{}, err
 	}
 
 	if config.Templates == nil {
-		return TemplatesConfig{}, errors.New("Templates array does not exist in respositories.yml")
+		return TemplatesConfig{}, errors.New("templates array does not exist in respositories.yml")
 	}
 
 	var transformedConfig = TemplatesConfig{}
@@ -139,10 +138,6 @@ func DownloadDirectoryContents(templatePath string, destDir string, force bool) 
 
 	// TODO add spinner
 
-	// downloads files
-	if err := client.Get(); err != nil {
-		return fmt.Errorf("Error getting path %s: %v", client.Src, err)
-	}
-
-	return nil
+	err = client.Get()
+	return errors.WithMessagef(err, "error getting path %s", client.Src)
 }

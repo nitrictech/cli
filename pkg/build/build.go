@@ -110,13 +110,7 @@ func CreateBaseDev(stackPath string, imagesToBuild map[string]string) error {
 	return nil
 }
 
-type StackImages struct {
-	Name       string                             `yaml:"name"`
-	Functions  map[string][]containerengine.Image `yaml:"functionImages,omitempty"`
-	Containers map[string][]containerengine.Image `yaml:"containerImages,omitempty"`
-}
-
-func List(s *stack.Stack) (*StackImages, error) {
+func List(s *stack.Stack) ([]containerengine.Image, error) {
 	cr, err := containerengine.Discover()
 	if err != nil {
 		return nil, err

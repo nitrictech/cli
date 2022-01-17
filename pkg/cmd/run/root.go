@@ -73,11 +73,12 @@ var runCmd = &cobra.Command{
 		cobra.CheckErr(err)
 
 		// Connect dev documents
+		os.Setenv("LOCAL_DB_DIR", "./.nitric/run")
 		dp, err := boltdb_service.New()
 		cobra.CheckErr(err)
 
 		// Connect secrets plugin
-		os.Setenv("LOCAL_SECRET_DIR", "./.nitric/")
+		os.Setenv("LOCAL_SEC_DIR", "./.nitric/run")
 		secp, err := secret_service.New()
 		cobra.CheckErr(err)
 

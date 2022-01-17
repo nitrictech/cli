@@ -121,29 +121,6 @@ type Topic struct{}
 
 type Queue struct{}
 
-// A static site deployment with Nitric
-// We also support server rendered applications
-type Site struct {
-	// Base path of the site
-	// Will be used to execute scripts
-	Path string `yaml:"path"`
-	// Path to get assets to upload
-	// this will be relative to path
-	AssetPath string `yaml:"assetPath"`
-	// Build scripts to execute before upload
-	BuildScripts []string `yaml:"buildScripts,omitempty"`
-}
-
-type EntrypointPath struct {
-	Target string `yaml:"target"`
-	Type   string `yaml:"type"` // 'site' | 'api' | 'function' | 'container';
-}
-
-type Entrypoint struct {
-	Domains []string                  `yaml:"domains,omitempty"`
-	Paths   map[string]EntrypointPath `yaml:"paths,omitempty"`
-}
-
 type Stack struct {
 	dir         string
 	Name        string                 `yaml:"name"`
@@ -156,8 +133,6 @@ type Stack struct {
 	Schedules   map[string]Schedule    `yaml:"schedules,omitempty"`
 	apiDocs     map[string]*openapi3.T `yaml:"-"`
 	Apis        map[string]string      `yaml:"apis,omitempty"`
-	Sites       map[string]Site        `yaml:"sites,omitempty"`
-	EntryPoints map[string]Entrypoint  `yaml:"entrypoints,omitempty"`
 }
 
 func (s *Stack) SetApiDoc(name string, doc *openapi3.T) {

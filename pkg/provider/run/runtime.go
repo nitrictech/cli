@@ -43,8 +43,9 @@ type LaunchOpts struct {
 
 func launchOptsForFunction(f *Function) (LaunchOpts, error) {
 	switch f.runtime {
-	// Javascript will re-use typescript runtime
 	case RuntimeJavascript:
+		// Javascript will re-use typescript runtime
+		fallthrough
 	case RuntimeTypescript:
 		return LaunchOpts{
 			Entrypoint: strslice.StrSlice{"nodemon"},
@@ -67,8 +68,9 @@ func CreateBaseDevForFunctions(funcs []*Function) error {
 
 	for _, f := range funcs {
 		switch f.runtime {
-		// Javascript will re-use typescript runtime
 		case RuntimeJavascript:
+			// Javascript will re-use typescript runtime
+			fallthrough
 		case RuntimeTypescript:
 			imageBuilds[string(RuntimeTypescript)] = devImageNameForRuntime(RuntimeTypescript)
 		}

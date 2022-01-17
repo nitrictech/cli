@@ -18,18 +18,24 @@ package utils
 
 import (
 	"strings"
+	"sync"
 )
 
 func NewErrorList() *ErrorList {
-	return &ErrorList{}
+	return &ErrorList{
+		lock: &sync.RWMutex{},
+	}
 }
 
 // ErrorList is for when one error is not the cause of others.
 type ErrorList struct {
+	lock sync.Locker
 	errs []error
 }
 
 func (e *ErrorList) Add(err error) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	if err == nil {
 		return
 	}
@@ -37,6 +43,8 @@ func (e *ErrorList) Add(err error) {
 }
 
 func (e *ErrorList) Error() string {
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	msgs := []string{}
 	for _, m := range e.errs {
 		msgs = append(msgs, m.Error())

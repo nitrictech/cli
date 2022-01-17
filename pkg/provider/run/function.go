@@ -16,6 +16,7 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -23,25 +24,43 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/strslice"
 
 	"github.com/nitrictech/newcli/pkg/containerengine"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 type Function struct {
 	handler string
 	runCtx  string
-	runtime Runtime
+	runtime utils.Runtime
 	ce      containerengine.ContainerEngine
 	// Container id populated after a call to Start
 	cid string
 }
 
-func (f *Function) Name() string {
-	return strings.Replace(filepath.Base(f.handler), filepath.Ext(f.handler), "", 1)
+type LaunchOpts struct {
+	Entrypoint []string
+	Cmd        []string
 }
 
-func runTimeFromHandler(handler string) string {
-	return strings.Replace(filepath.Ext(handler), ".", "", -1)
+func launchOptsForFunction(f *Function) (LaunchOpts, error) {
+	opts := LaunchOpts{Entrypoint: strslice.StrSlice{"nodemon"}}
+	rt, err := utils.NewRunTimeFromFilename(f.handler)
+	if err != nil {
+		return opts, err
+	}
+	switch rt {
+	case utils.RuntimeJavascript, utils.RuntimeTypescript:
+		opts.Cmd = strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + f.handler}
+	default:
+		return opts, errors.New("could not get launchOpts from " + f.handler + ", runtime not supported")
+	}
+	return opts, nil
+}
+
+func (f *Function) Name() string {
+	return strings.Replace(filepath.Base(f.handler), filepath.Ext(f.handler), "", 1)
 }
 
 func (f *Function) Start() error {
@@ -67,13 +86,12 @@ func (f *Function) Start() error {
 	}
 
 	cID, err := f.ce.ContainerCreate(&container.Config{
-		Image: devImageNameForRuntime(f.runtime), // Select an image to use based on the handler
+		Image: f.runtime.DevImageName(), // Select an image to use based on the handler
 		// Set the address to the bound port
 		Env:        []string{fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", 50051)},
 		Entrypoint: launchOpts.Entrypoint,
 		Cmd:        launchOpts.Cmd,
 	}, hostConfig, nil, f.Name())
-
 	if err != nil {
 		return err
 	}
@@ -93,16 +111,10 @@ type FunctionOpts struct {
 	ContainerEngine containerengine.ContainerEngine
 }
 
-func NewFunction(opts FunctionOpts) (*Function, error) {
-	var runtime Runtime
-
-	switch Runtime(runTimeFromHandler(opts.Handler)) {
-	case RuntimeTypescript:
-		runtime = RuntimeTypescript
-	case RuntimeJavascript:
-		runtime = RuntimeJavascript
-	default:
-		return nil, fmt.Errorf("no runtime supported for handler: %s", opts.Handler)
+func newFunction(opts FunctionOpts) (*Function, error) {
+	runtime, err := utils.NewRunTimeFromFilename(opts.Handler)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Function{
@@ -116,7 +128,6 @@ func NewFunction(opts FunctionOpts) (*Function, error) {
 func FunctionsFromHandlers(runCtx string, handlers []string) ([]*Function, error) {
 	funcs := make([]*Function, 0, len(handlers))
 	ce, err := containerengine.Discover()
-
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +135,7 @@ func FunctionsFromHandlers(runCtx string, handlers []string) ([]*Function, error
 	for _, h := range handlers {
 		relativeHandlerPath, _ := filepath.Rel(runCtx, h)
 
-		if f, err := NewFunction(FunctionOpts{
+		if f, err := newFunction(FunctionOpts{
 			RunCtx:          runCtx,
 			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,

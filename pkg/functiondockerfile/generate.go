@@ -20,10 +20,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path"
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 type FunctionDockerfile interface {
@@ -46,29 +46,37 @@ func withMembrane(con dockerfile.ContainerState, version, provider string) {
 	})
 }
 
+var generators = map[utils.Runtime]func(f *stack.Function, version, provider string, w io.Writer) error{
+	utils.RuntimeGolang:     golangGenerator,
+	utils.RuntimeJava:       javaGenerator,
+	utils.RuntimeJavascript: javascriptGenerator,
+	utils.RuntimeTypescript: typescriptGenerator,
+	utils.RuntimePython:     pythonGenerator,
+}
+
 func Generate(f *stack.Function, version, provider string, fwriter io.Writer) error {
-	switch path.Ext(f.Handler) {
-	case ".js":
-		return javascriptGenerator(f, version, provider, fwriter)
-	case ".ts":
-		return typescriptGenerator(f, version, provider, fwriter)
-	case ".go":
-		return golangGenerator(f, version, provider, fwriter)
-	case ".py":
-		return pythonGenerator(f, version, provider, fwriter)
-	case ".jar":
-		return javaGenerator(f, version, provider, fwriter)
+	rt, err := utils.NewRunTimeFromFilename(f.Handler)
+	if err != nil {
+		return err
 	}
-	return errors.New("could not build dockerfile from " + f.Handler + ", extension not supported")
+	generator, ok := generators[rt]
+	if generator == nil || !ok {
+		return errors.New("could not build dockerfile from " + f.Handler + ", extension not supported")
+	}
+	return generator(f, version, provider, fwriter)
 }
 
 // GenerateForCodeAsConfig dockerfiles for code-as-config
 // These will initially be generated without the membrane
 func GenerateForCodeAsConfig(handler string, fwriter io.Writer) error {
-	switch path.Ext(handler) {
-	case ".js":
+	rt, err := utils.NewRunTimeFromFilename(handler)
+	if err != nil {
+		return err
+	}
+	switch rt {
+	case utils.RuntimeJavascript:
 		fallthrough
-	case ".ts":
+	case utils.RuntimeTypescript:
 		return typescriptDevBaseGenerator(fwriter)
 	}
 

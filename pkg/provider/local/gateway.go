@@ -48,7 +48,7 @@ func (l *local) gateway(deploymentName, apiName, apiFile string) error {
 	}
 	port := uint16(ports[0])
 
-	err = l.cr.Pull(devAPIGatewayImageName)
+	err = l.cr.ImagePull(devAPIGatewayImageName)
 	if err != nil {
 		return err
 	}

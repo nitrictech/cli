@@ -126,6 +126,20 @@ func (mr *MockContainerEngineMockRecorder) CopyFromArchive(arg0, arg1, arg2 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyFromArchive", reflect.TypeOf((*MockContainerEngine)(nil).CopyFromArchive), arg0, arg1, arg2)
 }
 
+// ImagePull mocks base method.
+func (m *MockContainerEngine) ImagePull(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ImagePull", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ImagePull indicates an expected call of ImagePull.
+func (mr *MockContainerEngineMockRecorder) ImagePull(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePull", reflect.TypeOf((*MockContainerEngine)(nil).ImagePull), arg0)
+}
+
 // ListImages mocks base method.
 func (m *MockContainerEngine) ListImages(arg0, arg1 string) ([]containerengine.Image, error) {
 	m.ctrl.T.Helper()
@@ -153,20 +167,6 @@ func (m *MockContainerEngine) NetworkCreate(arg0 string) error {
 func (mr *MockContainerEngineMockRecorder) NetworkCreate(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkCreate", reflect.TypeOf((*MockContainerEngine)(nil).NetworkCreate), arg0)
-}
-
-// Pull mocks base method.
-func (m *MockContainerEngine) Pull(arg0 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Pull", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Pull indicates an expected call of Pull.
-func (mr *MockContainerEngineMockRecorder) Pull(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pull", reflect.TypeOf((*MockContainerEngine)(nil).Pull), arg0)
 }
 
 // RemoveByLabel mocks base method.

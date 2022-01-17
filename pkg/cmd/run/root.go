@@ -31,6 +31,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/provider/run"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
+	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
 	minio "github.com/nitrictech/nitric/pkg/plugins/storage/minio"
 	"github.com/nitrictech/nitric/pkg/worker"
 )
@@ -72,7 +73,13 @@ var runCmd = &cobra.Command{
 		cobra.CheckErr(err)
 
 		// Connect dev documents
+		os.Setenv("LOCAL_DB_DIR", "./.nitric/run")
 		dp, err := boltdb_service.New()
+		cobra.CheckErr(err)
+
+		// Connect secrets plugin
+		os.Setenv("LOCAL_SEC_DIR", "./.nitric/run")
+		secp, err := secret_service.New()
 		cobra.CheckErr(err)
 
 		// Create a new Worker Pool
@@ -93,6 +100,7 @@ var runCmd = &cobra.Command{
 		mem, err := membrane.New(&membrane.MembraneOptions{
 			ServiceAddress:          "0.0.0.0:50051",
 			ChildCommand:            []string{"echo", "running membrane 🚀"},
+			SecretPlugin:            secp,
 			StoragePlugin:           sp,
 			DocumentPlugin:          dp,
 			GatewayPlugin:           gw,

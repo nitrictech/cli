@@ -71,14 +71,10 @@ func New(stackPath string, globString string) (CodeConfig, error) {
 func (c *codeConfig) ImagesToBuild() map[string]string {
 	imagesToBuild := map[string]string{}
 	for _, h := range c.files {
-		lang := strings.Replace(path.Ext(h), ".", "", 1)
-		imagesToBuild[lang] = imageNameFromExt(path.Ext(h))
+		rt, _ := utils.NewRunTimeFromFilename(h)
+		imagesToBuild[rt.String()] = rt.DevImageName()
 	}
 	return imagesToBuild
-}
-
-func imageNameFromExt(ext string) string {
-	return "nitric-" + strings.Replace(ext, ".", "", 1) + "-dev"
 }
 
 // Collect - Collects information about all functions for a nitric stack
@@ -247,8 +243,12 @@ func (c *codeConfig) collectOne(handler string) error {
 		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
+	rt, err := utils.NewRunTimeFromFilename(handler)
+	if err != nil {
+		return err
+	}
 	cID, err := ce.ContainerCreate(&container.Config{
-		Image: imageNameFromExt(path.Ext(handler)), // Select an image to use based on the handler
+		Image: rt.DevImageName(), // Select an image to use based on the handler
 		// Set the address to the bound port
 		Env: []string{fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port)},
 		Cmd: strslice.StrSlice{"-T", handler},

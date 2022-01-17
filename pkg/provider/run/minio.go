@@ -55,12 +55,14 @@ const (
 // StartMinio -
 func (m *MinioServer) Start() error {
 	runDir, err := filepath.Abs(m.dir)
-
 	if err != nil {
 		return err
 	}
 
-	os.MkdirAll(runDir, runPerm)
+	err = os.MkdirAll(runDir, runPerm)
+	if err != nil {
+		return errors.WithMessage(err, "mkdirall")
+	}
 
 	// TODO: Create new buckets on the fly
 	//for bName := range l.s.Buckets {

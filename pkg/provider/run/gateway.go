@@ -27,7 +27,6 @@ import (
 	"github.com/nitrictech/nitric/pkg/plugins/gateway"
 	"github.com/nitrictech/nitric/pkg/triggers"
 	nitric_utils "github.com/nitrictech/nitric/pkg/utils"
-
 	"github.com/nitrictech/nitric/pkg/worker"
 )
 

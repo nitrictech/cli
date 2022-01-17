@@ -24,6 +24,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/build"
@@ -45,7 +46,8 @@ var runCmd = &cobra.Command{
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		ctx, _ := filepath.Abs(".")
+		ctx, err := filepath.Abs(".")
+		cobra.CheckErr(err)
 
 		files, err := filepath.Glob(filepath.Join(ctx, args[0]))
 		cobra.CheckErr(err)
@@ -97,7 +99,6 @@ var runCmd = &cobra.Command{
 			Pool:                    pool,
 			TolerateMissingServices: true,
 		})
-
 		cobra.CheckErr(err)
 
 		memerr := make(chan error)
@@ -119,9 +120,9 @@ var runCmd = &cobra.Command{
 
 		select {
 		case membraneError := <-memerr:
-			fmt.Println(fmt.Sprintf("Membrane Error: %v, exiting", membraneError))
+			fmt.Println(errors.WithMessage(membraneError, "membrane error, exiting"))
 		case sigTerm := <-term:
-			fmt.Println(fmt.Sprintf("Received %v, exiting", sigTerm))
+			fmt.Printf("Received %v, exiting\n", sigTerm)
 		}
 
 		for _, f := range functions {

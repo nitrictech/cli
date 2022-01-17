@@ -84,7 +84,7 @@ func imageNameFromExt(ext string) string {
 // Collect - Collects information about all functions for a nitric stack
 func (c *codeConfig) Collect() error {
 	wg := sync.WaitGroup{}
-	errs := sync.Map{}
+	errList := utils.NewErrorList()
 
 	for _, f := range c.files {
 		wg.Add(1)
@@ -94,25 +94,19 @@ func (c *codeConfig) Collect() error {
 			defer wg.Done()
 			rel, err := filepath.Rel(c.stackPath, file)
 			if err != nil {
-				errs.Store(rel, err)
+				errList.Add(err)
 				return
 			}
 
 			err = c.collectOne(rel)
 			if err != nil {
-				errs.Store(rel, err)
+				errList.Add(err)
 				return
 			}
 		}(f)
 	}
 
 	wg.Wait()
-
-	errList := utils.NewErrorList()
-	errs.Range(func(k, v interface{}) bool {
-		errList.Add(v.(error))
-		return true
-	})
 
 	return errList.Aggregate()
 }

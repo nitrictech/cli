@@ -32,8 +32,9 @@ import (
 	"github.com/nitrictech/newcli/pkg/cmd/provider"
 	"github.com/nitrictech/newcli/pkg/cmd/run"
 	"github.com/nitrictech/newcli/pkg/cmd/stack"
-	"github.com/nitrictech/newcli/pkg/cmd/target"
+	cmdTarget "github.com/nitrictech/newcli/pkg/cmd/target"
 	"github.com/nitrictech/newcli/pkg/output"
+	"github.com/nitrictech/newcli/pkg/target"
 )
 
 const configFileName = ".nitric-config"
@@ -89,7 +90,7 @@ func init() {
 	rootCmd.AddCommand(deployment.RootCommand())
 	rootCmd.AddCommand(provider.RootCommand())
 	rootCmd.AddCommand(stack.RootCommand())
-	rootCmd.AddCommand(target.RootCommand())
+	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(configHelpTopic)
@@ -129,9 +130,9 @@ func ensureConfigDefaults() {
 	}
 
 	targets := viper.GetStringMap("targets")
-	if _, ok := targets["local"]; !ok {
+	if _, ok := targets[target.Local]; !ok {
 		needsWrite = true
-		targets["local"] = map[string]string{"provider": "local"}
+		targets[target.Local] = map[string]string{"provider": target.Local}
 		viper.Set("targets", targets)
 	}
 

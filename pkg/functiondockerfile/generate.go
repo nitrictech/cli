@@ -23,6 +23,7 @@ import (
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/target"
 	"github.com/nitrictech/newcli/pkg/utils"
 )
 
@@ -32,7 +33,7 @@ type FunctionDockerfile interface {
 
 func withMembrane(con dockerfile.ContainerState, version, provider string) {
 	membraneName := "membrane-" + provider
-	if provider == "local" {
+	if provider == target.Local {
 		membraneName = "membrane-dev"
 	}
 	fetchFrom := fmt.Sprintf("https://github.com/nitrictech/nitric/releases/download/%s/%s", version, membraneName)
@@ -74,9 +75,7 @@ func GenerateForCodeAsConfig(handler string, fwriter io.Writer) error {
 		return err
 	}
 	switch rt {
-	case utils.RuntimeJavascript:
-		fallthrough
-	case utils.RuntimeTypescript:
+	case utils.RuntimeJavascript, utils.RuntimeTypescript:
 		return typescriptDevBaseGenerator(fwriter)
 	}
 

@@ -24,18 +24,29 @@ import (
 	"github.com/nitrictech/newcli/pkg/pflagext"
 )
 
+const (
+	Local           = "local"
+	Aws             = "aws"
+	Azure           = "azure"
+	Gcp             = "gcp"
+	Digitalocean    = "digitalocean"
+	DefaultTarget   = Local
+	DefaultProvider = Local
+)
+
 var (
-	target   string
-	name     string
-	provider string
-	region   string
+	target    string
+	name      string
+	provider  string
+	region    string
+	Providers = []string{Local, Aws, Azure, Gcp, Digitalocean}
 )
 
 func FromOptions() *Target {
 	t := Target{}
 	if target == "" {
-		t.Name = "local"
-		t.Provider = "local"
+		t.Name = DefaultTarget
+		t.Provider = DefaultProvider
 	} else {
 		targets := map[string]Target{}
 		cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("targets"), &targets))
@@ -60,15 +71,14 @@ func AddOptions(cmd *cobra.Command, providerOnly bool) {
 		targets = append(targets, k)
 	}
 
-	cmd.Flags().VarP(pflagext.NewStringEnumVar(&target, targets, "local"), "target", "t", "use this to refer to a target in the configuration")
+	cmd.Flags().VarP(pflagext.NewStringEnumVar(&target, targets, Local), "target", "t", "use this to refer to a target in the configuration")
 	cmd.RegisterFlagCompletionFunc("target", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return targets, cobra.ShellCompDirectiveDefault
 	})
 
-	providers := []string{"local", "aws", "azure", "gcp", "digitalocean"}
-	cmd.Flags().VarP(pflagext.NewStringEnumVar(&provider, providers, "local"), "provider", "p", "the provider to deploy to")
+	cmd.Flags().VarP(pflagext.NewStringEnumVar(&provider, Providers, Local), "provider", "p", "the provider to deploy to")
 	cmd.RegisterFlagCompletionFunc("provider", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return providers, cobra.ShellCompDirectiveDefault
+		return Providers, cobra.ShellCompDirectiveDefault
 	})
 
 	if !providerOnly {

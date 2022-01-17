@@ -40,19 +40,20 @@ const (
 	minioConsolePort = 9001 // TODO: Determine if we would like to expose the console
 )
 
-var (
-	userHome, _   = os.UserHomeDir()
-	nitricHome    = path.Join(userHome, ".nitric")
-	stagingDir    = path.Join(nitricHome, "staging")
-	stagingAPIDir = path.Join(stagingDir, "apis")
-)
-
 type local struct {
 	s       *stack.Stack
 	t       *target.Target
 	network string
 	cr      containerengine.ContainerEngine
 }
+
+var (
+	userHome, _                  = os.UserHomeDir()
+	nitricHome                   = path.Join(userHome, ".nitric")
+	stagingDir                   = path.Join(nitricHome, "staging")
+	stagingAPIDir                = path.Join(stagingDir, "apis")
+	_             types.Provider = &local{}
+)
 
 func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
 	cr, err := containerengine.Discover()

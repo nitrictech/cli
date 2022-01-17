@@ -26,7 +26,8 @@ import (
 
 	"github.com/nitrictech/nitric/pkg/plugins/gateway"
 	"github.com/nitrictech/nitric/pkg/triggers"
-	"github.com/nitrictech/nitric/pkg/utils"
+	nitric_utils "github.com/nitrictech/nitric/pkg/utils"
+
 	"github.com/nitrictech/nitric/pkg/worker"
 )
 
@@ -53,7 +54,7 @@ func apiWorkerFilter(apiName string) func(w worker.Worker) bool {
 func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
 	apiName := ctx.UserValue("name").(string)
 	// Rewrite the URL of the request to remove the /api/{name} subroute
-	pathParts := utils.SplitPath(string(ctx.Path()))
+	pathParts := nitric_utils.SplitPath(string(ctx.Path()))
 	// remove first two path parts
 	newPathParts := pathParts[2:]
 
@@ -91,6 +92,34 @@ func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
 	ctx.Response.SetBody(resp.Body)
 }
 
+func (s *BaseHttpGateway) topic(ctx *fasthttp.RequestCtx) {
+	topicName := ctx.UserValue("name").(string)
+
+	evt := &triggers.Event{
+		ID:      "test",
+		Topic:   topicName,
+		Payload: ctx.Request.Body(),
+	}
+
+	ws := s.pool.GetWorkers(&worker.GetWorkerOptions{
+		Event: evt,
+	})
+
+	if len(ws) == 0 {
+		ctx.Error("no subscribers found for topic", 404)
+	}
+
+	errList := make([]error, 0)
+
+	for _, w := range ws {
+		if err := w.HandleEvent(evt); err != nil {
+			errList = append(errList, err)
+		}
+	}
+
+	ctx.Success("text/plain", []byte(fmt.Sprintf("%d successful & %d failed deliveries", len(ws)-len(errList), len(errList))))
+}
+
 func (s *BaseHttpGateway) Start(pool worker.WorkerPool) error {
 	s.pool = pool
 
@@ -98,6 +127,8 @@ func (s *BaseHttpGateway) Start(pool worker.WorkerPool) error {
 	r := router.New()
 	// Make a request for an API gateway
 	r.ANY("/apis/{name}/{any:*}", s.api)
+	// trigger a topic
+	r.POST("/topic/{name}", s.topic)
 
 	s.server = &fasthttp.Server{
 		ReadTimeout:     time.Second * 1,
@@ -119,7 +150,7 @@ func (s *BaseHttpGateway) Stop() error {
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
 func NewGateway() (gateway.GatewayService, error) {
-	address := utils.GetEnv("GATEWAY_ADDRESS", ":9001")
+	address := nitric_utils.GetEnv("GATEWAY_ADDRESS", ":9001")
 
 	return &BaseHttpGateway{
 		address: address,

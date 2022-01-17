@@ -149,9 +149,7 @@ var stackDescribeCmd = &cobra.Command{
 	Long:  `Describes stack dependencies`,
 	Run: func(cmd *cobra.Command, args []string) {
 		stackPath, err := filepath.Abs(stack.StackPath())
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+		cobra.CheckErr(err)
 
 		cc, err := codeconfig.New(stackPath, args[0])
 		cobra.CheckErr(err)

@@ -109,9 +109,6 @@ var runCmd = &cobra.Command{
 
 		functions, err := run.FunctionsFromHandlers(ctx, files)
 		cobra.CheckErr(err)
-		if err != nil {
-
-		}
 
 		for _, f := range functions {
 			err = f.Start()

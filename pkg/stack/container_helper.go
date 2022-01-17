@@ -20,8 +20,14 @@ import (
 	"fmt"
 )
 
+var _ Compute = &Container{}
+
 func (c *Container) Name() string {
 	return c.name
+}
+
+func (c *Container) Unit() *ComputeUnit {
+	return &c.ComputeUnit
 }
 
 func (c *Container) ContextDirectory() string {

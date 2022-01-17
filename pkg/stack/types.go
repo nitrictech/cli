@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v2"
 )
 
@@ -106,6 +107,14 @@ type Schedule struct {
 	Event  ScheduleEvent  `yaml:"event"`
 }
 
+type Collection struct{}
+
+type Bucket struct{}
+
+type Topic struct{}
+
+type Queue struct{}
+
 // A static site deployment with Nitric
 // We also support server rendered applications
 type Site struct {
@@ -133,15 +142,24 @@ type Stack struct {
 	dir         string
 	Name        string                 `yaml:"name"`
 	Functions   map[string]Function    `yaml:"functions,omitempty"`
-	Collections map[string]interface{} `yaml:"collections,omitempty"`
+	Collections map[string]Collection  `yaml:"collections,omitempty"`
 	Containers  map[string]Container   `yaml:"containers,omitempty"`
-	Buckets     map[string]interface{} `yaml:"buckets,omitempty"`
-	Topics      map[string]interface{} `yaml:"topics,omitempty"`
-	Queues      map[string]interface{} `yaml:"queues,omitempty"`
+	Buckets     map[string]Bucket      `yaml:"buckets,omitempty"`
+	Topics      map[string]Topic       `yaml:"topics,omitempty"`
+	Queues      map[string]Queue       `yaml:"queues,omitempty"`
 	Schedules   map[string]Schedule    `yaml:"schedules,omitempty"`
+	apiDocs     map[string]*openapi3.T `yaml:"-"`
 	Apis        map[string]string      `yaml:"apis,omitempty"`
 	Sites       map[string]Site        `yaml:"sites,omitempty"`
 	EntryPoints map[string]Entrypoint  `yaml:"entrypoints,omitempty"`
+}
+
+func (s *Stack) SetApiDoc(name string, doc *openapi3.T) {
+	if s.apiDocs == nil {
+		s.apiDocs = make(map[string]*openapi3.T)
+	}
+
+	s.apiDocs[name] = doc
 }
 
 func FromFile(name string) (*Stack, error) {
@@ -175,6 +193,19 @@ func FromFile(name string) (*Stack, error) {
 			c.contextDirectory = stack.Path()
 		}
 		stack.Containers[name] = c
+	}
+
+	// Attempt to populate documents from api file references
+	for k, v := range stack.Apis {
+		if doc, err := openapi3.NewLoader().LoadFromFile(filepath.Join(stack.dir, v)); err != nil {
+			return nil, err
+		} else {
+			if stack.apiDocs == nil {
+				stack.apiDocs = make(map[string]*openapi3.T)
+			}
+
+			stack.apiDocs[k] = doc
+		}
 	}
 
 	return stack, nil

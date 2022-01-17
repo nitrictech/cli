@@ -32,6 +32,7 @@ var deploymentCmd = &cobra.Command{
 	nitric deployment create
 	nitric deployment delete
 	nitric deployment list
+	nitric deployment describe
 `,
 }
 

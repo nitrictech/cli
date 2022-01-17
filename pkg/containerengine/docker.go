@@ -79,7 +79,8 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	if err != nil {
 		return err
 	}
-	if strings.Contains(dockerfile, "/tmp") {
+
+	if strings.Contains(dockerfile, os.TempDir()) {
 		// copy the generated dockerfile into the tar.
 		df, err := os.Open(dockerfile)
 		if err != nil {
@@ -203,6 +204,10 @@ func (d *docker) Start(nameOrID string) error {
 	return d.cli.ContainerStart(context.Background(), nameOrID, types.ContainerStartOptions{})
 }
 
+func (d *docker) Stop(nameOrID string, timeout *time.Duration) error {
+	return d.cli.ContainerStop(context.Background(), nameOrID, timeout)
+}
+
 func (d *docker) CopyFromArchive(nameOrID string, path string, reader io.Reader) error {
 	return d.cli.CopyToContainer(context.Background(), nameOrID, path, reader, types.CopyToContainerOptions{})
 }
@@ -239,17 +244,26 @@ func (d *docker) RemoveByLabel(name, value string) error {
 	return nil
 }
 
+func (d *docker) ContainerWait(containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+	return d.cli.ContainerWait(context.Background(), containerID, condition)
+}
+
 func (d *docker) ContainerExec(containerName string, cmd []string, workingDir string) error {
-	rst, err := d.cli.ContainerExecCreate(context.Background(), containerName, types.ExecConfig{
+	ctx := context.Background()
+	rst, err := d.cli.ContainerExecCreate(ctx, containerName, types.ExecConfig{
 		WorkingDir: workingDir,
 		Cmd:        cmd,
 	})
 	if err != nil {
 		return err
 	}
+	err = d.cli.ContainerExecStart(ctx, rst.ID, types.ExecStartCheck{})
+	if err != nil {
+		return err
+	}
 
 	for {
-		res, err := d.cli.ContainerExecInspect(context.Background(), rst.ID)
+		res, err := d.cli.ContainerExecInspect(ctx, rst.ID)
 		if err != nil {
 			return err
 		}

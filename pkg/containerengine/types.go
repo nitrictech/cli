@@ -27,6 +27,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var MockEngine ContainerEngine
+
 type Image struct {
 	ID         string `yaml:"id"`
 	Repository string `yaml:"repository,omitempty"`
@@ -41,6 +43,8 @@ type ContainerEngine interface {
 	NetworkCreate(name string) error
 	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error
+	Stop(nameOrID string, timeout *time.Duration) error
+	ContainerWait(containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error)
 	CopyFromArchive(nameOrID string, path string, reader io.Reader) error
 	ContainersListByLabel(match map[string]string) ([]types.Container, error)
 	RemoveByLabel(name, value string) error
@@ -48,6 +52,10 @@ type ContainerEngine interface {
 }
 
 func Discover() (ContainerEngine, error) {
+	if MockEngine != nil {
+		// for unit testing
+		return MockEngine, nil
+	}
 	pm, err := newPodman()
 	if err == nil {
 		return pm, nil

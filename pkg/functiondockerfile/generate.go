@@ -61,3 +61,16 @@ func Generate(f *stack.Function, version, provider string, fwriter io.Writer) er
 	}
 	return errors.New("could not build dockerfile from " + f.Handler + ", extension not supported")
 }
+
+// GenerateForCodeAsConfig dockerfiles for code-as-config
+// These will initially be generated without the membrane
+func GenerateForCodeAsConfig(handler string, fwriter io.Writer) error {
+	switch path.Ext(handler) {
+	case ".js":
+		fallthrough
+	case ".ts":
+		return typescriptDevBaseGenerator(fwriter)
+	}
+
+	return errors.New("could not build dockerfile from " + handler + ", extension not supported")
+}

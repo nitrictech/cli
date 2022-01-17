@@ -14,8 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build linux
-
 package containerengine
 
 import (
@@ -25,6 +23,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -98,6 +97,14 @@ func (p *podman) ContainerCreate(config *container.Config, hostConfig *container
 
 func (p *podman) Start(nameOrID string) error {
 	return p.docker.Start(nameOrID)
+}
+
+func (p *podman) Stop(nameOrID string, timeout *time.Duration) error {
+	return p.docker.Stop(nameOrID, timeout)
+}
+
+func (p *podman) ContainerWait(containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+	return p.docker.ContainerWait(containerID, condition)
 }
 
 func (p *podman) CopyFromArchive(nameOrID string, path string, reader io.Reader) error {

@@ -150,6 +150,10 @@ var runCmd = &cobra.Command{
 			fmt.Println(fmt.Sprintf("Received %v, exiting", sigTerm))
 		}
 
+		for _, f := range functions {
+			f.Stop()
+		}
+
 		// Stop the membrane
 		mem.Stop()
 		// Stop the minio server

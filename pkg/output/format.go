@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/davecgh/go-spew/spew"
@@ -157,8 +158,15 @@ func printMap(object interface{}, out io.Writer) {
 	iter := value.MapRange()
 
 	rows := []table.Row{}
+
+	keyList := []reflect.Value{}
 	for iter.Next() {
-		k := iter.Key()
+		keyList = append(keyList, iter.Key())
+	}
+	sort.SliceStable(keyList, func(i, j int) bool {
+		return keyList[i].String() < keyList[j].String()
+	})
+	for _, k := range keyList {
 		v := value.MapIndex(k)
 
 		switch v.Kind() {

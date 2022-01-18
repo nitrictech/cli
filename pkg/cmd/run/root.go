@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/build"
-	"github.com/nitrictech/newcli/pkg/provider/run"
+	"github.com/nitrictech/newcli/pkg/run"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
 	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"

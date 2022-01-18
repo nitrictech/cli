@@ -23,7 +23,6 @@ import (
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
-	"github.com/nitrictech/newcli/pkg/target"
 	"github.com/nitrictech/newcli/pkg/utils"
 )
 
@@ -33,9 +32,6 @@ type FunctionDockerfile interface {
 
 func withMembrane(con dockerfile.ContainerState, version, provider string) {
 	membraneName := "membrane-" + provider
-	if provider == target.Local {
-		membraneName = "membrane-dev"
-	}
 	fetchFrom := fmt.Sprintf("https://github.com/nitrictech/nitric/releases/download/%s/%s", version, membraneName)
 	if version == "latest" {
 		fetchFrom = fmt.Sprintf("https://github.com/nitrictech/nitric/releases/%s/download/%s", version, membraneName)

@@ -275,11 +275,14 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 				return nil, err
 			}
 
-			sns.NewTopicSubscription(ctx, name+"Subscription", &sns.TopicSubscriptionArgs{
+			_, err = sns.NewTopicSubscription(ctx, name+"Subscription", &sns.TopicSubscriptionArgs{
 				Endpoint: res.Function.Arn,
 				Protocol: pulumi.String("lambda"),
 				Topic:    topic.ID(), // TODO check (was topic.sns)
 			}, pulumi.Parent(res))
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			fmt.Printf("WARNING: Function %s has a Trigger %s, but the topic is missing", name, t)
 		}

@@ -34,7 +34,6 @@ import (
 	"github.com/nitrictech/newcli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/newcli/pkg/cmd/target"
 	"github.com/nitrictech/newcli/pkg/output"
-	"github.com/nitrictech/newcli/pkg/target"
 )
 
 const configFileName = ".nitric-config"
@@ -58,7 +57,7 @@ func Execute() {
 
 var configHelpTopic = &cobra.Command{
 	Use:   "configuration",
-	Short: "Configuraton help",
+	Short: "Configuration help",
 	Long: `nitric CLI can be configured (using yaml format) in the following locations:
 ${HOME}/.nitric-config.yaml
 ${HOME}/.config/nitric/.nitric-config.yaml
@@ -68,12 +67,9 @@ An example of the format is:
     new: stack create
 
   targets:
-    local:
-      provider: local
     test-app:
       region: eastus
       provider: aws
-      name: myApp
   `,
 }
 
@@ -82,9 +78,10 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
-	rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
 	})
+	cobra.CheckErr(err)
 
 	rootCmd.AddCommand(build.RootCommand())
 	rootCmd.AddCommand(deployment.RootCommand())
@@ -115,7 +112,7 @@ func initConfig() {
 	}
 
 	viper.AutomaticEnv()
-	viper.ReadInConfig()
+	_ = viper.ReadInConfig()
 
 	ensureConfigDefaults()
 }
@@ -129,13 +126,6 @@ func ensureConfigDefaults() {
 		viper.Set("aliases", aliases)
 	}
 
-	targets := viper.GetStringMap("targets")
-	if _, ok := targets[target.Local]; !ok {
-		needsWrite = true
-		targets[target.Local] = map[string]string{"provider": target.Local}
-		viper.Set("targets", targets)
-	}
-
 	to := viper.GetDuration("build_timeout")
 	if to == 0 {
 		needsWrite = true
@@ -144,7 +134,7 @@ func ensureConfigDefaults() {
 
 	if needsWrite {
 		fmt.Println("updating configfile to include defaults")
-		viper.WriteConfig()
+		cobra.CheckErr(viper.WriteConfig())
 	}
 }
 
@@ -161,7 +151,7 @@ func addAliases() {
 				newArgs = append(newArgs, strings.Split(aliasString, " ")...)
 				newArgs = append(newArgs, args...)
 				os.Args = newArgs
-				rootCmd.Execute()
+				cobra.CheckErr(rootCmd.Execute())
 			},
 			DisableFlagParsing: true, // the real command will parse the flags
 		}

@@ -85,15 +85,15 @@ var deploymentListCmd = &cobra.Command{
 
 func RootCommand() *cobra.Command {
 	deploymentCmd.AddCommand(deploymentApplyCmd)
-	target.AddOptions(deploymentApplyCmd, false)
+	cobra.CheckErr(target.AddOptions(deploymentApplyCmd, false))
 	stack.AddOptions(deploymentApplyCmd)
 
 	deploymentCmd.AddCommand(deploymentDeleteCmd)
-	target.AddOptions(deploymentDeleteCmd, false)
+	cobra.CheckErr(target.AddOptions(deploymentDeleteCmd, false))
 	stack.AddOptions(deploymentDeleteCmd)
 
 	deploymentCmd.AddCommand(deploymentListCmd)
 	stack.AddOptions(deploymentListCmd)
-	target.AddOptions(deploymentListCmd, false)
+	cobra.CheckErr(target.AddOptions(deploymentListCmd, false))
 	return deploymentCmd
 }

@@ -43,11 +43,11 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	}
 
 	for k, p := range args.OpenAPISpec.Paths {
-		p.Get = awsOperation(ctx.Log, p.Get, args.LambdaFunctions)
-		p.Post = awsOperation(ctx.Log, p.Post, args.LambdaFunctions)
-		p.Patch = awsOperation(ctx.Log, p.Patch, args.LambdaFunctions)
-		p.Put = awsOperation(ctx.Log, p.Put, args.LambdaFunctions)
-		p.Delete = awsOperation(ctx.Log, p.Delete, args.LambdaFunctions)
+		p.Get = awsOperation(p.Get, args.LambdaFunctions)
+		p.Post = awsOperation(p.Post, args.LambdaFunctions)
+		p.Patch = awsOperation(p.Patch, args.LambdaFunctions)
+		p.Put = awsOperation(p.Put, args.LambdaFunctions)
+		p.Delete = awsOperation(p.Delete, args.LambdaFunctions)
 		args.OpenAPISpec.Paths[k] = p
 	}
 
@@ -94,7 +94,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	})
 }
 
-func awsOperation(logger pulumi.Log, op *openapi3.Operation, funcs map[string]*Lambda) *openapi3.Operation {
+func awsOperation(op *openapi3.Operation, funcs map[string]*Lambda) *openapi3.Operation {
 	if op == nil {
 		return nil
 	}
@@ -111,7 +111,6 @@ func awsOperation(logger pulumi.Log, op *openapi3.Operation, funcs map[string]*L
 	if _, ok := funcs[name]; !ok {
 		return nil
 	}
-	logger.Info("awsOperation "+name, nil)
 	channel := make(chan string)
 	funcs[name].Function.Arn.ApplyT(func(arn string) string {
 		channel <- arn
@@ -119,7 +118,6 @@ func awsOperation(logger pulumi.Log, op *openapi3.Operation, funcs map[string]*L
 	})
 
 	arn := <-channel
-	logger.Info("awsOperation "+name+" "+arn, nil)
 	op.Extensions["x-amazon-apigateway-integration"] = map[string]string{
 		"type":                 "aws_proxy",
 		"httpMethod":           "POST",

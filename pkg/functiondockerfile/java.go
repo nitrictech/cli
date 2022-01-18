@@ -54,7 +54,10 @@ func javaGenerator(f *stack.Function, version, provider string, w io.Writer) err
 		return err
 	}
 
-	con.Copy(dockerfile.CopyOptions{Src: f.Handler, Dest: "function.jar", From: "build"})
+	err = con.Copy(dockerfile.CopyOptions{Src: f.Handler, Dest: "function.jar", From: "build"})
+	if err != nil {
+		return err
+	}
 	con.Config(dockerfile.ConfigOptions{
 		WorkingDir: "/",
 		Ports:      []int32{9001},
@@ -88,11 +91,17 @@ func mavenBuild(con dockerfile.ContainerState, f *stack.Function) error {
 	moduleDirs := []string{}
 	for _, p := range pomFiles {
 		moduleDirs = append(moduleDirs, path.Dir(p))
-		con.Copy(dockerfile.CopyOptions{Src: p, Dest: path.Join("./", p)})
+		err = con.Copy(dockerfile.CopyOptions{Src: p, Dest: path.Join("./", p)})
+		if err != nil {
+			return err
+		}
 	}
 	con.Run(dockerfile.RunOptions{Command: []string{"mvn", "de.qaware.maven:go-offline-maven-plugin:resolve-dependencies"}})
 	for _, d := range moduleDirs {
-		con.Copy(dockerfile.CopyOptions{Src: d, Dest: path.Join("./", d)})
+		err = con.Copy(dockerfile.CopyOptions{Src: d, Dest: path.Join("./", d)})
+		if err != nil {
+			return err
+		}
 	}
 	con.Run(dockerfile.RunOptions{Command: []string{"mvn", "clean", "package"}})
 	return nil

@@ -37,9 +37,15 @@ func pythonGenerator(f *stack.Function, version, provider string, w io.Writer) e
 	con.Config(dockerfile.ConfigOptions{
 		WorkingDir: "/",
 	})
-	con.Copy(dockerfile.CopyOptions{Src: "requirements.txt", Dest: "requirements.txt"})
+	err = con.Copy(dockerfile.CopyOptions{Src: "requirements.txt", Dest: "requirements.txt"})
+	if err != nil {
+		return err
+	}
 	con.Run(dockerfile.RunOptions{Command: []string{"pip", "install", "--no-cache-dir", "-r", "requirements.txt"}})
-	con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	if err != nil {
+		return err
+	}
 
 	withMembrane(con, version, provider)
 

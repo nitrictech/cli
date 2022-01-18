@@ -62,7 +62,7 @@ var buildListCmd = &cobra.Command{
 
 func RootCommand() *cobra.Command {
 	buildCmd.AddCommand(buildCreateCmd)
-	target.AddOptions(buildCreateCmd, true)
+	cobra.CheckErr(target.AddOptions(buildCreateCmd, true))
 	stack.AddOptions(buildCreateCmd)
 	buildCmd.AddCommand(buildListCmd)
 	stack.AddOptions(buildListCmd)

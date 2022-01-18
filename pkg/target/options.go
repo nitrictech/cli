@@ -25,20 +25,19 @@ import (
 )
 
 const (
-	Local           = "local"
 	Aws             = "aws"
 	Azure           = "azure"
 	Gcp             = "gcp"
 	Digitalocean    = "digitalocean"
-	DefaultTarget   = Local
-	DefaultProvider = Local
+	DefaultTarget   = Aws
+	DefaultProvider = Aws
 )
 
 var (
 	target    string
 	provider  string
 	region    string
-	Providers = []string{Local, Aws, Azure, Gcp, Digitalocean}
+	Providers = []string{Aws, Azure, Gcp, Digitalocean}
 )
 
 func FromOptions() *Target {
@@ -60,24 +59,31 @@ func FromOptions() *Target {
 	return &t
 }
 
-func AddOptions(cmd *cobra.Command, providerOnly bool) {
+func AddOptions(cmd *cobra.Command, providerOnly bool) error {
 	targetsMap := viper.GetStringMap("targets")
 	targets := []string{}
 	for k := range targetsMap {
 		targets = append(targets, k)
 	}
 
-	cmd.Flags().VarP(pflagext.NewStringEnumVar(&target, targets, Local), "target", "t", "use this to refer to a target in the configuration")
-	cmd.RegisterFlagCompletionFunc("target", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.Flags().VarP(pflagext.NewStringEnumVar(&target, targets, Aws), "target", "t", "use this to refer to a target in the configuration")
+	err := cmd.RegisterFlagCompletionFunc("target", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return targets, cobra.ShellCompDirectiveDefault
 	})
+	if err != nil {
+		return err
+	}
 
-	cmd.Flags().VarP(pflagext.NewStringEnumVar(&provider, Providers, Local), "provider", "p", "the provider to deploy to")
-	cmd.RegisterFlagCompletionFunc("provider", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.Flags().VarP(pflagext.NewStringEnumVar(&provider, Providers, Aws), "provider", "p", "the provider to deploy to")
+	err = cmd.RegisterFlagCompletionFunc("provider", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return Providers, cobra.ShellCompDirectiveDefault
 	})
+	if err != nil {
+		return err
+	}
 
 	if !providerOnly {
 		cmd.Flags().StringVarP(&region, "region", "r", "", "the region to deploy to")
 	}
+	return nil
 }

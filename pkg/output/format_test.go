@@ -18,6 +18,8 @@ package output
 
 import (
 	"bytes"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -67,7 +69,7 @@ func Test_printStruct(t *testing.T) {
 func Test_printList(t *testing.T) {
 	tests := []struct {
 		name   string
-		object interface{}
+		object []target.Target
 		expect string
 	}{
 		{
@@ -88,6 +90,9 @@ func Test_printList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
+			sort.SliceStable(tt.object, func(i, j int) bool {
+				return strings.Compare(tt.object[i].Provider, tt.object[j].Provider) < 0
+			})
 			printList(tt.object, buf)
 			if !cmp.Equal(tt.expect, buf.String()) {
 				t.Error(cmp.Diff(tt.expect, buf.String()))
@@ -111,8 +116,8 @@ func Test_printMap(t *testing.T) {
 			wantOut: `+-------+----------+-----------+
 | KEY   | PROVIDER | REGION    |
 +-------+----------+-----------+
-| t1    | azure    | somewhere |
 | local | local    |           |
+| t1    | azure    | somewhere |
 +-------+----------+-----------+
 `,
 		},

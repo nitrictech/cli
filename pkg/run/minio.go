@@ -13,13 +13,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package local
+package run
 
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -27,14 +27,46 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/pkg/errors"
+
+	"github.com/nitrictech/newcli/pkg/containerengine"
 )
 
-func (l *local) storage(deploymentName string) error {
-	nitricRunDir := path.Join(l.s.Path(), runDir)
-	os.MkdirAll(nitricRunDir, runPerm)
-	for bName := range l.s.Buckets {
-		os.MkdirAll(path.Join(nitricRunDir, "buckets", bName), runPerm)
+type MinioServer struct {
+	dir     string
+	name    string
+	cid     string
+	ce      containerengine.ContainerEngine
+	apiPort int
+}
+
+const (
+	minioImage       = "minio/minio:latest"
+	devVolume        = "/nitric/"
+	runPerm          = os.ModePerm // NOTE: octal notation is important here!!!
+	LabelRunID       = "io.nitric-run-id"
+	LabelStackName   = "io.nitric-stack"
+	LabelType        = "io.nitric-type"
+	minioPort        = 9000
+	minioConsolePort = 9001 // TODO: Determine if we would like to expose the console
+
+)
+
+// StartMinio -
+func (m *MinioServer) Start() error {
+	runDir, err := filepath.Abs(m.dir)
+	if err != nil {
+		return err
 	}
+
+	err = os.MkdirAll(runDir, runPerm)
+	if err != nil {
+		return errors.WithMessage(err, "mkdirall")
+	}
+
+	// TODO: Create new buckets on the fly
+	//for bName := range l.s.Buckets {
+	//	os.MkdirAll(path.Join(nitricRunDir, "buckets", bName), runPerm)
+	//}
 	ports, err := freeport.Take(2)
 	if err != nil {
 		return errors.WithMessage(err, "freeport.Take")
@@ -43,21 +75,20 @@ func (l *local) storage(deploymentName string) error {
 	port := uint16(ports[0])
 	consolePort := uint16(ports[1])
 
-	minioImage := "minio/minio:latest"
-	err = l.cr.ImagePull(minioImage)
+	err = m.ce.ImagePull(minioImage)
 	if err != nil {
 		return err
 	}
 
-	cID, err := l.cr.ContainerCreate(&container.Config{
-		Image:  minioImage,
-		Cmd:    []string{"minio", "server", "/nitric/buckets", "--console-address", fmt.Sprintf(":%d", consolePort)},
-		Labels: l.labels(deploymentName, "storage"),
+	cID, err := m.ce.ContainerCreate(&container.Config{
+		Image: minioImage,
+		Cmd:   []string{"minio", "server", "/nitric/buckets", "--console-address", fmt.Sprintf(":%d", consolePort)},
 		ExposedPorts: nat.PortSet{
 			nat.Port(fmt.Sprintf("%d/tcp", minioPort)):        struct{}{},
 			nat.Port(fmt.Sprintf("%d/tcp", minioConsolePort)): struct{}{},
 		},
 	}, &container.HostConfig{
+		AutoRemove: true,
 		PortBindings: nat.PortMap{
 			nat.Port(fmt.Sprintf("%d/tcp", minioPort)): []nat.PortBinding{
 				{
@@ -72,17 +103,43 @@ func (l *local) storage(deploymentName string) error {
 		},
 		Mounts: []mount.Mount{
 			{
-				Source: nitricRunDir,
+				Source: runDir,
 				Type:   mount.TypeBind,
 				Target: devVolume,
 			},
 		},
-		NetworkMode: container.NetworkMode(l.network),
+		NetworkMode: container.NetworkMode("bridge"),
 	}, &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{},
-	}, "minio-"+deploymentName)
+	}, "minio-"+m.name)
 	if err != nil {
 		return err
 	}
-	return l.cr.Start(cID)
+	m.cid = cID
+	m.apiPort = minioPort
+
+	return m.ce.Start(cID)
+}
+
+func (m *MinioServer) GetApiPort() int {
+	return m.apiPort
+}
+
+func (m *MinioServer) Stop() error {
+	defaultTimeout := time.Duration(5) * time.Second
+	return m.ce.Stop(m.cid, &defaultTimeout)
+}
+
+func NewMinio(dir string, name string) (*MinioServer, error) {
+	ce, err := containerengine.Discover()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &MinioServer{
+		ce:   ce,
+		dir:  dir,
+		name: name,
+	}, nil
 }

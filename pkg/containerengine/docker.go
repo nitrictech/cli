@@ -135,14 +135,20 @@ func print(rd io.Reader) error {
 	for scanner.Scan() {
 		lastLine = scanner.Text()
 		line := &Line{}
-		json.Unmarshal([]byte(lastLine), line)
+		err := json.Unmarshal([]byte(lastLine), line)
+		if err != nil {
+			return err
+		}
 		if len(line.Stream) > 0 {
 			fmt.Print(line.Stream)
 		}
 	}
 
 	errLine := &ErrorLine{}
-	json.Unmarshal([]byte(lastLine), errLine)
+	err := json.Unmarshal([]byte(lastLine), errLine)
+	if err != nil {
+		return err
+	}
 	if errLine.Error != "" {
 		return errors.New(errLine.Error)
 	}
@@ -178,8 +184,7 @@ func (d *docker) ImagePull(rawImage string) error {
 		return errors.WithMessage(err, "Pull")
 	}
 	defer resp.Close()
-	print(resp)
-	return nil
+	return print(resp)
 }
 
 func (d *docker) NetworkCreate(name string) error {

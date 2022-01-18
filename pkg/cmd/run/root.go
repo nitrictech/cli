@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/build"
-	"github.com/nitrictech/newcli/pkg/provider/run"
+	"github.com/nitrictech/newcli/pkg/run"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
 	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
@@ -53,7 +53,7 @@ var runCmd = &cobra.Command{
 		files, err := filepath.Glob(filepath.Join(ctx, args[0]))
 		cobra.CheckErr(err)
 
-		build.CreateBaseDev(ctx, map[string]string{
+		err = build.CreateBaseDev(ctx, map[string]string{
 			"ts": "nitric-ts-dev",
 		})
 		cobra.CheckErr(err)
@@ -62,7 +62,7 @@ var runCmd = &cobra.Command{
 		cobra.CheckErr(err)
 
 		// start minio
-		mio.Start()
+		err = mio.Start()
 		cobra.CheckErr(err)
 
 		// Connect dev storage
@@ -134,13 +134,16 @@ var runCmd = &cobra.Command{
 		}
 
 		for _, f := range functions {
-			f.Stop()
+			if err = f.Stop(); err != nil {
+				fmt.Println(f.Name(), " stop error ", err)
+			}
 		}
 
 		// Stop the membrane
 		mem.Stop()
+
 		// Stop the minio server
-		mio.Stop()
+		cobra.CheckErr(mio.Stop())
 	},
 	Args: cobra.MaximumNArgs(1),
 }

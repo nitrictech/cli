@@ -13,6 +13,12 @@ linters:
   - staticcheck
   - structcheck
   - ineffassign
+  - varcheck
+  - unused
+  - deadcode
+  - misspell
+  - unconvert
+  - errcheck
 
 issues:
   max-issues-per-linter: 0

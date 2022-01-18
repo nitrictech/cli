@@ -24,7 +24,7 @@ import (
 var providerCmd = &cobra.Command{
 	Use:   "provider",
 	Short: "Work with a provider",
-	Long: `List availabe providers, e.g.
+	Long: `List available providers, e.g.
 	nitric provider list
 `,
 }

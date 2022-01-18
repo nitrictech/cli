@@ -17,8 +17,12 @@
 package deployment
 
 import (
+	"path/filepath"
+
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/newcli/pkg/build"
+	"github.com/nitrictech/newcli/pkg/codeconfig"
 	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/provider"
 	"github.com/nitrictech/newcli/pkg/stack"
@@ -34,6 +38,40 @@ var deploymentCmd = &cobra.Command{
 	nitric deployment list
 	nitric deployment describe
 `,
+}
+
+// NOTE: This command isn't designed to be permanent
+// just to demonstrate a workflow that is exclusively in memory
+// from config as code without having to write configuration files
+var deploymentRunCmd = &cobra.Command{
+	Use:   "run [name] [handler pattern]",
+	Short: "Run a deployment from code",
+	Long:  `Applies a Nitric application deployment, by running the nitric application`,
+	Run: func(cmd *cobra.Command, args []string) {
+		t := target.FromOptions()
+
+		stackPath, err := filepath.Abs(stack.StackPath())
+		cobra.CheckErr(err)
+
+		cc, err := codeconfig.New(stackPath, args[1])
+		cobra.CheckErr(err)
+
+		// Generate dev images to run on
+		err = build.CreateBaseDev(stackPath, cc.ImagesToBuild())
+		cobra.CheckErr(err)
+
+		err = cc.Collect()
+		cobra.CheckErr(err)
+
+		s, err := cc.ToStack()
+		cobra.CheckErr(err)
+
+		p, err := provider.NewProvider(s, t)
+		cobra.CheckErr(err)
+
+		cobra.CheckErr(p.Apply(args[0]))
+	},
+	Args: cobra.ExactArgs(2),
 }
 
 var deploymentApplyCmd = &cobra.Command{

@@ -25,12 +25,12 @@ lint:
 test:
 	go test -v ./pkg/...
 
-generate_check: generate
-	@if [ -n "$$(git status --untracked-files=no --porcelain)" ]; then \
+generate_check: generate fmt
+	@if [ -n "$$(git ls-files -m)" ]; then \
         echo "'make generate' requires you to check in the following files:"; \
 		git ls-files -m ; \
 		exit 1 ; \
     fi
 
 .PHONY: check
-check: generate_check lint test
+check: lint test generate_check

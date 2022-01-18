@@ -41,9 +41,15 @@ func golangGenerator(f *stack.Function, version, provider string, w io.Writer) e
 		WorkingDir: "/app/",
 	})
 
-	buildCon.Copy(dockerfile.CopyOptions{Src: "go.mod *.sum", Dest: "./"})
+	err = buildCon.Copy(dockerfile.CopyOptions{Src: "go.mod *.sum", Dest: "./"})
+	if err != nil {
+		return err
+	}
 	buildCon.Run(dockerfile.RunOptions{Command: []string{"go", "mod", "download"}})
-	buildCon.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	err = buildCon.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	if err != nil {
+		return err
+	}
 	buildCon.Run(dockerfile.RunOptions{Command: []string{"CGO_ENABLED=0", "GOOS=linux", "go", "build", "-o", "/bin/main", f.Handler}})
 
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
@@ -54,7 +60,10 @@ func golangGenerator(f *stack.Function, version, provider string, w io.Writer) e
 		return err
 	}
 
-	con.Copy(dockerfile.CopyOptions{Src: "/bin/main", Dest: "/bin/main", From: "build"})
+	err = con.Copy(dockerfile.CopyOptions{Src: "/bin/main", Dest: "/bin/main", From: "build"})
+	if err != nil {
+		return err
+	}
 	con.Run(dockerfile.RunOptions{Command: []string{"chmod", "+x-rw", "/bin/main"}})
 	con.Config(dockerfile.ConfigOptions{
 		Ports:      []int32{9001},

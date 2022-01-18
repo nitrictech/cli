@@ -38,13 +38,11 @@ type Server struct {
 // during the build process.
 func (s *Server) TriggerStream(stream pb.FaasService_TriggerStreamServer) error {
 	cm, err := stream.Recv()
-
 	if err != nil {
 		return status.Errorf(codes.Internal, "error reading message from stream: %v", err)
 	}
 
 	ir := cm.GetInitRequest()
-
 	if ir == nil {
 		// SHUT IT DOWN!!!!
 		// The first message must be an init request from the prospective FaaS worker
@@ -53,17 +51,17 @@ func (s *Server) TriggerStream(stream pb.FaasService_TriggerStreamServer) error 
 
 	switch w := ir.Worker.(type) {
 	case *pb.InitRequest_Api:
-		s.function.AddApiHandler(w.Api)
+		return s.function.AddApiHandler(w.Api)
 	case *pb.InitRequest_Schedule:
-		s.function.AddScheduleHandler(w.Schedule)
+		return s.function.AddScheduleHandler(w.Schedule)
 	case *pb.InitRequest_Subscription:
-		s.function.AddSubscriptionHandler(w.Subscription)
+		return s.function.AddSubscriptionHandler(w.Subscription)
 	default:
 		// treat as normal function worker
 		// XXX: No-op for now. This can be handled exclusively at runtime
 	}
 
-	// Close the stream, once we've recieved the InitRequest
+	// Close the stream, once we've received the InitRequest
 	return nil
 }
 

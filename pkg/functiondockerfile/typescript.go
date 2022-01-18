@@ -35,7 +35,10 @@ func typescriptGenerator(f *stack.Function, version, provider string, w io.Write
 
 	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "typescript"}})
 	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "ts-node"}})
-	con.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
+	err = con.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
+	if err != nil {
+		return err
+	}
 	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "import", "||", "echo", "Lockfile already exists"}})
 	con.Run(dockerfile.RunOptions{Command: []string{
 		"set", "-ex;",
@@ -44,7 +47,10 @@ func typescriptGenerator(f *stack.Function, version, provider string, w io.Write
 
 	withMembrane(con, version, provider)
 
-	con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	if err != nil {
+		return err
+	}
 	con.Config(dockerfile.ConfigOptions{
 		Cmd: []string{"ts-node", "-T", f.Handler},
 	})

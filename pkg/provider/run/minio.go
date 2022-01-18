@@ -42,7 +42,6 @@ type MinioServer struct {
 const (
 	minioImage       = "minio/minio:latest"
 	devVolume        = "/nitric/"
-	runDir           = "./.nitric/run"
 	runPerm          = os.ModePerm // NOTE: octal notation is important here!!!
 	LabelRunID       = "io.nitric-run-id"
 	LabelStackName   = "io.nitric-stack"

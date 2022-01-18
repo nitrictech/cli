@@ -58,7 +58,7 @@ func Execute() {
 
 var configHelpTopic = &cobra.Command{
 	Use:   "configuration",
-	Short: "Configuraton help",
+	Short: "Configuration help",
 	Long: `nitric CLI can be configured (using yaml format) in the following locations:
 ${HOME}/.nitric-config.yaml
 ${HOME}/.config/nitric/.nitric-config.yaml
@@ -82,9 +82,10 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
-	rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
 	})
+	cobra.CheckErr(err)
 
 	rootCmd.AddCommand(build.RootCommand())
 	rootCmd.AddCommand(deployment.RootCommand())
@@ -115,7 +116,7 @@ func initConfig() {
 	}
 
 	viper.AutomaticEnv()
-	viper.ReadInConfig()
+	_ = viper.ReadInConfig()
 
 	ensureConfigDefaults()
 }
@@ -144,7 +145,7 @@ func ensureConfigDefaults() {
 
 	if needsWrite {
 		fmt.Println("updating configfile to include defaults")
-		viper.WriteConfig()
+		cobra.CheckErr(viper.WriteConfig())
 	}
 }
 
@@ -161,7 +162,7 @@ func addAliases() {
 				newArgs = append(newArgs, strings.Split(aliasString, " ")...)
 				newArgs = append(newArgs, args...)
 				os.Args = newArgs
-				rootCmd.Execute()
+				cobra.CheckErr(rootCmd.Execute())
 			},
 			DisableFlagParsing: true, // the real command will parse the flags
 		}

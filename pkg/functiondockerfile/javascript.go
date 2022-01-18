@@ -34,13 +34,19 @@ func javascriptGenerator(f *stack.Function, version, provider string, w io.Write
 	}
 	withMembrane(con, version, provider)
 
-	con.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
+	err = con.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
+	if err != nil {
+		return err
+	}
 	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "import", "||", "echo", "Lockfile already exists"}})
 	con.Run(dockerfile.RunOptions{Command: []string{
 		"set", "-ex;",
 		"yarn", "install", "--production", "--frozen-lockfile", "--cache-folder", "/tmp/.cache;",
 		"rm", "-rf", "/tmp/.cache;"}})
-	con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	if err != nil {
+		return err
+	}
 	con.Config(dockerfile.ConfigOptions{
 		Cmd: []string{"node", f.Handler},
 	})

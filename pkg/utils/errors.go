@@ -17,6 +17,7 @@
 package utils
 
 import (
+	"errors"
 	"strings"
 	"sync"
 )
@@ -57,4 +58,22 @@ func (e *ErrorList) Aggregate() error {
 		return nil
 	}
 	return e
+}
+
+// NotSupportedError indicates that a request operation cannot be performed,
+// because it is unsupported.
+// Functions and methods should not return this error but should instead
+// return an error including appropriate context that satisfies
+//     errors.Is(err, errors.NotSupportedError)
+// either by directly wrapping NotSupportedError or by implementing an Is method.
+type NotSupportedError struct {
+	error
+}
+
+func NewNotSupportedErr(message string) error {
+	return &NotSupportedError{error: errors.New(message)}
+}
+
+func (*NotSupportedError) Is(err error) bool {
+	return strings.Contains(err.Error(), "unsupported") || strings.Contains(err.Error(), "not supported")
 }

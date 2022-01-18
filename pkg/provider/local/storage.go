@@ -44,7 +44,7 @@ func (l *local) storage(deploymentName string) error {
 	consolePort := uint16(ports[1])
 
 	minioImage := "minio/minio:latest"
-	err = l.cr.Pull(minioImage)
+	err = l.cr.ImagePull(minioImage)
 	if err != nil {
 		return err
 	}

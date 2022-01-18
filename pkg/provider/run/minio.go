@@ -76,7 +76,7 @@ func (m *MinioServer) Start() error {
 	port := uint16(ports[0])
 	consolePort := uint16(ports[1])
 
-	err = m.ce.Pull(minioImage)
+	err = m.ce.ImagePull(minioImage)
 	if err != nil {
 		return err
 	}

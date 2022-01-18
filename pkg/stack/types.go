@@ -86,6 +86,12 @@ type Container struct {
 	ComputeUnit `yaml:",inline"`
 }
 
+type Compute interface {
+	Name() string
+	ImageTagName(s *Stack, provider string) string
+	Unit() *ComputeUnit
+}
+
 // A subset of a NitricEvent
 // excluding it's requestId
 // This will be generated based on the scedule
@@ -160,6 +166,14 @@ func (s *Stack) SetApiDoc(name string, doc *openapi3.T) {
 	}
 
 	s.apiDocs[name] = doc
+}
+
+func (s *Stack) ApiDoc(name string) *openapi3.T {
+	if s.apiDocs == nil {
+		return nil
+	}
+
+	return s.apiDocs[name]
 }
 
 func FromFile(name string) (*Stack, error) {

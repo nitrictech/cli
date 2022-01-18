@@ -36,7 +36,7 @@ var deploymentCmd = &cobra.Command{
 `,
 }
 
-var deploymentCreateCmd = &cobra.Command{
+var deploymentApplyCmd = &cobra.Command{
 	Use:   "apply [name]",
 	Short: "Create or Update a new application deployment",
 	Long:  `Applies a Nitric application deployment.`,
@@ -84,9 +84,9 @@ var deploymentListCmd = &cobra.Command{
 }
 
 func RootCommand() *cobra.Command {
-	deploymentCmd.AddCommand(deploymentCreateCmd)
-	target.AddOptions(deploymentCreateCmd, false)
-	stack.AddOptions(deploymentCreateCmd)
+	deploymentCmd.AddCommand(deploymentApplyCmd)
+	target.AddOptions(deploymentApplyCmd, false)
+	stack.AddOptions(deploymentApplyCmd)
 
 	deploymentCmd.AddCommand(deploymentDeleteCmd)
 	target.AddOptions(deploymentDeleteCmd, false)

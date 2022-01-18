@@ -22,8 +22,14 @@ import (
 
 const DefaulMembraneVersion = "v0.12.1-rc.5"
 
+var _ Compute = &Function{}
+
 func (f *Function) Name() string {
 	return f.name
+}
+
+func (f *Function) Unit() *ComputeUnit {
+	return &f.ComputeUnit
 }
 
 func (f *Function) VersionString(s *Stack) string {

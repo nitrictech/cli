@@ -39,7 +39,7 @@ type Image struct {
 type ContainerEngine interface {
 	Build(dockerfile, path, imageTag string, buildArgs map[string]string) error
 	ListImages(stackName, containerName string) ([]Image, error)
-	Pull(rawImage string) error
+	ImagePull(rawImage string) error
 	NetworkCreate(name string) error
 	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error

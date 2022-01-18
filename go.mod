@@ -25,13 +25,17 @@ require (
 	github.com/nitrictech/boxygen v0.0.1-rc.7.0.20211212231606-62c668408f91
 	github.com/nitrictech/nitric v0.13.0-rc.11
 	github.com/pkg/errors v0.9.1
+	github.com/pulumi/pulumi-aws/sdk/v4 v4.33.0
+	github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0
+	github.com/pulumi/pulumi/sdk/v3 v3.14.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
+	github.com/stretchr/testify v1.7.0
 	github.com/valyala/fasthttp v1.32.0
 	golang.org/x/net v0.0.0-20211105192438-b53810dc28af // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
-	golang.org/x/tools v0.1.8 // indirect
 	google.golang.org/grpc v1.41.0
 	gopkg.in/yaml.v2 v2.4.0
 )

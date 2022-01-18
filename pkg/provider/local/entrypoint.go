@@ -71,7 +71,7 @@ func (l *local) entrypoint(deploymentName, entrypointName string, e *stack.Entry
 
 	port := uint16(ports[0])
 
-	err = l.cr.Pull("nginx")
+	err = l.cr.ImagePull("nginx")
 	if err != nil {
 		return err
 	}

@@ -14,9 +14,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package target
+package types
 
-type Target struct {
-	Provider string `json:"provider,omitempty"`
-	Region   string `json:"region,omitempty"`
+import (
+	"context"
+
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+type PulumiProvider interface {
+	PluginVersion() string
+	PluginName() string
+	Configure(context.Context, *auto.Stack) error
+	Deploy(*pulumi.Context) error
+	CleanUp()
 }

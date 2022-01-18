@@ -17,17 +17,23 @@
 package provider
 
 import (
+	"fmt"
+
 	"github.com/nitrictech/newcli/pkg/provider/local"
+	"github.com/nitrictech/newcli/pkg/provider/pulumi"
 	"github.com/nitrictech/newcli/pkg/provider/types"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 func NewProvider(s *stack.Stack, t *target.Target) (types.Provider, error) {
 	switch t.Provider {
-	case "local":
+	case target.Local:
 		return local.New(s, t)
+	case target.Aws, target.Azure, target.Digitalocean, target.Gcp:
+		return pulumi.New(s, t)
 	default:
-		return nil, nil
+		return nil, utils.NewNotSupportedErr(fmt.Sprintf("provider %s is not supported", t.Provider))
 	}
 }

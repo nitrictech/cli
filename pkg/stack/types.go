@@ -168,6 +168,14 @@ func (s *Stack) SetApiDoc(name string, doc *openapi3.T) {
 	s.apiDocs[name] = doc
 }
 
+func (s *Stack) ApiDoc(name string) *openapi3.T {
+	if s.apiDocs == nil {
+		return nil
+	}
+
+	return s.apiDocs[name]
+}
+
 func FromFile(name string) (*Stack, error) {
 	yamlFile, err := ioutil.ReadFile(name)
 	if err != nil {

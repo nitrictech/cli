@@ -20,7 +20,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"path"
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
@@ -34,7 +33,6 @@ import (
 	"github.com/nitrictech/newcli/pkg/provider/pulumi/types"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
-	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 type awsProvider struct {
@@ -85,9 +83,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	buckets := map[string]*s3.Bucket{}
 	for k := range a.s.Buckets {
-		buckets[k], err = s3.NewBucket(ctx, k, &s3.BucketArgs{
+		_, err = s3.NewBucket(ctx, k, &s3.BucketArgs{
 			Tags: commonTags(ctx, k),
 		})
 		if err != nil {
@@ -95,9 +92,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	queues := map[string]*sqs.Queue{}
 	for k := range a.s.Queues {
-		queues[k], err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
+		_, err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
 			Tags: commonTags(ctx, k),
 		})
 		if err != nil {
@@ -105,9 +101,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	dbs := map[string]*dynamodb.Table{}
 	for k := range a.s.Collections {
-		dbs[k], err = dynamodb.NewTable(ctx, "mytable", &dynamodb.TableArgs{
+		_, err = dynamodb.NewTable(ctx, "mytable", &dynamodb.TableArgs{
 			Attributes: dynamodb.TableAttributeArray{
 				&dynamodb.TableAttributeArgs{
 					Name: pulumi.String("_pk"),
@@ -134,13 +129,6 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			if err != nil {
 				return errors.WithMessage(err, "schedule "+k)
 			}
-		}
-	}
-
-	for k, s := range a.s.Sites {
-		err := a.site(ctx, k, &s)
-		if err != nil {
-			return errors.WithMessage(err, "site "+k)
 		}
 	}
 
@@ -187,20 +175,13 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			return errors.WithMessage(err, "lambda container "+c.Name())
 		}
 	}
-	apiGateways := map[string]*ApiGateway{}
-	for k, apiFile := range a.s.Apis {
-		apiGateways[k], err = newApiGateway(ctx, k, &ApiGatewayArgs{
-			ApiFilePath:     path.Join(a.s.Path(), apiFile),
+
+	for k := range a.s.Apis {
+		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
+			OpenAPISpec:     a.s.ApiDoc(k),
 			LambdaFunctions: funcs})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)
-		}
-	}
-
-	for k, v := range a.s.EntryPoints {
-		err = a.entrypoint(ctx, k, &v)
-		if err != nil {
-			return errors.WithMessage(err, "entrypoint "+k)
 		}
 	}
 
@@ -211,12 +192,4 @@ func (a *awsProvider) CleanUp() {
 	if a.tmpDir != "" {
 		os.Remove(a.tmpDir)
 	}
-}
-
-func (a *awsProvider) site(ctx *pulumi.Context, name string, o interface{}) error {
-	return utils.NewNotSupportedErr("site not supported on AWS yet")
-}
-
-func (a *awsProvider) entrypoint(ctx *pulumi.Context, name string, o interface{}) error {
-	return utils.NewNotSupportedErr("entrypoint not supported on AWS yet")
 }

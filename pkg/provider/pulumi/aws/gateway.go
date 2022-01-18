@@ -24,7 +24,7 @@ import (
 )
 
 type ApiGatewayArgs struct {
-	ApiFilePath     string
+	OpenAPISpec     *openapi3.T
 	LambdaFunctions map[string]*Lambda
 }
 
@@ -42,21 +42,16 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		return nil, err
 	}
 
-	spec, err := openapi3.NewLoader().LoadFromFile(args.ApiFilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	for k, p := range spec.Paths {
+	for k, p := range args.OpenAPISpec.Paths {
 		p.Get = awsOperation(ctx.Log, p.Get, args.LambdaFunctions)
 		p.Post = awsOperation(ctx.Log, p.Post, args.LambdaFunctions)
 		p.Patch = awsOperation(ctx.Log, p.Patch, args.LambdaFunctions)
 		p.Put = awsOperation(ctx.Log, p.Put, args.LambdaFunctions)
 		p.Delete = awsOperation(ctx.Log, p.Delete, args.LambdaFunctions)
-		spec.Paths[k] = p
+		args.OpenAPISpec.Paths[k] = p
 	}
 
-	b, err := spec.MarshalJSON()
+	b, err := args.OpenAPISpec.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}

@@ -57,10 +57,8 @@ func Create(s *stack.Stack, t *target.Target) error {
 		if err != nil {
 			return err
 		}
+
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		if buildArgs["PROVIDER"] == target.Local {
-			buildArgs["PROVIDER"] = "dev"
-		}
 		err = cr.Build(fh.Name(), f.ContextDirectory(), f.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
@@ -69,9 +67,6 @@ func Create(s *stack.Stack, t *target.Target) error {
 
 	for _, c := range s.Containers {
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		if buildArgs["PROVIDER"] == target.Local {
-			buildArgs["PROVIDER"] = "dev"
-		}
 		err := cr.Build(path.Join(c.ContextDirectory(), c.Dockerfile), c.ContextDirectory(), c.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err

@@ -34,7 +34,6 @@ import (
 	"github.com/nitrictech/newcli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/newcli/pkg/cmd/target"
 	"github.com/nitrictech/newcli/pkg/output"
-	"github.com/nitrictech/newcli/pkg/target"
 )
 
 const configFileName = ".nitric-config"
@@ -68,12 +67,9 @@ An example of the format is:
     new: stack create
 
   targets:
-    local:
-      provider: local
     test-app:
       region: eastus
       provider: aws
-      name: myApp
   `,
 }
 
@@ -128,13 +124,6 @@ func ensureConfigDefaults() {
 		needsWrite = true
 		aliases["new"] = "stack create"
 		viper.Set("aliases", aliases)
-	}
-
-	targets := viper.GetStringMap("targets")
-	if _, ok := targets[target.Local]; !ok {
-		needsWrite = true
-		targets[target.Local] = map[string]string{"provider": target.Local}
-		viper.Set("targets", targets)
 	}
 
 	to := viper.GetDuration("build_timeout")

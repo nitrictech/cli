@@ -66,6 +66,9 @@ var deploymentRunCmd = &cobra.Command{
 		s, err := cc.ToStack()
 		cobra.CheckErr(err)
 
+		// Create the build
+		cobra.CheckErr(build.Create(s, t))
+
 		p, err := provider.NewProvider(s, t)
 		cobra.CheckErr(err)
 

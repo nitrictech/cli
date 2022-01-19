@@ -30,7 +30,9 @@ import (
 
 	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/run"
+	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/tasklet"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 var runCmd = &cobra.Command{
@@ -44,10 +46,10 @@ var runCmd = &cobra.Command{
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		stackPath, err := filepath.Abs(".")
-		cobra.CheckErr(err)
+		contextDir := stack.StackPath()
+		stackName := path.Base(contextDir)
 
-		files, err := filepath.Glob(filepath.Join(stackPath, args[0]))
+		files, err := filepath.Glob(filepath.Join(contextDir, args[0]))
 		cobra.CheckErr(err)
 		if len(files) == 0 {
 			err = errors.New("No files where found with glob, try a new pattern")
@@ -57,16 +59,17 @@ var runCmd = &cobra.Command{
 		createBaseImage := tasklet.Runner{
 			StartMsg: "Creating Dev Image",
 			Runner: func(tCtx tasklet.TaskletContext) error {
-				return build.CreateBaseDev(stackPath, map[string]string{
-					"ts": "nitric-ts-dev",
-				})
+				images, err := utils.ImagesToBuild(files)
+				if err != nil {
+					return err
+				}
+				return build.CreateBaseDev(contextDir, images)
 			},
 			StopMsg: "Created Dev Image!",
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
-		ls := run.NewLocalServices(path.Base(stackPath), stackPath)
-
+		ls := run.NewLocalServices(stackName, contextDir)
 		memerr := make(chan error)
 
 		startLocalServices := tasklet.Runner{
@@ -93,7 +96,7 @@ var runCmd = &cobra.Command{
 		startFunctions := tasklet.Runner{
 			StartMsg: "Starting Functions",
 			Runner: func(tCtx tasklet.TaskletContext) error {
-				functions, err = run.FunctionsFromHandlers(stackPath, files)
+				functions, err = run.FunctionsFromHandlers(contextDir, files)
 				if err != nil {
 					return err
 				}
@@ -127,9 +130,10 @@ var runCmd = &cobra.Command{
 		// Stop the membrane
 		cobra.CheckErr(ls.Stop())
 	},
-	Args: cobra.MaximumNArgs(1),
+	Args: cobra.ExactArgs(1),
 }
 
 func RootCommand() *cobra.Command {
+	stack.AddOptions(runCmd)
 	return runCmd
 }

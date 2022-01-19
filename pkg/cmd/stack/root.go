@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/templates"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 var (
@@ -122,14 +122,16 @@ var stackDescribeCmd = &cobra.Command{
 	Short: "describe stack dependencies",
 	Long:  `Describes stack dependencies`,
 	Run: func(cmd *cobra.Command, args []string) {
-		stackPath, err := filepath.Abs(stack.StackPath())
-		cobra.CheckErr(err)
+		contextDir := stack.StackPath()
 
-		cc, err := codeconfig.New(stackPath, args[0])
+		cc, err := codeconfig.New(contextDir, args[0])
 		cobra.CheckErr(err)
 
 		// Generate dev images to run on
-		err = build.CreateBaseDev(stackPath, cc.ImagesToBuild())
+		images, err := utils.ImagesToBuild(cc.Handlers())
+		cobra.CheckErr(err)
+
+		err = build.CreateBaseDev(contextDir, images)
 		cobra.CheckErr(err)
 
 		err = cc.Collect()

@@ -126,11 +126,13 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 
 	// Collect all workers
 	for handler, f := range c.functions {
-		for _, w := range f.apis[api].workers {
-			workers = append(workers, &apiHandler{
-				target: containerNameFromHandler(handler),
-				worker: w,
-			})
+		if f.apis[api] != nil {
+			for _, w := range f.apis[api].workers {
+				workers = append(workers, &apiHandler{
+					target: containerNameFromHandler(handler),
+					worker: w,
+				})
+			}
 		}
 	}
 

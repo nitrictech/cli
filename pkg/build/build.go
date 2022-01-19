@@ -43,23 +43,20 @@ func Create(s *stack.Stack, t *target.Target) error {
 			}
 		}
 
-		fh, err := os.CreateTemp("", "Dockerfile.*")
+		fh, err := os.CreateTemp(s.Path(), "Dockerfile.*")
 		if err != nil {
 			return err
 		}
-
-		defer func() {
-			fh.Close()
-			os.Remove(fh.Name())
-		}()
+		defer func() { os.Remove(fh.Name()) }()
 
 		err = functiondockerfile.Generate(&f, f.VersionString(s), t.Provider, fh)
 		if err != nil {
 			return err
 		}
+		fh.Close()
 
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err = cr.Build(fh.Name(), f.ContextDirectory(), f.ImageTagName(s, t.Provider), buildArgs)
+		err = cr.Build(path.Base(fh.Name()), f.ContextDirectory(), f.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
@@ -67,7 +64,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 
 	for _, c := range s.Containers {
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err := cr.Build(path.Join(c.ContextDirectory(), c.Dockerfile), c.ContextDirectory(), c.ImageTagName(s, t.Provider), buildArgs)
+		err := cr.Build(path.Join(c.Context, c.Dockerfile), c.ContextDirectory(), c.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
@@ -83,7 +80,7 @@ func CreateBaseDev(stackPath string, imagesToBuild map[string]string) error {
 	}
 
 	for lang, imageTag := range imagesToBuild {
-		f, err := os.CreateTemp("", fmt.Sprintf("%s.*.dockerfile", lang))
+		f, err := os.CreateTemp(stackPath, fmt.Sprintf("%s.*.dockerfile", lang))
 		if err != nil {
 			return err
 		}
@@ -97,7 +94,7 @@ func CreateBaseDev(stackPath string, imagesToBuild map[string]string) error {
 			return err
 		}
 
-		if err := ce.Build(f.Name(), stackPath, imageTag, map[string]string{}); err != nil {
+		if err := ce.Build(path.Base(f.Name()), stackPath, imageTag, map[string]string{}); err != nil {
 			return err
 		}
 	}

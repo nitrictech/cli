@@ -394,6 +394,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		s.Functions[name] = stack.Function{
 			Handler: handler,
 			ComputeUnit: stack.ComputeUnit{
+				Name: name,
 				Triggers: stack.Triggers{
 					Topics: topicTriggers,
 				},

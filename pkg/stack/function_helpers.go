@@ -25,10 +25,6 @@ const DefaulMembraneVersion = "v0.12.1-rc.5"
 
 var _ Compute = &Function{}
 
-func (f *Function) Name() string {
-	return f.name
-}
-
 func (f *Function) Unit() *ComputeUnit {
 	return &f.ComputeUnit
 }
@@ -64,5 +60,5 @@ func (f *Function) ImageTagName(s *Stack, provider string) string {
 	if provider != "" {
 		providerString = "-" + provider
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, f.Name(), providerString)
+	return fmt.Sprintf("%s-%s%s", s.Name, f.Name, providerString)
 }

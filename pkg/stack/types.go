@@ -30,7 +30,7 @@ type Triggers struct {
 }
 
 type ComputeUnit struct {
-	name string `yaml:"-"` //nolint:structcheck,unused
+	Name string `yaml:"-"` //nolint:structcheck,unused
 
 	contextDirectory string `yaml:"-"` //nolint:structcheck,unused
 
@@ -87,7 +87,6 @@ type Container struct {
 }
 
 type Compute interface {
-	Name() string
 	ImageTagName(s *Stack, provider string) string
 	Unit() *ComputeUnit
 }
@@ -170,7 +169,7 @@ func FromFile(name string) (*Stack, error) {
 		stack.Functions[name] = fn
 	}
 	for name, c := range stack.Containers {
-		c.name = name
+		c.Name = name
 		if c.Context != "" {
 			c.contextDirectory = path.Join(stack.Path(), c.Context)
 		} else {

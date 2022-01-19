@@ -22,10 +22,6 @@ import (
 
 var _ Compute = &Container{}
 
-func (c *Container) Name() string {
-	return c.name
-}
-
 func (c *Container) Unit() *ComputeUnit {
 	return &c.ComputeUnit
 }
@@ -44,5 +40,5 @@ func (c *Container) ImageTagName(s *Stack, provider string) string {
 	if provider != "" {
 		providerString = "-" + provider
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, c.Name(), providerString)
+	return fmt.Sprintf("%s-%s%s", s.Name, c.Name, providerString)
 }

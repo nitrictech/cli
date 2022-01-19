@@ -176,7 +176,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for k := range a.s.Apis {
+	for _, k := range a.s.ApiNames() {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
 			OpenAPISpec:     a.s.ApiDoc(k),
 			LambdaFunctions: funcs})

@@ -142,6 +142,16 @@ func (s *Stack) SetApiDoc(name string, doc *openapi3.T) {
 	s.apiDocs[name] = doc
 }
 
+func (s *Stack) ApiNames() []string {
+	names := make([]string, 0, len(s.apiDocs))
+
+	for k := range s.apiDocs {
+		names = append(names, k)
+	}
+
+	return names
+}
+
 func (s *Stack) ApiDoc(name string) *openapi3.T {
 	if s.apiDocs == nil {
 		return nil

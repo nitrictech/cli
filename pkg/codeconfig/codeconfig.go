@@ -147,8 +147,14 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				paramName := strings.Replace(p, ":", "", -1)
 				params = append(params, &openapi3.ParameterRef{
 					Value: &openapi3.Parameter{
-						In:   "path",
-						Name: paramName,
+						In:       "path",
+						Name:     paramName,
+						Required: true,
+						Schema: &openapi3.SchemaRef{
+							Value: &openapi3.Schema{
+								Type: "string",
+							},
+						},
 					},
 				})
 				normalizedPath = normalizedPath + "{" + paramName + "}" + "/"
@@ -156,6 +162,8 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				normalizedPath = normalizedPath + p + "/"
 			}
 		}
+		// trim off trailing slash
+		normalizedPath = strings.TrimSuffix(normalizedPath, "/")
 
 		pathItem := doc.Paths.Find(normalizedPath)
 

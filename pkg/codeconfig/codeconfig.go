@@ -308,8 +308,6 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		Queues:      map[string]stack.Queue{},
 		Schedules:   map[string]stack.Schedule{},
 		Apis:        map[string]string{},
-		Sites:       map[string]stack.Site{},
-		EntryPoints: map[string]stack.Entrypoint{},
 	}
 	errs := utils.NewErrorList()
 	for handler, f := range c.functions {

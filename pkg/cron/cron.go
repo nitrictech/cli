@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aws
+package cron
 
 import (
 	"errors"
@@ -65,7 +65,7 @@ var (
 	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Validates that an expression is of the form rate(xyz) or cron(abc)
 )
 
-// awsSchedule converts the Schedule string to the format required by Cloudwatch Events
+// ConvertToAWS converts the Schedule string to the format required by Cloudwatch Events
 // https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents-expressions.html
 // Cron expressions must have an sixth "year" field, and must contain at least one ? (either-or)
 // in either day-of-month or day-of-week.
@@ -74,7 +74,7 @@ var (
 // All others become cron expressions.
 // Exception is made for strings of the form "rate( )" or "cron( )". These are accepted as-is and
 // validated server-side by CloudFormation.
-func awsSchedule(schedule string) (string, error) {
+func ConvertToAWS(schedule string) (string, error) {
 	if schedule == "" {
 		return "", errors.New("schedule can not be empty")
 	}

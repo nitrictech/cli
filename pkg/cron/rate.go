@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package cron
 
 import (
 	"fmt"
@@ -26,19 +26,20 @@ import (
 // into a simple crontab expression
 func RateToCron(rate string) (string, error) {
 	rateParts := strings.Split(rate, " ")
-
+	if len(rateParts) < 2 {
+		return "", fmt.Errorf("not enough parts to rate expression %s", rate)
+	}
 	rateNum := rateParts[0]
 	rateType := rateParts[1]
 
 	num, err := strconv.Atoi(rateNum)
-
 	if err != nil {
-		return "", fmt.Errorf("invalid rate expression %s; %v", rate, err)
+		return "", fmt.Errorf("invalid rate expression %s; %w", rate, err)
 	}
 
 	switch rateType {
-	// Every nth minute
 	case "minutes":
+		// Every nth minute
 		return fmt.Sprintf("*/%d * * * *", num), nil
 	case "hours":
 		// The top of every nth hour

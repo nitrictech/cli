@@ -136,5 +136,9 @@ func RootCommand() *cobra.Command {
 	deploymentCmd.AddCommand(deploymentListCmd)
 	stack.AddOptions(deploymentListCmd)
 	cobra.CheckErr(target.AddOptions(deploymentListCmd, false))
+
+	deploymentCmd.AddCommand(deploymentRunCmd)
+	cobra.CheckErr(target.AddOptions(deploymentRunCmd, true))
+
 	return deploymentCmd
 }

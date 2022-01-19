@@ -38,7 +38,8 @@ var buildCreateCmd = &cobra.Command{
 	Short: "create a new application build",
 	Long:  `Creates a new Nitric application build.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		t := target.FromOptions()
+		t, err := target.FromOptions()
+		cobra.CheckErr(err)
 		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
 		cobra.CheckErr(build.Create(s, t))

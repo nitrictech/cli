@@ -40,7 +40,7 @@ var (
 	Providers = []string{Aws, Azure, Gcp, Digitalocean}
 )
 
-func FromOptions() *Target {
+func FromOptions() (*Target, error) {
 	t := Target{}
 	if target == "" {
 		target = DefaultTarget
@@ -53,10 +53,13 @@ func FromOptions() *Target {
 		}
 	} else {
 		targets := map[string]Target{}
-		cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("targets"), &targets))
+		err := mapstructure.Decode(viper.GetStringMap("targets"), &targets)
+		if err != nil {
+			return nil, err
+		}
 		t = targets[target]
 	}
-	return &t
+	return &t, nil
 }
 
 func AddOptions(cmd *cobra.Command, providerOnly bool) error {

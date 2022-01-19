@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"syscall"
 	"time"
@@ -64,7 +65,8 @@ var runCmd = &cobra.Command{
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
-		ls := run.NewLocalServices(stackPath)
+		ls := run.NewLocalServices(path.Base(stackPath), stackPath)
+
 		memerr := make(chan error)
 
 		startLocalServices := tasklet.Runner{

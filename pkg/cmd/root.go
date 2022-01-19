@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -35,6 +34,7 @@ import (
 	cmdTarget "github.com/nitrictech/newcli/pkg/cmd/target"
 	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/tasklet"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 const configFileName = ".nitric-config"
@@ -107,7 +107,7 @@ func initConfig() {
 
 		// Search config in home directory with name ".nitric" (without extension).
 		viper.AddConfigPath(home)
-		viper.AddConfigPath(path.Join(home, ".config", "nitric"))
+		viper.AddConfigPath(utils.NitricConfigDir())
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".nitric-config")
 	}

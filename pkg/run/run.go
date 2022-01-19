@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"time"
 
+	"github.com/nitrictech/newcli/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
 	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
@@ -36,13 +38,15 @@ type LocalServices interface {
 }
 
 type localServices struct {
+	stackName string
 	stackPath string
 	mio       *MinioServer
 	mem       *membrane.Membrane
 }
 
-func NewLocalServices(stackPath string) LocalServices {
+func NewLocalServices(stackName, stackPath string) LocalServices {
 	return &localServices{
+		stackName: stackName,
 		stackPath: stackPath,
 	}
 }
@@ -65,8 +69,10 @@ func (l *localServices) Running() bool {
 }
 
 func (l *localServices) Start() error {
+	runDir := path.Join(utils.NitricRunDir(), l.stackName)
+
 	var err error
-	l.mio, err = NewMinio("./.nitric/run", "test-run")
+	l.mio, err = NewMinio(runDir, "test-run")
 	if err != nil {
 		return err
 	}
@@ -87,14 +93,14 @@ func (l *localServices) Start() error {
 	}
 
 	// Connect dev documents
-	os.Setenv("LOCAL_DB_DIR", "./.nitric/run")
+	os.Setenv("LOCAL_DB_DIR", runDir)
 	dp, err := boltdb_service.New()
 	if err != nil {
 		return err
 	}
 
 	// Connect secrets plugin
-	os.Setenv("LOCAL_SEC_DIR", "./.nitric/run")
+	os.Setenv("LOCAL_SEC_DIR", runDir)
 	secp, err := secret_service.New()
 	if err != nil {
 		return err

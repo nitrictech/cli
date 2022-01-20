@@ -133,8 +133,14 @@ func ensureConfigDefaults() {
 	}
 
 	if needsWrite {
-		fmt.Println("updating configfile to include defaults")
-		cobra.CheckErr(viper.WriteConfig())
+		configSpinner, err := output.Spinner("Updating configfile to include defaults")
+		cobra.CheckErr(err)
+		err = viper.WriteConfig()
+		cobra.CheckErr(err)
+
+		// let spinner render
+		time.Sleep(1 * time.Second)
+		configSpinner.Success("Configfile updated")
 	}
 }
 

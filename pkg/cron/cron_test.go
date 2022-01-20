@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aws
+package cron
 
 import (
 	"testing"
@@ -156,7 +156,7 @@ func TestAwsSchedule(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			parsedSchedule, err := awsSchedule(tc.inputSchedule)
+			parsedSchedule, err := ConvertToAWS(tc.inputSchedule)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

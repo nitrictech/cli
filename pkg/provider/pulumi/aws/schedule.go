@@ -23,10 +23,12 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/cloudwatch"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	"github.com/nitrictech/newcli/pkg/cron"
 )
 
 func (a *awsProvider) schedule(ctx *pulumi.Context, name, expression string, topic *sns.Topic) error {
-	awsCronValue, err := awsSchedule(expression)
+	awsCronValue, err := cron.ConvertToAWS(expression)
 	if err != nil {
 		return err
 	}

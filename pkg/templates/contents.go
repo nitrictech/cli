@@ -30,55 +30,93 @@ import (
 	"github.com/nitrictech/newcli/pkg/utils"
 )
 
-type Template struct {
-	Name string `yaml:"name"`
-	Path string `yaml:"path"`
-}
-
-type TemplatesConfig struct {
-	Templates []Template
-}
-
 const (
 	rawGitHubURL        = "https://raw.githubusercontent.com"
 	templatesRepo       = "nitrictech/stack-templates"
 	templatesRepoGitURL = "github.com/nitrictech/stack-templates.git"
 )
 
-var configPath = path.Join(utils.NitricHome(), "store", "repositories.yml")
+type TemplateInfo struct {
+	Name string `yaml:"name"`
+	Path string `yaml:"path"`
+}
 
-func ReadTemplatesConfig() (*TemplatesConfig, error) {
-	var config *TemplatesConfig
+type repository struct {
+	Templates []TemplateInfo
+}
 
-	// Open YAML file
-	file, err := os.Open(configPath)
+type Downloader interface {
+	Names() ([]string, error)
+	Get(name string) *TemplateInfo
+	DownloadDirectoryContents(name string, destDir string, force bool) error
+}
+
+type downloader struct {
+	configPath string
+	newGetter  func(*getter.Client) utils.GetterClient
+	repo       []TemplateInfo
+}
+
+var _ Downloader = &downloader{}
+
+func NewDownloader() Downloader {
+	return &downloader{
+		configPath: path.Join(utils.NitricHome(), "store", "repositories.yml"),
+		newGetter:  utils.NewGetter,
+	}
+}
+
+func (d *downloader) Names() ([]string, error) {
+	names := []string{}
+	if len(d.repo) == 0 {
+		err := d.repository()
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, ti := range d.repo {
+		names = append(names, ti.Name)
+	}
+	return names, nil
+}
+
+func (d *downloader) Get(name string) *TemplateInfo {
+	for _, ti := range d.repo {
+		if ti.Name == name {
+			return &ti
+		}
+	}
+	return nil
+}
+
+func (d *downloader) readTemplatesConfig() ([]TemplateInfo, error) {
+	file, err := os.Open(d.configPath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	// Decode YAML file to struct
-	if file != nil {
-		decoder := yaml.NewDecoder(file)
-		if err := decoder.Decode(&config); err != nil {
-			return nil, err
-		}
+	decoder := yaml.NewDecoder(file)
+	repo := repository{}
+	if err := decoder.Decode(&repo); err != nil {
+		return nil, errors.WithMessage(err, "repository file "+d.configPath)
 	}
 
-	return config, nil
+	return repo.Templates, nil
 }
 
 func officialStackName(name string) string {
 	return "official/" + name
 }
 
-func ListTemplates() (TemplatesConfig, error) {
-	client := &getter.Client{
+func (d *downloader) repository() error {
+	src := rawGitHubURL + "/" + path.Join(templatesRepo, "main/repository.yaml")
+	client := d.newGetter(&getter.Client{
 		Ctx: context.Background(),
 		//define the destination to where the directory will be stored. This will create the directory if it doesnt exist
-		Dst: configPath,
+		Dst: d.configPath,
 		//the repository with a subdirectory I would like to clone only
-		Src:  rawGitHubURL + "/" + path.Join(templatesRepo, "main/repository.yaml"),
+		Src:  src,
 		Mode: getter.ClientModeFile,
 		//define the type of detectors go getter should use, in this case only github is needed
 
@@ -86,45 +124,47 @@ func ListTemplates() (TemplatesConfig, error) {
 		Getters: map[string]getter.Getter{
 			"https": &getter.HttpGetter{},
 		},
-	}
+	})
 
 	// download file
 	if err := client.Get(); err != nil {
-		return TemplatesConfig{}, fmt.Errorf("error getting path %s: %v", client.Src, err)
+		return fmt.Errorf("error getting path %s: %w", src, err)
 	}
 
-	var config, err = ReadTemplatesConfig()
+	list, err := d.readTemplatesConfig()
 	if err != nil {
-		return TemplatesConfig{}, err
+		return err
 	}
 
-	if config.Templates == nil {
-		return TemplatesConfig{}, errors.New("templates array does not exist in respositories.yml")
+	d.repo = []TemplateInfo{}
+	for _, template := range list {
+		d.repo = append(d.repo, TemplateInfo{
+			Name: officialStackName(template.Name),
+			Path: filepath.Clean(template.Path),
+		})
 	}
 
-	var transformedConfig = TemplatesConfig{}
-
-	for _, template := range config.Templates {
-		transformedTemplate := Template{Name: officialStackName(template.Name), Path: filepath.Base(template.Path)}
-		transformedConfig.Templates = append(transformedConfig.Templates, transformedTemplate)
-	}
-
-	return transformedConfig, nil
+	return nil
 }
 
-func DownloadDirectoryContents(templatePath string, destDir string, force bool) error {
+func (d *downloader) DownloadDirectoryContents(name string, destDir string, force bool) error {
 	_, err := os.Stat(destDir)
 	if err == nil && !force {
 		return errors.New("stack directory already exists and isn't empty, choose a different name or use the --force flag to create in a non-empty directory")
 	}
 
-	client := &getter.Client{
+	template := d.Get(name)
+	if template == nil {
+		return fmt.Errorf("template %s not found", name)
+	}
+
+	client := d.newGetter(&getter.Client{
 		Ctx: context.Background(),
 		//define the destination to where the directory will be stored. This will create the directory if it doesnt exist
 		Dst: destDir,
 		Dir: true,
 		//the repository with a subdirectory I would like to clone only
-		Src:  templatesRepoGitURL + "//" + templatePath,
+		Src:  templatesRepoGitURL + "//" + template.Path,
 		Mode: getter.ClientModeDir,
 		//define the type of detectors go getter should use, in this case only github is needed
 		Detectors: []getter.Detector{
@@ -134,10 +174,8 @@ func DownloadDirectoryContents(templatePath string, destDir string, force bool) 
 		Getters: map[string]getter.Getter{
 			"git": &getter.GitGetter{},
 		},
-	}
-
-	// TODO add spinner
+	})
 
 	err = client.Get()
-	return errors.WithMessagef(err, "error getting path %s", client.Src)
+	return errors.WithMessagef(err, "error getting path %s", templatesRepoGitURL+"//"+template.Path)
 }

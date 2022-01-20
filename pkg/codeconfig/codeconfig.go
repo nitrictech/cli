@@ -34,6 +34,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/nitrictech/newcli/pkg/containerengine"
+	"github.com/nitrictech/newcli/pkg/cron"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
@@ -344,7 +345,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			if v.GetCron() != nil {
 				exp = v.GetCron().Cron
 			} else if v.GetRate() != nil {
-				e, err := utils.RateToCron(v.GetRate().Rate)
+				e, err := cron.RateToCron(v.GetRate().Rate)
 
 				if err != nil {
 					errs.Add(fmt.Errorf("schedule expresson %s is invalid; %v", v.GetRate().Rate, err))

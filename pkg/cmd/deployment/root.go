@@ -41,7 +41,8 @@ var deploymentApplyCmd = &cobra.Command{
 	Short: "Create or Update a new application deployment",
 	Long:  `Applies a Nitric application deployment.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		t := target.FromOptions()
+		t, err := target.FromOptions()
+		cobra.CheckErr(err)
 		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
 		p, err := provider.NewProvider(s, t)
@@ -56,7 +57,8 @@ var deploymentDeleteCmd = &cobra.Command{
 	Short: "Delete an application deployment",
 	Long:  `Delete a Nitric application deployment.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		t := target.FromOptions()
+		t, err := target.FromOptions()
+		cobra.CheckErr(err)
 		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
 		p, err := provider.NewProvider(s, t)
@@ -71,7 +73,8 @@ var deploymentListCmd = &cobra.Command{
 	Short: "list deployments for a stack",
 	Long:  `Lists Nitric application deployments for a stack.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		t := target.FromOptions()
+		t, err := target.FromOptions()
+		cobra.CheckErr(err)
 		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
 		p, err := provider.NewProvider(s, t)

@@ -14,25 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package utils
 
-import (
-	"testing"
+import "github.com/hashicorp/go-getter"
 
-	"github.com/golang/mock/gomock"
+// GetterClient exists because go-getter does not have an interface to mock.
+type GetterClient interface {
+	Get() error
+}
 
-	"github.com/nitrictech/newcli/mocks/mock_containerengine"
-	"github.com/nitrictech/newcli/pkg/containerengine"
-)
+type getterConfig struct {
+	*getter.Client
+}
 
-func TestCreateBaseDev(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	me := mock_containerengine.NewMockContainerEngine(ctrl)
-	me.EXPECT().Build(gomock.Any(), "path/to/stack", "nitric-ts-dev", map[string]string{})
+func NewGetter(c *getter.Client) GetterClient {
+	return &getterConfig{Client: c}
+}
 
-	containerengine.MockEngine = me
-
-	if err := CreateBaseDev("path/to/stack", map[string]string{"ts": "nitric-ts-dev"}); err != nil {
-		t.Errorf("CreateBaseDev() error = %v", err)
-	}
+func (c *getterConfig) Get() error {
+	return c.Client.Get()
 }

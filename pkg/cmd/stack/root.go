@@ -65,17 +65,9 @@ var stackCreateCmd = &cobra.Command{
 			TemplateName string
 		}{}
 
-		templatesConfig, err := templates.ListTemplates()
-
+		downloadr := templates.NewDownloader()
+		dirs, err := downloadr.Names()
 		cobra.CheckErr(err)
-
-		templatesList := templatesConfig.Templates
-
-		var dirs []string
-
-		for _, template := range templatesList {
-			dirs = append(dirs, template.Name)
-		}
 
 		templateNameQu.Prompt = &survey.Select{
 			Message: "Choose a template:",
@@ -88,21 +80,17 @@ var stackCreateCmd = &cobra.Command{
 			}
 
 			a, ok := ans.(string)
-
 			if !ok {
 				return errors.New("wrong type, need a string")
 			}
 
-			for _, d := range templatesList {
-				if d.Path == a {
-					return nil
-				}
+			if downloadr.Get(a) == nil {
+				return fmt.Errorf("%s not in %v", a, dirs)
 			}
-			return fmt.Errorf("%s not in %v", a, dirs)
+			return nil
 		}
 
-		var qs = []*survey.Question{}
-
+		qs := []*survey.Question{}
 		if len(args) > 0 && stackNameQu.Validate(args[0]) == nil {
 			answers.StackName = args[0]
 		} else {
@@ -121,21 +109,7 @@ var stackCreateCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
-		var templatePath string
-
-		for i := range templatesList {
-			if templatesList[i].Name == answers.TemplateName || templatesList[i].Path == answers.TemplateName {
-				templatePath = templatesList[i].Path
-				break
-			}
-		}
-
-		if templatePath == "" {
-			err = errors.New(fmt.Sprintf("path for template %v not found", answers.TemplateName))
-			cobra.CheckErr(err)
-		}
-
-		err = templates.DownloadDirectoryContents(templatePath, "./"+answers.StackName, force)
+		err = downloadr.DownloadDirectoryContents(answers.TemplateName, "./"+answers.StackName, force)
 		cobra.CheckErr(err)
 		err = setStackName(answers.StackName)
 		cobra.CheckErr(err)

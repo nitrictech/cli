@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/build"
+	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/run"
 )
 
@@ -48,9 +49,22 @@ var runCmd = &cobra.Command{
 		files, err := filepath.Glob(filepath.Join(stackPath, args[0]))
 		cobra.CheckErr(err)
 
+		if len(files) == 0 {
+			err = errors.New("No files where found with glob, try a new pattern")
+			cobra.CheckErr(err)
+		}
+
+		imageSpinner, err := output.Spinner("Creating Dev Image")
+		cobra.CheckErr(err)
+
 		err = build.CreateBaseDev(stackPath, map[string]string{
 			"ts": "nitric-ts-dev",
 		})
+		cobra.CheckErr(err)
+
+		imageSpinner.Success("Created Dev Image!")
+
+		servicesSpinner, err := output.Spinner("Starting Local Services")
 		cobra.CheckErr(err)
 
 		ls := run.NewLocalServices(stackPath)
@@ -66,6 +80,11 @@ var runCmd = &cobra.Command{
 			time.Sleep(time.Second)
 		}
 
+		servicesSpinner.Success("Started Local Services!")
+
+		functionsSpinner, err := output.Spinner("Starting Functions")
+		cobra.CheckErr(err)
+
 		functions, err := run.FunctionsFromHandlers(stackPath, files)
 		cobra.CheckErr(err)
 
@@ -75,6 +94,9 @@ var runCmd = &cobra.Command{
 		}
 
 		time.Sleep(time.Second * 2)
+
+		functionsSpinner.Success("Started Functions!")
+
 		fmt.Println("Local running, use ctrl-C to stop")
 
 		select {

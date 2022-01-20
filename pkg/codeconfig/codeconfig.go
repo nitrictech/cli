@@ -189,7 +189,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				Responses:   openapi3.NewResponses(),
 				ExtensionProps: openapi3.ExtensionProps{
 					Extensions: map[string]interface{}{
-						"x-nitric-target": map[string]interface{}{
+						"x-nitric-target": map[string]string{
 							"type": "function",
 							"name": containerNameFromHandler(w.target),
 						},

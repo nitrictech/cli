@@ -18,6 +18,7 @@ package pulumi
 
 import (
 	"context"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
@@ -100,7 +101,7 @@ func (p *pulumiDeployment) Apply(name string) error {
 		LogLevel:    &loglevel,
 		LogToStdErr: true})
 
-	res, err := s.Up(context.Background())
+	res, err := s.Up(context.Background(), optup.ProgressStreams(os.Stdout))
 	defer p.p.CleanUp()
 	if err != nil {
 		return errors.WithMessage(err, res.Summary.Message)

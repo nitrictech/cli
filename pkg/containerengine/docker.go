@@ -22,7 +22,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 
@@ -40,7 +42,8 @@ import (
 )
 
 type docker struct {
-	cli *client.Client
+	cli    *client.Client
+	syslog *localSyslog
 }
 
 var _ ContainerEngine = &docker{}
@@ -65,6 +68,10 @@ func newDocker() (ContainerEngine, error) {
 	}
 
 	return &docker{cli: cli}, err
+}
+
+func (d *docker) Type() string {
+	return "docker"
 }
 
 func tarContextDir(relDockerfile, contextDir string) (io.ReadCloser, error) {
@@ -137,7 +144,7 @@ func print(rd io.Reader) error {
 			return err
 		}
 		if len(line.Stream) > 0 {
-			fmt.Print(line.Stream)
+			log.Default().Print(line.Stream)
 		}
 	}
 
@@ -277,4 +284,13 @@ func (d *docker) ContainerExec(containerName string, cmd []string, workingDir st
 		}
 		return fmt.Errorf("%s %v exited with %d", containerName, cmd, res.ExitCode)
 	}
+}
+
+func (d *docker) Logger(stackPath string) ContainerLogger {
+	if d.syslog == nil {
+		d.syslog = &localSyslog{
+			logPath: path.Join(utils.NitricLogDir(stackPath), "run.log"),
+		}
+	}
+	return d.syslog
 }

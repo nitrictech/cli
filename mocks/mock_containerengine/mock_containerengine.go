@@ -155,6 +155,20 @@ func (mr *MockContainerEngineMockRecorder) ListImages(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListImages", reflect.TypeOf((*MockContainerEngine)(nil).ListImages), arg0, arg1)
 }
 
+// Logger mocks base method.
+func (m *MockContainerEngine) Logger(arg0 string) containerengine.ContainerLogger {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Logger", arg0)
+	ret0, _ := ret[0].(containerengine.ContainerLogger)
+	return ret0
+}
+
+// Logger indicates an expected call of Logger.
+func (mr *MockContainerEngineMockRecorder) Logger(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockContainerEngine)(nil).Logger), arg0)
+}
+
 // NetworkCreate mocks base method.
 func (m *MockContainerEngine) NetworkCreate(arg0 string) error {
 	m.ctrl.T.Helper()
@@ -209,4 +223,18 @@ func (m *MockContainerEngine) Stop(arg0 string, arg1 *time.Duration) error {
 func (mr *MockContainerEngineMockRecorder) Stop(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockContainerEngine)(nil).Stop), arg0, arg1)
+}
+
+// Type mocks base method.
+func (m *MockContainerEngine) Type() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Type")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Type indicates an expected call of Type.
+func (mr *MockContainerEngineMockRecorder) Type() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Type", reflect.TypeOf((*MockContainerEngine)(nil).Type))
 }

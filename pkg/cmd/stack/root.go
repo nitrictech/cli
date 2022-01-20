@@ -123,7 +123,6 @@ var stackDescribeCmd = &cobra.Command{
 	Long:  `Describes stack dependencies`,
 	Run: func(cmd *cobra.Command, args []string) {
 		contextDir := stack.StackPath()
-
 		cc, err := codeconfig.New(contextDir, args[0])
 		cobra.CheckErr(err)
 

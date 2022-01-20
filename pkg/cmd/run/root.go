@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/build"
+	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/run"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/tasklet"
@@ -56,6 +57,12 @@ var runCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
+		ce, err := containerengine.Discover()
+		cobra.CheckErr(err)
+
+		logger := ce.Logger(contextDir)
+		cobra.CheckErr(logger.Start())
+
 		createBaseImage := tasklet.Runner{
 			StartMsg: "Creating Dev Image",
 			Runner: func(tCtx tasklet.TaskletContext) error {
@@ -80,9 +87,18 @@ var runCmd = &cobra.Command{
 				}(memerr)
 
 				for {
+					select {
+					case err := <-memerr:
+						// catch any early errors from Start()
+						if err != nil {
+							return err
+						}
+					default:
+					}
 					if ls.Running() {
 						break
 					}
+					tCtx.Spinner().UpdateText("Waiting for Local Services to be ready")
 					time.Sleep(time.Second)
 				}
 				return nil
@@ -127,6 +143,7 @@ var runCmd = &cobra.Command{
 			}
 		}
 
+		_ = logger.Stop()
 		// Stop the membrane
 		cobra.CheckErr(ls.Stop())
 	},

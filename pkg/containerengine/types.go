@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var MockEngine ContainerEngine
+var DiscoveredEngine ContainerEngine
 
 type Image struct {
 	ID         string `yaml:"id"`
@@ -36,7 +36,14 @@ type Image struct {
 	CreatedAt  string `yaml:"createdAt,omitempty"`
 }
 
+type ContainerLogger interface {
+	Start() error
+	Stop() error
+	Config() *container.LogConfig
+}
+
 type ContainerEngine interface {
+	Type() string
 	Build(dockerfile, path, imageTag string, buildArgs map[string]string) error
 	ListImages(stackName, containerName string) ([]Image, error)
 	ImagePull(rawImage string) error
@@ -49,19 +56,21 @@ type ContainerEngine interface {
 	ContainersListByLabel(match map[string]string) ([]types.Container, error)
 	RemoveByLabel(name, value string) error
 	ContainerExec(containerName string, cmd []string, workingDir string) error
+	Logger(stackPath string) ContainerLogger
 }
 
 func Discover() (ContainerEngine, error) {
-	if MockEngine != nil {
-		// for unit testing
-		return MockEngine, nil
+	if DiscoveredEngine != nil {
+		return DiscoveredEngine, nil
 	}
 	pm, err := newPodman()
 	if err == nil {
+		DiscoveredEngine = pm
 		return pm, nil
 	}
 	dk, err := newDocker()
 	if err == nil {
+		DiscoveredEngine = dk
 		return dk, nil
 	}
 	return nil, errors.New("neither podman nor docker found")

@@ -39,7 +39,7 @@ func TestCreateBaseDev(t *testing.T) {
 
 	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{})
 
-	containerengine.MockEngine = me
+	containerengine.DiscoveredEngine = me
 
 	if err := CreateBaseDev(dir, map[string]string{"ts": "nitric-ts-dev"}); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)

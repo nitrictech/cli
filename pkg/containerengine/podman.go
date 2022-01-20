@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 
@@ -30,6 +31,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
+
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 // use docker client to podman socket.
@@ -73,6 +76,10 @@ func newPodman() (ContainerEngine, error) {
 	fmt.Println("podman found")
 
 	return &podman{docker: &docker{cli: cli}}, err
+}
+
+func (p *podman) Type() string {
+	return "podman"
 }
 
 func (p *podman) Build(dockerfile, path, imageTag string, buildArgs map[string]string) error {
@@ -122,3 +129,23 @@ func (p *podman) RemoveByLabel(name, value string) error {
 func (p *podman) ContainerExec(containerName string, cmd []string, workingDir string) error {
 	return p.docker.ContainerExec(containerName, cmd, workingDir)
 }
+
+func (p *podman) Logger(stackPath string) ContainerLogger {
+	return &jsonfile{logPath: path.Join(utils.NitricLogDir(stackPath), "run.log")}
+}
+
+type jsonfile struct {
+	logPath string
+}
+
+func (j *jsonfile) Config() *container.LogConfig {
+	return &container.LogConfig{
+		Type: "json-file",
+		Config: map[string]string{
+			"path": j.logPath,
+		},
+	}
+}
+
+func (j *jsonfile) Stop() error  { return nil }
+func (j *jsonfile) Start() error { return nil }

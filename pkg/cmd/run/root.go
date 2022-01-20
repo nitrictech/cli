@@ -29,11 +29,6 @@ import (
 
 	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/run"
-	"github.com/nitrictech/nitric/pkg/membrane"
-	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
-	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
-	minio "github.com/nitrictech/nitric/pkg/plugins/storage/minio"
-	"github.com/nitrictech/nitric/pkg/worker"
 )
 
 var runCmd = &cobra.Command{
@@ -47,76 +42,31 @@ var runCmd = &cobra.Command{
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		ctx, err := filepath.Abs(".")
+		stackPath, err := filepath.Abs(".")
 		cobra.CheckErr(err)
 
-		files, err := filepath.Glob(filepath.Join(ctx, args[0]))
+		files, err := filepath.Glob(filepath.Join(stackPath, args[0]))
 		cobra.CheckErr(err)
 
-		err = build.CreateBaseDev(ctx, map[string]string{
+		err = build.CreateBaseDev(stackPath, map[string]string{
 			"ts": "nitric-ts-dev",
 		})
 		cobra.CheckErr(err)
 
-		mio, err := run.NewMinio("./.nitric/run", "test-run")
-		cobra.CheckErr(err)
-
-		// start minio
-		err = mio.Start()
-		cobra.CheckErr(err)
-
-		// Connect dev storage
-		os.Setenv(minio.MINIO_ENDPOINT_ENV, fmt.Sprintf("localhost:%d", mio.GetApiPort()))
-		os.Setenv(minio.MINIO_ACCESS_KEY_ENV, "minioadmin")
-		os.Setenv(minio.MINIO_SECRET_KEY_ENV, "minioadmin")
-		sp, err := minio.New()
-		cobra.CheckErr(err)
-
-		// Connect dev documents
-		os.Setenv("LOCAL_DB_DIR", "./.nitric/run")
-		dp, err := boltdb_service.New()
-		cobra.CheckErr(err)
-
-		// Connect secrets plugin
-		os.Setenv("LOCAL_SEC_DIR", "./.nitric/run")
-		secp, err := secret_service.New()
-		cobra.CheckErr(err)
-
-		// Create a new Worker Pool
-		// TODO: We may want to override GetWorker on the default ProcessPool
-		// For now we'll use the default and expand from there
-		pool := worker.NewProcessPool(&worker.ProcessPoolOptions{
-			MinWorkers: 0,
-			MaxWorkers: 100,
-		})
-
-		// Start a new gateway plugin
-		gw, err := run.NewGateway()
-		cobra.CheckErr(err)
-
-		// Prepare development membrane to start
-		// This will start a single membrane that all
-		// running functions will connect to
-		mem, err := membrane.New(&membrane.MembraneOptions{
-			ServiceAddress:          "0.0.0.0:50051",
-			ChildCommand:            []string{"echo", "running membrane 🚀"},
-			SecretPlugin:            secp,
-			StoragePlugin:           sp,
-			DocumentPlugin:          dp,
-			GatewayPlugin:           gw,
-			Pool:                    pool,
-			TolerateMissingServices: true,
-		})
-		cobra.CheckErr(err)
-
+		ls := run.NewLocalServices(stackPath)
 		memerr := make(chan error)
 		go func(errch chan error) {
-			errch <- mem.Start()
+			errch <- ls.Start()
 		}(memerr)
 
-		time.Sleep(time.Second * time.Duration(2))
+		for {
+			if ls.Running() {
+				break
+			}
+			time.Sleep(time.Second)
+		}
 
-		functions, err := run.FunctionsFromHandlers(ctx, files)
+		functions, err := run.FunctionsFromHandlers(stackPath, files)
 		cobra.CheckErr(err)
 
 		for _, f := range functions {
@@ -124,6 +74,7 @@ var runCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
+		time.Sleep(time.Second * 2)
 		fmt.Println("Local running, use ctrl-C to stop")
 
 		select {
@@ -140,10 +91,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Stop the membrane
-		mem.Stop()
-
-		// Stop the minio server
-		cobra.CheckErr(mio.Stop())
+		cobra.CheckErr(ls.Stop())
 	},
 	Args: cobra.MaximumNArgs(1),
 }

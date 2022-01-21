@@ -28,8 +28,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/build"
-	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/run"
+	"github.com/nitrictech/newcli/pkg/tasklet"
 )
 
 var runCmd = &cobra.Command{
@@ -48,54 +48,64 @@ var runCmd = &cobra.Command{
 
 		files, err := filepath.Glob(filepath.Join(stackPath, args[0]))
 		cobra.CheckErr(err)
-
 		if len(files) == 0 {
 			err = errors.New("No files where found with glob, try a new pattern")
 			cobra.CheckErr(err)
 		}
 
-		imageSpinner, err := output.Spinner("Creating Dev Image")
-		cobra.CheckErr(err)
-
-		err = build.CreateBaseDev(stackPath, map[string]string{
-			"ts": "nitric-ts-dev",
-		})
-		cobra.CheckErr(err)
-
-		imageSpinner.Success("Created Dev Image!")
-
-		servicesSpinner, err := output.Spinner("Starting Local Services")
-		cobra.CheckErr(err)
+		createBaseImage := tasklet.Runner{
+			StartMsg: "Creating Dev Image",
+			Runner: func(tCtx tasklet.TaskletContext) error {
+				return build.CreateBaseDev(stackPath, map[string]string{
+					"ts": "nitric-ts-dev",
+				})
+			},
+			StopMsg: "Created Dev Image!",
+		}
+		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
 		ls := run.NewLocalServices(stackPath)
 		memerr := make(chan error)
-		go func(errch chan error) {
-			errch <- ls.Start()
-		}(memerr)
 
-		for {
-			if ls.Running() {
-				break
-			}
-			time.Sleep(time.Second)
+		startLocalServices := tasklet.Runner{
+			StartMsg: "Starting Local Services",
+			Runner: func(tCtx tasklet.TaskletContext) error {
+				go func(errch chan error) {
+					errch <- ls.Start()
+				}(memerr)
+
+				for {
+					if ls.Running() {
+						break
+					}
+					time.Sleep(time.Second)
+				}
+				return nil
+			},
+			StopMsg: "Started Local Services!",
 		}
+		tasklet.MustRun(startLocalServices, tasklet.Opts{Signal: term})
 
-		servicesSpinner.Success("Started Local Services!")
+		var functions []*run.Function
 
-		functionsSpinner, err := output.Spinner("Starting Functions")
-		cobra.CheckErr(err)
-
-		functions, err := run.FunctionsFromHandlers(stackPath, files)
-		cobra.CheckErr(err)
-
-		for _, f := range functions {
-			err = f.Start()
-			cobra.CheckErr(err)
+		startFunctions := tasklet.Runner{
+			StartMsg: "Starting Functions",
+			Runner: func(tCtx tasklet.TaskletContext) error {
+				functions, err = run.FunctionsFromHandlers(stackPath, files)
+				if err != nil {
+					return err
+				}
+				for _, f := range functions {
+					err = f.Start()
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			},
+			StopMsg: "Started Functions!",
 		}
-
-		time.Sleep(time.Second * 2)
-
-		functionsSpinner.Success("Started Functions!")
+		tasklet.MustRun(startFunctions, tasklet.Opts{Signal: term})
 
 		fmt.Println("Local running, use ctrl-C to stop")
 

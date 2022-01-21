@@ -34,6 +34,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/newcli/pkg/cmd/target"
 	"github.com/nitrictech/newcli/pkg/output"
+	"github.com/nitrictech/newcli/pkg/tasklet"
 )
 
 const configFileName = ".nitric-config"
@@ -133,14 +134,12 @@ func ensureConfigDefaults() {
 	}
 
 	if needsWrite {
-		configSpinner, err := output.Spinner("Updating configfile to include defaults")
-		cobra.CheckErr(err)
-		err = viper.WriteConfig()
-		cobra.CheckErr(err)
-
-		// let spinner render
-		time.Sleep(1 * time.Second)
-		configSpinner.Success("Configfile updated")
+		tasklet.MustRun(tasklet.Runner{
+			StartMsg: "Updating configfile to include defaults",
+			Runner: func(_ tasklet.TaskletContext) error {
+				return viper.WriteConfig()
+			},
+			StopMsg: "Configfile updated"}, tasklet.Opts{})
 	}
 }
 

@@ -72,7 +72,7 @@ func javaGenerator(f *stack.Function, version, provider string, w io.Writer) err
 func glob(dir string, name string) ([]string, error) {
 	files := []string{}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
-		if f.Name() == name {
+		if f != nil && f.Name() == name {
 			// remove the provided dir (so it's like we have changed dir here)
 			files = append(files, strings.Replace(path, dir, "", 1))
 		}

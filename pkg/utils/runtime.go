@@ -28,7 +28,7 @@ type Runtime string
 const (
 	RuntimeTypescript Runtime = "ts"
 	RuntimeJavascript Runtime = "js"
-	RuntimePython     Runtime = "python"
+	RuntimePython     Runtime = "py"
 	RuntimeGolang     Runtime = "go"
 	RuntimeJava       Runtime = "java"
 
@@ -46,6 +46,8 @@ func NewRunTimeFromFilename(file string) (Runtime, error) {
 		return RuntimePython, nil
 	case RuntimeTypescript:
 		return RuntimeTypescript, nil
+	case RuntimeJava:
+		return RuntimeJava, nil
 	default:
 		return RuntimeUnknown, errors.New("runtime '" + string(rt) + "' not supported")
 	}

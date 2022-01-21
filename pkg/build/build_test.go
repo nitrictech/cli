@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+
 	"github.com/nitrictech/newcli/mocks/mock_containerengine"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/stack"

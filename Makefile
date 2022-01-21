@@ -24,7 +24,10 @@ lint:
 
 .PHONY: test
 test:
-	go test -v ./pkg/...
+	go test ./pkg/...
+
+test-coverage:
+	@go test -cover -outputdir=./ -coverprofile=all.coverprofile ./pkg/...
 
 generate_check: generate fmt
 	@if [ -n "$$(git ls-files -m)" ]; then \

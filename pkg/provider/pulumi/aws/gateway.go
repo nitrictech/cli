@@ -121,7 +121,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 			Function:  fun.Function.Name,
 			Action:    pulumi.String("lambda:InvokeFunction"),
 			Principal: pulumi.String("apigateway.amazonaws.com"),
-			SourceArn: res.Api.ExecutionArn,
+			SourceArn: pulumi.Sprintf("%s/*/*/*", res.Api.ExecutionArn),
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, err

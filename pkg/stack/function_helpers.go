@@ -18,16 +18,11 @@ package stack
 
 import (
 	"fmt"
-	"path"
 )
 
 const DefaulMembraneVersion = "v0.12.1-rc.5"
 
 var _ Compute = &Function{}
-
-func (f *Function) Name() string {
-	return f.name
-}
 
 func (f *Function) Unit() *ComputeUnit {
 	return &f.ComputeUnit
@@ -40,20 +35,6 @@ func (f *Function) VersionString(s *Stack) string {
 	return DefaulMembraneVersion
 }
 
-func (f *Function) WithPrivateInfo(name, stackDir string) *Function {
-	f.name = name
-	if f.Context != "" {
-		f.contextDirectory = path.Join(stackDir, f.Context)
-	} else {
-		f.contextDirectory = stackDir
-	}
-	return f
-}
-
-func (f *Function) ContextDirectory() string {
-	return f.contextDirectory
-}
-
 // ImageTagName returns the default image tag for a source image built from this function
 // provider the provider name (e.g. aws), used to uniquely identify builds for specific providers
 func (f *Function) ImageTagName(s *Stack, provider string) string {
@@ -64,5 +45,5 @@ func (f *Function) ImageTagName(s *Stack, provider string) string {
 	if provider != "" {
 		providerString = "-" + provider
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, f.Name(), providerString)
+	return fmt.Sprintf("%s-%s%s", s.Name, f.Name, providerString)
 }

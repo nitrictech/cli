@@ -27,6 +27,7 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 
 	"github.com/nitrictech/newcli/pkg/containerengine"
+	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/utils"
 )
 
@@ -126,18 +127,24 @@ func newFunction(opts FunctionOpts) (*Function, error) {
 	}, nil
 }
 
-func FunctionsFromHandlers(runCtx string, handlers []string) ([]*Function, error) {
-	funcs := make([]*Function, 0, len(handlers))
+func FunctionsFromHandlers(s *stack.Stack) ([]*Function, error) {
+	funcs := make([]*Function, 0, len(s.Functions))
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, h := range handlers {
-		relativeHandlerPath, _ := filepath.Rel(runCtx, h)
+	for _, f := range s.Functions {
+		relativeHandlerPath := f.Handler
+		if filepath.IsAbs(f.Handler) {
+			relativeHandlerPath, err = filepath.Rel(s.Dir, f.Handler)
+			if err != nil {
+				return nil, err
+			}
+		}
 
 		if f, err := newFunction(FunctionOpts{
-			RunCtx:          runCtx,
+			RunCtx:          s.Dir,
 			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,
 		}); err != nil {

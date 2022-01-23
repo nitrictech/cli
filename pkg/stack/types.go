@@ -30,9 +30,10 @@ type Triggers struct {
 }
 
 type ComputeUnit struct {
-	name string `yaml:"-"` //nolint:structcheck,unused
+	Name string `yaml:"-"`
 
-	contextDirectory string `yaml:"-"` //nolint:structcheck,unused
+	// This is the stack.Dir + Context
+	ContextDirectory string `yaml:"-"`
 
 	// Context is the directory containing the code for the function
 	Context string `yaml:"context,omitempty"`
@@ -87,7 +88,6 @@ type Container struct {
 }
 
 type Compute interface {
-	Name() string
 	ImageTagName(s *Stack, provider string) string
 	Unit() *ComputeUnit
 }
@@ -122,7 +122,7 @@ type Topic struct{}
 type Queue struct{}
 
 type Stack struct {
-	dir         string
+	Dir         string                 `yaml:"-"`
 	Name        string                 `yaml:"name"`
 	Functions   map[string]Function    `yaml:"functions,omitempty"`
 	Collections map[string]Collection  `yaml:"collections,omitempty"`
@@ -131,24 +131,8 @@ type Stack struct {
 	Topics      map[string]Topic       `yaml:"topics,omitempty"`
 	Queues      map[string]Queue       `yaml:"queues,omitempty"`
 	Schedules   map[string]Schedule    `yaml:"schedules,omitempty"`
-	apiDocs     map[string]*openapi3.T `yaml:"-"`
+	ApiDocs     map[string]*openapi3.T `yaml:"-"`
 	Apis        map[string]string      `yaml:"apis,omitempty"`
-}
-
-func (s *Stack) SetApiDoc(name string, doc *openapi3.T) {
-	if s.apiDocs == nil {
-		s.apiDocs = make(map[string]*openapi3.T)
-	}
-
-	s.apiDocs[name] = doc
-}
-
-func (s *Stack) ApiDoc(name string) *openapi3.T {
-	if s.apiDocs == nil {
-		return nil
-	}
-
-	return s.apiDocs[name]
 }
 
 func FromFile(name string) (*Stack, error) {
@@ -160,43 +144,44 @@ func FromFile(name string) (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
-	stack := &Stack{dir: dir}
+	stack := &Stack{Dir: dir}
 	err = yaml.Unmarshal(yamlFile, stack)
 	if err != nil {
 		return nil, err
 	}
 	for name, fn := range stack.Functions {
-		fn.WithPrivateInfo(name, stack.Path())
+		fn.Name = name
+		if fn.Context != "" {
+			fn.ContextDirectory = path.Join(stack.Dir, fn.Context)
+		} else {
+			fn.ContextDirectory = stack.Dir
+		}
 		stack.Functions[name] = fn
 	}
 	for name, c := range stack.Containers {
-		c.name = name
+		c.Name = name
 		if c.Context != "" {
-			c.contextDirectory = path.Join(stack.Path(), c.Context)
+			c.ContextDirectory = path.Join(stack.Dir, c.Context)
 		} else {
-			c.contextDirectory = stack.Path()
+			c.ContextDirectory = stack.Dir
 		}
 		stack.Containers[name] = c
 	}
 
 	// Attempt to populate documents from api file references
 	for k, v := range stack.Apis {
-		if doc, err := openapi3.NewLoader().LoadFromFile(filepath.Join(stack.dir, v)); err != nil {
+		if doc, err := openapi3.NewLoader().LoadFromFile(filepath.Join(stack.Dir, v)); err != nil {
 			return nil, err
 		} else {
-			if stack.apiDocs == nil {
-				stack.apiDocs = make(map[string]*openapi3.T)
+			if stack.ApiDocs == nil {
+				stack.ApiDocs = make(map[string]*openapi3.T)
 			}
 
-			stack.apiDocs[k] = doc
+			stack.ApiDocs[k] = doc
 		}
 	}
 
 	return stack, nil
-}
-
-func (s *Stack) Path() string {
-	return s.dir
 }
 
 func (s *Stack) ToFile(name string) error {

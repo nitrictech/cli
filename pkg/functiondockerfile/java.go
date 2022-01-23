@@ -18,13 +18,12 @@ package functiondockerfile
 
 import (
 	"io"
-	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 const (
@@ -69,21 +68,8 @@ func javaGenerator(f *stack.Function, version, provider string, w io.Writer) err
 	return err
 }
 
-func glob(dir string, name string) ([]string, error) {
-	files := []string{}
-	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
-		if f != nil && f.Name() == name {
-			// remove the provided dir (so it's like we have changed dir here)
-			files = append(files, strings.Replace(path, dir, "", 1))
-		}
-		return nil
-	})
-
-	return files, err
-}
-
 func mavenBuild(con dockerfile.ContainerState, f *stack.Function) error {
-	pomFiles, err := glob(f.ContextDirectory(), "pom.xml")
+	pomFiles, err := utils.FindFilesInDir(f.ContextDirectory, "pom.xml")
 	if err != nil {
 		return err
 	}

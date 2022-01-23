@@ -33,6 +33,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
+	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/cron"
 	"github.com/nitrictech/newcli/pkg/stack"
@@ -43,34 +44,41 @@ import (
 // CodeConfig - represents a collection of related functions and their shared dependencies.
 type CodeConfig interface {
 	Collect() error
-	Handlers() []string
 	ToStack() (*stack.Stack, error)
 }
 
 type codeConfig struct {
 	// A stack can be composed of one or more applications
-	functions map[string]*FunctionDependencies
-	stackPath string
-	files     []string
-	lock      sync.RWMutex
+	functions    map[string]*FunctionDependencies
+	initialStack *stack.Stack
+	lock         sync.RWMutex
 }
 
-func New(stackPath string, globString string) (CodeConfig, error) {
-	files, err := filepath.Glob(filepath.Join(stackPath, globString))
+func New(s *stack.Stack) (CodeConfig, error) {
+	return &codeConfig{
+		initialStack: s,
+		functions:    map[string]*FunctionDependencies{},
+		lock:         sync.RWMutex{},
+	}, nil
+}
+
+func Populate(initial *stack.Stack) (*stack.Stack, error) {
+	cc, err := New(initial)
 	if err != nil {
 		return nil, err
 	}
 
-	return &codeConfig{
-		stackPath: stackPath,
-		files:     files,
-		functions: map[string]*FunctionDependencies{},
-		lock:      sync.RWMutex{},
-	}, nil
-}
+	err = build.CreateBaseDev(initial)
+	if err != nil {
+		return nil, err
+	}
 
-func (c *codeConfig) Handlers() []string {
-	return c.files
+	err = cc.Collect()
+	if err != nil {
+		return nil, err
+	}
+
+	return cc.ToStack()
 }
 
 // Collect - Collects information about all functions for a nitric stack
@@ -78,13 +86,13 @@ func (c *codeConfig) Collect() error {
 	wg := sync.WaitGroup{}
 	errList := utils.NewErrorList()
 
-	for _, f := range c.files {
+	for _, f := range c.initialStack.Functions {
 		wg.Add(1)
 
 		// run files in parallel
 		go func(file string) {
 			defer wg.Done()
-			rel, err := filepath.Rel(c.stackPath, file)
+			rel, err := filepath.Rel(c.initialStack.Dir, file)
 			if err != nil {
 				errList.Add(err)
 				return
@@ -95,7 +103,7 @@ func (c *codeConfig) Collect() error {
 				errList.Add(err)
 				return
 			}
-		}(f)
+		}(f.Handler)
 	}
 
 	wg.Wait()
@@ -228,7 +236,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
-				Source: c.stackPath,
+				Source: c.initialStack.Dir,
 				Target: "/app",
 			},
 		},
@@ -294,17 +302,16 @@ func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
 }
 
 func (c *codeConfig) ToStack() (*stack.Stack, error) {
-	s := &stack.Stack{
-		Name:        path.Base(c.stackPath),
-		Functions:   map[string]stack.Function{},
-		Containers:  map[string]stack.Container{},
-		Collections: map[string]stack.Collection{},
-		Buckets:     map[string]stack.Bucket{},
-		Topics:      map[string]stack.Topic{},
-		Queues:      map[string]stack.Queue{},
-		Schedules:   map[string]stack.Schedule{},
-		Apis:        map[string]string{},
-	}
+	s := c.initialStack
+	s.Containers = map[string]stack.Container{}
+	s.Collections = map[string]stack.Collection{}
+	s.Buckets = map[string]stack.Bucket{}
+	s.Topics = map[string]stack.Topic{}
+	s.Queues = map[string]stack.Queue{}
+	s.Schedules = map[string]stack.Schedule{}
+	s.Apis = map[string]string{}
+	s.ApiDocs = map[string]*openapi3.T{}
+
 	errs := utils.NewErrorList()
 	for handler, f := range c.functions {
 		name := containerNameFromHandler(handler)
@@ -317,7 +324,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 				return nil, fmt.Errorf("could not build spec for api: %s; %v", k, err)
 			}
 
-			s.SetApiDoc(k, spec)
+			s.ApiDocs[k] = spec
 		}
 		for k := range f.buckets {
 			s.Buckets[k] = stack.Bucket{}
@@ -389,14 +396,20 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			}
 		}
 
-		s.Functions[name] = stack.Function{
-			Handler: handler,
-			ComputeUnit: stack.ComputeUnit{
-				Triggers: stack.Triggers{
-					Topics: topicTriggers,
+		f, ok := s.Functions[name]
+		if !ok {
+			f = stack.Function{
+				Handler: handler,
+				ComputeUnit: stack.ComputeUnit{
+					Name: name,
 				},
-			},
+			}
 		}
+		f.ComputeUnit.ContextDirectory = s.Dir
+		f.ComputeUnit.Triggers = stack.Triggers{
+			Topics: topicTriggers,
+		}
+		s.Functions[name] = f
 	}
 
 	return s, errs.Aggregate()

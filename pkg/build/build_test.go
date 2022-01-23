@@ -39,11 +39,14 @@ func TestCreateBaseDev(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
+	s := &stack.Stack{Dir: dir}
+	s.Functions = map[string]stack.Function{"foo": {Handler: "functions/list.ts"}}
+
 	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{})
 
 	containerengine.DiscoveredEngine = me
 
-	if err := CreateBaseDev(dir, map[string]string{"ts": "nitric-ts-dev"}); err != nil {
+	if err := CreateBaseDev(s); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)
 	}
 }
@@ -54,7 +57,7 @@ func TestCreate(t *testing.T) {
 	me.EXPECT().Build(gomock.Any(), "", "corp-abc-dev:123456", map[string]string{"PROVIDER": "aws"})
 	me.EXPECT().Build("Dockerfile.custom", "", "corp-xyz-dev:444444", map[string]string{"PROVIDER": "aws"})
 
-	containerengine.MockEngine = me
+	containerengine.DiscoveredEngine = me
 
 	s := &stack.Stack{
 		Name: "test-stack",

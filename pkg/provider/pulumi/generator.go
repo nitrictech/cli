@@ -70,7 +70,7 @@ func (p *pulumiDeployment) load(name string) (*auto.Stack, error) {
 		auto.Project(workspace.Project{
 			Name:    tokens.PackageName(projectName),
 			Runtime: workspace.NewProjectRuntimeInfo("go", nil),
-			Main:    p.s.Path(),
+			Main:    p.s.Dir,
 		}))
 	if err != nil {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
@@ -116,7 +116,7 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 		auto.Project(workspace.Project{
 			Name:    tokens.PackageName(projectName),
 			Runtime: workspace.NewProjectRuntimeInfo("go", nil),
-			Main:    p.s.Path(),
+			Main:    p.s.Dir,
 		}))
 	if err != nil {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")

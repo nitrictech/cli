@@ -43,7 +43,7 @@ import (
 // CodeConfig - represents a collection of related functions and their shared dependencies.
 type CodeConfig interface {
 	Collect() error
-	ImagesToBuild() map[string]string
+	Handlers() []string
 	ToStack() (*stack.Stack, error)
 }
 
@@ -69,13 +69,8 @@ func New(stackPath string, globString string) (CodeConfig, error) {
 	}, nil
 }
 
-func (c *codeConfig) ImagesToBuild() map[string]string {
-	imagesToBuild := map[string]string{}
-	for _, h := range c.files {
-		rt, _ := utils.NewRunTimeFromFilename(h)
-		imagesToBuild[rt.String()] = rt.DevImageName()
-	}
-	return imagesToBuild
+func (c *codeConfig) Handlers() []string {
+	return c.files
 }
 
 // Collect - Collects information about all functions for a nitric stack

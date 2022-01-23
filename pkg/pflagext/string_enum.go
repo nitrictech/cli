@@ -26,7 +26,7 @@ type stringEnum struct {
 	ValueP  *string
 }
 
-// newEnum give a list of allowed flag parameters, where the second argument is the default
+// NewStringEnumVar give a list of allowed flag parameters, where the second argument is the default
 func NewStringEnumVar(value *string, allowed []string, d string) *stringEnum {
 	*value = d
 	return &stringEnum{

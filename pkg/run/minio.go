@@ -108,6 +108,7 @@ func (m *MinioServer) Start() error {
 				Target: devVolume,
 			},
 		},
+		LogConfig:   *m.ce.Logger(m.dir).Config(),
 		NetworkMode: container.NetworkMode("bridge"),
 	}, &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{},
@@ -132,7 +133,6 @@ func (m *MinioServer) Stop() error {
 
 func NewMinio(dir string, name string) (*MinioServer, error) {
 	ce, err := containerengine.Discover()
-
 	if err != nil {
 		return nil, err
 	}

@@ -22,6 +22,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	"github.com/nitrictech/newcli/pkg/pflagext"
 )
 
 var (
@@ -61,5 +63,5 @@ func FromOptions() (*Stack, error) {
 func AddOptions(cmd *cobra.Command) {
 	wd, err := os.Getwd()
 	cobra.CheckErr(err)
-	cmd.Flags().StringVarP(&stackPath, "stack", "s", wd, "path to the stack")
+	cmd.Flags().VarP(pflagext.NewPathVar(&stackPath, pflagext.AllowFileAndDir, wd), "stack", "s", "path to the stack")
 }

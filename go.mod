@@ -6,6 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
+	github.com/docker/cli v20.10.12+incompatible
 	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fasthttp/router v1.4.5
@@ -21,6 +22,7 @@ require (
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jhoonb/archivex v0.0.0-20201016144719-6a343cdae81d
 	github.com/mitchellh/mapstructure v1.4.2
+	github.com/moby/buildkit v0.9.3 // indirect
 	github.com/nitrictech/boxygen v0.0.1-rc.7.0.20211212231606-62c668408f91
 	github.com/nitrictech/nitric v0.13.0-rc.11
 	github.com/pkg/errors v0.9.1
@@ -36,6 +38,7 @@ require (
 	golang.org/x/net v0.0.0-20211105192438-b53810dc28af // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	google.golang.org/grpc v1.41.0
+	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 

@@ -17,6 +17,8 @@
 package build
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -28,11 +30,18 @@ import (
 func TestCreateBaseDev(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	me := mock_containerengine.NewMockContainerEngine(ctrl)
-	me.EXPECT().Build(gomock.Any(), "path/to/stack", "nitric-ts-dev", map[string]string{})
 
-	containerengine.MockEngine = me
+	dir, err := ioutil.TempDir("", "test-nitric-build")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(dir)
 
-	if err := CreateBaseDev("path/to/stack", map[string]string{"ts": "nitric-ts-dev"}); err != nil {
+	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{})
+
+	containerengine.DiscoveredEngine = me
+
+	if err := CreateBaseDev(dir, map[string]string{"ts": "nitric-ts-dev"}); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)
 	}
 }

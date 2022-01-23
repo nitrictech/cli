@@ -19,7 +19,9 @@ package utils
 import (
 	"log"
 	"os"
+	"os/user"
 	"path"
+	"runtime"
 	"strings"
 )
 
@@ -35,10 +37,9 @@ func SplitPath(p string) []string {
 	return strings.FieldsFunc(p, slashSplitter)
 }
 
-// Gets the nitric home directory
-func NitricHome() string {
+// homeDir gets the nitric home directory
+func homeDir() string {
 	nitricHomeEnv := os.Getenv("NITRIC_HOME")
-
 	if nitricHomeEnv != "" {
 		return nitricHomeEnv
 	}
@@ -49,4 +50,39 @@ func NitricHome() string {
 	}
 
 	return path.Join(dirname, ".nitric")
+}
+
+// NitricRunDir returns the directory to place runtime data.
+func NitricRunDir() string {
+	if runtime.GOOS == "linux" {
+		u, err := user.Current()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return path.Join("/run/user/", u.Uid, "nitric")
+	}
+	return path.Join(homeDir(), "run")
+}
+
+// NitricTemplatesDir returns the directory to place template related data.
+func NitricTemplatesDir() string {
+	return path.Join(homeDir(), "store")
+}
+
+// NitricConfigDir returns the directory to find configuration.
+func NitricConfigDir() string {
+	if runtime.GOOS == "linux" {
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return path.Join(dirname, ".config", "nitric")
+	}
+	return homeDir()
+}
+
+// NitricLogDir returns the directory to find log files.
+func NitricLogDir(stackPath string) string {
+	return path.Join(stackPath, ".nitric")
 }

@@ -61,7 +61,7 @@ var _ Downloader = &downloader{}
 
 func NewDownloader() Downloader {
 	return &downloader{
-		configPath: path.Join(utils.NitricHome(), "store", "repositories.yml"),
+		configPath: path.Join(utils.NitricTemplatesDir(), "repositories.yml"),
 		newGetter:  utils.NewGetter,
 	}
 }

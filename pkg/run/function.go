@@ -73,6 +73,7 @@ func (f *Function) Start() error {
 				Target: "/app",
 			},
 		},
+		LogConfig: *f.ce.Logger(f.runCtx).Config(),
 	}
 	if runtime.GOOS == "linux" {
 		// setup host.docker.internal to route to host gateway

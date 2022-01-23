@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"syscall"
 	"time"
@@ -28,8 +29,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/build"
+	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/run"
+	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/tasklet"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 var runCmd = &cobra.Command{
@@ -43,28 +47,36 @@ var runCmd = &cobra.Command{
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		stackPath, err := filepath.Abs(".")
-		cobra.CheckErr(err)
+		contextDir := stack.StackPath()
+		stackName := path.Base(contextDir)
 
-		files, err := filepath.Glob(filepath.Join(stackPath, args[0]))
+		files, err := filepath.Glob(filepath.Join(contextDir, args[0]))
 		cobra.CheckErr(err)
 		if len(files) == 0 {
 			err = errors.New("No files where found with glob, try a new pattern")
 			cobra.CheckErr(err)
 		}
 
+		ce, err := containerengine.Discover()
+		cobra.CheckErr(err)
+
+		logger := ce.Logger(contextDir)
+		cobra.CheckErr(logger.Start())
+
 		createBaseImage := tasklet.Runner{
 			StartMsg: "Creating Dev Image",
 			Runner: func(tCtx tasklet.TaskletContext) error {
-				return build.CreateBaseDev(stackPath, map[string]string{
-					"ts": "nitric-ts-dev",
-				})
+				images, err := utils.ImagesToBuild(files)
+				if err != nil {
+					return err
+				}
+				return build.CreateBaseDev(contextDir, images)
 			},
 			StopMsg: "Created Dev Image!",
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
-		ls := run.NewLocalServices(stackPath)
+		ls := run.NewLocalServices(stackName, contextDir)
 		memerr := make(chan error)
 
 		startLocalServices := tasklet.Runner{
@@ -75,9 +87,18 @@ var runCmd = &cobra.Command{
 				}(memerr)
 
 				for {
+					select {
+					case err := <-memerr:
+						// catch any early errors from Start()
+						if err != nil {
+							return err
+						}
+					default:
+					}
 					if ls.Running() {
 						break
 					}
+					tCtx.Spinner().UpdateText("Waiting for Local Services to be ready")
 					time.Sleep(time.Second)
 				}
 				return nil
@@ -91,7 +112,7 @@ var runCmd = &cobra.Command{
 		startFunctions := tasklet.Runner{
 			StartMsg: "Starting Functions",
 			Runner: func(tCtx tasklet.TaskletContext) error {
-				functions, err = run.FunctionsFromHandlers(stackPath, files)
+				functions, err = run.FunctionsFromHandlers(contextDir, files)
 				if err != nil {
 					return err
 				}
@@ -122,12 +143,14 @@ var runCmd = &cobra.Command{
 			}
 		}
 
+		_ = logger.Stop()
 		// Stop the membrane
 		cobra.CheckErr(ls.Stop())
 	},
-	Args: cobra.MaximumNArgs(1),
+	Args: cobra.ExactArgs(1),
 }
 
 func RootCommand() *cobra.Command {
+	stack.AddOptions(runCmd)
 	return runCmd
 }

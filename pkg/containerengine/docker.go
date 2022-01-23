@@ -18,27 +18,32 @@ package containerengine
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
+	"log"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 
+	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/jhoonb/archivex"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/idtools"
 	"github.com/pkg/errors"
+
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 type docker struct {
-	cli *client.Client
+	cli    *client.Client
+	syslog *localSyslog
 }
 
 var _ ContainerEngine = &docker{}
@@ -65,38 +70,37 @@ func newDocker() (ContainerEngine, error) {
 	return &docker{cli: cli}, err
 }
 
+func (d *docker) Type() string {
+	return "docker"
+}
+
+func tarContextDir(relDockerfile, contextDir string) (io.ReadCloser, error) {
+	excludes, err := build.ReadDockerignore(contextDir)
+	if err != nil {
+		return nil, err
+	}
+
+	excludes = append(excludes, utils.NitricLogDir(contextDir))
+
+	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
+		return nil, errors.Errorf("error checking context: '%s'.", err)
+	}
+
+	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
+	return archive.TarWithOptions(contextDir, &archive.TarOptions{
+		ExcludePatterns: excludes,
+		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
+	})
+}
+
 func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), buildTimeout())
 	defer cancel()
 
-	tar := new(archivex.TarFile)
-	dockerBuildContext := bytes.Buffer{}
-	err := tar.CreateWriter("src.tar", &dockerBuildContext)
+	dockerBuildContext, err := tarContextDir(dockerfile, srcPath)
 	if err != nil {
 		return err
 	}
-	err = tar.AddAll(srcPath, false)
-	if err != nil {
-		return err
-	}
-
-	if strings.Contains(dockerfile, os.TempDir()) {
-		// copy the generated dockerfile into the tar.
-		df, err := os.Open(dockerfile)
-		if err != nil {
-			return err
-		}
-		s, err := os.Stat(dockerfile)
-		if err != nil {
-			return err
-		}
-		err = tar.Add(s.Name(), df, s)
-		if err != nil {
-			return err
-		}
-		dockerfile = s.Name()
-	}
-	tar.Close()
 	opts := types.ImageBuildOptions{
 		SuppressOutput: false,
 		Dockerfile:     dockerfile,
@@ -105,7 +109,7 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 		ForceRemove:    true,
 		PullParent:     true,
 	}
-	res, err := d.cli.ImageBuild(ctx, &dockerBuildContext, opts)
+	res, err := d.cli.ImageBuild(ctx, dockerBuildContext, opts)
 	if err != nil {
 		return err
 	}
@@ -140,7 +144,7 @@ func print(rd io.Reader) error {
 			return err
 		}
 		if len(line.Stream) > 0 {
-			fmt.Print(line.Stream)
+			log.Default().Print(line.Stream)
 		}
 	}
 
@@ -280,4 +284,13 @@ func (d *docker) ContainerExec(containerName string, cmd []string, workingDir st
 		}
 		return fmt.Errorf("%s %v exited with %d", containerName, cmd, res.ExitCode)
 	}
+}
+
+func (d *docker) Logger(stackPath string) ContainerLogger {
+	if d.syslog == nil {
+		d.syslog = &localSyslog{
+			logPath: path.Join(utils.NitricLogDir(stackPath), "run.log"),
+		}
+	}
+	return d.syslog
 }

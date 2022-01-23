@@ -25,6 +25,8 @@ import (
 
 	"github.com/nitrictech/newcli/mocks/mock_containerengine"
 	"github.com/nitrictech/newcli/pkg/containerengine"
+	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/target"
 )
 
 func TestCreateBaseDev(t *testing.T) {
@@ -42,6 +44,40 @@ func TestCreateBaseDev(t *testing.T) {
 	containerengine.DiscoveredEngine = me
 
 	if err := CreateBaseDev(dir, map[string]string{"ts": "nitric-ts-dev"}); err != nil {
+		t.Errorf("CreateBaseDev() error = %v", err)
+	}
+}
+
+func TestCreate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	me := mock_containerengine.NewMockContainerEngine(ctrl)
+	me.EXPECT().Build(gomock.Any(), "", "corp-abc-dev:123456", map[string]string{"PROVIDER": "aws"})
+	me.EXPECT().Build("Dockerfile.custom", "", "corp-xyz-dev:444444", map[string]string{"PROVIDER": "aws"})
+
+	containerengine.MockEngine = me
+
+	s := &stack.Stack{
+		Name: "test-stack",
+		Functions: map[string]stack.Function{
+			"list": {
+				Handler: "functions/list.ts",
+				ComputeUnit: stack.ComputeUnit{
+					Tag: "corp-abc-dev:123456",
+				},
+				BuildScripts: []string{"ls"},
+			},
+		},
+		Containers: map[string]stack.Container{
+			"doit": {
+				Dockerfile: "Dockerfile.custom",
+				ComputeUnit: stack.ComputeUnit{
+					Tag: "corp-xyz-dev:444444",
+				},
+			},
+		},
+	}
+
+	if err := Create(s, &target.Target{Provider: "aws", Region: "eastus"}); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)
 	}
 }

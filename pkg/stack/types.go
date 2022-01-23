@@ -166,12 +166,7 @@ func FromFile(name string) (*Stack, error) {
 		return nil, err
 	}
 	for name, fn := range stack.Functions {
-		fn.name = name
-		if fn.Context != "" {
-			fn.contextDirectory = path.Join(stack.Path(), fn.Context)
-		} else {
-			fn.contextDirectory = stack.Path()
-		}
+		fn.WithPrivateInfo(name, stack.Path())
 		stack.Functions[name] = fn
 	}
 	for name, c := range stack.Containers {

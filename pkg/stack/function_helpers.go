@@ -49,5 +49,5 @@ func (f *Function) ImageTagName(s *Stack, provider string) string {
 	if provider != "" {
 		providerString = "-" + provider
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, f.Name, providerString)
+	return fmt.Sprintf("%s-%s%s", s.Name, f.Name(), providerString)
 }

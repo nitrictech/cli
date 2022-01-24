@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/nitrictech/newcli/pkg/cmd/build"
 	"github.com/nitrictech/newcli/pkg/cmd/deployment"
 	"github.com/nitrictech/newcli/pkg/cmd/provider"
 	"github.com/nitrictech/newcli/pkg/cmd/run"
@@ -84,7 +83,6 @@ func init() {
 	})
 	cobra.CheckErr(err)
 
-	rootCmd.AddCommand(build.RootCommand())
 	rootCmd.AddCommand(deployment.RootCommand())
 	rootCmd.AddCommand(provider.RootCommand())
 	rootCmd.AddCommand(stack.RootCommand())

@@ -19,11 +19,14 @@ package stack
 import (
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/pflagext"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 var (
@@ -40,24 +43,81 @@ func wrapStatError(err error) error {
 	return err
 }
 
-func StackPath() string {
-	return stackPath
-}
-
 func FromOptions() (*Stack, error) {
-	ss, err := os.Stat(stackPath)
+	configPath := stackPath
+	ss, err := os.Stat(configPath)
 	if err != nil {
 		return nil, wrapStatError(err)
 	}
 	if ss.IsDir() {
-		stackPath = path.Join(stackPath, "nitric.yaml")
+		configPath = path.Join(configPath, "nitric.yaml")
 	}
-	_, err = os.Stat(stackPath)
+	_, err = os.Stat(configPath)
 	if err != nil {
 		return nil, wrapStatError(err)
 	}
 
-	return FromFile(stackPath)
+	return FromFile(configPath)
+}
+
+func FunctionFromHandler(h, stackDir string) Function {
+	name := strings.Replace(path.Base(h), path.Ext(h), "", 1)
+	fn := Function{
+		ComputeUnit: ComputeUnit{Name: name},
+		Handler:     h,
+	}
+	fn.SetContextDirectory(stackDir)
+
+	return fn
+}
+
+func FromOptionsMinimal() (*Stack, error) {
+	ss, err := os.Stat(stackPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sDir := stackPath
+	if !ss.IsDir() {
+		sDir = filepath.Dir(stackPath)
+	}
+
+	// get the abs dir in case user provides "."
+	absDir, err := filepath.Abs(sDir)
+	if err != nil {
+		return nil, err
+	}
+	s := New(path.Base(absDir), sDir)
+
+	return s, nil
+}
+
+func FromGlobArgs(glob []string) (*Stack, error) {
+	s, err := FromOptionsMinimal()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, g := range glob {
+		if _, err := os.Stat(g); err != nil {
+			fs, err := utils.GlobInDir(stackPath, g)
+			if err != nil {
+				return nil, err
+			}
+			for _, f := range fs {
+				fn := FunctionFromHandler(f, s.Dir)
+				s.Functions[fn.Name] = fn
+			}
+		} else {
+			fn := FunctionFromHandler(g, s.Dir)
+			s.Functions[fn.Name] = fn
+		}
+	}
+	if len(s.Functions) == 0 {
+		return nil, errors.New("No files where found with glob, try a new pattern")
+	}
+
+	return s, nil
 }
 
 func AddOptions(cmd *cobra.Command) {

@@ -19,18 +19,23 @@ package stack
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 )
 
 const DefaulMembraneVersion = "v0.12.1-rc.5"
 
 var _ Compute = &Function{}
 
-func (f *Function) Name() string {
-	return f.name
-}
-
 func (f *Function) Unit() *ComputeUnit {
 	return &f.ComputeUnit
+}
+
+func (f *Function) SetContextDirectory(stackDir string) {
+	if f.Context != "" {
+		f.ContextDirectory = path.Join(stackDir, f.Context)
+	} else {
+		f.ContextDirectory = stackDir
+	}
 }
 
 func (f *Function) VersionString(s *Stack) string {
@@ -40,18 +45,16 @@ func (f *Function) VersionString(s *Stack) string {
 	return DefaulMembraneVersion
 }
 
-func (f *Function) WithPrivateInfo(name, stackDir string) *Function {
-	f.name = name
-	if f.Context != "" {
-		f.contextDirectory = path.Join(stackDir, f.Context)
-	} else {
-		f.contextDirectory = stackDir
+func (f *Function) RelativeHandlerPath(s *Stack) (string, error) {
+	relativeHandlerPath := f.Handler
+	if filepath.IsAbs(f.Handler) {
+		var err error
+		relativeHandlerPath, err = filepath.Rel(s.Dir, f.Handler)
+		if err != nil {
+			return "", err
+		}
 	}
-	return f
-}
-
-func (f *Function) ContextDirectory() string {
-	return f.contextDirectory
+	return relativeHandlerPath, nil
 }
 
 // ImageTagName returns the default image tag for a source image built from this function
@@ -64,5 +67,5 @@ func (f *Function) ImageTagName(s *Stack, provider string) string {
 	if provider != "" {
 		providerString = "-" + provider
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, f.Name(), providerString)
+	return fmt.Sprintf("%s-%s%s", s.Name, f.Name, providerString)
 }

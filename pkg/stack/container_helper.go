@@ -18,20 +18,21 @@ package stack
 
 import (
 	"fmt"
+	"path"
 )
 
 var _ Compute = &Container{}
-
-func (c *Container) Name() string {
-	return c.name
-}
 
 func (c *Container) Unit() *ComputeUnit {
 	return &c.ComputeUnit
 }
 
-func (c *Container) ContextDirectory() string {
-	return c.contextDirectory
+func (c *Container) SetContextDirectory(stackDir string) {
+	if c.Context != "" {
+		c.ContextDirectory = path.Join(stackDir, c.Context)
+	} else {
+		c.ContextDirectory = stackDir
+	}
 }
 
 // ImageTagName returns the default image tag for a source image built from this function
@@ -44,5 +45,5 @@ func (c *Container) ImageTagName(s *Stack, provider string) string {
 	if provider != "" {
 		providerString = "-" + provider
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, c.Name(), providerString)
+	return fmt.Sprintf("%s-%s%s", s.Name, c.Name, providerString)
 }

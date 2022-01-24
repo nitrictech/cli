@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -33,50 +31,41 @@ import (
 	"github.com/nitrictech/newcli/pkg/run"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/tasklet"
-	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run [entrypointsGlob]",
+	Use:   "run [handlerGlob]",
 	Short: "run a nitric stack",
-	Long: `Run a nitric stack locally for
-	development/testing
+	Long: `Run a nitric stack locally for development or testing
 `,
+	Example: `nitric run -s projectX "functions/*.ts"`,
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		contextDir := stack.StackPath()
-		stackName := path.Base(contextDir)
-
-		files, err := filepath.Glob(filepath.Join(contextDir, args[0]))
-		cobra.CheckErr(err)
-		if len(files) == 0 {
-			err = errors.New("No files where found with glob, try a new pattern")
-			cobra.CheckErr(err)
+		s, err := stack.FromOptions()
+		if err != nil && len(args) > 0 {
+			s, err = stack.FromGlobArgs(args)
 		}
+		cobra.CheckErr(err)
 
 		ce, err := containerengine.Discover()
 		cobra.CheckErr(err)
 
-		logger := ce.Logger(contextDir)
+		logger := ce.Logger(s.Dir)
 		cobra.CheckErr(logger.Start())
 
 		createBaseImage := tasklet.Runner{
 			StartMsg: "Creating Dev Image",
 			Runner: func(tCtx tasklet.TaskletContext) error {
-				images, err := utils.ImagesToBuild(files)
-				if err != nil {
-					return err
-				}
-				return build.CreateBaseDev(contextDir, images)
+				return build.CreateBaseDev(s)
 			},
 			StopMsg: "Created Dev Image!",
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
-		ls := run.NewLocalServices(stackName, contextDir)
+		ls := run.NewLocalServices(s.Name, s.Dir)
 		memerr := make(chan error)
 
 		startLocalServices := tasklet.Runner{
@@ -112,7 +101,7 @@ var runCmd = &cobra.Command{
 		startFunctions := tasklet.Runner{
 			StartMsg: "Starting Functions",
 			Runner: func(tCtx tasklet.TaskletContext) error {
-				functions, err = run.FunctionsFromHandlers(contextDir, files)
+				functions, err = run.FunctionsFromHandlers(s)
 				if err != nil {
 					return err
 				}
@@ -147,7 +136,7 @@ var runCmd = &cobra.Command{
 		// Stop the membrane
 		cobra.CheckErr(ls.Stop())
 	},
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MinimumNArgs(0),
 }
 
 func RootCommand() *cobra.Command {

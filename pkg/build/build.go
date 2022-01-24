@@ -26,6 +26,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/functiondockerfile"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 func Create(s *stack.Stack, t *target.Target) error {
@@ -36,14 +37,14 @@ func Create(s *stack.Stack, t *target.Target) error {
 	for _, f := range s.Functions {
 		for _, script := range f.BuildScripts {
 			cmd := exec.Command(script)
-			cmd.Dir = path.Join(s.Path(), f.Context)
+			cmd.Dir = path.Join(s.Dir, f.Context)
 			err := cmd.Run()
 			if err != nil {
 				return err
 			}
 		}
 
-		fh, err := os.CreateTemp(s.Path(), "Dockerfile.*")
+		fh, err := os.CreateTemp(s.Dir, "Dockerfile.*")
 		if err != nil {
 			return err
 		}
@@ -56,7 +57,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 		fh.Close()
 
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err = cr.Build(path.Base(fh.Name()), f.ContextDirectory(), f.ImageTagName(s, t.Provider), buildArgs)
+		err = cr.Build(path.Base(fh.Name()), f.ContextDirectory, f.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
@@ -64,7 +65,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 
 	for _, c := range s.Containers {
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err := cr.Build(path.Join(c.Context, c.Dockerfile), c.ContextDirectory(), c.ImageTagName(s, t.Provider), buildArgs)
+		err := cr.Build(path.Join(c.Context, c.Dockerfile), c.ContextDirectory, c.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
@@ -73,14 +74,24 @@ func Create(s *stack.Stack, t *target.Target) error {
 }
 
 // CreateBaseDev builds images for code-as-config
-func CreateBaseDev(stackPath string, imagesToBuild map[string]string) error {
+func CreateBaseDev(s *stack.Stack) error {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return err
 	}
+	imagesToBuild := map[string]string{}
+	for _, f := range s.Functions {
+		rt, err := utils.NewRunTimeFromFilename(f.Handler)
+		if err != nil {
+			return err
+		}
+		lang := rt.String()
+		_, ok := imagesToBuild[lang]
+		if ok {
+			continue
+		}
 
-	for lang, imageTag := range imagesToBuild {
-		f, err := os.CreateTemp(stackPath, fmt.Sprintf("%s.*.dockerfile", lang))
+		f, err := os.CreateTemp(s.Dir, fmt.Sprintf("%s.*.dockerfile", lang))
 		if err != nil {
 			return err
 		}
@@ -94,9 +105,10 @@ func CreateBaseDev(stackPath string, imagesToBuild map[string]string) error {
 			return err
 		}
 
-		if err := ce.Build(path.Base(f.Name()), stackPath, imageTag, map[string]string{}); err != nil {
+		if err := ce.Build(path.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}); err != nil {
 			return err
 		}
+		imagesToBuild[lang] = rt.DevImageName()
 	}
 
 	return nil
@@ -109,7 +121,7 @@ func List(s *stack.Stack) ([]containerengine.Image, error) {
 	}
 	images := []containerengine.Image{}
 	for _, f := range s.Functions {
-		imgs, err := cr.ListImages(s.Name, f.Name())
+		imgs, err := cr.ListImages(s.Name, f.Name)
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {
@@ -117,7 +129,7 @@ func List(s *stack.Stack) ([]containerengine.Image, error) {
 		}
 	}
 	for _, c := range s.Containers {
-		imgs, err := cr.ListImages(s.Name, c.Name())
+		imgs, err := cr.ListImages(s.Name, c.Name)
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {

@@ -139,13 +139,13 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	funcs := map[string]*Lambda{}
 	for k, f := range a.s.Functions {
-		image, err := newECRImage(ctx, f.Name(), &ECRImageArgs{
+		image, err := newECRImage(ctx, f.Name, &ECRImageArgs{
 			LocalImageName:  f.ImageTagName(a.s, ""),
 			SourceImageName: f.ImageTagName(a.s, a.t.Provider),
 			AuthToken:       authToken,
 			TempDir:         a.tmpDir})
 		if err != nil {
-			return errors.WithMessage(err, "function image tag "+f.Name())
+			return errors.WithMessage(err, "function image tag "+f.Name)
 		}
 		funcs[k], err = newLambda(ctx, k, &LambdaArgs{
 			Topics:      topics,
@@ -153,18 +153,18 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			Compute:     &f,
 		})
 		if err != nil {
-			return errors.WithMessage(err, "lambda function "+f.Name())
+			return errors.WithMessage(err, "lambda function "+f.Name)
 		}
 	}
 
 	for k, c := range a.s.Containers {
-		image, err := newECRImage(ctx, c.Name(), &ECRImageArgs{
+		image, err := newECRImage(ctx, c.Name, &ECRImageArgs{
 			LocalImageName:  c.ImageTagName(a.s, ""),
 			SourceImageName: c.ImageTagName(a.s, a.t.Provider),
 			AuthToken:       authToken,
 			TempDir:         a.tmpDir})
 		if err != nil {
-			return errors.WithMessage(err, "function image tag "+c.Name())
+			return errors.WithMessage(err, "function image tag "+c.Name)
 		}
 		funcs[k], err = newLambda(ctx, k, &LambdaArgs{
 			Topics:      topics,
@@ -172,13 +172,13 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			Compute:     &c,
 		})
 		if err != nil {
-			return errors.WithMessage(err, "lambda container "+c.Name())
+			return errors.WithMessage(err, "lambda container "+c.Name)
 		}
 	}
 
 	for k := range a.s.Apis {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
-			OpenAPISpec:     a.s.ApiDoc(k),
+			OpenAPISpec:     a.s.ApiDocs[k],
 			LambdaFunctions: funcs})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)

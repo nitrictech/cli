@@ -129,7 +129,10 @@ ENTRYPOINT ["/usr/local/bin/membrane"]`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fwriter := &bytes.Buffer{}
-			tt.f.WithPrivateInfo("testFn", "./")
+			if tt.f.ComputeUnit.Context != "" {
+				tt.f.ComputeUnit.ContextDirectory = tt.f.ComputeUnit.Context
+			}
+			tt.f.ComputeUnit.Name = "testfn"
 			if err := Generate(tt.f, tt.version, tt.provider, fwriter); err != nil {
 				t.Errorf("Generate() error = %v", err)
 				return
@@ -161,7 +164,7 @@ ENTRYPOINT ["ts-node"]`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fwriter := &bytes.Buffer{}
-			tt.f.WithPrivateInfo("testFn", "./")
+			tt.f.ComputeUnit = stack.ComputeUnit{Name: "testfn", ContextDirectory: "./"}
 			if err := GenerateForCodeAsConfig(tt.f.Handler, fwriter); err != nil {
 				t.Errorf("GenerateForCodeAsConfig() error = %v", err)
 				return

@@ -26,12 +26,10 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/codeconfig"
 	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/templates"
-	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 var (
@@ -118,29 +116,19 @@ var stackCreateCmd = &cobra.Command{
 }
 
 var stackDescribeCmd = &cobra.Command{
-	Use:   "describe [handler pattern]",
+	Use:   "describe [handlerGlob]",
 	Short: "describe stack dependencies",
 	Long:  `Describes stack dependencies`,
 	Run: func(cmd *cobra.Command, args []string) {
-		contextDir := stack.StackPath()
-		cc, err := codeconfig.New(contextDir, args[0])
+		s, err := stack.FromGlobArgs(args)
 		cobra.CheckErr(err)
 
-		// Generate dev images to run on
-		images, err := utils.ImagesToBuild(cc.Handlers())
+		s, err = codeconfig.Populate(s)
 		cobra.CheckErr(err)
 
-		err = build.CreateBaseDev(contextDir, images)
-		cobra.CheckErr(err)
-
-		err = cc.Collect()
-		cobra.CheckErr(err)
-
-		s, err := cc.ToStack()
-		cobra.CheckErr(err)
 		output.Print(s)
 	},
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MinimumNArgs(1),
 }
 
 func RootCommand() *cobra.Command {

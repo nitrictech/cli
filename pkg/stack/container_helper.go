@@ -18,12 +18,21 @@ package stack
 
 import (
 	"fmt"
+	"path"
 )
 
 var _ Compute = &Container{}
 
 func (c *Container) Unit() *ComputeUnit {
 	return &c.ComputeUnit
+}
+
+func (c *Container) SetContextDirectory(stackDir string) {
+	if c.Context != "" {
+		c.ContextDirectory = path.Join(stackDir, c.Context)
+	} else {
+		c.ContextDirectory = stackDir
+	}
 }
 
 // ImageTagName returns the default image tag for a source image built from this function

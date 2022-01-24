@@ -65,7 +65,7 @@ var deploymentApplyCmd = &cobra.Command{
 		err = build.Create(s, t)
 		cobra.CheckErr(err)
 
-		cobra.CheckErr(p.Apply(args[0]))
+		cobra.CheckErr(p.Apply(deploymentName))
 	},
 	Args: cobra.MinimumNArgs(0),
 }
@@ -90,7 +90,7 @@ var deploymentDeleteCmd = &cobra.Command{
 		p, err := provider.NewProvider(s, t)
 		cobra.CheckErr(err)
 
-		cobra.CheckErr(p.Delete(args[0]))
+		cobra.CheckErr(p.Delete(deploymentName))
 	},
 	Args: cobra.MinimumNArgs(0),
 }

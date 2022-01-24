@@ -135,12 +135,9 @@ func FunctionsFromHandlers(s *stack.Stack) ([]*Function, error) {
 	}
 
 	for _, f := range s.Functions {
-		relativeHandlerPath := f.Handler
-		if filepath.IsAbs(f.Handler) {
-			relativeHandlerPath, err = filepath.Rel(s.Dir, f.Handler)
-			if err != nil {
-				return nil, err
-			}
+		relativeHandlerPath, err := f.RelativeHandlerPath(s)
+		if err != nil {
+			return nil, err
 		}
 
 		if f, err := newFunction(FunctionOpts{

@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -90,9 +89,9 @@ func (c *codeConfig) Collect() error {
 		wg.Add(1)
 
 		// run files in parallel
-		go func(file string) {
+		go func(fn stack.Function) {
 			defer wg.Done()
-			rel, err := filepath.Rel(c.initialStack.Dir, file)
+			rel, err := fn.RelativeHandlerPath(c.initialStack)
 			if err != nil {
 				errList.Add(err)
 				return
@@ -103,7 +102,7 @@ func (c *codeConfig) Collect() error {
 				errList.Add(err)
 				return
 			}
-		}(f.Handler)
+		}(f)
 	}
 
 	wg.Wait()
@@ -302,15 +301,12 @@ func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
 }
 
 func (c *codeConfig) ToStack() (*stack.Stack, error) {
-	s := c.initialStack
-	s.Containers = map[string]stack.Container{}
-	s.Collections = map[string]stack.Collection{}
-	s.Buckets = map[string]stack.Bucket{}
-	s.Topics = map[string]stack.Topic{}
-	s.Queues = map[string]stack.Queue{}
-	s.Schedules = map[string]stack.Schedule{}
-	s.Apis = map[string]string{}
-	s.ApiDocs = map[string]*openapi3.T{}
+	s := stack.New(c.initialStack.Name, c.initialStack.Dir)
+
+	err := mergo.Merge(s, c.initialStack)
+	if err != nil {
+		return nil, err
+	}
 
 	errs := utils.NewErrorList()
 	for handler, f := range c.functions {
@@ -319,9 +315,8 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 
 		for k := range f.apis {
 			spec, err := c.apiSpec(k)
-
 			if err != nil {
-				return nil, fmt.Errorf("could not build spec for api: %s; %v", k, err)
+				return nil, fmt.Errorf("could not build spec for api: %s; %w", k, err)
 			}
 
 			s.ApiDocs[k] = spec
@@ -350,7 +345,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 				e, err := cron.RateToCron(v.GetRate().Rate)
 
 				if err != nil {
-					errs.Add(fmt.Errorf("schedule expresson %s is invalid; %v", v.GetRate().Rate, err))
+					errs.Add(fmt.Errorf("schedule expresson %s is invalid; %w", v.GetRate().Rate, err))
 					continue
 				}
 
@@ -398,14 +393,8 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 
 		f, ok := s.Functions[name]
 		if !ok {
-			f = stack.Function{
-				Handler: handler,
-				ComputeUnit: stack.ComputeUnit{
-					Name: name,
-				},
-			}
+			f = stack.FunctionFromHandler(handler, s.Dir)
 		}
-		f.ComputeUnit.ContextDirectory = s.Dir
 		f.ComputeUnit.Triggers = stack.Triggers{
 			Topics: topicTriggers,
 		}

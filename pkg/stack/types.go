@@ -89,6 +89,7 @@ type Container struct {
 
 type Compute interface {
 	ImageTagName(s *Stack, provider string) string
+	SetContextDirectory(stackDir string)
 	Unit() *ComputeUnit
 }
 
@@ -135,6 +136,22 @@ type Stack struct {
 	Apis        map[string]string      `yaml:"apis,omitempty"`
 }
 
+func New(name, dir string) *Stack {
+	return &Stack{
+		Name:        name,
+		Dir:         dir,
+		Containers:  map[string]Container{},
+		Collections: map[string]Collection{},
+		Functions:   map[string]Function{},
+		Buckets:     map[string]Bucket{},
+		Topics:      map[string]Topic{},
+		Queues:      map[string]Queue{},
+		Schedules:   map[string]Schedule{},
+		Apis:        map[string]string{},
+		ApiDocs:     map[string]*openapi3.T{},
+	}
+}
+
 func FromFile(name string) (*Stack, error) {
 	yamlFile, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -151,20 +168,12 @@ func FromFile(name string) (*Stack, error) {
 	}
 	for name, fn := range stack.Functions {
 		fn.Name = name
-		if fn.Context != "" {
-			fn.ContextDirectory = path.Join(stack.Dir, fn.Context)
-		} else {
-			fn.ContextDirectory = stack.Dir
-		}
+		fn.SetContextDirectory(stack.Dir)
 		stack.Functions[name] = fn
 	}
 	for name, c := range stack.Containers {
 		c.Name = name
-		if c.Context != "" {
-			c.ContextDirectory = path.Join(stack.Dir, c.Context)
-		} else {
-			c.ContextDirectory = stack.Dir
-		}
+		c.SetContextDirectory(stack.Dir)
 		stack.Containers[name] = c
 	}
 

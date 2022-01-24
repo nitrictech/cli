@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/imdario/mergo"
 )
 
 func TestFromGlobArgs(t *testing.T) {
@@ -124,13 +125,18 @@ func TestFromGlobArgs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stackPath = tt.stackPath
+			want := New("", "")
+			err := mergo.Merge(want, tt.want)
+			if err != nil {
+				t.Fatal(err)
+			}
 			got, err := FromGlobArgs(tt.glob)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("FromGlobArgs() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(tt.want, got) {
-				t.Error(cmp.Diff(tt.want, got, cmp.AllowUnexported(Stack{}, ComputeUnit{})))
+			if !reflect.DeepEqual(want, got) {
+				t.Error(cmp.Diff(want, got))
 			}
 		})
 	}

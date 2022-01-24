@@ -60,43 +60,34 @@ func FromOptions() (*Stack, error) {
 	return FromFile(configPath)
 }
 
-func functionFromHandler(h, stackDir string) Function {
+func FunctionFromHandler(h, stackDir string) Function {
 	name := strings.Replace(path.Base(h), path.Ext(h), "", 1)
 	fn := Function{
 		ComputeUnit: ComputeUnit{Name: name},
 		Handler:     h,
 	}
-
-	if fn.Context != "" {
-		fn.ContextDirectory = path.Join(stackDir, fn.Context)
-	} else {
-		fn.ContextDirectory = stackDir
-	}
+	fn.SetContextDirectory(stackDir)
 
 	return fn
 }
 
 func FromGlobArgs(glob []string) (*Stack, error) {
-	s := &Stack{
-		Functions: map[string]Function{},
-	}
-
 	ss, err := os.Stat(stackPath)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Dir = stackPath
+	sDir := stackPath
 	if !ss.IsDir() {
-		s.Dir = filepath.Dir(stackPath)
+		sDir = filepath.Dir(stackPath)
 	}
 
 	// get the abs dir in case user provides "."
-	absDir, err := filepath.Abs(s.Dir)
+	absDir, err := filepath.Abs(sDir)
 	if err != nil {
 		return nil, err
 	}
-	s.Name = path.Base(absDir)
+	s := New(path.Base(absDir), sDir)
 
 	for _, g := range glob {
 		if _, err := os.Stat(g); err != nil {
@@ -105,11 +96,11 @@ func FromGlobArgs(glob []string) (*Stack, error) {
 				return nil, err
 			}
 			for _, f := range fs {
-				fn := functionFromHandler(f, s.Dir)
+				fn := FunctionFromHandler(f, s.Dir)
 				s.Functions[fn.Name] = fn
 			}
 		} else {
-			fn := functionFromHandler(g, s.Dir)
+			fn := FunctionFromHandler(g, s.Dir)
 			s.Functions[fn.Name] = fn
 		}
 	}

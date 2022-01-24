@@ -18,6 +18,8 @@ package stack
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
 )
 
 const DefaulMembraneVersion = "v0.12.1-rc.5"
@@ -28,11 +30,31 @@ func (f *Function) Unit() *ComputeUnit {
 	return &f.ComputeUnit
 }
 
+func (f *Function) SetContextDirectory(stackDir string) {
+	if f.Context != "" {
+		f.ContextDirectory = path.Join(stackDir, f.Context)
+	} else {
+		f.ContextDirectory = stackDir
+	}
+}
+
 func (f *Function) VersionString(s *Stack) string {
 	if f.Version != "" {
 		return f.Version
 	}
 	return DefaulMembraneVersion
+}
+
+func (f *Function) RelativeHandlerPath(s *Stack) (string, error) {
+	relativeHandlerPath := f.Handler
+	if filepath.IsAbs(f.Handler) {
+		var err error
+		relativeHandlerPath, err = filepath.Rel(s.Dir, f.Handler)
+		if err != nil {
+			return "", err
+		}
+	}
+	return relativeHandlerPath, nil
 }
 
 // ImageTagName returns the default image tag for a source image built from this function

@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 )
 
-const DefaulMembraneVersion = "v0.12.1-rc.5"
+const DefaultMembraneVersion = "v0.13.0-rc.12"
 
 var _ Compute = &Function{}
 
@@ -42,7 +42,7 @@ func (f *Function) VersionString(s *Stack) string {
 	if f.Version != "" {
 		return f.Version
 	}
-	return DefaulMembraneVersion
+	return DefaultMembraneVersion
 }
 
 func (f *Function) RelativeHandlerPath(s *Stack) (string, error) {

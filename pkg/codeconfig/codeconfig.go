@@ -133,11 +133,13 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 
 	// Collect all workers
 	for handler, f := range c.functions {
-		for _, w := range f.apis[api].workers {
-			workers = append(workers, &apiHandler{
-				target: containerNameFromHandler(handler),
-				worker: w,
-			})
+		if f.apis[api] != nil {
+			for _, w := range f.apis[api].workers {
+				workers = append(workers, &apiHandler{
+					target: containerNameFromHandler(handler),
+					worker: w,
+				})
+			}
 		}
 	}
 
@@ -152,8 +154,14 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				paramName := strings.Replace(p, ":", "", -1)
 				params = append(params, &openapi3.ParameterRef{
 					Value: &openapi3.Parameter{
-						In:   "path",
-						Name: paramName,
+						In:       "path",
+						Name:     paramName,
+						Required: true,
+						Schema: &openapi3.SchemaRef{
+							Value: &openapi3.Schema{
+								Type: "string",
+							},
+						},
 					},
 				})
 				normalizedPath = normalizedPath + "{" + paramName + "}" + "/"
@@ -161,6 +169,8 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				normalizedPath = normalizedPath + p + "/"
 			}
 		}
+		// trim off trailing slash
+		normalizedPath = strings.TrimSuffix(normalizedPath, "/")
 
 		pathItem := doc.Paths.Find(normalizedPath)
 
@@ -186,7 +196,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				Responses:   openapi3.NewResponses(),
 				ExtensionProps: openapi3.ExtensionProps{
 					Extensions: map[string]interface{}{
-						"x-nitric-target": map[string]interface{}{
+						"x-nitric-target": map[string]string{
 							"type": "function",
 							"name": containerNameFromHandler(w.target),
 						},

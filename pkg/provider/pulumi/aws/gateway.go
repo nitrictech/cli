@@ -17,6 +17,8 @@
 package aws
 
 import (
+	"fmt"
+
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/apigatewayv2"
 	awslambda "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/lambda"
@@ -35,6 +37,11 @@ type ApiGateway struct {
 	Api  *apigatewayv2.Api
 }
 
+type nameArnPair struct {
+	name      string
+	invokeArn string
+}
+
 func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts ...pulumi.ResourceOption) (*ApiGateway, error) {
 	res := &ApiGateway{Name: name}
 	err := ctx.RegisterComponentResource("nitric:api:AwsApiGateway", name, res, opts...)
@@ -42,22 +49,56 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		return nil, err
 	}
 
-	for k, p := range args.OpenAPISpec.Paths {
-		p.Get = awsOperation(p.Get, args.LambdaFunctions)
-		p.Post = awsOperation(p.Post, args.LambdaFunctions)
-		p.Patch = awsOperation(p.Patch, args.LambdaFunctions)
-		p.Put = awsOperation(p.Put, args.LambdaFunctions)
-		p.Delete = awsOperation(p.Delete, args.LambdaFunctions)
-		args.OpenAPISpec.Paths[k] = p
+	nameArnPairs := make([]interface{}, 0, len(args.LambdaFunctions))
+
+	// collect name arn pairs for output iteration
+	for k, v := range args.LambdaFunctions {
+		nameArnPairs = append(nameArnPairs, pulumi.All(k, v.Function.InvokeArn).ApplyT(func(args []interface{}) nameArnPair {
+			name := args[0].(string)
+			arn := args[1].(string)
+			return nameArnPair{
+				name:      name,
+				invokeArn: arn,
+			}
+		}))
 	}
 
-	b, err := args.OpenAPISpec.MarshalJSON()
+	doc := pulumi.All(nameArnPairs...).ApplyT(func(pairs []interface{}) (string, error) {
+		naps := make(map[string]string)
+
+		for _, p := range pairs {
+			if pair, ok := p.(nameArnPair); ok {
+				naps[pair.name] = pair.invokeArn
+			} else {
+				// XXX: Should not occur
+				return "", fmt.Errorf("invalid data")
+			}
+		}
+
+		for k, p := range args.OpenAPISpec.Paths {
+			p.Get = awsOperation(p.Get, naps)
+			p.Post = awsOperation(p.Post, naps)
+			p.Patch = awsOperation(p.Patch, naps)
+			p.Put = awsOperation(p.Put, naps)
+			p.Delete = awsOperation(p.Delete, naps)
+			args.OpenAPISpec.Paths[k] = p
+		}
+
+		b, err := args.OpenAPISpec.MarshalJSON()
+
+		if err != nil {
+			return "", err
+		}
+
+		return string(b), nil
+	}).(pulumi.StringOutput)
+
 	if err != nil {
 		return nil, err
 	}
 
 	res.Api, err = apigatewayv2.NewApi(ctx, name, &apigatewayv2.ApiArgs{
-		Body:         pulumi.String(b),
+		Body:         doc,
 		ProtocolType: pulumi.String("HTTP"),
 		Tags:         commonTags(ctx, name),
 	}, pulumi.Parent(res))
@@ -81,7 +122,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 			Function:  fun.Function.Name,
 			Action:    pulumi.String("lambda:InvokeFunction"),
 			Principal: pulumi.String("apigateway.amazonaws.com"),
-			SourceArn: res.Api.ExecutionArn,
+			SourceArn: pulumi.Sprintf("%s/*/*/*", res.Api.ExecutionArn),
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, err
@@ -94,7 +135,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	})
 }
 
-func awsOperation(op *openapi3.Operation, funcs map[string]*Lambda) *openapi3.Operation {
+func awsOperation(op *openapi3.Operation, funcs map[string]string) *openapi3.Operation {
 	if op == nil {
 		return nil
 	}
@@ -111,13 +152,8 @@ func awsOperation(op *openapi3.Operation, funcs map[string]*Lambda) *openapi3.Op
 	if _, ok := funcs[name]; !ok {
 		return nil
 	}
-	channel := make(chan string)
-	funcs[name].Function.Arn.ApplyT(func(arn string) string {
-		channel <- arn
-		return arn
-	})
 
-	arn := <-channel
+	arn := funcs[name]
 	op.Extensions["x-amazon-apigateway-integration"] = map[string]string{
 		"type":                 "aws_proxy",
 		"httpMethod":           "POST",

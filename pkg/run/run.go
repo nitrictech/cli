@@ -114,6 +114,11 @@ func (l *localServices) Start() error {
 		MaxWorkers: 100,
 	})
 
+	ev, err := NewEvents(pool)
+	if err != nil {
+		return err
+	}
+
 	// Start a new gateway plugin
 	gw, err := NewGateway()
 	if err != nil {
@@ -130,6 +135,7 @@ func (l *localServices) Start() error {
 		StoragePlugin:           sp,
 		DocumentPlugin:          dp,
 		GatewayPlugin:           gw,
+		EventsPlugin:            ev,
 		Pool:                    pool,
 		TolerateMissingServices: true,
 	})

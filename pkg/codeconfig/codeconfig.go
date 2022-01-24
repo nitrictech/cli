@@ -399,15 +399,17 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			}
 		}
 
-		s.Functions[name] = stack.Function{
+		f := stack.Function{
 			Handler: handler,
 			ComputeUnit: stack.ComputeUnit{
-				Name: name,
 				Triggers: stack.Triggers{
 					Topics: topicTriggers,
 				},
 			},
 		}
+
+		f.WithPrivateInfo(name, "")
+		s.Functions[name] = f
 	}
 
 	return s, errs.Aggregate()

@@ -27,6 +27,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/provider"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 var deploymentCmd = &cobra.Command{
@@ -48,7 +49,8 @@ var deploymentRunCmd = &cobra.Command{
 	Short: "Run a deployment from code",
 	Long:  `Applies a Nitric application deployment, by running the nitric application`,
 	Run: func(cmd *cobra.Command, args []string) {
-		t := target.FromOptions()
+		t, err := target.FromOptions()
+		cobra.CheckErr(err)
 
 		stackPath, err := filepath.Abs(stack.StackPath())
 		cobra.CheckErr(err)
@@ -56,8 +58,11 @@ var deploymentRunCmd = &cobra.Command{
 		cc, err := codeconfig.New(stackPath, args[1])
 		cobra.CheckErr(err)
 
+		imgs, err := utils.ImagesToBuild(cc.Handlers())
+		cobra.CheckErr(err)
+
 		// Generate dev images to run on
-		err = build.CreateBaseDev(stackPath, cc.ImagesToBuild())
+		err = build.CreateBaseDev(stackPath, imgs)
 		cobra.CheckErr(err)
 
 		err = cc.Collect()

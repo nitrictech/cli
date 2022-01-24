@@ -18,7 +18,6 @@ package stack
 
 import (
 	"fmt"
-	"path"
 )
 
 const DefaultMembraneVersion = "v0.13.0-rc.12"
@@ -34,16 +33,6 @@ func (f *Function) VersionString(s *Stack) string {
 		return f.Version
 	}
 	return DefaultMembraneVersion
-}
-
-func (f *Function) WithPrivateInfo(name, stackDir string) *Function {
-	f.name = name
-	if f.Context != "" {
-		f.contextDirectory = path.Join(stackDir, f.Context)
-	} else {
-		f.contextDirectory = stackDir
-	}
-	return f
 }
 
 func (f *Function) ContextDirectory() string {

@@ -109,7 +109,7 @@ func List(s *stack.Stack) ([]containerengine.Image, error) {
 	}
 	images := []containerengine.Image{}
 	for _, f := range s.Functions {
-		imgs, err := cr.ListImages(s.Name, f.Name)
+		imgs, err := cr.ListImages(s.Name, f.Name())
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {
@@ -117,7 +117,7 @@ func List(s *stack.Stack) ([]containerengine.Image, error) {
 		}
 	}
 	for _, c := range s.Containers {
-		imgs, err := cr.ListImages(s.Name, c.Name)
+		imgs, err := cr.ListImages(s.Name, c.Name())
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {

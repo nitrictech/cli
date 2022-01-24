@@ -30,7 +30,7 @@ type Triggers struct {
 }
 
 type ComputeUnit struct {
-	Name string `yaml:"-"` //nolint:structcheck,unused
+	name string `yaml:"-"` //nolint:structcheck,unused
 
 	contextDirectory string `yaml:"-"` //nolint:structcheck,unused
 
@@ -84,6 +84,19 @@ type Container struct {
 	Args       []string `yaml:"args,omitempty"`
 
 	ComputeUnit `yaml:",inline"`
+}
+
+func (c *ComputeUnit) WithPrivateInfo(name, stackDir string) {
+	c.name = name
+	if c.Context != "" {
+		c.contextDirectory = path.Join(stackDir, c.Context)
+	} else {
+		c.contextDirectory = stackDir
+	}
+}
+
+func (c *ComputeUnit) Name() string {
+	return c.name
 }
 
 type Compute interface {
@@ -179,12 +192,7 @@ func FromFile(name string) (*Stack, error) {
 		stack.Functions[name] = fn
 	}
 	for name, c := range stack.Containers {
-		c.Name = name
-		if c.Context != "" {
-			c.contextDirectory = path.Join(stack.Path(), c.Context)
-		} else {
-			c.contextDirectory = stack.Path()
-		}
+		c.WithPrivateInfo(name, stack.Path())
 		stack.Containers[name] = c
 	}
 

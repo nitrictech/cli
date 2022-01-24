@@ -71,7 +71,7 @@ func FunctionFromHandler(h, stackDir string) Function {
 	return fn
 }
 
-func FromGlobArgs(glob []string) (*Stack, error) {
+func FromOptionsMinimal() (*Stack, error) {
 	ss, err := os.Stat(stackPath)
 	if err != nil {
 		return nil, err
@@ -88,6 +88,15 @@ func FromGlobArgs(glob []string) (*Stack, error) {
 		return nil, err
 	}
 	s := New(path.Base(absDir), sDir)
+
+	return s, nil
+}
+
+func FromGlobArgs(glob []string) (*Stack, error) {
+	s, err := FromOptionsMinimal()
+	if err != nil {
+		return nil, err
+	}
 
 	for _, g := range glob {
 		if _, err := os.Stat(g); err != nil {

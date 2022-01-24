@@ -78,13 +78,7 @@ var deploymentDeleteCmd = &cobra.Command{
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
 
-		s, err := stack.FromOptions()
-		if err != nil && len(args) > 0 {
-			s, err = stack.FromGlobArgs(args)
-			cobra.CheckErr(err)
-
-			s, err = codeconfig.Populate(s)
-		}
+		s, err := stack.FromOptionsMinimal()
 		cobra.CheckErr(err)
 
 		p, err := provider.NewProvider(s, t)

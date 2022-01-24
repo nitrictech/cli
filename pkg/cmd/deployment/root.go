@@ -32,11 +32,16 @@ var deploymentName string
 var deploymentCmd = &cobra.Command{
 	Use:   "deployment",
 	Short: "Work with a deployment",
-	Long:  `Delopy a project`,
-	Example: `nitric deployment apply
-nitric deployment apply -n prod -s ../project/ -t prod
-nitric deployment apply -n prod -s ../project/ -t prod "functions/*.ts"
+	Long: `Stack deployment command set.
 
+The deployment commands generally need 3 things:
+1. a target (either explicitly with "-t <targetname> or defined in the config)
+2. a deployment name (either explicitly with -n <deployment name> or use the default name of "dep")
+3. a stack definition, this could be a supplied by any of the following ways:
+  - Provide a nitric.yaml configuration file, the path to which is provided either explicitly with "-s <stack dir> or in the current director.
+  -	A Glob to the functions from which the configuration is derived.
+	`,
+	Example: `nitric deployment apply
 nitric deployment delete
 nitric deployment list
 `,
@@ -46,6 +51,10 @@ var deploymentApplyCmd = &cobra.Command{
 	Use:   "apply [handlerGlob]",
 	Short: "Create or Update a new application deployment",
 	Long:  `Applies a Nitric application deployment.`,
+	Example: `nitric deployment apply
+nitric deployment apply -n prod-aws -s ../project/ -t prod
+nitric deployment apply -n prod-aws -s ../project/ -t prod "functions/*.ts"
+		`,
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
@@ -71,9 +80,13 @@ var deploymentApplyCmd = &cobra.Command{
 }
 
 var deploymentDeleteCmd = &cobra.Command{
-	Use:   "delete [handlerGlob]",
+	Use:   "delete",
 	Short: "Delete an application deployment",
 	Long:  `Delete a Nitric application deployment.`,
+	Example: `nitric deployment delete
+nitric deployment delete -s ../project/ -t prod
+nitric deployment delete -n prod-aws -s ../project/ -t prod
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
@@ -86,24 +99,21 @@ var deploymentDeleteCmd = &cobra.Command{
 
 		cobra.CheckErr(p.Delete(deploymentName))
 	},
-	Args: cobra.MinimumNArgs(0),
+	Args: cobra.ExactArgs(0),
 }
 
 var deploymentListCmd = &cobra.Command{
-	Use:   "list [handlerGlob]",
+	Use:   "list",
 	Short: "list deployments for a stack",
 	Long:  `Lists Nitric application deployments for a stack.`,
+	Example: `nitric list
+nitric deployment list -s ../project/ -t prod
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
 
-		s, err := stack.FromOptions()
-		if err != nil && len(args) > 0 {
-			s, err = stack.FromGlobArgs(args)
-			cobra.CheckErr(err)
-
-			s, err = codeconfig.Populate(s)
-		}
+		s, err := stack.FromOptionsMinimal()
 		cobra.CheckErr(err)
 
 		p, err := provider.NewProvider(s, t)
@@ -114,7 +124,7 @@ var deploymentListCmd = &cobra.Command{
 
 		output.Print(deps)
 	},
-	Args: cobra.MinimumNArgs(0),
+	Args: cobra.ExactArgs(0),
 }
 
 func RootCommand() *cobra.Command {

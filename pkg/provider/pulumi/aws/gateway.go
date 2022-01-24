@@ -53,9 +53,11 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 	// collect name arn pairs for output iteration
 	for k, v := range args.LambdaFunctions {
-		nameArnPairs = append(nameArnPairs, v.Function.InvokeArn.ApplyT(func(arn string) nameArnPair {
+		nameArnPairs = append(nameArnPairs, pulumi.All(k, v.Function.InvokeArn).ApplyT(func(args []interface{}) nameArnPair {
+			name := args[0].(string)
+			arn := args[1].(string)
 			return nameArnPair{
-				name:      k,
+				name:      name,
 				invokeArn: arn,
 			}
 		}))
@@ -65,11 +67,10 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		naps := make(map[string]string)
 
 		for _, p := range pairs {
-			fmt.Printf("Underlying Type: %T\n", p)
 			if pair, ok := p.(nameArnPair); ok {
 				naps[pair.name] = pair.invokeArn
 			} else {
-				// XXX: Should not occurr
+				// XXX: Should not occur
 				return "", fmt.Errorf("invalid data")
 			}
 		}

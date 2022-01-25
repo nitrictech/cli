@@ -40,6 +40,10 @@ func TestFromGlobArgs(t *testing.T) {
 				Dir:  ".",
 				Name: "stack",
 				Functions: map[string]Function{
+					"compute_test": {
+						Handler:     "compute_test.go",
+						ComputeUnit: ComputeUnit{Name: "compute_test", ContextDirectory: "."},
+					},
 					"container_helper": {
 						Handler:     "container_helper.go",
 						ComputeUnit: ComputeUnit{Name: "container_helper", ContextDirectory: "."},

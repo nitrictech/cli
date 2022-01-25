@@ -225,10 +225,6 @@ func TestFromGlobArgs(t *testing.T) {
 						Handler:     "utils/runtime.go",
 						ComputeUnit: ComputeUnit{Name: "runtime", ContextDirectory: "../../pkg"},
 					},
-					"tar": {
-						Handler:     "utils/tar.go",
-						ComputeUnit: ComputeUnit{Name: "tar", ContextDirectory: "../../pkg"},
-					},
 				},
 			},
 		},

@@ -83,7 +83,7 @@ func Run(runner Runner, opts Opts) error {
 	select {
 	case err = <-doErr:
 	case <-timer.C:
-		err = errors.New("tasklet timedout after " + time.Since(start).String())
+		err = errors.New("tasklet timedout after " + opts.Timeout.String())
 	case <-done:
 	case sigTerm := <-opts.Signal:
 		err = fmt.Errorf("received %v, exiting", sigTerm)

@@ -145,3 +145,41 @@ func TestFromGlobArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestFromOptionsMinimal(t *testing.T) {
+	tests := []struct {
+		name      string
+		stackPath string
+		wantDir   string
+		wantName  string
+	}{
+		{
+			name:      "current dir",
+			stackPath: ".",
+			wantDir:   ".",
+			wantName:  "stack",
+		},
+		{
+			name:      "relative",
+			stackPath: "../../pkg/cron",
+			wantDir:   "../../pkg/cron",
+			wantName:  "cron",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stackPath = tt.stackPath
+			got, err := FromOptionsMinimal()
+			if err != nil {
+				t.Errorf("FromOptionsMinimal() error = %v", err)
+				return
+			}
+			if got.Dir != tt.wantDir {
+				t.Errorf("FromOptionsMinimal() got.Dir = %s, wantDir %v", got.Dir, tt.wantDir)
+			}
+			if got.Name != tt.wantName {
+				t.Errorf("FromOptionsMinimal() got.Name = %s, wantName %v", got.Name, tt.wantName)
+			}
+		})
+	}
+}

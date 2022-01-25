@@ -16,3 +16,5 @@ all.coverprofile
 # Go workspace file
 go.work
 .vscode/
+
+dist/

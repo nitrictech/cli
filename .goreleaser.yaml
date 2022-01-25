@@ -1,0 +1,40 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+before:
+  hooks:
+    - go mod tidy
+    - make generate
+builds:
+  - env:
+      - CGO_ENABLED=0
+    id: nitric
+    binary: nitric
+    main: ./pkg/cmd/
+    goos:
+      - linux
+      - windows
+      - darwin
+archives:
+  - replacements:
+      darwin: macOS
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+      archives:
+    format_overrides:
+      - goos: windows
+        format: zip
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  skip: true
+scoop:
+  bucket:
+    owner: nitrictech
+    name: scoop-bucket
+  homepage: "https://nitric.io"
+  description: "Nitric CLI"
+  license: Apache 2.0

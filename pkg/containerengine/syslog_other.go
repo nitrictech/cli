@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build !windows
+
 package containerengine
 
 import (
@@ -36,6 +38,10 @@ type localSyslog struct {
 	file    *os.File
 	port    int
 	server  *syslog.Server
+}
+
+func newSyslog(logPath string) ContainerLogger {
+	return &localSyslog{logPath: logPath}
 }
 
 func (s *localSyslog) Stop() error {

@@ -26,6 +26,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
+	queue_service "github.com/nitrictech/nitric/pkg/plugins/queue/dev"
 	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
 	minio "github.com/nitrictech/nitric/pkg/plugins/storage/minio"
 	"github.com/nitrictech/nitric/pkg/worker"
@@ -106,6 +107,13 @@ func (l *localServices) Start() error {
 		return err
 	}
 
+	// Connect queue plugin
+	os.Setenv("LOCAL_QUEUE_DIR", runDir)
+	qp, err := queue_service.New()
+	if err != nil {
+		return err
+	}
+
 	// Create a new Worker Pool
 	// TODO: We may want to override GetWorker on the default ProcessPool
 	// For now we'll use the default and expand from there
@@ -132,12 +140,13 @@ func (l *localServices) Start() error {
 		ServiceAddress:          "0.0.0.0:50051",
 		ChildCommand:            []string{"echo", "running membrane 🚀"},
 		SecretPlugin:            secp,
+		QueuePlugin:             qp,
 		StoragePlugin:           sp,
 		DocumentPlugin:          dp,
 		GatewayPlugin:           gw,
 		EventsPlugin:            ev,
 		Pool:                    pool,
-		TolerateMissingServices: true,
+		TolerateMissingServices: false,
 	})
 	if err != nil {
 		return err

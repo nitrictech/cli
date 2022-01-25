@@ -71,7 +71,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 				naps[pair.name] = pair.invokeArn
 			} else {
 				// XXX: Should not occur
-				return "", fmt.Errorf("invalid data")
+				return "", fmt.Errorf("invalid data %T %v", p, p)
 			}
 		}
 

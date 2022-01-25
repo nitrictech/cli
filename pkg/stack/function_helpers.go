@@ -17,12 +17,14 @@
 package stack
 
 import (
+	_ "embed"
 	"fmt"
 	"path"
 	"path/filepath"
 )
 
-const DefaultMembraneVersion = "v0.13.0-rc.12"
+//go:embed membraneversion.txt
+var DefaultMembraneVersion string
 
 var _ Compute = &Function{}
 

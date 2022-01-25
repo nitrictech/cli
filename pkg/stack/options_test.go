@@ -48,6 +48,10 @@ func TestFromGlobArgs(t *testing.T) {
 						Handler:     "function_helpers.go",
 						ComputeUnit: ComputeUnit{Name: "function_helpers", ContextDirectory: "."},
 					},
+					"function_helpers_test": {
+						Handler:     "function_helpers_test.go",
+						ComputeUnit: ComputeUnit{Name: "function_helpers_test", ContextDirectory: "."},
+					},
 					"options": {
 						Handler:     "options.go",
 						ComputeUnit: ComputeUnit{Name: "options", ContextDirectory: "."},

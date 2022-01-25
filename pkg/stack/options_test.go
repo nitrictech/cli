@@ -91,6 +91,10 @@ func TestFromGlobArgs(t *testing.T) {
 						Handler:     "utils/glob.go",
 						ComputeUnit: ComputeUnit{Name: "glob", ContextDirectory: "../../pkg"},
 					},
+					"glob_test": {
+						Handler:     "utils/glob_test.go",
+						ComputeUnit: ComputeUnit{Name: "glob_test", ContextDirectory: "../../pkg"},
+					},
 					"paths": {
 						Handler:     "utils/paths.go",
 						ComputeUnit: ComputeUnit{Name: "paths", ContextDirectory: "../../pkg"},

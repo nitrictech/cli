@@ -201,6 +201,10 @@ func TestFromGlobArgs(t *testing.T) {
 						Handler:     "utils/errors.go",
 						ComputeUnit: ComputeUnit{Name: "errors", ContextDirectory: "../../pkg"},
 					},
+					"errors_test": {
+						Handler:     "utils/errors_test.go",
+						ComputeUnit: ComputeUnit{Name: "errors_test", ContextDirectory: "../../pkg"},
+					},
 					"fileinfo": {
 						Handler:     "utils/fileinfo.go",
 						ComputeUnit: ComputeUnit{Name: "fileinfo", ContextDirectory: "../../pkg"},

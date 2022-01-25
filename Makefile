@@ -13,6 +13,7 @@ build: generate
 generate:
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/newcli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/newcli/pkg/utils GetterClient > mocks/mock_utils/mock_getter.go
+	@go run ./hack/modversion/main.go > pkg/stack/membraneversion.txt
 
 .PHONY: fmt
 fmt:

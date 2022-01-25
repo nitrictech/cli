@@ -43,7 +43,7 @@ import (
 
 type docker struct {
 	cli    *client.Client
-	syslog *localSyslog
+	logger ContainerLogger
 }
 
 var _ ContainerEngine = &docker{}
@@ -287,10 +287,9 @@ func (d *docker) ContainerExec(containerName string, cmd []string, workingDir st
 }
 
 func (d *docker) Logger(stackPath string) ContainerLogger {
-	if d.syslog == nil {
-		d.syslog = &localSyslog{
-			logPath: path.Join(utils.NitricLogDir(stackPath), "run.log"),
-		}
+	if d.logger != nil {
+		return d.logger
 	}
-	return d.syslog
+	d.logger = newSyslog(path.Join(utils.NitricLogDir(stackPath), "run.log"))
+	return d.logger
 }

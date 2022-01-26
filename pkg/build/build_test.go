@@ -42,7 +42,7 @@ func TestCreateBaseDev(t *testing.T) {
 	s := stack.New("", dir)
 	s.Functions = map[string]stack.Function{"foo": {Handler: "functions/list.ts"}}
 
-	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{})
+	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{}, []string{})
 
 	containerengine.DiscoveredEngine = me
 
@@ -54,8 +54,8 @@ func TestCreateBaseDev(t *testing.T) {
 func TestCreate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	me := mock_containerengine.NewMockContainerEngine(ctrl)
-	me.EXPECT().Build(gomock.Any(), "", "corp-abc-dev:123456", map[string]string{"PROVIDER": "aws"})
-	me.EXPECT().Build("Dockerfile.custom", "", "corp-xyz-dev:444444", map[string]string{"PROVIDER": "aws"})
+	me.EXPECT().Build(gomock.Any(), "", "corp-abc-dev:123456", map[string]string{"PROVIDER": "aws"}, []string{"data/*"})
+	me.EXPECT().Build("Dockerfile.custom", "", "corp-xyz-dev:444444", map[string]string{"PROVIDER": "aws"}, []string{})
 
 	containerengine.DiscoveredEngine = me
 
@@ -69,6 +69,7 @@ func TestCreate(t *testing.T) {
 					Tag: "corp-abc-dev:123456",
 				},
 				BuildScripts: []string{"ls"},
+				Excludes:     []string{"data/*"},
 			},
 		},
 		Containers: map[string]stack.Container{

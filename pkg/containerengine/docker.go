@@ -74,13 +74,14 @@ func (d *docker) Type() string {
 	return "docker"
 }
 
-func tarContextDir(relDockerfile, contextDir string) (io.ReadCloser, error) {
+func tarContextDir(relDockerfile, contextDir string, extraExcludes []string) (io.ReadCloser, error) {
 	excludes, err := build.ReadDockerignore(contextDir)
 	if err != nil {
 		return nil, err
 	}
 
 	excludes = append(excludes, utils.NitricLogDir(contextDir))
+	excludes = append(excludes, extraExcludes...)
 
 	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
 		return nil, errors.Errorf("error checking context: '%s'.", err)
@@ -93,11 +94,11 @@ func tarContextDir(relDockerfile, contextDir string) (io.ReadCloser, error) {
 	})
 }
 
-func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string) error {
+func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), buildTimeout())
 	defer cancel()
 
-	dockerBuildContext, err := tarContextDir(dockerfile, srcPath)
+	dockerBuildContext, err := tarContextDir(dockerfile, srcPath, excludes)
 	if err != nil {
 		return err
 	}

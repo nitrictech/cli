@@ -60,15 +60,3 @@ func (r Runtime) String() string {
 func (r Runtime) DevImageName() string {
 	return fmt.Sprintf("nitric-%s-dev", r)
 }
-
-func ImagesToBuild(handlers []string) (map[string]string, error) {
-	imagesToBuild := map[string]string{}
-	for _, h := range handlers {
-		rt, err := NewRunTimeFromFilename(h)
-		if err != nil {
-			return nil, err
-		}
-		imagesToBuild[rt.String()] = rt.DevImageName()
-	}
-	return imagesToBuild, nil
-}

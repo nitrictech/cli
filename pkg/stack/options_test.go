@@ -17,12 +17,130 @@
 package stack
 
 import (
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/imdario/mergo"
 )
+
+func newFakeStack(name, dir string) *Stack {
+	s := &Stack{
+		Name: name,
+		Dir:  dir,
+		Collections: map[string]Collection{
+			"dollars": {},
+		},
+		Containers: map[string]Container{
+			"thing": {
+				Dockerfile: "containerfile",
+				Args:       []string{"-x", "-y"},
+				ComputeUnit: ComputeUnit{
+					Name:    "thing",
+					Context: "feat5",
+					Memory:  4096,
+					Triggers: Triggers{
+						[]string{"spiders"},
+					},
+				},
+			},
+		},
+		Buckets: map[string]Bucket{
+			"big": {},
+			"red": {},
+		},
+		Topics: map[string]Topic{
+			"pollies": {},
+		},
+		Queues: map[string]Queue{
+			"covid": {},
+		},
+		Schedules: map[string]Schedule{
+			"firstly": {
+				Expression: "@daily",
+				Event: ScheduleEvent{
+					PayloadType: "?",
+					Payload: map[string]interface{}{
+						"a": "value",
+					},
+				},
+				Target: ScheduleTarget{Type: "y", Name: "x"},
+			},
+		},
+		Apis: map[string]string{
+			"main": "main.json",
+		},
+		ApiDocs: map[string]*openapi3.T{
+			"main": {
+				ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{}},
+				OpenAPI:        "3.0.1",
+				Components: openapi3.Components{
+					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{}},
+				},
+				Info: &openapi3.Info{
+					Title:          "test dummy",
+					Version:        "v1",
+					ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{}},
+				},
+				Paths: openapi3.Paths{},
+			},
+		},
+		Functions: map[string]Function{
+			"listr": {
+				Version:      "v1.2.3",
+				BuildScripts: []string{"make generate"},
+				Excludes:     []string{"data/"},
+				MaxRequests:  3490,
+				External:     false,
+				Handler:      "list.go",
+				ComputeUnit: ComputeUnit{
+					Name:    "listr",
+					Context: "feat5",
+					Memory:  4096,
+					Triggers: Triggers{
+						[]string{"spiders"},
+					},
+				},
+			},
+		},
+	}
+	for k, v := range s.Functions {
+		v.SetContextDirectory(dir)
+		s.Functions[k] = v
+	}
+	for k, v := range s.Containers {
+		v.SetContextDirectory(dir)
+		s.Containers[k] = v
+	}
+	return s
+}
+
+func TestFromOptions(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "nitric-cli-test-*")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	s := newFakeStack("test", tmpDir)
+
+	err = s.ToFile("nitric.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+
+	stackPath = tmpDir
+	newS, err := FromOptions()
+	if err != nil {
+		t.Error(err)
+	}
+	if !cmp.Equal(s, newS) {
+		t.Error(cmp.Diff(s, newS))
+	}
+}
 
 func TestFromGlobArgs(t *testing.T) {
 	tests := []struct {
@@ -40,6 +158,10 @@ func TestFromGlobArgs(t *testing.T) {
 				Dir:  ".",
 				Name: "stack",
 				Functions: map[string]Function{
+					"compute_test": {
+						Handler:     "compute_test.go",
+						ComputeUnit: ComputeUnit{Name: "compute_test", ContextDirectory: "."},
+					},
 					"container_helper": {
 						Handler:     "container_helper.go",
 						ComputeUnit: ComputeUnit{Name: "container_helper", ContextDirectory: "."},
@@ -79,6 +201,10 @@ func TestFromGlobArgs(t *testing.T) {
 						Handler:     "utils/errors.go",
 						ComputeUnit: ComputeUnit{Name: "errors", ContextDirectory: "../../pkg"},
 					},
+					"errors_test": {
+						Handler:     "utils/errors_test.go",
+						ComputeUnit: ComputeUnit{Name: "errors_test", ContextDirectory: "../../pkg"},
+					},
 					"fileinfo": {
 						Handler:     "utils/fileinfo.go",
 						ComputeUnit: ComputeUnit{Name: "fileinfo", ContextDirectory: "../../pkg"},
@@ -91,6 +217,10 @@ func TestFromGlobArgs(t *testing.T) {
 						Handler:     "utils/glob.go",
 						ComputeUnit: ComputeUnit{Name: "glob", ContextDirectory: "../../pkg"},
 					},
+					"glob_test": {
+						Handler:     "utils/glob_test.go",
+						ComputeUnit: ComputeUnit{Name: "glob_test", ContextDirectory: "../../pkg"},
+					},
 					"paths": {
 						Handler:     "utils/paths.go",
 						ComputeUnit: ComputeUnit{Name: "paths", ContextDirectory: "../../pkg"},
@@ -98,10 +228,6 @@ func TestFromGlobArgs(t *testing.T) {
 					"runtime": {
 						Handler:     "utils/runtime.go",
 						ComputeUnit: ComputeUnit{Name: "runtime", ContextDirectory: "../../pkg"},
-					},
-					"tar": {
-						Handler:     "utils/tar.go",
-						ComputeUnit: ComputeUnit{Name: "tar", ContextDirectory: "../../pkg"},
 					},
 				},
 			},
@@ -141,6 +267,44 @@ func TestFromGlobArgs(t *testing.T) {
 			}
 			if !reflect.DeepEqual(want, got) {
 				t.Error(cmp.Diff(want, got))
+			}
+		})
+	}
+}
+
+func TestFromOptionsMinimal(t *testing.T) {
+	tests := []struct {
+		name      string
+		stackPath string
+		wantDir   string
+		wantName  string
+	}{
+		{
+			name:      "current dir",
+			stackPath: ".",
+			wantDir:   ".",
+			wantName:  "stack",
+		},
+		{
+			name:      "relative",
+			stackPath: "../../pkg/cron",
+			wantDir:   "../../pkg/cron",
+			wantName:  "cron",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stackPath = tt.stackPath
+			got, err := FromOptionsMinimal()
+			if err != nil {
+				t.Errorf("FromOptionsMinimal() error = %v", err)
+				return
+			}
+			if got.Dir != tt.wantDir {
+				t.Errorf("FromOptionsMinimal() got.Dir = %s, wantDir %v", got.Dir, tt.wantDir)
+			}
+			if got.Name != tt.wantName {
+				t.Errorf("FromOptionsMinimal() got.Name = %s, wantName %v", got.Name, tt.wantName)
 			}
 		})
 	}

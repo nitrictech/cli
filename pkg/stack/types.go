@@ -17,6 +17,8 @@
 package stack
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path"
 	"path/filepath"
@@ -198,5 +200,25 @@ func (s *Stack) ToFile(name string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(name, b, 0)
+	err = ioutil.WriteFile(path.Join(s.Dir, name), b, 0644)
+	if err != nil {
+		return err
+	}
+
+	for apiName, apiFile := range s.Apis {
+		apiPath := path.Join(s.Dir, apiFile)
+		doc, ok := s.ApiDocs[apiName]
+		if !ok {
+			return fmt.Errorf("apiDoc %s does not exist", apiPath)
+		}
+		docJ, err := json.Marshal(doc)
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(apiPath, docJ, 0644)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

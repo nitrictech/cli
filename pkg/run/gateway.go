@@ -148,9 +148,7 @@ func (s *BaseHttpGateway) Stop() error {
 
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
-func NewGateway() (gateway.GatewayService, error) {
-	address := nitric_utils.GetEnv("GATEWAY_ADDRESS", ":9001")
-
+func NewGateway(address string) (gateway.GatewayService, error) {
 	return &BaseHttpGateway{
 		address: address,
 	}, nil

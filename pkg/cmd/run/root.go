@@ -28,6 +28,7 @@ import (
 
 	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/containerengine"
+	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/run"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/tasklet"
@@ -95,6 +96,8 @@ var runCmd = &cobra.Command{
 			StopMsg: "Started Local Services!",
 		}
 		tasklet.MustRun(startLocalServices, tasklet.Opts{Signal: term})
+
+		output.Print(*ls.Status())
 
 		var functions []*run.Function
 

@@ -29,6 +29,7 @@ import (
 	queue_service "github.com/nitrictech/nitric/pkg/plugins/queue/dev"
 	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
 	minio "github.com/nitrictech/nitric/pkg/plugins/storage/minio"
+	nitric_utils "github.com/nitrictech/nitric/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/worker"
 )
 
@@ -36,6 +37,16 @@ type LocalServices interface {
 	Start() error
 	Stop() error
 	Running() bool
+	Status() *LocalServicesStatus
+}
+
+type LocalServicesStatus struct {
+	Running          bool   `yaml:"running"`
+	RunDir           string `yaml:"runDir"`
+	GatewayAddress   string `yaml:"gatewayAddress"`
+	MembraneAddress  string `yaml:"membraneAddress"`
+	MinioContainerID string `yaml:"minioContainerID"`
+	MinioEndpoint    string `yaml:"minioEndpoint"`
 }
 
 type localServices struct {
@@ -43,12 +54,19 @@ type localServices struct {
 	stackPath string
 	mio       *MinioServer
 	mem       *membrane.Membrane
+	status    *LocalServicesStatus
 }
 
 func NewLocalServices(stackName, stackPath string) LocalServices {
 	return &localServices{
 		stackName: stackName,
 		stackPath: stackPath,
+		status: &LocalServicesStatus{
+			Running:         false,
+			RunDir:          path.Join(utils.NitricRunDir(), stackName),
+			GatewayAddress:  nitric_utils.GetEnv("GATEWAY_ADDRESS", ":9001"),
+			MembraneAddress: net.JoinHostPort("localhost", "50051"),
+		},
 	}
 }
 
@@ -58,22 +76,22 @@ func (l *localServices) Stop() error {
 }
 
 func (l *localServices) Running() bool {
+	l.status.Running = false
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort("0.0.0.0", "50051"), time.Second)
-	if err != nil {
-		return false
-	}
-	if conn != nil {
+	if err == nil && conn != nil {
 		defer conn.Close()
-		return true
+		l.status.Running = true
 	}
-	return false
+	return l.status.Running
+}
+
+func (l *localServices) Status() *LocalServicesStatus {
+	return l.status
 }
 
 func (l *localServices) Start() error {
-	runDir := path.Join(utils.NitricRunDir(), l.stackName)
-
 	var err error
-	l.mio, err = NewMinio(runDir, "test-run")
+	l.mio, err = NewMinio(l.status.RunDir, "minio")
 	if err != nil {
 		return err
 	}
@@ -83,9 +101,11 @@ func (l *localServices) Start() error {
 	if err != nil {
 		return err
 	}
+	l.status.MinioContainerID = l.mio.cid
+	l.status.MinioEndpoint = fmt.Sprintf("localhost:%d", l.mio.GetApiPort())
 
 	// Connect dev storage
-	os.Setenv(minio.MINIO_ENDPOINT_ENV, fmt.Sprintf("localhost:%d", l.mio.GetApiPort()))
+	os.Setenv(minio.MINIO_ENDPOINT_ENV, l.status.MinioEndpoint)
 	os.Setenv(minio.MINIO_ACCESS_KEY_ENV, "minioadmin")
 	os.Setenv(minio.MINIO_SECRET_KEY_ENV, "minioadmin")
 	sp, err := minio.New()
@@ -94,21 +114,21 @@ func (l *localServices) Start() error {
 	}
 
 	// Connect dev documents
-	os.Setenv("LOCAL_DB_DIR", runDir)
+	os.Setenv("LOCAL_DB_DIR", l.status.RunDir)
 	dp, err := boltdb_service.New()
 	if err != nil {
 		return err
 	}
 
 	// Connect secrets plugin
-	os.Setenv("LOCAL_SEC_DIR", runDir)
+	os.Setenv("LOCAL_SEC_DIR", l.status.RunDir)
 	secp, err := secret_service.New()
 	if err != nil {
 		return err
 	}
 
 	// Connect queue plugin
-	os.Setenv("LOCAL_QUEUE_DIR", runDir)
+	os.Setenv("LOCAL_QUEUE_DIR", l.status.RunDir)
 	qp, err := queue_service.New()
 	if err != nil {
 		return err
@@ -128,7 +148,7 @@ func (l *localServices) Start() error {
 	}
 
 	// Start a new gateway plugin
-	gw, err := NewGateway()
+	gw, err := NewGateway(l.status.GatewayAddress)
 	if err != nil {
 		return err
 	}

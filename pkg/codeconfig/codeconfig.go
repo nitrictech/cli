@@ -38,6 +38,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/cron"
+	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/run"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/utils"
@@ -317,17 +318,19 @@ func (c *codeConfig) collectOne(handler string) error {
 		return err
 	}
 
-	logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     true,
-	})
-	if err != nil {
-		return err
+	if output.VerboseLevel > 1 {
+		logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
+			ShowStdout: true,
+			ShowStderr: true,
+			Follow:     true,
+		})
+		if err != nil {
+			return err
+		}
+		go func() {
+			_, _ = stdcopy.StdCopy(os.Stdout, os.Stderr, logreader)
+		}()
 	}
-	go func() {
-		_, _ = stdcopy.StdCopy(os.Stdout, os.Stderr, logreader)
-	}()
 
 	errs := utils.NewErrorList()
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)

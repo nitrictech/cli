@@ -60,3 +60,12 @@ func (r Runtime) String() string {
 func (r Runtime) DevImageName() string {
 	return fmt.Sprintf("nitric-%s-dev", r)
 }
+
+func (r Runtime) ContainerName(handler string) string {
+	switch r {
+	case RuntimeGolang:
+		return filepath.Base(filepath.Dir(handler))
+	default:
+		return strings.Replace(filepath.Base(handler), filepath.Ext(handler), "", 1)
+	}
+}

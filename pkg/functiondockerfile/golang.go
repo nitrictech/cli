@@ -74,3 +74,17 @@ func golangGenerator(f *stack.Function, version, provider string, w io.Writer) e
 	_, err = w.Write([]byte(strings.Join(append(buildCon.Lines(), con.Lines()...), "\n")))
 	return err
 }
+
+// golangDevBaseGenerator generates a base image for code-as-config
+func golangDevBaseGenerator(w io.Writer) error {
+	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+		From:   "golang:alpine",
+		Ignore: []string{},
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+	return err
+}

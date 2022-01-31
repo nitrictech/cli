@@ -56,6 +56,7 @@ type ContainerEngine interface {
 	ContainersListByLabel(match map[string]string) ([]types.Container, error)
 	RemoveByLabel(name, value string) error
 	ContainerExec(containerName string, cmd []string, workingDir string) error
+	ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error)
 	Logger(stackPath string) ContainerLogger
 }
 

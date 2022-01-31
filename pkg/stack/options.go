@@ -20,7 +20,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -61,7 +60,8 @@ func FromOptions() (*Stack, error) {
 }
 
 func FunctionFromHandler(h, stackDir string) Function {
-	name := strings.Replace(path.Base(h), path.Ext(h), "", 1)
+	rt, _ := utils.NewRunTimeFromFilename(h)
+	name := rt.ContainerName(h)
 	fn := Function{
 		ComputeUnit: ComputeUnit{Name: name},
 		Handler:     h,

@@ -73,6 +73,8 @@ func GenerateForCodeAsConfig(handler string, fwriter io.Writer) error {
 	switch rt {
 	case utils.RuntimeJavascript, utils.RuntimeTypescript:
 		return typescriptDevBaseGenerator(fwriter)
+	case utils.RuntimeGolang:
+		return golangDevBaseGenerator(fwriter)
 	}
 
 	return errors.New("could not build dockerfile from " + handler + ", extension not supported")

@@ -19,22 +19,26 @@ package codeconfig
 import (
 	"fmt"
 	"net"
+	"os"
 	"path"
 	"runtime"
 	"strings"
 	"sync"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/imdario/mergo"
+	"github.com/moby/moby/pkg/stdcopy"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
 	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/cron"
+	"github.com/nitrictech/newcli/pkg/run"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
@@ -209,6 +213,35 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	return doc, nil
 }
 
+func launchOptsForFunctionCollect(runCtx, handler string) (run.LaunchOpts, error) {
+	rt, err := utils.NewRunTimeFromFilename(handler)
+	if err != nil {
+		return run.LaunchOpts{}, err
+	}
+
+	switch rt {
+	case utils.RuntimeJavascript, utils.RuntimeTypescript:
+		return run.LaunchOpts{
+			Image:      rt.DevImageName(),
+			Entrypoint: strslice.StrSlice{"ts-node"},
+			Cmd:        strslice.StrSlice{"-T " + "/app/" + handler},
+		}, nil
+	case utils.RuntimeGolang:
+		module, err := utils.GoModule(runCtx)
+		if err != nil {
+			return run.LaunchOpts{}, err
+		}
+		return run.LaunchOpts{
+			Image:      rt.DevImageName(),
+			TargetWD:   path.Join("/go/src", module),
+			Entrypoint: strslice.StrSlice{"go", "run"},
+			Cmd:        strslice.StrSlice{"./" + handler},
+		}, nil
+	default:
+		return run.LaunchOpts{}, errors.New("could not get launchOpts from " + handler + ", runtime not supported")
+	}
+}
+
 // collectOne - Collects information about a function for a nitric stack
 // handler - the specific handler for the application
 func (c *codeConfig) collectOne(handler string) error {
@@ -240,13 +273,19 @@ func (c *codeConfig) collectOne(handler string) error {
 		return errors.WithMessage(err, "error running the handler")
 	}
 
+	opts, err := launchOptsForFunctionCollect(c.initialStack.Dir, handler)
+	if err != nil {
+		return err
+	}
+	fmt.Println(opts.String())
+
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
 				Source: c.initialStack.Dir,
-				Target: "/app",
+				Target: opts.TargetWD,
 			},
 		},
 	}
@@ -256,15 +295,18 @@ func (c *codeConfig) collectOne(handler string) error {
 		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
-	rt, err := utils.NewRunTimeFromFilename(handler)
-	if err != nil {
-		return err
-	}
 	cID, err := ce.ContainerCreate(&container.Config{
-		Image: rt.DevImageName(), // Select an image to use based on the handler
-		// Set the address to the bound port
-		Env: []string{fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port)},
-		Cmd: strslice.StrSlice{"-T", handler},
+		AttachStdout: true,
+		AttachStderr: true,
+		Image:        opts.Image,
+		Env: []string{
+			fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port),
+			fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
+			fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
+		},
+		Cmd:        opts.Cmd,
+		Entrypoint: opts.Entrypoint,
+		WorkingDir: opts.TargetWD,
 	}, hostConfig, nil, containerNameFromHandler(handler))
 	if err != nil {
 		return err
@@ -274,6 +316,18 @@ func (c *codeConfig) collectOne(handler string) error {
 	if err != nil {
 		return err
 	}
+
+	logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	})
+	if err != nil {
+		return err
+	}
+	go func() {
+		_, _ = stdcopy.StdCopy(os.Stdout, os.Stderr, logreader)
+	}()
 
 	errs := utils.NewErrorList()
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
@@ -300,7 +354,8 @@ func (c *codeConfig) collectOne(handler string) error {
 }
 
 func containerNameFromHandler(handler string) string {
-	return strings.Replace(path.Base(handler), path.Ext(handler), "", 1)
+	rt, _ := utils.NewRunTimeFromFilename(handler)
+	return rt.ContainerName(handler)
 }
 
 func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {

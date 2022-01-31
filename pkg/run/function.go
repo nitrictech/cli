@@ -18,7 +18,7 @@ package run
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
+	"path"
 	"runtime"
 	"strings"
 
@@ -41,37 +41,56 @@ type Function struct {
 }
 
 type LaunchOpts struct {
+	Image      string
+	TargetWD   string
 	Entrypoint []string
 	Cmd        []string
 }
 
+func (o *LaunchOpts) String() string {
+	return fmt.Sprintf("docker run -v <stackDir>:%s -w %s %s %v %v", o.TargetWD, o.TargetWD, o.Image, strings.Join(o.Entrypoint, " "), strings.Join(o.Cmd, " "))
+}
+
 func launchOptsForFunction(f *Function) (LaunchOpts, error) {
-	opts := LaunchOpts{Entrypoint: strslice.StrSlice{"nodemon"}}
-	rt, err := utils.NewRunTimeFromFilename(f.handler)
-	if err != nil {
-		return opts, err
-	}
-	switch rt {
+	switch f.runtime {
 	case utils.RuntimeJavascript, utils.RuntimeTypescript:
-		opts.Cmd = strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + f.handler}
+		return LaunchOpts{
+			TargetWD:   "/app",
+			Entrypoint: strslice.StrSlice{"nodemon"},
+			Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + f.handler},
+		}, nil
+	case utils.RuntimeGolang:
+		module, err := utils.GoModule(f.runCtx)
+		if err != nil {
+			return LaunchOpts{}, err
+		}
+		return LaunchOpts{
+			TargetWD:   path.Join("/go/src", module),
+			Entrypoint: strslice.StrSlice{"go", "run"},
+			Cmd:        strslice.StrSlice{"./" + f.handler},
+		}, nil
 	default:
-		return opts, errors.New("could not get launchOpts from " + f.handler + ", runtime not supported")
+		return LaunchOpts{}, errors.New("could not get launchOpts from " + f.handler + ", runtime not supported")
 	}
-	return opts, nil
 }
 
 func (f *Function) Name() string {
-	return strings.Replace(filepath.Base(f.handler), filepath.Ext(f.handler), "", 1)
+	return f.runtime.ContainerName(f.handler)
 }
 
 func (f *Function) Start() error {
+	launchOpts, err := launchOptsForFunction(f)
+	if err != nil {
+		return err
+	}
+
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
 				Source: f.runCtx,
-				Target: "/app",
+				Target: launchOpts.TargetWD,
 			},
 		},
 		LogConfig: *f.ce.Logger(f.runCtx).Config(),
@@ -82,17 +101,13 @@ func (f *Function) Start() error {
 		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
-	launchOpts, err := launchOptsForFunction(f)
-	if err != nil {
-		return err
-	}
-
 	cID, err := f.ce.ContainerCreate(&container.Config{
 		Image: f.runtime.DevImageName(), // Select an image to use based on the handler
 		// Set the address to the bound port
 		Env:        []string{fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", 50051)},
 		Entrypoint: launchOpts.Entrypoint,
 		Cmd:        launchOpts.Cmd,
+		WorkingDir: launchOpts.TargetWD,
 	}, hostConfig, nil, f.Name())
 	if err != nil {
 		return err

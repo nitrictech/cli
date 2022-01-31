@@ -129,6 +129,10 @@ func (p *podman) ContainerExec(containerName string, cmd []string, workingDir st
 	return p.docker.ContainerExec(containerName, cmd, workingDir)
 }
 
+func (p *podman) ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error) {
+	return p.docker.ContainerLogs(containerID, opts)
+}
+
 func (p *podman) Logger(stackPath string) ContainerLogger {
 	logPath, _ := utils.NewNitricLogFile(stackPath)
 	return &jsonfile{logPath: logPath}

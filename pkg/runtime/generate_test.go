@@ -14,28 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package functiondockerfile
+package runtime
 
 import (
 	"bytes"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
-	"github.com/nitrictech/newcli/pkg/stack"
 )
 
 func TestGenerate(t *testing.T) {
 	tests := []struct {
 		name        string
-		f           *stack.Function
+		handler     string
 		version     string
 		provider    string
 		wantFwriter string
 	}{
 		{
 			name:     "ts",
-			f:        &stack.Function{Handler: "functions/list.ts"},
+			handler:  "functions/list.ts",
 			version:  "latest",
 			provider: "azure",
 			wantFwriter: `FROM node:alpine
@@ -52,7 +50,7 @@ CMD ["ts-node", "-T", "functions/list.ts"]`,
 		},
 		{
 			name:     "go",
-			f:        &stack.Function{Handler: "pkg/handler/list.go"},
+			handler:  "pkg/handler/list.go",
 			version:  "v1.2.3",
 			provider: "aws",
 			wantFwriter: `FROM golang:alpine as build
@@ -73,7 +71,7 @@ CMD ["/bin/main"]`,
 		},
 		{
 			name:     "python",
-			f:        &stack.Function{Handler: "list.py"},
+			handler:  "list.py",
 			version:  "v1.1.7",
 			provider: "digitalocean",
 			wantFwriter: `FROM python:3.7-slim
@@ -91,7 +89,7 @@ CMD ["python", "list.py"]`,
 		},
 		{
 			name:     "js",
-			f:        &stack.Function{Handler: "functions/list.js"},
+			handler:  "functions/list.js",
 			version:  "latest",
 			provider: "gcp",
 			wantFwriter: `FROM node:alpine
@@ -106,7 +104,7 @@ CMD ["node", "functions/list.js"]`,
 		},
 		{
 			name:     "java",
-			f:        &stack.Function{Handler: "test.java", ComputeUnit: stack.ComputeUnit{Context: "testdata"}},
+			handler:  "testdata/test.java",
 			version:  "latest",
 			provider: "aws",
 			wantFwriter: `FROM maven:3-openjdk-11 as build
@@ -117,7 +115,7 @@ COPY / .
 COPY /subdir subdir
 RUN mvn clean package
 FROM adoptopenjdk/openjdk11:x86_64-alpine-jre-11.0.10_9
-COPY --from=build test.java function.jar
+COPY --from=build testdata/test.java function.jar
 WORKDIR /
 EXPOSE 9001
 CMD ["java", "-jar", "function.jar"]
@@ -129,11 +127,11 @@ ENTRYPOINT ["/usr/local/bin/membrane"]`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fwriter := &bytes.Buffer{}
-			if tt.f.ComputeUnit.Context != "" {
-				tt.f.ComputeUnit.ContextDirectory = tt.f.ComputeUnit.Context
+			rt, err := NewRunTimeFromHandler(tt.handler)
+			if err != nil {
+				t.Error(err)
 			}
-			tt.f.ComputeUnit.Name = "testfn"
-			if err := Generate(tt.f, tt.version, tt.provider, fwriter); err != nil {
+			if err := rt.FunctionDockerfile("testdata", tt.version, tt.provider, fwriter); err != nil {
 				t.Errorf("Generate() error = %v", err)
 				return
 			}
@@ -147,14 +145,14 @@ ENTRYPOINT ["/usr/local/bin/membrane"]`,
 func TestGenerateForCodeAsConfig(t *testing.T) {
 	tests := []struct {
 		name        string
-		f           *stack.Function
+		handler     string
 		version     string
 		provider    string
 		wantFwriter string
 	}{
 		{
-			name: "ts",
-			f:    &stack.Function{Handler: "functions/list.ts"},
+			name:    "ts",
+			handler: "functions/list.ts",
 			wantFwriter: `FROM node:alpine
 RUN yarn global add typescript ts-node nodemon
 WORKDIR /app/
@@ -164,8 +162,11 @@ ENTRYPOINT ["ts-node"]`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fwriter := &bytes.Buffer{}
-			tt.f.ComputeUnit = stack.ComputeUnit{Name: "testfn", ContextDirectory: "./"}
-			if err := GenerateForCodeAsConfig(tt.f.Handler, fwriter); err != nil {
+			rt, err := NewRunTimeFromHandler(tt.handler)
+			if err != nil {
+				t.Error(err)
+			}
+			if err := rt.FunctionDockerfileForCodeAsConfig(fwriter); err != nil {
 				t.Errorf("GenerateForCodeAsConfig() error = %v", err)
 				return
 			}

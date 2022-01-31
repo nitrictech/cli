@@ -14,17 +14,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package functiondockerfile
+package runtime
 
 import (
+	"fmt"
 	"io"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/strslice"
+
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
-func golangGenerator(f *stack.Function, version, provider string, w io.Writer) error {
+type golang struct {
+	rte     RuntimeExt
+	handler string
+}
+
+var _ Runtime = &golang{}
+
+func (t *golang) DevImageName() string {
+	return fmt.Sprintf("nitric-%s-dev", t.rte)
+}
+
+func (t *golang) ContainerName() string {
+	// get the abs dir in case user provides "."
+	absH, err := filepath.Abs(t.handler)
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Base(filepath.Dir(absH))
+}
+
+func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	buildCon, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "golang:alpine",
 		As:     "build",
@@ -50,7 +78,8 @@ func golangGenerator(f *stack.Function, version, provider string, w io.Writer) e
 	if err != nil {
 		return err
 	}
-	buildCon.Run(dockerfile.RunOptions{Command: []string{"CGO_ENABLED=0", "GOOS=linux", "go", "build", "-o", "/bin/main", f.Handler}})
+
+	buildCon.Run(dockerfile.RunOptions{Command: []string{"CGO_ENABLED=0", "GOOS=linux", "go", "build", "-o", "/bin/main", t.handler}})
 
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "alpine",
@@ -75,8 +104,7 @@ func golangGenerator(f *stack.Function, version, provider string, w io.Writer) e
 	return err
 }
 
-// golangDevBaseGenerator generates a base image for code-as-config
-func golangDevBaseGenerator(w io.Writer) error {
+func (t *golang) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "golang:alpine",
 		Ignore: []string{},
@@ -87,4 +115,53 @@ func golangDevBaseGenerator(w io.Writer) error {
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err
+}
+
+func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
+	module, err := utils.GoModule(runCtx)
+	if err != nil {
+		return LaunchOpts{}, err
+	}
+	return LaunchOpts{
+		Image:      t.DevImageName(),
+		TargetWD:   path.Join("/go/src", module),
+		Entrypoint: strslice.StrSlice{"go", "run"},
+		Cmd:        strslice.StrSlice{"./" + t.handler},
+		Mounts: []mount.Mount{
+			{
+				Type:   "bind",
+				Source: path.Join(os.Getenv("GOPATH"), "pkg"),
+				Target: "/go/pkg",
+			},
+			{
+				Type:   "bind",
+				Source: runCtx,
+				Target: path.Join("/go/src", module),
+			},
+		},
+	}, nil
+}
+
+func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
+	module, err := utils.GoModule(runCtx)
+	if err != nil {
+		return LaunchOpts{}, err
+	}
+	return LaunchOpts{
+		TargetWD:   path.Join("/go/src", module),
+		Entrypoint: strslice.StrSlice{"go", "run"},
+		Cmd:        strslice.StrSlice{"./" + t.handler},
+		Mounts: []mount.Mount{
+			{
+				Type:   "bind",
+				Source: path.Join(os.Getenv("GOPATH"), "pkg"),
+				Target: "/go/pkg",
+			},
+			{
+				Type:   "bind",
+				Source: runCtx,
+				Target: path.Join("/go/src", module),
+			},
+		},
+	}, nil
 }

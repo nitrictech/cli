@@ -37,7 +37,7 @@ func TestFindFilesInDir(t *testing.T) {
 		{
 			dir:  "../../",
 			name: "generator.go",
-			want: []string{"pkg/functiondockerfile/generator.go", "pkg/provider/generator.go", "pkg/provider/pulumi/generator.go"},
+			want: []string{"pkg/provider/generator.go", "pkg/provider/pulumi/generator.go"},
 		},
 	}
 	for _, tt := range tests {
@@ -69,7 +69,7 @@ func TestGlobInDir(t *testing.T) {
 		{
 			dir:     "../../",
 			pattern: "*/*/generator.go",
-			want:    []string{"pkg/functiondockerfile/generator.go", "pkg/provider/generator.go"},
+			want:    []string{"pkg/provider/generator.go"},
 		},
 	}
 	for _, tt := range tests {

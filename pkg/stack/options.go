@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/pflagext"
+	"github.com/nitrictech/newcli/pkg/runtime"
 	"github.com/nitrictech/newcli/pkg/utils"
 )
 
@@ -60,10 +61,9 @@ func FromOptions() (*Stack, error) {
 }
 
 func FunctionFromHandler(h, stackDir string) Function {
-	rt, _ := utils.NewRunTimeFromFilename(h)
-	name := rt.ContainerName(h)
+	rt, _ := runtime.NewRunTimeFromHandler(h)
 	fn := Function{
-		ComputeUnit: ComputeUnit{Name: name},
+		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
 		Handler:     h,
 	}
 	fn.SetContextDirectory(stackDir)

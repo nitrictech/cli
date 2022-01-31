@@ -14,17 +14,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package functiondockerfile
+package runtime
 
 import (
+	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
-func pythonGenerator(f *stack.Function, version, provider string, w io.Writer) error {
+type python struct {
+	rte     RuntimeExt
+	handler string
+}
+
+var _ Runtime = &python{}
+
+func (t *python) DevImageName() string {
+	return fmt.Sprintf("nitric-%s-dev", t.rte)
+}
+
+func (t *python) ContainerName() string {
+	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
+}
+
+func (t *python) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
+	return utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
+}
+
+func (t *python) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
+	return LaunchOpts{}, utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
+}
+
+func (t *python) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
+	return LaunchOpts{}, utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
+}
+
+func (t *python) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "python:3.7-slim",
 		Ignore: []string{"__pycache__/", "*.py[cod]", "*$py.class"},
@@ -54,7 +83,7 @@ func pythonGenerator(f *stack.Function, version, provider string, w io.Writer) e
 			"PYTHONPATH": "/app/:${PYTHONPATH}",
 		},
 		Ports: []int32{9001},
-		Cmd:   []string{"python", f.Handler},
+		Cmd:   []string{"python", t.handler},
 	})
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err

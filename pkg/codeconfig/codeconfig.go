@@ -274,6 +274,7 @@ func (c *codeConfig) collectOne(handler string) error {
 			fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port),
 			fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
 			fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
+			"NITRIC_ENVIRONMENT=build", // this is to tell the sdk that we are running in the build and not proper runtime.
 		},
 		Cmd:        opts.Cmd,
 		Entrypoint: opts.Entrypoint,

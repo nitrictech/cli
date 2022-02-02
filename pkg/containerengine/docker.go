@@ -24,7 +24,6 @@ import (
 	"io"
 	"log"
 	"os/exec"
-	"path"
 	"strings"
 	"time"
 
@@ -291,6 +290,7 @@ func (d *docker) Logger(stackPath string) ContainerLogger {
 	if d.logger != nil {
 		return d.logger
 	}
-	d.logger = newSyslog(path.Join(utils.NitricLogDir(stackPath), "run.log"))
+	logPath, _ := utils.NewNitricLogFile(stackPath)
+	d.logger = newSyslog(logPath)
 	return d.logger
 }

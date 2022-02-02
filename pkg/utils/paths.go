@@ -86,3 +86,13 @@ func NitricConfigDir() string {
 func NitricLogDir(stackPath string) string {
 	return path.Join(stackPath, ".nitric")
 }
+
+// NewNitricLogFile returns a path to a unique log file that does not exist.
+func NewNitricLogFile(stackPath string) (string, error) {
+	tf, err := os.CreateTemp(NitricLogDir(stackPath), "run-*.log")
+	if err != nil {
+		return "", err
+	}
+	tf.Close()
+	return tf.Name(), nil
+}

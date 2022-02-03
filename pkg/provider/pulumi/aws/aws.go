@@ -18,12 +18,14 @@ package aws
 
 import (
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/resourcegroups"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sqs"
@@ -73,6 +75,28 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
+	}
+
+	rgQueryJSON, err := json.Marshal(map[string]interface{}{
+		"ResourceTypeFilters": []string{"AWS::AllSupported"},
+		"TagFilters": []interface{}{
+			map[string]interface{}{
+				"Key":    "x-nitric-stack",
+				"Values": []string{ctx.Stack()},
+			},
+		},
+	})
+	if err != nil {
+		return errors.WithMessage(err, "resource group json marshal")
+	}
+
+	_, err = resourcegroups.NewGroup(ctx, ctx.Stack(), &resourcegroups.GroupArgs{
+		ResourceQuery: &resourcegroups.GroupResourceQueryArgs{
+			Query: pulumi.String(rgQueryJSON),
+		},
+	})
+	if err != nil {
+		return errors.WithMessage(err, "resource group create")
 	}
 
 	topics := map[string]*sns.Topic{}

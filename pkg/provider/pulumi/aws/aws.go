@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/resourcegroups"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
@@ -35,6 +36,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/provider/pulumi/types"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type awsProvider struct {
@@ -107,8 +109,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	buckets := map[string]*s3.Bucket{}
 	for k := range a.s.Buckets {
-		_, err = s3.NewBucket(ctx, k, &s3.BucketArgs{
+		buckets[k], err = s3.NewBucket(ctx, k, &s3.BucketArgs{
 			Tags: commonTags(ctx, k),
 		})
 		if err != nil {
@@ -116,8 +119,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	queues := map[string]*sqs.Queue{}
 	for k := range a.s.Queues {
-		_, err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
+		queues[k], err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
 			Tags: commonTags(ctx, k),
 		})
 		if err != nil {
@@ -162,6 +166,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	funcs := map[string]*Lambda{}
+	principalMap := make(map[v1.ResourceType]map[string]*iam.Role)
+	principalMap[v1.ResourceType_Function] = make(map[string]*iam.Role)
 	for k, f := range a.s.Functions {
 		image, err := newECRImage(ctx, f.Name, &ECRImageArgs{
 			LocalImageName:  f.ImageTagName(a.s, ""),
@@ -179,6 +185,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "lambda function "+f.Name)
 		}
+
+		principalMap[v1.ResourceType_Function][k] = funcs[k].Role
 	}
 
 	for k, c := range a.s.Containers {
@@ -198,6 +206,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "lambda container "+c.Name)
 		}
+
+		principalMap[v1.ResourceType_Function][k] = funcs[k].Role
 	}
 
 	for k, v := range a.s.ApiDocs {
@@ -207,6 +217,18 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)
 		}
+	}
+
+	for _, p := range a.s.Policies {
+		newPolicy(ctx, "", &PolicyArgs{
+			Policy: p,
+			Resources: &StackResources{
+				Topics:  topics,
+				Queues:  queues,
+				Buckets: buckets,
+			},
+			Principals: principalMap,
+		})
 	}
 
 	return nil

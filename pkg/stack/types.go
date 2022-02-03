@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	"gopkg.in/yaml.v2"
 )
 
@@ -136,6 +137,12 @@ type Stack struct {
 	Schedules   map[string]Schedule    `yaml:"schedules,omitempty"`
 	ApiDocs     map[string]*openapi3.T `yaml:"-"`
 	Apis        map[string]string      `yaml:"apis,omitempty"`
+	// TODO: Not currently supported by nitric.yaml configuration (but is technically definable using the proto model)
+	// We may want to decouple the definition from contracts at a later stage
+	// but re-using the contract here provides us a serializable entity with no
+	// repetition/redefinition
+	// NOTE: if we want to use the proto definition here we would need support for yaml parsing to use customisable tags
+	Policies []*v1.PolicyResource `yaml:"-"`
 }
 
 func New(name, dir string) *Stack {
@@ -151,6 +158,7 @@ func New(name, dir string) *Stack {
 		Schedules:   map[string]Schedule{},
 		Apis:        map[string]string{},
 		ApiDocs:     map[string]*openapi3.T{},
+		Policies:    make([]*v1.PolicyResource, 0),
 	}
 }
 

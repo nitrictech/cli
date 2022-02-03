@@ -40,6 +40,7 @@ type Lambda struct {
 
 	Name     string
 	Function *awslambda.Function
+	Role     *iam.Role
 }
 
 func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulumi.ResourceOption) (*Lambda, error) {
@@ -66,7 +67,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
-	lambdaRole, err := iam.NewRole(ctx, name+"LambdaRole", &iam.RoleArgs{
+	res.Role, err = iam.NewRole(ctx, name+"LambdaRole", &iam.RoleArgs{
 		AssumeRolePolicy: pulumi.String(tmpJSON),
 		Tags:             commonTags(ctx, name+"LambdaRole"),
 	}, pulumi.Parent(res))
@@ -76,7 +77,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 
 	_, err = iam.NewRolePolicyAttachment(ctx, name+"LambdaBasicExecution", &iam.RolePolicyAttachmentArgs{
 		PolicyArn: iam.ManagedPolicyAWSLambdaBasicExecutionRole,
-		Role:      lambdaRole.ID(),
+		Role:      res.Role.ID(),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
@@ -106,7 +107,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	// TODO: Lock this SNS topics for which this function has pub definitions
 	// FIXME: Limit to known resources
 	_, err = iam.NewRolePolicy(ctx, name+"SNSAccess", &iam.RolePolicyArgs{
-		Role:   lambdaRole.ID(),
+		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
 	}, pulumi.Parent(res))
 	if err != nil {
@@ -137,7 +138,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 	_, err = iam.NewRolePolicy(ctx, name+"SQSAccess", &iam.RolePolicyArgs{
-		Role:   lambdaRole.ID(),
+		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
 	}, pulumi.Parent(res))
 	if err != nil {
@@ -175,7 +176,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 	_, err = iam.NewRolePolicy(ctx, name+"SecretsAccess", &iam.RolePolicyArgs{
-		Role:   lambdaRole.ID(),
+		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
 	}, pulumi.Parent(res))
 	if err != nil {
@@ -210,7 +211,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 	_, err = iam.NewRolePolicy(ctx, name+"DynamoDBAccess", &iam.RolePolicyArgs{
-		Role:   lambdaRole.ID(),
+		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
 	}, pulumi.Parent(res))
 	if err != nil {
@@ -239,7 +240,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	}
 
 	_, err = iam.NewRolePolicy(ctx, name+"S3Access", &iam.RolePolicyArgs{
-		Role:   lambdaRole.ID(),
+		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
 	}, pulumi.Parent(res))
 	if err != nil {
@@ -255,7 +256,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		MemorySize:  pulumi.IntPtr(memory),
 		Timeout:     pulumi.IntPtr(15),
 		PackageType: pulumi.String("Image"),
-		Role:        lambdaRole.Arn,
+		Role:        res.Role.Arn,
 		Tags:        commonTags(ctx, name),
 	}, pulumi.Parent(res))
 	if err != nil {

@@ -25,6 +25,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/provider"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/newcli/pkg/tasklet"
 )
 
 var deploymentName string
@@ -71,10 +72,23 @@ nitric deployment apply -n prod-aws -s ../project/ -t prod "functions/*.ts"
 		p, err := provider.NewProvider(s, t)
 		cobra.CheckErr(err)
 
-		err = build.Create(s, t)
-		cobra.CheckErr(err)
+		buildImages := tasklet.Runner{
+			StartMsg: "Building Images",
+			Runner: func(tCtx tasklet.TaskletContext) error {
+				return build.Create(s, t)
+			},
+			StopMsg: "Images built!",
+		}
+		tasklet.MustRun(buildImages, tasklet.Opts{})
 
-		cobra.CheckErr(p.Apply(deploymentName))
+		deploy := tasklet.Runner{
+			StartMsg: "Deploying..",
+			Runner: func(tCtx tasklet.TaskletContext) error {
+				return p.Apply(deploymentName)
+			},
+			StopMsg: "Deployment complete!",
+		}
+		tasklet.MustRun(deploy, tasklet.Opts{})
 	},
 	Args: cobra.MinimumNArgs(0),
 }
@@ -97,7 +111,15 @@ nitric deployment delete -n prod-aws -s ../project/ -t prod
 		p, err := provider.NewProvider(s, t)
 		cobra.CheckErr(err)
 
-		cobra.CheckErr(p.Delete(deploymentName))
+		deploy := tasklet.Runner{
+			StartMsg: "Deleting..",
+			Runner: func(tCtx tasklet.TaskletContext) error {
+				return p.Delete(deploymentName)
+			},
+			StopMsg: "Deployment deleted!",
+		}
+		tasklet.MustRun(deploy, tasklet.Opts{})
+
 	},
 	Args: cobra.ExactArgs(0),
 }

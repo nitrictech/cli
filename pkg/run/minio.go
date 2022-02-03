@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -126,7 +127,8 @@ func (m *MinioServer) GetApiPort() int {
 }
 
 func (m *MinioServer) Stop() error {
-	return m.ce.Stop(m.cid, nil)
+	timeout := time.Second * 5
+	return m.ce.Stop(m.cid, &timeout)
 }
 
 func NewMinio(dir string, name string) (*MinioServer, error) {

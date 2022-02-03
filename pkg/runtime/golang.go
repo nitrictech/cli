@@ -112,6 +112,7 @@ func (t *golang) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	con.Run(dockerfile.RunOptions{Command: []string{"go", "get", "github.com/asalkeld/CompileDaemon@d4b10de"}})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err
@@ -123,10 +124,9 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 		return LaunchOpts{}, err
 	}
 	return LaunchOpts{
-		Image:      t.DevImageName(),
-		TargetWD:   path.Join("/go/src", module),
-		Entrypoint: strslice.StrSlice{"go", "run"},
-		Cmd:        strslice.StrSlice{"./" + t.handler},
+		Image:    t.DevImageName(),
+		TargetWD: path.Join("/go/src", module),
+		Cmd:      strslice.StrSlice{"go", "run", "./" + t.handler},
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
@@ -147,10 +147,26 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 	if err != nil {
 		return LaunchOpts{}, err
 	}
-	return LaunchOpts{
-		TargetWD:   path.Join("/go/src", module),
-		Entrypoint: strslice.StrSlice{"go", "run"},
-		Cmd:        strslice.StrSlice{"./" + t.handler},
+	containerRunCtx := path.Join("/go/src", module)
+	relHandler := t.handler
+	if strings.HasPrefix(t.handler, runCtx) {
+		relHandler, err = filepath.Rel(runCtx, t.handler)
+		if err != nil {
+			return LaunchOpts{}, err
+		}
+	}
+
+	opts := LaunchOpts{
+		TargetWD: containerRunCtx,
+		Cmd: strslice.StrSlice{
+			"/go/bin/CompileDaemon",
+			"-verbose",
+			"-exclude-dir=.git",
+			"-exclude-dir=.nitric",
+			"-directory=.",
+			fmt.Sprintf("-build=go build -o %s ./%s", t.ContainerName(), relHandler),
+			"-command=./" + t.ContainerName(),
+		},
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
@@ -160,8 +176,10 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 			{
 				Type:   "bind",
 				Source: runCtx,
-				Target: path.Join("/go/src", module),
+				Target: containerRunCtx,
 			},
 		},
-	}, nil
+	}
+
+	return opts, nil
 }

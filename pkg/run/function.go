@@ -17,12 +17,14 @@ package run
 
 import (
 	"fmt"
+	"log"
 	goruntime "runtime"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
 
 	"github.com/nitrictech/newcli/pkg/containerengine"
+	"github.com/nitrictech/newcli/pkg/output"
 	"github.com/nitrictech/newcli/pkg/runtime"
 	"github.com/nitrictech/newcli/pkg/stack"
 )
@@ -46,18 +48,19 @@ func (f *Function) Start() error {
 		return err
 	}
 
-	hostConfig := &container.HostConfig{
+	hc := &container.HostConfig{
 		AutoRemove: true,
 		Mounts:     launchOpts.Mounts,
 		LogConfig:  *f.ce.Logger(f.runCtx).Config(),
 	}
+
 	if goruntime.GOOS == "linux" {
 		// setup host.docker.internal to route to host gateway
 		// to access rpc server hosted by local CLI run
-		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
+		hc.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
-	cID, err := f.ce.ContainerCreate(&container.Config{
+	cc := &container.Config{
 		Image: f.rt.DevImageName(), // Select an image to use based on the handler
 		// Set the address to the bound port
 		Env: []string{
@@ -68,7 +71,13 @@ func (f *Function) Start() error {
 		Entrypoint: launchOpts.Entrypoint,
 		Cmd:        launchOpts.Cmd,
 		WorkingDir: launchOpts.TargetWD,
-	}, hostConfig, nil, f.Name())
+	}
+
+	if output.VerboseLevel > 1 {
+		log.Default().Print(containerengine.Cli(cc, hc))
+	}
+
+	cID, err := f.ce.ContainerCreate(cc, hc, nil, f.Name())
 	if err != nil {
 		return err
 	}

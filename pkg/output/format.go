@@ -124,16 +124,26 @@ func printList(object interface{}, out io.Writer) {
 	tab.SetOutputMirror(out)
 
 	t := reflect.TypeOf(object)
-	tab.AppendHeader(namesFrom(t.Elem()))
+	names := namesFrom(t.Elem())
+	if len(names) > 0 {
+		tab.AppendHeader(names)
+	}
 	rows := []table.Row{}
 	v := reflect.ValueOf(object)
+
 	for i := 0; i < v.Len(); i++ {
-		if v.Index(i).Kind() == reflect.Struct {
+		switch v.Index(i).Kind() {
+		case reflect.Struct:
 			row := table.Row{}
 			for fi := 0; fi < v.Index(i).NumField(); fi++ {
 				row = append(row, v.Index(i).Field(fi))
 			}
 			rows = append(rows, row)
+		case reflect.Slice, reflect.Array, reflect.Func, reflect.Chan, reflect.Interface, reflect.Map:
+			// not yet supported
+		default:
+			// simple types
+			rows = append(rows, table.Row{v.Index(i)})
 		}
 	}
 	tab.AppendRows(rows)

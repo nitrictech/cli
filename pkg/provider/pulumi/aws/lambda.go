@@ -88,11 +88,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		"Statement": []map[string]interface{}{
 			{
 				"Action": []string{
-					"sns:Publish",
-					"sns:GetTopicAttributes",
-					"sns:Subscribe",
 					"sns:ConfirmSubscription",
-					"sns:ListTopics",
 					"sns:Unsubscribe",
 				},
 				"Effect":   "Allow",
@@ -107,37 +103,6 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	// TODO: Lock this SNS topics for which this function has pub definitions
 	// FIXME: Limit to known resources
 	_, err = iam.NewRolePolicy(ctx, name+"SNSAccess", &iam.RolePolicyArgs{
-		Role:   res.Role.ID(),
-		Policy: pulumi.String(tmpJSON),
-	}, pulumi.Parent(res))
-	if err != nil {
-		return nil, err
-	}
-
-	tmpJSON, err = json.Marshal(map[string]interface{}{
-		"Version": "2012-10-17",
-		"Statement": []map[string]interface{}{
-			{
-				"Action": []string{
-					"sqs:ChangeMessageVisibility",
-					"sqs:DeleteMessage",
-					"sqs:GetQueueAttributes",
-					"sqs:GetQueueUrl",
-					"sqs:ListDeadLetterSourceQueues",
-					"sqs:ListQueues",
-					"sqs:ListQueueTags",
-					"sqs:ReceiveMessage",
-					"sqs:SendMessage",
-				},
-				"Effect":   "Allow",
-				"Resource": "*",
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	_, err = iam.NewRolePolicy(ctx, name+"SQSAccess", &iam.RolePolicyArgs{
 		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
 	}, pulumi.Parent(res))
@@ -176,70 +141,6 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 	_, err = iam.NewRolePolicy(ctx, name+"SecretsAccess", &iam.RolePolicyArgs{
-		Role:   res.Role.ID(),
-		Policy: pulumi.String(tmpJSON),
-	}, pulumi.Parent(res))
-	if err != nil {
-		return nil, err
-	}
-
-	// FIXME: Limit to known resources
-	tmpJSON, err = json.Marshal(map[string]interface{}{
-		"Version": "2012-10-17",
-		"Statement": []map[string]interface{}{
-			{
-				"Action": []string{
-					"dynamodb:CreateTable",
-					"dynamodb:BatchGetItem",
-					"dynamodb:BatchWriteItem",
-					"dynamodb:PutItem",
-					"dynamodb:DescribeTable",
-					"dynamodb:DeleteItem",
-					"dynamodb:GetItem",
-					"dynamodb:Query",
-					"dynamodb:Scan",
-					"dynamodb:UpdateItem",
-					"dynamodb:UpdateTable",
-					"dynamodb:ListTables",
-				},
-				"Effect":   "Allow",
-				"Resource": "*",
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	_, err = iam.NewRolePolicy(ctx, name+"DynamoDBAccess", &iam.RolePolicyArgs{
-		Role:   res.Role.ID(),
-		Policy: pulumi.String(tmpJSON),
-	}, pulumi.Parent(res))
-	if err != nil {
-		return nil, err
-	}
-
-	// FIXME: Limit to known resources
-	tmpJSON, err = json.Marshal(map[string]interface{}{
-		"Version": "2012-10-17",
-		"Statement": []map[string]interface{}{
-			{
-				"Action": []string{
-					"s3:ListAllMyBuckets",
-					"s3:GetBucketTagging",
-					"s3:GetObject",
-					"s3:PutObject",
-					"s3:DeleteObject",
-				},
-				"Effect":   "Allow",
-				"Resource": "*",
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = iam.NewRolePolicy(ctx, name+"S3Access", &iam.RolePolicyArgs{
 		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
 	}, pulumi.Parent(res))

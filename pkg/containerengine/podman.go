@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
-	"path"
 	"strings"
 	"time"
 
@@ -131,7 +130,8 @@ func (p *podman) ContainerExec(containerName string, cmd []string, workingDir st
 }
 
 func (p *podman) Logger(stackPath string) ContainerLogger {
-	return &jsonfile{logPath: path.Join(utils.NitricLogDir(stackPath), "run.log")}
+	logPath, _ := utils.NewNitricLogFile(stackPath)
+	return &jsonfile{logPath: logPath}
 }
 
 type jsonfile struct {

@@ -20,34 +20,83 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
 
 func TestFromOptions(t *testing.T) {
 	tests := []struct {
-		name     string
-		target   string
-		provider string
-		region   string
-		config   map[string]Target
-		want     *Target
+		name        string
+		target      string
+		provider    string
+		region      string
+		extraConfig []string
+		config      map[string]map[string]interface{}
+		want        *Target
 	}{
 		{
 			name: "default",
+			config: map[string]map[string]interface{}{
+				"test": {
+					"provider": "aws",
+					"region":   "westus",
+				},
+			},
 			want: &Target{Provider: Aws, Region: ""},
 		},
 		{
 			name:   "from config",
-			target: "aws",
-			config: map[string]Target{"aws": {Provider: Aws, Region: "westus"}},
-			want:   &Target{Provider: Aws, Region: "westus"},
+			target: "az",
+			config: map[string]map[string]interface{}{
+				"az": {
+					"provider": "azure",
+					"region":   "jioindiawest",
+				},
+				"aws": {
+					"provider": "aws",
+					"region":   "us-west-2",
+				},
+			},
+			want: &Target{Provider: Azure, Region: "jioindiawest"},
 		},
 		{
-			name:     "from args",
-			provider: "azure",
-			region:   "eastus",
-			want:     &Target{Provider: Azure, Region: "eastus"},
+			name:   "from config with extra",
+			target: "azure",
+			config: map[string]map[string]interface{}{
+				"azure": {
+					"provider":   "azure",
+					"region":     "westus",
+					"org":        "nitric.io",
+					"adminemail": "a@b.io",
+				},
+			},
+			want: &Target{
+				Provider: Azure,
+				Region:   "westus",
+				Extra: map[string]interface{}{
+					"org":        "nitric.io",
+					"adminemail": "a@b.io",
+				},
+			},
+		},
+		{
+			name:        "from args",
+			provider:    "azure",
+			region:      "eastus",
+			extraConfig: []string{"org=nitric.io", "adminemail=a@b.io"},
+			config: map[string]map[string]interface{}{
+				"azure": {
+					"provider": "azure",
+					"region":   "westus",
+				},
+			},
+			want: &Target{
+				Provider: Azure,
+				Region:   "eastus",
+				Extra: map[string]interface{}{
+					"org":        "nitric.io",
+					"adminemail": "a@b.io",
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -55,15 +104,8 @@ func TestFromOptions(t *testing.T) {
 			target = tt.target
 			provider = tt.provider
 			region = tt.region
-			if tt.target != "" {
-				current := viper.GetStringMap("targets")
-				err := mapstructure.Decode(tt.config, &current)
-				if err != nil {
-					t.Error(err)
-				}
-
-				viper.Set("targets", current)
-			}
+			extraConfig = tt.extraConfig
+			viper.Set("targets", tt.config)
 			got, err := FromOptions()
 			if err != nil {
 				t.Errorf("FromOptions() error = %v", err)

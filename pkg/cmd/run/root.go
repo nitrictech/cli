@@ -122,6 +122,23 @@ var runCmd = &cobra.Command{
 
 		fmt.Println("Local running, use ctrl-C to stop")
 
+		type apiendpoint struct {
+			Api      string `yaml:"api"`
+			Endpoint string `yaml:"endpoint"`
+		}
+		apis := []apiendpoint{}
+
+		for a := range s.ApiDocs {
+			apis = append(apis, apiendpoint{Api: a, Endpoint: fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)})
+		}
+		if len(apis) == 0 {
+			// if we have a nitric.yaml then ApiDocs will be empty
+			for a := range s.Apis {
+				apis = append(apis, apiendpoint{Api: a, Endpoint: fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)})
+			}
+		}
+		output.Print(apis)
+
 		select {
 		case membraneError := <-memerr:
 			fmt.Println(errors.WithMessage(membraneError, "membrane error, exiting"))

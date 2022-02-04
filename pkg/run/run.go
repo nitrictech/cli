@@ -41,12 +41,10 @@ type LocalServices interface {
 }
 
 type LocalServicesStatus struct {
-	Running          bool   `yaml:"running"`
-	RunDir           string `yaml:"runDir"`
-	GatewayAddress   string `yaml:"gatewayAddress"`
-	MembraneAddress  string `yaml:"membraneAddress"`
-	MinioContainerID string `yaml:"minioContainerID"`
-	MinioEndpoint    string `yaml:"minioEndpoint"`
+	RunDir          string `yaml:"runDir"`
+	GatewayAddress  string `yaml:"gatewayAddress"`
+	MembraneAddress string `yaml:"membraneAddress"`
+	MinioEndpoint   string `yaml:"minioEndpoint"`
 }
 
 type localServices struct {
@@ -62,7 +60,6 @@ func NewLocalServices(stackName, stackPath string) LocalServices {
 		stackName: stackName,
 		stackPath: stackPath,
 		status: &LocalServicesStatus{
-			Running:         false,
 			RunDir:          path.Join(utils.NitricRunDir(), stackName),
 			GatewayAddress:  nitric_utils.GetEnv("GATEWAY_ADDRESS", ":9001"),
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
@@ -76,13 +73,12 @@ func (l *localServices) Stop() error {
 }
 
 func (l *localServices) Running() bool {
-	l.status.Running = false
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort("0.0.0.0", "50051"), time.Second)
 	if err == nil && conn != nil {
 		defer conn.Close()
-		l.status.Running = true
+		return true
 	}
-	return l.status.Running
+	return false
 }
 
 func (l *localServices) Status() *LocalServicesStatus {
@@ -101,7 +97,6 @@ func (l *localServices) Start() error {
 	if err != nil {
 		return err
 	}
-	l.status.MinioContainerID = l.mio.cid
 	l.status.MinioEndpoint = fmt.Sprintf("localhost:%d", l.mio.GetApiPort())
 
 	// Connect dev storage

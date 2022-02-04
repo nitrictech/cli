@@ -64,9 +64,9 @@ func (a *awsProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 
 func commonTags(ctx *pulumi.Context, name string) pulumi.StringMap {
 	return pulumi.StringMap{
-		"x-nitric-project":       pulumi.String(ctx.Project()),
-		"x-nitric-stack":         pulumi.String(ctx.Stack()),
-		"x-nitric-resource-name": pulumi.String(name),
+		"x-nitric-project": pulumi.String(ctx.Project()),
+		"x-nitric-stack":   pulumi.String(ctx.Stack()),
+		"x-nitric-name":    pulumi.String(name),
 	}
 }
 

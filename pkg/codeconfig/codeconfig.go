@@ -368,6 +368,10 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		for k := range f.queues {
 			s.Queues[k] = stack.Queue{}
 		}
+
+		// Add policies
+		s.Policies = append(s.Policies, f.policies...)
+
 		for k, v := range f.schedules {
 			// Create a new topic target
 			// replace spaced with hyphens

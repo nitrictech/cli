@@ -18,6 +18,8 @@ package aws
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -70,6 +72,21 @@ func commonTags(ctx *pulumi.Context, name string) pulumi.StringMap {
 		"x-nitric-stack":   pulumi.String(ctx.Stack()),
 		"x-nitric-name":    pulumi.String(name),
 	}
+}
+
+func md5Hash(b []byte) string {
+	hasher := md5.New()
+	hasher.Write(b)
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func policyResourceName(policy *v1.PolicyResource) (string, error) {
+	policyDoc, err := json.Marshal(policy)
+	if err != nil {
+		return "", err
+	}
+
+	return md5Hash(policyDoc), nil
 }
 
 func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
@@ -220,7 +237,13 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	for _, p := range a.s.Policies {
-		newPolicy(ctx, "", &PolicyArgs{
+		policyName, err := policyResourceName(p)
+
+		if err != nil {
+			return err
+		}
+
+		newPolicy(ctx, policyName, &PolicyArgs{
 			Policy: p,
 			Resources: &StackResources{
 				Topics:  topics,

@@ -162,6 +162,12 @@ func New(name, dir string) *Stack {
 	}
 }
 
+// Compute default policies for a stack
+func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
+	// TODO: Calculate policies for stacks loaded from a file
+	return []*v1.PolicyResource{}
+}
+
 func FromFile(name string) (*Stack, error) {
 	yamlFile, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -199,6 +205,9 @@ func FromFile(name string) (*Stack, error) {
 			stack.ApiDocs[k] = doc
 		}
 	}
+
+	// Calculate default policies
+	stack.Policies = calculateDefaultPolicies(stack)
 
 	return stack, nil
 }

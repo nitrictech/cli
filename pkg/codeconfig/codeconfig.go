@@ -19,22 +19,24 @@ package codeconfig
 import (
 	"fmt"
 	"net"
-	"path"
-	"runtime"
+	"os"
+	osruntime "runtime"
 	"strings"
 	"sync"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/imdario/mergo"
+	"github.com/moby/moby/pkg/stdcopy"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
 	"github.com/nitrictech/newcli/pkg/build"
 	"github.com/nitrictech/newcli/pkg/containerengine"
 	"github.com/nitrictech/newcli/pkg/cron"
+	"github.com/nitrictech/newcli/pkg/output"
+	"github.com/nitrictech/newcli/pkg/runtime"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
@@ -133,10 +135,14 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 
 	// Collect all workers
 	for handler, f := range c.functions {
+		rt, err := runtime.NewRunTimeFromHandler(handler)
+		if err != nil {
+			return nil, err
+		}
 		if f.apis[api] != nil {
 			for _, w := range f.apis[api].workers {
 				workers = append(workers, &apiHandler{
-					target: containerNameFromHandler(handler),
+					target: rt.ContainerName(),
 					worker: w,
 				})
 			}
@@ -198,7 +204,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 					Extensions: map[string]interface{}{
 						"x-nitric-target": map[string]string{
 							"type": "function",
-							"name": containerNameFromHandler(w.target),
+							"name": w.target,
 						},
 					},
 				},
@@ -237,35 +243,43 @@ func (c *codeConfig) collectOne(handler string) error {
 	// Specify the service bind as the port with the docker gateway IP (running in bridge mode)
 	ce, err := containerengine.Discover()
 	if err != nil {
-		return errors.WithMessage(err, "error running the handler")
+		return errors.WithMessage(err, "error discovering container engine")
+	}
+
+	rt, err := runtime.NewRunTimeFromHandler(handler)
+	if err != nil {
+		return errors.WithMessage(err, "error getting the runtime from handler "+handler)
+	}
+
+	opts, err := rt.LaunchOptsForFunctionCollect(c.initialStack.Dir)
+	if err != nil {
+		return err
 	}
 
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
-		Mounts: []mount.Mount{
-			{
-				Type:   "bind",
-				Source: c.initialStack.Dir,
-				Target: "/app",
-			},
-		},
+		Mounts:     opts.Mounts,
 	}
-	if runtime.GOOS == "linux" {
+	if osruntime.GOOS == "linux" {
 		// setup host.docker.internal to route to host gateway
 		// to access rpc server hosted by local CLI run
 		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
-	rt, err := utils.NewRunTimeFromFilename(handler)
-	if err != nil {
-		return err
-	}
 	cID, err := ce.ContainerCreate(&container.Config{
-		Image: rt.DevImageName(), // Select an image to use based on the handler
-		// Set the address to the bound port
-		Env: []string{fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port)},
-		Cmd: strslice.StrSlice{"-T", handler},
-	}, hostConfig, nil, containerNameFromHandler(handler))
+		AttachStdout: true,
+		AttachStderr: true,
+		Image:        opts.Image,
+		Env: []string{
+			fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port),
+			fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
+			fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
+			"NITRIC_ENVIRONMENT=build", // this is to tell the sdk that we are running in the build and not proper runtime.
+		},
+		Cmd:        opts.Cmd,
+		Entrypoint: opts.Entrypoint,
+		WorkingDir: opts.TargetWD,
+	}, hostConfig, nil, rt.ContainerName())
 	if err != nil {
 		return err
 	}
@@ -273,6 +287,20 @@ func (c *codeConfig) collectOne(handler string) error {
 	err = ce.Start(cID)
 	if err != nil {
 		return err
+	}
+
+	if output.VerboseLevel > 1 {
+		logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
+			ShowStdout: true,
+			ShowStderr: true,
+			Follow:     true,
+		})
+		if err != nil {
+			return err
+		}
+		go func() {
+			_, _ = stdcopy.StdCopy(os.Stdout, os.Stderr, logreader)
+		}()
 	}
 
 	errs := utils.NewErrorList()
@@ -299,10 +327,6 @@ func (c *codeConfig) collectOne(handler string) error {
 	return errs.Aggregate()
 }
 
-func containerNameFromHandler(handler string) string {
-	return strings.Replace(path.Base(handler), path.Ext(handler), "", 1)
-}
-
 func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -320,7 +344,11 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 
 	errs := utils.NewErrorList()
 	for handler, f := range c.functions {
-		name := containerNameFromHandler(handler)
+		rt, err := runtime.NewRunTimeFromHandler(handler)
+		if err != nil {
+			return nil, err
+		}
+
 		topicTriggers := make([]string, 0, len(f.subscriptions)+len(f.schedules))
 
 		for k := range f.apis {
@@ -401,14 +429,14 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			}
 		}
 
-		f, ok := s.Functions[name]
+		f, ok := s.Functions[rt.ContainerName()]
 		if !ok {
 			f = stack.FunctionFromHandler(handler, s.Dir)
 		}
 		f.ComputeUnit.Triggers = stack.Triggers{
 			Topics: topicTriggers,
 		}
-		s.Functions[name] = f
+		s.Functions[rt.ContainerName()] = f
 	}
 
 	return s, errs.Aggregate()

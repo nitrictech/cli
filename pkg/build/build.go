@@ -21,12 +21,12 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/nitrictech/newcli/pkg/containerengine"
-	"github.com/nitrictech/newcli/pkg/functiondockerfile"
+	"github.com/nitrictech/newcli/pkg/runtime"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
-	"github.com/nitrictech/newcli/pkg/utils"
 )
 
 func Create(s *stack.Stack, t *target.Target) error {
@@ -50,7 +50,11 @@ func Create(s *stack.Stack, t *target.Target) error {
 		}
 		defer func() { os.Remove(fh.Name()) }()
 
-		err = functiondockerfile.Generate(&f, f.VersionString(s), t.Provider, fh)
+		rt, err := runtime.NewRunTimeFromHandler(f.Handler)
+		if err != nil {
+			return err
+		}
+		err = rt.FunctionDockerfile(f.ContextDirectory, f.VersionString(s), t.Provider, fh)
 		if err != nil {
 			return err
 		}
@@ -81,11 +85,11 @@ func CreateBaseDev(s *stack.Stack) error {
 	}
 	imagesToBuild := map[string]string{}
 	for _, f := range s.Functions {
-		rt, err := utils.NewRunTimeFromFilename(f.Handler)
+		rt, err := runtime.NewRunTimeFromHandler(f.Handler)
 		if err != nil {
 			return err
 		}
-		lang := rt.String()
+		lang := strings.Replace(path.Ext(f.Handler), ".", "", 1)
 		_, ok := imagesToBuild[lang]
 		if ok {
 			continue
@@ -101,7 +105,7 @@ func CreateBaseDev(s *stack.Stack) error {
 			os.Remove(f.Name())
 		}()
 
-		if err := functiondockerfile.GenerateForCodeAsConfig("handler."+lang, f); err != nil {
+		if err := rt.FunctionDockerfileForCodeAsConfig(f); err != nil {
 			return err
 		}
 

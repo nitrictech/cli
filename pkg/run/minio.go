@@ -17,6 +17,7 @@ package run
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/nitrictech/newcli/pkg/containerengine"
+	"github.com/nitrictech/newcli/pkg/output"
 )
 
 type MinioServer struct {
@@ -80,14 +82,16 @@ func (m *MinioServer) Start() error {
 		return err
 	}
 
-	cID, err := m.ce.ContainerCreate(&container.Config{
+	cc := &container.Config{
 		Image: minioImage,
 		Cmd:   []string{"minio", "server", "/nitric/buckets", "--console-address", fmt.Sprintf(":%d", consolePort)},
 		ExposedPorts: nat.PortSet{
 			nat.Port(fmt.Sprintf("%d/tcp", minioPort)):        struct{}{},
 			nat.Port(fmt.Sprintf("%d/tcp", minioConsolePort)): struct{}{},
 		},
-	}, &container.HostConfig{
+	}
+
+	hc := &container.HostConfig{
 		AutoRemove: true,
 		PortBindings: nat.PortMap{
 			nat.Port(fmt.Sprintf("%d/tcp", minioPort)): []nat.PortBinding{
@@ -110,14 +114,18 @@ func (m *MinioServer) Start() error {
 		},
 		LogConfig:   *m.ce.Logger(m.dir).Config(),
 		NetworkMode: container.NetworkMode("bridge"),
-	}, &network.NetworkingConfig{
-		EndpointsConfig: map[string]*network.EndpointSettings{},
-	}, "minio-"+m.name)
+	}
+
+	cID, err := m.ce.ContainerCreate(cc, hc, &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{}}, "minio-"+m.name)
 	if err != nil {
 		return err
 	}
 	m.cid = cID
 	m.apiPort = minioPort
+
+	if output.VerboseLevel > 1 {
+		log.Default().Print(containerengine.Cli(cc, hc))
+	}
 
 	return m.ce.Start(cID)
 }

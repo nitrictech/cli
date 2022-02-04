@@ -158,33 +158,9 @@ func TestFromGlobArgs(t *testing.T) {
 				Dir:  ".",
 				Name: "stack",
 				Functions: map[string]Function{
-					"compute_test": {
-						Handler:     "compute_test.go",
-						ComputeUnit: ComputeUnit{Name: "compute_test", ContextDirectory: "."},
-					},
-					"container_helper": {
-						Handler:     "container_helper.go",
-						ComputeUnit: ComputeUnit{Name: "container_helper", ContextDirectory: "."},
-					},
-					"function_helpers": {
-						Handler:     "function_helpers.go",
-						ComputeUnit: ComputeUnit{Name: "function_helpers", ContextDirectory: "."},
-					},
-					"function_helpers_test": {
-						Handler:     "function_helpers_test.go",
-						ComputeUnit: ComputeUnit{Name: "function_helpers_test", ContextDirectory: "."},
-					},
-					"options": {
-						Handler:     "options.go",
-						ComputeUnit: ComputeUnit{Name: "options", ContextDirectory: "."},
-					},
-					"options_test": {
-						Handler:     "options_test.go",
-						ComputeUnit: ComputeUnit{Name: "options_test", ContextDirectory: "."},
-					},
-					"types": {
+					"stack": {
 						Handler:     "types.go",
-						ComputeUnit: ComputeUnit{Name: "types", ContextDirectory: "."},
+						ComputeUnit: ComputeUnit{Name: "stack", ContextDirectory: "."},
 					},
 				},
 			},
@@ -197,37 +173,9 @@ func TestFromGlobArgs(t *testing.T) {
 				Dir:  "../../pkg",
 				Name: "pkg",
 				Functions: map[string]Function{
-					"errors": {
-						Handler:     "utils/errors.go",
-						ComputeUnit: ComputeUnit{Name: "errors", ContextDirectory: "../../pkg"},
-					},
-					"errors_test": {
-						Handler:     "utils/errors_test.go",
-						ComputeUnit: ComputeUnit{Name: "errors_test", ContextDirectory: "../../pkg"},
-					},
-					"fileinfo": {
-						Handler:     "utils/fileinfo.go",
-						ComputeUnit: ComputeUnit{Name: "fileinfo", ContextDirectory: "../../pkg"},
-					},
-					"getter": {
-						Handler:     "utils/getter.go",
-						ComputeUnit: ComputeUnit{Name: "getter", ContextDirectory: "../../pkg"},
-					},
-					"glob": {
-						Handler:     "utils/glob.go",
-						ComputeUnit: ComputeUnit{Name: "glob", ContextDirectory: "../../pkg"},
-					},
-					"glob_test": {
-						Handler:     "utils/glob_test.go",
-						ComputeUnit: ComputeUnit{Name: "glob_test", ContextDirectory: "../../pkg"},
-					},
-					"paths": {
+					"utils": {
 						Handler:     "utils/paths.go",
-						ComputeUnit: ComputeUnit{Name: "paths", ContextDirectory: "../../pkg"},
-					},
-					"runtime": {
-						Handler:     "utils/runtime.go",
-						ComputeUnit: ComputeUnit{Name: "runtime", ContextDirectory: "../../pkg"},
+						ComputeUnit: ComputeUnit{Name: "utils", ContextDirectory: "../../pkg"},
 					},
 				},
 			},
@@ -240,13 +188,9 @@ func TestFromGlobArgs(t *testing.T) {
 				Dir:  "../../pkg",
 				Name: "pkg",
 				Functions: map[string]Function{
-					"types": {
-						Handler:     "stack/types.go",
-						ComputeUnit: ComputeUnit{Name: "types", ContextDirectory: "../../pkg"},
-					},
-					"options": {
+					"stack": {
 						Handler:     "stack/options.go",
-						ComputeUnit: ComputeUnit{Name: "options", ContextDirectory: "../../pkg"},
+						ComputeUnit: ComputeUnit{Name: "stack", ContextDirectory: "../../pkg"},
 					},
 				},
 			},

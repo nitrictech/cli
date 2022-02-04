@@ -257,6 +257,10 @@ func (d *docker) ContainerWait(containerID string, condition container.WaitCondi
 	return d.cli.ContainerWait(context.Background(), containerID, condition)
 }
 
+func (d *docker) ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error) {
+	return d.cli.ContainerLogs(context.Background(), containerID, opts)
+}
+
 func (d *docker) ContainerExec(containerName string, cmd []string, workingDir string) error {
 	ctx := context.Background()
 	rst, err := d.cli.ContainerExecCreate(ctx, containerName, types.ExecConfig{

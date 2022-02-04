@@ -20,9 +20,9 @@ require (
 	github.com/hashicorp/go-getter v1.5.11
 	github.com/imdario/mergo v0.3.12
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
-	github.com/jhoonb/archivex v0.0.0-20201016144719-6a343cdae81d
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/moby/buildkit v0.9.3 // indirect
+	github.com/moby/moby v20.10.12+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.7.0.20211212231606-62c668408f91
 	github.com/nitrictech/nitric v0.13.0-rc.11
 	github.com/pkg/errors v0.9.1

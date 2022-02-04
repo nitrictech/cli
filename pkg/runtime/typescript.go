@@ -14,17 +14,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package functiondockerfile
+package runtime
 
 import (
+	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/strslice"
+
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/newcli/pkg/stack"
 )
 
-func typescriptGenerator(f *stack.Function, version, provider string, w io.Writer) error {
+type typescript struct {
+	rte     RuntimeExt
+	handler string
+}
+
+var _ Runtime = &typescript{}
+
+func (t *typescript) DevImageName() string {
+	return fmt.Sprintf("nitric-%s-dev", t.rte)
+}
+
+func (t *typescript) ContainerName() string {
+	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
+}
+
+func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",
 		Ignore: []string{"node_modules/", ".nitric/", ".git/", ".idea/"},
@@ -52,14 +71,13 @@ func typescriptGenerator(f *stack.Function, version, provider string, w io.Write
 		return err
 	}
 	con.Config(dockerfile.ConfigOptions{
-		Cmd: []string{"ts-node", "-T", f.Handler},
+		Cmd: []string{"ts-node", "-T", t.handler},
 	})
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err
 }
 
-// typescriptDevBaseGenerator generates a base image for code-as-config
-func typescriptDevBaseGenerator(w io.Writer) error {
+func (t *typescript) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",
 		Ignore: []string{"node_modules/", ".nitric/", ".git/", ".idea/"},
@@ -76,4 +94,35 @@ func typescriptDevBaseGenerator(w io.Writer) error {
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err
+}
+
+func (t *typescript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
+	return LaunchOpts{
+		Image:      t.DevImageName(),
+		Entrypoint: strslice.StrSlice{"ts-node"},
+		Cmd:        strslice.StrSlice{"-T " + "/app/" + t.handler},
+		TargetWD:   "/app",
+		Mounts: []mount.Mount{
+			{
+				Type:   "bind",
+				Source: runCtx,
+				Target: "/app",
+			},
+		},
+	}, nil
+}
+
+func (t *typescript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
+	return LaunchOpts{
+		TargetWD: "/app",
+		Mounts: []mount.Mount{
+			{
+				Type:   "bind",
+				Source: runCtx,
+				Target: "/app",
+			},
+		},
+		Entrypoint: strslice.StrSlice{"nodemon"},
+		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + t.handler},
+	}, nil
 }

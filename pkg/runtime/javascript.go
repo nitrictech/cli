@@ -14,17 +14,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package functiondockerfile
+package runtime
 
 import (
+	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/strslice"
+
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/newcli/pkg/utils"
 )
 
-func javascriptGenerator(f *stack.Function, version, provider string, w io.Writer) error {
+type javascript struct {
+	rte     RuntimeExt
+	handler string
+}
+
+var _ Runtime = &javascript{}
+
+func (t *javascript) DevImageName() string {
+	return fmt.Sprintf("nitric-%s-dev", t.rte)
+}
+
+func (t *javascript) ContainerName() string {
+	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
+}
+
+func (t *javascript) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
+	return utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
+}
+
+func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",
 		Ignore: []string{"node_modules/", ".nitric/", ".git/", ".idea/"},
@@ -48,9 +72,40 @@ func javascriptGenerator(f *stack.Function, version, provider string, w io.Write
 		return err
 	}
 	con.Config(dockerfile.ConfigOptions{
-		Cmd: []string{"node", f.Handler},
+		Cmd: []string{"node", t.handler},
 	})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err
+}
+
+func (t *javascript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
+	return LaunchOpts{
+		Image:      t.DevImageName(),
+		Entrypoint: strslice.StrSlice{"ts-node"},
+		Cmd:        strslice.StrSlice{"-T " + "/app/" + t.handler},
+		TargetWD:   "/app",
+		Mounts: []mount.Mount{
+			{
+				Type:   "bind",
+				Source: runCtx,
+				Target: "/app",
+			},
+		},
+	}, nil
+}
+
+func (t *javascript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
+	return LaunchOpts{
+		Mounts: []mount.Mount{
+			{
+				Type:   "bind",
+				Source: runCtx,
+				Target: "/app",
+			},
+		},
+		TargetWD:   "/app",
+		Entrypoint: strslice.StrSlice{"nodemon"},
+		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + t.handler},
+	}, nil
 }

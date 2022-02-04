@@ -14,15 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package functiondockerfile
+package runtime
 
 import (
+	"fmt"
 	"io"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/utils"
 )
 
@@ -31,7 +32,34 @@ const (
 	mavenOpenJDKImage   = "maven:3-openjdk-11"
 )
 
-func javaGenerator(f *stack.Function, version, provider string, w io.Writer) error {
+type java struct {
+	rte     RuntimeExt
+	handler string
+}
+
+var _ Runtime = &java{}
+
+func (t *java) DevImageName() string {
+	return fmt.Sprintf("nitric-%s-dev", t.rte)
+}
+
+func (t *java) ContainerName() string {
+	return filepath.Base(filepath.Dir(t.handler))
+}
+
+func (t *java) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
+	return utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
+}
+
+func (t *java) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
+	return LaunchOpts{}, utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
+}
+
+func (t *java) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
+	return LaunchOpts{}, utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
+}
+
+func (t *java) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	buildCon, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   mavenOpenJDKImage,
 		As:     "build",
@@ -40,7 +68,7 @@ func javaGenerator(f *stack.Function, version, provider string, w io.Writer) err
 	if err != nil {
 		return err
 	}
-	err = mavenBuild(buildCon, f)
+	err = mavenBuild(buildCon, funcCtxDir)
 	if err != nil {
 		return err
 	}
@@ -53,7 +81,7 @@ func javaGenerator(f *stack.Function, version, provider string, w io.Writer) err
 		return err
 	}
 
-	err = con.Copy(dockerfile.CopyOptions{Src: f.Handler, Dest: "function.jar", From: "build"})
+	err = con.Copy(dockerfile.CopyOptions{Src: t.handler, Dest: "function.jar", From: "build"})
 	if err != nil {
 		return err
 	}
@@ -68,8 +96,8 @@ func javaGenerator(f *stack.Function, version, provider string, w io.Writer) err
 	return err
 }
 
-func mavenBuild(con dockerfile.ContainerState, f *stack.Function) error {
-	pomFiles, err := utils.FindFilesInDir(f.ContextDirectory, "pom.xml")
+func mavenBuild(con dockerfile.ContainerState, contextDir string) error {
+	pomFiles, err := utils.FindFilesInDir(contextDir, "pom.xml")
 	if err != nil {
 		return err
 	}

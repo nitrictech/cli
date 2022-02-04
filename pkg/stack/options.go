@@ -20,12 +20,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/newcli/pkg/pflagext"
+	"github.com/nitrictech/newcli/pkg/runtime"
 	"github.com/nitrictech/newcli/pkg/utils"
 )
 
@@ -61,9 +61,9 @@ func FromOptions() (*Stack, error) {
 }
 
 func FunctionFromHandler(h, stackDir string) Function {
-	name := strings.Replace(path.Base(h), path.Ext(h), "", 1)
+	rt, _ := runtime.NewRunTimeFromHandler(h)
 	fn := Function{
-		ComputeUnit: ComputeUnit{Name: name},
+		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
 		Handler:     h,
 	}
 	fn.SetContextDirectory(stackDir)

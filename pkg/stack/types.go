@@ -164,8 +164,95 @@ func New(name, dir string) *Stack {
 
 // Compute default policies for a stack
 func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
+	policies := make([]*v1.PolicyResource, 0)
+
+	principals := make([]*v1.Resource, 0)
+
+	for name := range s.Functions {
+		principals = append(principals, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Function,
+		})
+	}
+
+	topicResources := make([]*v1.Resource, len(s.Topics), 0)
+	for name := range s.Topics {
+		topicResources = append(topicResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Topic,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_TopicDetail,
+			v1.Action_TopicEventPublish,
+			v1.Action_TopicList,
+		},
+		Resources: topicResources,
+	})
+
+	bucketResources := make([]*v1.Resource, len(s.Buckets), 0)
+	for name := range s.Buckets {
+		bucketResources = append(bucketResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Bucket,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_BucketFileDelete,
+			v1.Action_BucketFileGet,
+			v1.Action_BucketFileList,
+			v1.Action_BucketFilePut,
+		},
+		Resources: bucketResources,
+	})
+
+	queueResources := make([]*v1.Resource, len(s.Queues), 0)
+	for name := range s.Buckets {
+		queueResources = append(queueResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Queue,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_QueueDetail,
+			v1.Action_QueueList,
+			v1.Action_QueueReceive,
+			v1.Action_QueueSend,
+		},
+		Resources: queueResources,
+	})
+
+	collectionResources := make([]*v1.Resource, len(s.Collections), 0)
+	for name := range s.Collections {
+		collectionResources = append(collectionResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Collection,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_CollectionDocumentDelete,
+			v1.Action_CollectionDocumentRead,
+			v1.Action_CollectionDocumentWrite,
+			v1.Action_CollectionList,
+			v1.Action_CollectionQuery,
+		},
+		Resources: collectionResources,
+	})
+
 	// TODO: Calculate policies for stacks loaded from a file
-	return []*v1.PolicyResource{}
+	return policies
 }
 
 func FromFile(name string) (*Stack, error) {

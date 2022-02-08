@@ -24,8 +24,9 @@ import (
 	"path/filepath"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	"gopkg.in/yaml.v2"
+
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type Triggers struct {

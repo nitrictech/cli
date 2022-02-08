@@ -83,13 +83,19 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
+	// Add resource list permissions
+	// Currently the membrane will use list operations
 	tmpJSON, err = json.Marshal(map[string]interface{}{
 		"Version": "2012-10-17",
 		"Statement": []map[string]interface{}{
 			{
 				"Action": []string{
-					"sns:ConfirmSubscription",
-					"sns:Unsubscribe",
+					// "sns:ConfirmSubscription",
+					// "sns:Unsubscribe",
+					"sns:ListTopics",
+					"sqs:ListQueues",
+					"dynamodb:ListTables",
+					"s3:ListAllMyBuckets",
 				},
 				"Effect":   "Allow",
 				"Resource": "*",
@@ -102,7 +108,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 
 	// TODO: Lock this SNS topics for which this function has pub definitions
 	// FIXME: Limit to known resources
-	_, err = iam.NewRolePolicy(ctx, name+"SNSAccess", &iam.RolePolicyArgs{
+	_, err = iam.NewRolePolicy(ctx, name+"ListAccess", &iam.RolePolicyArgs{
 		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
 	}, pulumi.Parent(res))

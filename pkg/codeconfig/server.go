@@ -26,6 +26,7 @@ import (
 )
 
 type Server struct {
+	name     string
 	function *FunctionDependencies
 	pb.UnimplementedFaasServiceServer
 	pb.UnimplementedResourceServiceServer
@@ -84,8 +85,9 @@ func (s *Server) Declare(ctx context.Context, req *pb.ResourceDeclareRequest) (*
 }
 
 // NewServer - Creates a new deployment server
-func NewServer(function *FunctionDependencies) *Server {
+func NewServer(name string, function *FunctionDependencies) *Server {
 	return &Server{
+		name:     name,
 		function: function,
 	}
 }

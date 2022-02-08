@@ -100,7 +100,7 @@ func (t *typescript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, er
 	return LaunchOpts{
 		Image:      t.DevImageName(),
 		Entrypoint: strslice.StrSlice{"ts-node"},
-		Cmd:        strslice.StrSlice{"-T " + "/app/" + t.handler},
+		Cmd:        strslice.StrSlice{"-T", "/app/" + t.handler},
 		TargetWD:   "/app",
 		Mounts: []mount.Mount{
 			{

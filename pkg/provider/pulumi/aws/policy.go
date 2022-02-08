@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package aws
 
 import (
@@ -5,6 +21,7 @@ import (
 	"fmt"
 
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	iam "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
@@ -20,9 +37,10 @@ type Policy struct {
 }
 
 type StackResources struct {
-	Topics  map[string]*sns.Topic
-	Queues  map[string]*sqs.Queue
-	Buckets map[string]*s3.Bucket
+	Topics      map[string]*sns.Topic
+	Queues      map[string]*sqs.Queue
+	Buckets     map[string]*s3.Bucket
+	Collections map[string]*dynamodb.Table
 }
 
 type PrincipalMap = map[v1.ResourceType]map[string]*iam.Role
@@ -37,7 +55,7 @@ type PolicyArgs struct {
 
 var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_BucketFileList: {
-		"s3:ListAllMyBuckets",
+		"s3:ListBuckets",
 		"s3:GetBucketTagging",
 	},
 	v1.Action_BucketFileGet: {
@@ -49,9 +67,10 @@ var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_BucketFileDelete: {
 		"s3:DeleteObject",
 	},
-	v1.Action_TopicList: {
-		"sns:ListTopics",
-	},
+	// XXX: Cannot be applied to single resources
+	// v1.Action_TopicList: {
+	// 	"sns:ListTopics",
+	// },
 	v1.Action_TopicDetail: {
 		"sns:GetTopicAttributes",
 	},
@@ -64,9 +83,10 @@ var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_QueueReceive: {
 		"sqs: ReceiveMessage",
 	},
-	v1.Action_QueueList: {
-		"sqs:ListQueues",
-	},
+	// XXX: Cannot be applied to single resources
+	// v1.Action_QueueList: {
+	// 	"sqs:ListQueues",
+	// },
 	v1.Action_QueueDetail: {
 		"sqs:GetQueueAttributes",
 		"sqs:GetQueueUrl",
@@ -78,6 +98,7 @@ var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	},
 	v1.Action_CollectionDocumentWrite: {
 		"dynamodb:UpdateItem",
+		"dynamodb:PutItem",
 	},
 	v1.Action_CollectionDocumentDelete: {
 		"dynamodb:DeleteItem",
@@ -86,9 +107,10 @@ var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 		"dynamodb:Query",
 		"dynamodb:Scan",
 	},
-	v1.Action_CollectionList: {
-		"dynamodb:ListTables",
-	},
+	// XXX: Cannot be applied to single resources
+	// v1.Action_CollectionList: {
+	// 	"dynamodb:ListTables",
+	// },
 }
 
 func actionsToAwsActions(actions []v1.Action) []string {
@@ -97,7 +119,6 @@ func actionsToAwsActions(actions []v1.Action) []string {
 	for _, a := range actions {
 		awsActions = append(awsActions, awsActionsMap[a]...)
 	}
-	// TODO:
 	return awsActions
 }
 
@@ -115,6 +136,10 @@ func arnForResource(resource *v1.Resource, resources *StackResources) (pulumi.St
 	case v1.ResourceType_Queue:
 		if q, ok := resources.Queues[resource.Name]; ok {
 			return q.Arn, nil
+		}
+	case v1.ResourceType_Collection:
+		if c, ok := resources.Collections[resource.Name]; ok {
+			return c.Arn, nil
 		}
 	default:
 		return pulumi.StringOutput{}, fmt.Errorf(
@@ -145,7 +170,7 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 	actions := actionsToAwsActions(args.Policy.Actions)
 
 	// Get Targets
-	targetArns := make([]pulumi.StringOutput, 0, len(args.Policy.Resources))
+	targetArns := make([]interface{}, 0, len(args.Policy.Resources))
 	for _, princ := range args.Policy.Resources {
 		if arn, err := arnForResource(princ, args.Resources); err == nil {
 			targetArns = append(targetArns, arn)
@@ -167,15 +192,38 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 		}
 	}
 
-	policyJson, err := json.Marshal(map[string]interface{}{
-		"Version": "2012-10-17",
-		"Statement": []map[string]interface{}{
-			{
-				"Action":   actions,
-				"Effect":   "Allow",
-				"Resource": targetArns,
+	serialPolicy, err := json.Marshal(args.Policy)
+	if err != nil {
+		return nil, err
+	}
+
+	policyJson := pulumi.All(targetArns...).ApplyT(func(args []interface{}) (string, error) {
+		arns := make([]string, 0, len(args))
+		for _, iArn := range args {
+			arn, ok := iArn.(string)
+			if !ok {
+				return "", fmt.Errorf("input not a string: %T %v", arn, arn)
+			}
+
+			arns = append(arns, arn)
+		}
+
+		jsonb, err := json.Marshal(map[string]interface{}{
+			"Version": "2012-10-17",
+			"Statement": []map[string]interface{}{
+				{
+					"Action":   actions,
+					"Effect":   "Allow",
+					"Resource": arns,
+				},
 			},
-		},
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		return string(jsonb), nil
 	})
 
 	if err != nil {
@@ -186,10 +234,10 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 	for k, r := range principalRoles {
 		// Role policies require a unique name
 		// Use a hash of the policy document to help create a unique name
-		policyName := fmt.Sprintf("%s-%s", k, md5Hash(policyJson))
+		policyName := fmt.Sprintf("%s-%s", k, md5Hash(serialPolicy))
 		rolePol, err := iam.NewRolePolicy(ctx, policyName, &iam.RolePolicyArgs{
 			Role:   r.ID(),
-			Policy: pulumi.String(policyJson),
+			Policy: policyJson,
 		}, pulumi.Parent(res))
 
 		if err != nil {

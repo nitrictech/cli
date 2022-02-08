@@ -81,6 +81,7 @@ func (a *Api) AddWorker(worker *pb.ApiWorker) error {
 
 // FunctionDependencies - Stores information about a Nitric Function, and it's dependencies
 type FunctionDependencies struct {
+	name          string
 	apis          map[string]*Api
 	subscriptions map[string]*pb.SubscriptionWorker
 	schedules     map[string]*pb.ScheduleWorker
@@ -96,6 +97,13 @@ type FunctionDependencies struct {
 func (a *FunctionDependencies) AddPolicy(p *pb.PolicyResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+	for _, p := range p.Principals {
+		// If provided a blank function principal assume its for this function
+		if p.Type == pb.ResourceType_Function && p.Name == "" {
+			p.Name = a.name
+		}
+	}
+
 	a.policies = append(a.policies, p)
 }
 
@@ -167,8 +175,9 @@ func (a *FunctionDependencies) AddQueue(name string, q *pb.QueueResource) {
 }
 
 // NewFunction - creates a new Nitric Function, ready to register handlers and dependencies.
-func NewFunction() *FunctionDependencies {
+func NewFunction(name string) *FunctionDependencies {
 	return &FunctionDependencies{
+		name:          name,
 		apis:          make(map[string]*Api),
 		subscriptions: make(map[string]*pb.SubscriptionWorker),
 		schedules:     make(map[string]*pb.ScheduleWorker),

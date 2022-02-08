@@ -120,7 +120,12 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	topics := map[string]*sns.Topic{}
 	for k := range a.s.Topics {
-		topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{Tags: commonTags(ctx, k)})
+		topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
+			// FIXME: Autonaming of topics disabled until improvements to
+			// nitric topic name discovery is made for SNS topics.
+			Name: pulumi.StringPtr(k),
+			Tags: commonTags(ctx, k),
+		})
 		if err != nil {
 			return errors.WithMessage(err, "sns topic "+k)
 		}
@@ -146,8 +151,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	collections := map[string]*dynamodb.Table{}
 	for k := range a.s.Collections {
-		_, err = dynamodb.NewTable(ctx, "mytable", &dynamodb.TableArgs{
+		collections[k], err = dynamodb.NewTable(ctx, k, &dynamodb.TableArgs{
 			Attributes: dynamodb.TableAttributeArray{
 				&dynamodb.TableAttributeArgs{
 					Name: pulumi.String("_pk"),
@@ -243,15 +249,18 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			return err
 		}
 
-		newPolicy(ctx, policyName, &PolicyArgs{
+		if _, err := newPolicy(ctx, policyName, &PolicyArgs{
 			Policy: p,
 			Resources: &StackResources{
-				Topics:  topics,
-				Queues:  queues,
-				Buckets: buckets,
+				Topics:      topics,
+				Queues:      queues,
+				Buckets:     buckets,
+				Collections: collections,
 			},
 			Principals: principalMap,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil

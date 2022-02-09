@@ -23,10 +23,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/nitrictech/newcli/pkg/containerengine"
-	"github.com/nitrictech/newcli/pkg/runtime"
-	"github.com/nitrictech/newcli/pkg/stack"
-	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/runtime"
+	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/target"
 )
 
 func Create(s *stack.Stack, t *target.Target) error {

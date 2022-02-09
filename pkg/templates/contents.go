@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const (

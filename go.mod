@@ -1,4 +1,4 @@
-module github.com/nitrictech/newcli
+module github.com/nitrictech/cli
 
 go 1.16
 

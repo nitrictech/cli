@@ -31,7 +31,7 @@ import (
 	"github.com/hashicorp/consul/sdk/freeport"
 	"gopkg.in/mcuadros/go-syslog.v2"
 
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type localSyslog struct {

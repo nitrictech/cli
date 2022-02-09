@@ -32,13 +32,13 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
-	"github.com/nitrictech/newcli/pkg/build"
-	"github.com/nitrictech/newcli/pkg/containerengine"
-	"github.com/nitrictech/newcli/pkg/cron"
-	"github.com/nitrictech/newcli/pkg/output"
-	"github.com/nitrictech/newcli/pkg/runtime"
-	"github.com/nitrictech/newcli/pkg/stack"
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/build"
+	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/cron"
+	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/runtime"
+	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 

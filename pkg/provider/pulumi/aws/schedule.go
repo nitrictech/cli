@@ -24,7 +24,7 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
-	"github.com/nitrictech/newcli/pkg/cron"
+	"github.com/nitrictech/cli/pkg/cron"
 )
 
 func (a *awsProvider) schedule(ctx *pulumi.Context, name, expression string, topic *sns.Topic) error {

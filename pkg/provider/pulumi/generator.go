@@ -26,12 +26,12 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
 
-	"github.com/nitrictech/newcli/pkg/provider/pulumi/aws"
-	pulumitypes "github.com/nitrictech/newcli/pkg/provider/pulumi/types"
-	"github.com/nitrictech/newcli/pkg/provider/types"
-	"github.com/nitrictech/newcli/pkg/stack"
-	"github.com/nitrictech/newcli/pkg/target"
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/aws"
+	pulumitypes "github.com/nitrictech/cli/pkg/provider/pulumi/types"
+	"github.com/nitrictech/cli/pkg/provider/types"
+	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/target"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type pulumiDeployment struct {

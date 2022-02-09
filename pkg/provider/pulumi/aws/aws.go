@@ -35,9 +35,9 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
-	"github.com/nitrictech/newcli/pkg/provider/pulumi/types"
-	"github.com/nitrictech/newcli/pkg/stack"
-	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/types"
+	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/target"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 

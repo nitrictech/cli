@@ -29,8 +29,8 @@ import (
 	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/pkg/errors"
 
-	"github.com/nitrictech/newcli/pkg/containerengine"
-	"github.com/nitrictech/newcli/pkg/output"
+	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/output"
 )
 
 type MinioServer struct {

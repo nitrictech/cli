@@ -26,14 +26,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/nitrictech/newcli/pkg/cmd/deployment"
-	"github.com/nitrictech/newcli/pkg/cmd/provider"
-	"github.com/nitrictech/newcli/pkg/cmd/run"
-	"github.com/nitrictech/newcli/pkg/cmd/stack"
-	cmdTarget "github.com/nitrictech/newcli/pkg/cmd/target"
-	"github.com/nitrictech/newcli/pkg/output"
-	"github.com/nitrictech/newcli/pkg/tasklet"
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/cmd/deployment"
+	"github.com/nitrictech/cli/pkg/cmd/provider"
+	"github.com/nitrictech/cli/pkg/cmd/run"
+	"github.com/nitrictech/cli/pkg/cmd/stack"
+	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
+	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/tasklet"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const configFileName = ".nitric-config"

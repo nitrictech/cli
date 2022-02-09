@@ -19,11 +19,11 @@ package provider
 import (
 	"fmt"
 
-	"github.com/nitrictech/newcli/pkg/provider/pulumi"
-	"github.com/nitrictech/newcli/pkg/provider/types"
-	"github.com/nitrictech/newcli/pkg/stack"
-	"github.com/nitrictech/newcli/pkg/target"
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/provider/pulumi"
+	"github.com/nitrictech/cli/pkg/provider/types"
+	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/target"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 func NewProvider(s *stack.Stack, t *target.Target) (types.Provider, error) {

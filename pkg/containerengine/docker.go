@@ -37,7 +37,7 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/pkg/errors"
 
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type docker struct {

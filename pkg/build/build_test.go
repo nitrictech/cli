@@ -23,10 +23,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/nitrictech/newcli/mocks/mock_containerengine"
-	"github.com/nitrictech/newcli/pkg/containerengine"
-	"github.com/nitrictech/newcli/pkg/stack"
-	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/cli/mocks/mock_containerengine"
+	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/target"
 )
 
 func TestCreateBaseDev(t *testing.T) {

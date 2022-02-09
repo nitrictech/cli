@@ -21,7 +21,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/utils"
 
 	pb "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )

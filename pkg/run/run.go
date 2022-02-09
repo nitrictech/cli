@@ -23,7 +23,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
 	queue_service "github.com/nitrictech/nitric/pkg/plugins/queue/dev"

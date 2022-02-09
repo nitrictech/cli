@@ -38,3 +38,22 @@ scoop:
   homepage: "https://nitric.io"
   description: "Nitric CLI"
   license: Apache 2.0
+
+brews:
+  -
+    name: nitric
+    tap:
+      owner: nitrictech
+      name: homebrew-tap
+    commit_author:
+      name: nitric-bot
+      email: maintainers@nitric.io
+    folder: Formula
+    homepage: "https://nitric.io/"
+    description: "Nitric CLI"
+    license: "Apache 2.0"
+    dependencies:
+      - name: git
+      - name: pulumi # needed for certain provider deployments
+        type: optional
+    folder: Formula

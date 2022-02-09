@@ -56,4 +56,3 @@ brews:
       - name: git
       - name: pulumi # needed for certain provider deployments
         type: optional
-    folder: Formula

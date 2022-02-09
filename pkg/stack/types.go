@@ -176,7 +176,7 @@ func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
 		})
 	}
 
-	topicResources := make([]*v1.Resource, len(s.Topics), 0)
+	topicResources := make([]*v1.Resource, 0, len(s.Topics))
 	for name := range s.Topics {
 		topicResources = append(topicResources, &v1.Resource{
 			Name: name,
@@ -194,7 +194,7 @@ func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
 		Resources: topicResources,
 	})
 
-	bucketResources := make([]*v1.Resource, len(s.Buckets), 0)
+	bucketResources := make([]*v1.Resource, 0, len(s.Buckets))
 	for name := range s.Buckets {
 		bucketResources = append(bucketResources, &v1.Resource{
 			Name: name,
@@ -213,7 +213,7 @@ func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
 		Resources: bucketResources,
 	})
 
-	queueResources := make([]*v1.Resource, len(s.Queues), 0)
+	queueResources := make([]*v1.Resource, 0, len(s.Queues))
 	for name := range s.Buckets {
 		queueResources = append(queueResources, &v1.Resource{
 			Name: name,
@@ -232,7 +232,7 @@ func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
 		Resources: queueResources,
 	})
 
-	collectionResources := make([]*v1.Resource, len(s.Collections), 0)
+	collectionResources := make([]*v1.Resource, 0, len(s.Collections))
 	for name := range s.Collections {
 		collectionResources = append(collectionResources, &v1.Resource{
 			Name: name,

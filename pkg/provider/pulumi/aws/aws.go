@@ -18,6 +18,8 @@ package aws
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -25,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/resourcegroups"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
@@ -35,6 +38,7 @@ import (
 	"github.com/nitrictech/newcli/pkg/provider/pulumi/types"
 	"github.com/nitrictech/newcli/pkg/stack"
 	"github.com/nitrictech/newcli/pkg/target"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type awsProvider struct {
@@ -70,6 +74,21 @@ func commonTags(ctx *pulumi.Context, name string) pulumi.StringMap {
 	}
 }
 
+func md5Hash(b []byte) string {
+	hasher := md5.New()
+	hasher.Write(b)
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func policyResourceName(policy *v1.PolicyResource) (string, error) {
+	policyDoc, err := json.Marshal(policy)
+	if err != nil {
+		return "", err
+	}
+
+	return md5Hash(policyDoc), nil
+}
+
 func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
@@ -101,14 +120,20 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	topics := map[string]*sns.Topic{}
 	for k := range a.s.Topics {
-		topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{Tags: commonTags(ctx, k)})
+		topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
+			// FIXME: Autonaming of topics disabled until improvements to
+			// nitric topic name discovery is made for SNS topics.
+			Name: pulumi.StringPtr(k),
+			Tags: commonTags(ctx, k),
+		})
 		if err != nil {
 			return errors.WithMessage(err, "sns topic "+k)
 		}
 	}
 
+	buckets := map[string]*s3.Bucket{}
 	for k := range a.s.Buckets {
-		_, err = s3.NewBucket(ctx, k, &s3.BucketArgs{
+		buckets[k], err = s3.NewBucket(ctx, k, &s3.BucketArgs{
 			Tags: commonTags(ctx, k),
 		})
 		if err != nil {
@@ -116,8 +141,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	queues := map[string]*sqs.Queue{}
 	for k := range a.s.Queues {
-		_, err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
+		queues[k], err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
 			Tags: commonTags(ctx, k),
 		})
 		if err != nil {
@@ -125,8 +151,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	collections := map[string]*dynamodb.Table{}
 	for k := range a.s.Collections {
-		_, err = dynamodb.NewTable(ctx, "mytable", &dynamodb.TableArgs{
+		collections[k], err = dynamodb.NewTable(ctx, k, &dynamodb.TableArgs{
 			Attributes: dynamodb.TableAttributeArray{
 				&dynamodb.TableAttributeArgs{
 					Name: pulumi.String("_pk"),
@@ -162,6 +189,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	funcs := map[string]*Lambda{}
+	principalMap := make(map[v1.ResourceType]map[string]*iam.Role)
+	principalMap[v1.ResourceType_Function] = make(map[string]*iam.Role)
 	for k, f := range a.s.Functions {
 		image, err := newECRImage(ctx, f.Name, &ECRImageArgs{
 			LocalImageName:  f.ImageTagName(a.s, ""),
@@ -179,6 +208,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "lambda function "+f.Name)
 		}
+
+		principalMap[v1.ResourceType_Function][k] = funcs[k].Role
 	}
 
 	for k, c := range a.s.Containers {
@@ -198,6 +229,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "lambda container "+c.Name)
 		}
+
+		principalMap[v1.ResourceType_Function][k] = funcs[k].Role
 	}
 
 	for k, v := range a.s.ApiDocs {
@@ -206,6 +239,27 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			LambdaFunctions: funcs})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)
+		}
+	}
+
+	for _, p := range a.s.Policies {
+		policyName, err := policyResourceName(p)
+
+		if err != nil {
+			return err
+		}
+
+		if _, err := newPolicy(ctx, policyName, &PolicyArgs{
+			Policy: p,
+			Resources: &StackResources{
+				Topics:      topics,
+				Queues:      queues,
+				Buckets:     buckets,
+				Collections: collections,
+			},
+			Principals: principalMap,
+		}); err != nil {
+			return err
 		}
 	}
 

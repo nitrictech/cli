@@ -25,6 +25,8 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v2"
+
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type Triggers struct {
@@ -136,6 +138,12 @@ type Stack struct {
 	Schedules   map[string]Schedule    `yaml:"schedules,omitempty"`
 	ApiDocs     map[string]*openapi3.T `yaml:"-"`
 	Apis        map[string]string      `yaml:"apis,omitempty"`
+	// TODO: Not currently supported by nitric.yaml configuration (but is technically definable using the proto model)
+	// We may want to decouple the definition from contracts at a later stage
+	// but re-using the contract here provides us a serializable entity with no
+	// repetition/redefinition
+	// NOTE: if we want to use the proto definition here we would need support for yaml parsing to use customisable tags
+	Policies []*v1.PolicyResource `yaml:"-"`
 }
 
 func New(name, dir string) *Stack {
@@ -151,7 +159,101 @@ func New(name, dir string) *Stack {
 		Schedules:   map[string]Schedule{},
 		Apis:        map[string]string{},
 		ApiDocs:     map[string]*openapi3.T{},
+		Policies:    make([]*v1.PolicyResource, 0),
 	}
+}
+
+// Compute default policies for a stack
+func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
+	policies := make([]*v1.PolicyResource, 0)
+
+	principals := make([]*v1.Resource, 0)
+
+	for name := range s.Functions {
+		principals = append(principals, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Function,
+		})
+	}
+
+	topicResources := make([]*v1.Resource, 0, len(s.Topics))
+	for name := range s.Topics {
+		topicResources = append(topicResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Topic,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_TopicDetail,
+			v1.Action_TopicEventPublish,
+			v1.Action_TopicList,
+		},
+		Resources: topicResources,
+	})
+
+	bucketResources := make([]*v1.Resource, 0, len(s.Buckets))
+	for name := range s.Buckets {
+		bucketResources = append(bucketResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Bucket,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_BucketFileDelete,
+			v1.Action_BucketFileGet,
+			v1.Action_BucketFileList,
+			v1.Action_BucketFilePut,
+		},
+		Resources: bucketResources,
+	})
+
+	queueResources := make([]*v1.Resource, 0, len(s.Queues))
+	for name := range s.Buckets {
+		queueResources = append(queueResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Queue,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_QueueDetail,
+			v1.Action_QueueList,
+			v1.Action_QueueReceive,
+			v1.Action_QueueSend,
+		},
+		Resources: queueResources,
+	})
+
+	collectionResources := make([]*v1.Resource, 0, len(s.Collections))
+	for name := range s.Collections {
+		collectionResources = append(collectionResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Collection,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_CollectionDocumentDelete,
+			v1.Action_CollectionDocumentRead,
+			v1.Action_CollectionDocumentWrite,
+			v1.Action_CollectionList,
+			v1.Action_CollectionQuery,
+		},
+		Resources: collectionResources,
+	})
+
+	// TODO: Calculate policies for stacks loaded from a file
+	return policies
 }
 
 func FromFile(name string) (*Stack, error) {
@@ -191,6 +293,9 @@ func FromFile(name string) (*Stack, error) {
 			stack.ApiDocs[k] = doc
 		}
 	}
+
+	// Calculate default policies
+	stack.Policies = calculateDefaultPolicies(stack)
 
 	return stack, nil
 }

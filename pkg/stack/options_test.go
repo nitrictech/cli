@@ -24,6 +24,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/imdario/mergo"
 )
 
@@ -137,8 +138,8 @@ func TestFromOptions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if !cmp.Equal(s, newS) {
-		t.Error(cmp.Diff(s, newS))
+	if !cmp.Equal(s, newS, cmpopts.IgnoreFields(Stack{}, "Policies")) {
+		t.Error(cmp.Diff(s, newS, cmpopts.IgnoreFields(Stack{}, "Policies")))
 	}
 }
 

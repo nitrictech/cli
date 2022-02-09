@@ -218,8 +218,15 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 // collectOne - Collects information about a function for a nitric stack
 // handler - the specific handler for the application
 func (c *codeConfig) collectOne(handler string) error {
-	fun := NewFunction()
-	srv := NewServer(fun)
+	rt, err := runtime.NewRunTimeFromHandler(handler)
+	if err != nil {
+		return errors.WithMessage(err, "error getting the runtime from handler "+handler)
+	}
+
+	name := rt.ContainerName()
+	fun := NewFunction(name)
+
+	srv := NewServer(name, fun)
 	grpcSrv := grpc.NewServer()
 
 	v1.RegisterResourceServiceServer(grpcSrv, srv)
@@ -244,11 +251,6 @@ func (c *codeConfig) collectOne(handler string) error {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return errors.WithMessage(err, "error discovering container engine")
-	}
-
-	rt, err := runtime.NewRunTimeFromHandler(handler)
-	if err != nil {
-		return errors.WithMessage(err, "error getting the runtime from handler "+handler)
 	}
 
 	opts, err := rt.LaunchOptsForFunctionCollect(c.initialStack.Dir)
@@ -344,11 +346,6 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 
 	errs := utils.NewErrorList()
 	for handler, f := range c.functions {
-		rt, err := runtime.NewRunTimeFromHandler(handler)
-		if err != nil {
-			return nil, err
-		}
-
 		topicTriggers := make([]string, 0, len(f.subscriptions)+len(f.schedules))
 
 		for k := range f.apis {
@@ -368,6 +365,10 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		for k := range f.queues {
 			s.Queues[k] = stack.Queue{}
 		}
+
+		// Add policies
+		s.Policies = append(s.Policies, f.policies...)
+
 		for k, v := range f.schedules {
 			// Create a new topic target
 			// replace spaced with hyphens
@@ -429,14 +430,14 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			}
 		}
 
-		f, ok := s.Functions[rt.ContainerName()]
+		fun, ok := s.Functions[f.name]
 		if !ok {
-			f = stack.FunctionFromHandler(handler, s.Dir)
+			fun = stack.FunctionFromHandler(handler, s.Dir)
 		}
-		f.ComputeUnit.Triggers = stack.Triggers{
+		fun.ComputeUnit.Triggers = stack.Triggers{
 			Topics: topicTriggers,
 		}
-		s.Functions[rt.ContainerName()] = f
+		s.Functions[f.name] = fun
 	}
 
 	return s, errs.Aggregate()

@@ -31,9 +31,10 @@ import (
 	"github.com/nitrictech/cli/pkg/cmd/deployment"
 	"github.com/nitrictech/cli/pkg/cmd/provider"
 	"github.com/nitrictech/cli/pkg/cmd/run"
-	"github.com/nitrictech/cli/pkg/cmd/stack"
+	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/tasklet"
 	"github.com/nitrictech/cli/pkg/utils"
@@ -96,7 +97,7 @@ func init() {
 
 	rootCmd.AddCommand(deployment.RootCommand())
 	rootCmd.AddCommand(provider.RootCommand())
-	rootCmd.AddCommand(stack.RootCommand())
+	rootCmd.AddCommand(cmdstack.RootCommand())
 	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
@@ -143,6 +144,10 @@ func ensureConfigDefaults() {
 	}
 
 	if target.EnsureDefaultConfig() {
+		needsWrite = true
+	}
+
+	if stack.EnsureRuntimeDefaults() {
 		needsWrite = true
 	}
 

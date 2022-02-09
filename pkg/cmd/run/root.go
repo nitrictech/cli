@@ -39,16 +39,20 @@ var runCmd = &cobra.Command{
 	Short: "run a nitric stack",
 	Long: `Run a nitric stack locally for development or testing
 `,
-	Example: `nitric run -s ../projectX "functions/*.ts"`,
+	Example: `# use a nitric.yaml or configured default handlerGlob (stack in the current directory).
+nitric run
+
+# use an explicit handlerGlob (stack in the current directory)
+nitric run "functions/*.ts"
+
+# use an explicit handlerGlob and explicit stack directory
+nitric run -s ../projectX/ "functions/*.ts"`,
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		s, err := stack.FromOptions()
-		if err != nil && len(args) > 0 {
-			s, err = stack.FromGlobArgs(args)
-		}
+		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
 
 		ce, err := containerengine.Discover()

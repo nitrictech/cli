@@ -135,7 +135,7 @@ func TestFromOptions(t *testing.T) {
 	}
 
 	stackPath = tmpDir
-	newS, err := FromOptions()
+	newS, err := FromOptions([]string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -206,9 +206,9 @@ func TestFromGlobArgs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got, err := FromGlobArgs(tt.glob)
+			got, err := FromOptions(tt.glob)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("FromGlobArgs() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("FromOptions() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(want, got) {

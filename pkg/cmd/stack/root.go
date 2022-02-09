@@ -120,8 +120,16 @@ var stackDescribeCmd = &cobra.Command{
 	Use:   "describe [handlerGlob]",
 	Short: "describe stack dependencies",
 	Long:  `Describes stack dependencies`,
+	Example: `# use a nitric.yaml or configured default handlerGlob (stack in the current directory).
+nitric stack describe
+
+# use an explicit handlerGlob (stack in the current directory)
+nitric stack describe "functions/*/*.go"
+
+# use an explicit handlerGlob and explicit stack directory
+nitric stack describe -s ../projectX "functions/*/*.go"`,
 	Run: func(cmd *cobra.Command, args []string) {
-		s, err := stack.FromGlobArgs(args)
+		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
 
 		s, err = codeconfig.Populate(s)
@@ -129,7 +137,7 @@ var stackDescribeCmd = &cobra.Command{
 
 		output.Print(s)
 	},
-	Args: cobra.MinimumNArgs(1),
+	Args: cobra.MinimumNArgs(0),
 }
 
 func RootCommand() *cobra.Command {

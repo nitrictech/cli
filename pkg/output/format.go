@@ -29,7 +29,7 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"gopkg.in/yaml.v2"
 
-	"github.com/nitrictech/newcli/pkg/pflagext"
+	"github.com/nitrictech/cli/pkg/pflagext"
 )
 
 var (

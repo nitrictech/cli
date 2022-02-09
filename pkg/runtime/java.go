@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const (

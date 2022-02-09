@@ -23,10 +23,10 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 
-	"github.com/nitrictech/newcli/pkg/containerengine"
-	"github.com/nitrictech/newcli/pkg/output"
-	"github.com/nitrictech/newcli/pkg/runtime"
-	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/runtime"
+	"github.com/nitrictech/cli/pkg/stack"
 )
 
 type Function struct {

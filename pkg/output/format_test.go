@@ -24,8 +24,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/nitrictech/newcli/pkg/containerengine"
-	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/target"
 )
 
 func Test_printStruct(t *testing.T) {

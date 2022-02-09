@@ -25,8 +25,8 @@ import (
 	"github.com/hashicorp/go-getter"
 	"gopkg.in/yaml.v2"
 
-	"github.com/nitrictech/newcli/mocks/mock_utils"
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/mocks/mock_utils"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 func TestRepository(t *testing.T) {

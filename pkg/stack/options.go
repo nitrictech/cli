@@ -24,9 +24,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/newcli/pkg/pflagext"
-	"github.com/nitrictech/newcli/pkg/runtime"
-	"github.com/nitrictech/newcli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/pflagext"
+	"github.com/nitrictech/cli/pkg/runtime"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 var (

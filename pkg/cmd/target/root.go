@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/nitrictech/newcli/pkg/output"
-	"github.com/nitrictech/newcli/pkg/target"
+	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/target"
 )
 
 var targetCmd = &cobra.Command{

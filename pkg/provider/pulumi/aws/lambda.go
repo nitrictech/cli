@@ -26,7 +26,7 @@ import (
 	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
-	"github.com/nitrictech/newcli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/stack"
 )
 
 type LambdaArgs struct {

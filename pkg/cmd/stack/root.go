@@ -26,10 +26,10 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/newcli/pkg/codeconfig"
-	"github.com/nitrictech/newcli/pkg/output"
-	"github.com/nitrictech/newcli/pkg/stack"
-	"github.com/nitrictech/newcli/pkg/templates"
+	"github.com/nitrictech/cli/pkg/codeconfig"
+	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/templates"
 )
 
 var (

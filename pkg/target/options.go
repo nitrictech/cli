@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/nitrictech/newcli/pkg/pflagext"
+	"github.com/nitrictech/cli/pkg/pflagext"
 )
 
 const (

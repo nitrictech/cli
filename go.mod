@@ -35,6 +35,7 @@ require (
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0
 	github.com/pulumi/pulumi/sdk/v3 v3.23.2
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/spf13/cast v1.4.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0

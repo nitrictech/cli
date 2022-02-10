@@ -83,8 +83,8 @@ func (a *azureProvider) Validate() error {
 	}
 	a.org = a.t.Extra["org"].(string)
 
-	if _, ok := a.t.Extra["adminEmail"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"adminEmail\"", a.t.Provider))
+	if _, ok := a.t.Extra["adminemail"]; !ok {
+		errList.Add(fmt.Errorf("target %s requires \"adminemail\"", a.t.Provider))
 	}
 	a.adminEmail = a.t.Extra["adminemail"].(string)
 

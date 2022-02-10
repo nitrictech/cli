@@ -309,7 +309,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		}()
 	}
 
-	errs := utils.NewErrorList()
+	errs := utils.NewErrorList().WithSubject(handler)
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
 	select {
 	case done := <-waitChan:
@@ -318,7 +318,7 @@ func (c *codeConfig) collectOne(handler string) error {
 			msg = done.Error.Message
 		}
 		if msg != "" || done.StatusCode != 0 {
-			errs.Add(fmt.Errorf("error executing container (code %d) %s", done.StatusCode, msg))
+			errs.Add(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
 		}
 	case cErr := <-cErrChan:
 		errs.Add(cErr)

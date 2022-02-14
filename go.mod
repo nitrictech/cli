@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
+	github.com/Azure/azure-sdk-for-go v56.3.0+incompatible
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/cli v20.10.12+incompatible
@@ -28,8 +29,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.34
 	github.com/pulumi/pulumi-aws/sdk/v4 v4.33.0
+	github.com/pulumi/pulumi-azure-native/sdk v1.56.0
+	github.com/pulumi/pulumi-azure/sdk/v4 v4.36.0
+	github.com/pulumi/pulumi-azuread/sdk/v5 v5.16.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0
-	github.com/pulumi/pulumi/sdk/v3 v3.14.0
+	github.com/pulumi/pulumi/sdk/v3 v3.23.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0

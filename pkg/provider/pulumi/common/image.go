@@ -14,34 +14,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aws
+package common
 
 import (
 	"io/ioutil"
 
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
 	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-type ECRImageArgs struct {
+type ImageArgs struct {
 	LocalImageName  string
 	SourceImageName string
+	RepositoryUrl   pulumi.StringInput
 	TempDir         string
-
-	AuthToken *ecr.GetAuthorizationTokenResult
+	Server          pulumi.StringInput
+	Username        pulumi.StringInput
+	Password        pulumi.StringInput
 }
 
-type ECRImage struct {
+type Image struct {
 	pulumi.ResourceState
 
 	Name        string
 	DockerImage *docker.Image
 }
 
-func newECRImage(ctx *pulumi.Context, name string, args *ECRImageArgs, opts ...pulumi.ResourceOption) (*ECRImage, error) {
-	res := &ECRImage{Name: name}
-	err := ctx.RegisterComponentResource("nitric:ECR:Image", name, res, opts...)
+func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.ResourceOption) (*Image, error) {
+	res := &Image{Name: name}
+	err := ctx.RegisterComponentResource("nitric:Image", name, res, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,13 +56,8 @@ func newECRImage(ctx *pulumi.Context, name string, args *ECRImageArgs, opts ...p
 		return nil, err
 	}
 
-	repo, err := ecr.NewRepository(ctx, args.LocalImageName, &ecr.RepositoryArgs{Tags: commonTags(ctx, args.LocalImageName)})
-	if err != nil {
-		return nil, err
-	}
-
 	imageArgs := &docker.ImageArgs{
-		ImageName: repo.RepositoryUrl,
+		ImageName: args.RepositoryUrl,
 		Build: docker.DockerBuildArgs{
 			Env: pulumi.StringMap{
 				"DOCKER_BUILDKIT": pulumi.String("1"),
@@ -69,17 +65,16 @@ func newECRImage(ctx *pulumi.Context, name string, args *ECRImageArgs, opts ...p
 			Dockerfile: pulumi.String(dummyDockerFilePath.Name()),
 		},
 		Registry: docker.ImageRegistryArgs{
-			Server:   pulumi.String(args.AuthToken.ProxyEndpoint),
-			Username: pulumi.String(args.AuthToken.UserName),
-			Password: pulumi.String(args.AuthToken.Password),
+			Server:   args.Server,
+			Username: args.Username,
+			Password: args.Password,
 		},
 	}
-	res.DockerImage, err = docker.NewImage(ctx, name+"-image", imageArgs)
+	res.DockerImage, err = docker.NewImage(ctx, name+"-image", imageArgs, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
 	}
 
-	//imageDigest:   this.imageDigest,
 	return res, ctx.RegisterResourceOutputs(res, pulumi.Map{
 		"name":          pulumi.String(res.Name),
 		"imageUri":      res.DockerImage.ImageName,

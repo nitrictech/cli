@@ -21,6 +21,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -35,9 +36,10 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
-	"github.com/nitrictech/cli/pkg/provider/pulumi/types"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
+	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
@@ -47,31 +49,56 @@ type awsProvider struct {
 	tmpDir string
 }
 
-func New(s *stack.Stack, t *target.Target) types.PulumiProvider {
+func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 	return &awsProvider{s: s, t: t}
 }
 
-func (a *awsProvider) PluginName() string {
-	return "aws"
+func (a *awsProvider) Plugins() []common.Plugin {
+	return []common.Plugin{
+		{
+			Name:    "aws",
+			Version: "v4.37.1",
+		},
+	}
 }
 
-func (a *awsProvider) PluginVersion() string {
-	return "v4.0.0"
+func (a *awsProvider) SupportedRegions() []string {
+	return []string{
+		"us-east-1",
+		"us-west-1",
+		"us-west-2",
+		"eu-west-1",
+		"eu-central-1",
+		"ap-southeast-1",
+		"ap-northeast-1",
+		"ap-southeast-2",
+		"ap-northeast-2",
+		"sa-east-1",
+		"cn-north-1",
+		"ap-south-1",
+	}
+}
+
+func (a *awsProvider) Validate() error {
+	found := false
+	for _, r := range a.SupportedRegions() {
+		if r == a.t.Region {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.t.Region, a.t.Provider))
+	}
+	return nil
 }
 
 func (a *awsProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
 	if a.t.Region != "" {
 		return autoStack.SetConfig(ctx, "aws:region", auto.ConfigValue{Value: a.t.Region})
 	}
-	return nil
-}
 
-func commonTags(ctx *pulumi.Context, name string) pulumi.StringMap {
-	return pulumi.StringMap{
-		"x-nitric-project": pulumi.String(ctx.Project()),
-		"x-nitric-stack":   pulumi.String(ctx.Stack()),
-		"x-nitric-name":    pulumi.String(name),
-	}
+	return nil
 }
 
 func md5Hash(b []byte) string {
@@ -124,7 +151,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			// FIXME: Autonaming of topics disabled until improvements to
 			// nitric topic name discovery is made for SNS topics.
 			Name: pulumi.StringPtr(k),
-			Tags: commonTags(ctx, k),
+			Tags: common.Tags(ctx, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "sns topic "+k)
@@ -134,7 +161,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	buckets := map[string]*s3.Bucket{}
 	for k := range a.s.Buckets {
 		buckets[k], err = s3.NewBucket(ctx, k, &s3.BucketArgs{
-			Tags: commonTags(ctx, k),
+			Tags: common.Tags(ctx, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "s3 bucket "+k)
@@ -144,7 +171,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	queues := map[string]*sqs.Queue{}
 	for k := range a.s.Queues {
 		queues[k], err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
-			Tags: commonTags(ctx, k),
+			Tags: common.Tags(ctx, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "sqs queue "+k)
@@ -167,7 +194,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			HashKey:     pulumi.String("_pk"),
 			RangeKey:    pulumi.String("_sk"),
 			BillingMode: pulumi.String("PAY_PER_REQUEST"),
-			Tags:        commonTags(ctx, k),
+			Tags:        common.Tags(ctx, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "dynamodb table "+k)
@@ -191,46 +218,48 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	funcs := map[string]*Lambda{}
 	principalMap := make(map[v1.ResourceType]map[string]*iam.Role)
 	principalMap[v1.ResourceType_Function] = make(map[string]*iam.Role)
-	for k, f := range a.s.Functions {
-		image, err := newECRImage(ctx, f.Name, &ECRImageArgs{
-			LocalImageName:  f.ImageTagName(a.s, ""),
-			SourceImageName: f.ImageTagName(a.s, a.t.Provider),
-			AuthToken:       authToken,
-			TempDir:         a.tmpDir})
-		if err != nil {
-			return errors.WithMessage(err, "function image tag "+f.Name)
-		}
-		funcs[k], err = newLambda(ctx, k, &LambdaArgs{
-			Topics:      topics,
-			DockerImage: image.DockerImage,
-			Compute:     &f,
-		})
-		if err != nil {
-			return errors.WithMessage(err, "lambda function "+f.Name)
-		}
 
-		principalMap[v1.ResourceType_Function][k] = funcs[k].Role
+	computes := []stack.Compute{}
+	for _, c := range a.s.Functions {
+		copy := c
+		computes = append(computes, &copy)
 	}
+	for _, c := range a.s.Containers {
+		copy := c
+		computes = append(computes, &copy)
+	}
+	for _, c := range computes {
+		localImageName := c.ImageTagName(a.s, "")
 
-	for k, c := range a.s.Containers {
-		image, err := newECRImage(ctx, c.Name, &ECRImageArgs{
-			LocalImageName:  c.ImageTagName(a.s, ""),
-			SourceImageName: c.ImageTagName(a.s, a.t.Provider),
-			AuthToken:       authToken,
-			TempDir:         a.tmpDir})
-		if err != nil {
-			return errors.WithMessage(err, "function image tag "+c.Name)
-		}
-		funcs[k], err = newLambda(ctx, k, &LambdaArgs{
-			Topics:      topics,
-			DockerImage: image.DockerImage,
-			Compute:     &c,
+		repo, err := ecr.NewRepository(ctx, localImageName, &ecr.RepositoryArgs{
+			Tags: common.Tags(ctx, localImageName),
 		})
 		if err != nil {
-			return errors.WithMessage(err, "lambda container "+c.Name)
+			return err
 		}
 
-		principalMap[v1.ResourceType_Function][k] = funcs[k].Role
+		image, err := common.NewImage(ctx, c.Unit().Name, &common.ImageArgs{
+			LocalImageName:  localImageName,
+			SourceImageName: c.ImageTagName(a.s, a.t.Provider),
+			RepositoryUrl:   repo.RepositoryUrl,
+			Server:          pulumi.String(authToken.ProxyEndpoint),
+			Username:        pulumi.String(authToken.UserName),
+			Password:        pulumi.String(authToken.Password),
+			TempDir:         a.tmpDir})
+		if err != nil {
+			return errors.WithMessage(err, "function image tag "+c.Unit().Name)
+		}
+
+		funcs[c.Unit().Name], err = newLambda(ctx, c.Unit().Name, &LambdaArgs{
+			Topics:      topics,
+			DockerImage: image.DockerImage,
+			Compute:     c,
+		})
+		if err != nil {
+			return errors.WithMessage(err, "lambda container "+c.Unit().Name)
+		}
+
+		principalMap[v1.ResourceType_Function][c.Unit().Name] = funcs[c.Unit().Name].Role
 	}
 
 	for k, v := range a.s.ApiDocs {
@@ -244,7 +273,6 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for _, p := range a.s.Policies {
 		policyName, err := policyResourceName(p)
-
 		if err != nil {
 			return err
 		}

@@ -25,6 +25,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/cron"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 )
 
 func (a *awsProvider) schedule(ctx *pulumi.Context, name, expression string, topic *sns.Topic) error {
@@ -35,7 +36,7 @@ func (a *awsProvider) schedule(ctx *pulumi.Context, name, expression string, top
 
 	eventRule, err := cloudwatch.NewEventRule(ctx, name+"Schedule", &cloudwatch.EventRuleArgs{
 		ScheduleExpression: pulumi.String("cron(" + awsCronValue + ")"),
-		Tags:               commonTags(ctx, name+"Schedule"),
+		Tags:               common.Tags(ctx, name+"Schedule"),
 	})
 	if err != nil {
 		return err

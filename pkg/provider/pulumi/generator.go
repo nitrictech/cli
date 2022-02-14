@@ -26,8 +26,10 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
 
+	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/aws"
-	pulumitypes "github.com/nitrictech/cli/pkg/provider/pulumi/types"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/azure"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
@@ -37,7 +39,7 @@ import (
 type pulumiDeployment struct {
 	s *stack.Stack
 	t *target.Target
-	p pulumitypes.PulumiProvider
+	p common.PulumiProvider
 }
 
 var (
@@ -45,12 +47,18 @@ var (
 )
 
 func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
-	var prov pulumitypes.PulumiProvider
+	var prov common.PulumiProvider
 	switch t.Provider {
 	case target.Aws:
 		prov = aws.New(s, t)
+	case target.Azure:
+		prov = azure.New(s, t)
 	default:
 		return nil, utils.NewNotSupportedErr("pulumi provider " + t.Provider + " not suppored")
+	}
+
+	if err := prov.Validate(); err != nil {
+		return nil, err
 	}
 
 	return &pulumiDeployment{
@@ -76,9 +84,11 @@ func (p *pulumiDeployment) load(name string) (*auto.Stack, error) {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
 	}
 
-	err = s.Workspace().InstallPlugin(ctx, p.p.PluginName(), p.p.PluginVersion())
-	if err != nil {
-		return nil, errors.WithMessage(err, "InstallPlugin")
+	for _, plug := range p.p.Plugins() {
+		err = s.Workspace().InstallPlugin(ctx, plug.Name, plug.Version)
+		if err != nil {
+			return nil, errors.WithMessage(err, "InstallPlugin "+plug.String())
+		}
 	}
 
 	err = p.p.Configure(ctx, &s)
@@ -93,17 +103,18 @@ func (p *pulumiDeployment) load(name string) (*auto.Stack, error) {
 func (p *pulumiDeployment) Apply(name string) error {
 	s, err := p.load(name)
 	if err != nil {
-		return err
+		return errors.WithMessage(err, "loading pulumi stack")
 	}
-	var loglevel uint = 2
-	_ = optup.DebugLogging(debug.LoggingOptions{
+
+	var loglevel uint = uint(output.VerboseLevel)
+	dbg := optup.DebugLogging(debug.LoggingOptions{
 		LogLevel:    &loglevel,
 		LogToStdErr: true})
 
-	res, err := s.Up(context.Background())
+	res, err := s.Up(context.Background(), dbg)
 	defer p.p.CleanUp()
 	if err != nil {
-		return errors.WithMessage(err, res.Summary.Message)
+		return errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
 	}
 	return nil
 }

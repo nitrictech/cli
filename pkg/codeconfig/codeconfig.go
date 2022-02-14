@@ -268,7 +268,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
-	cID, err := ce.ContainerCreate(&container.Config{
+	cc := &container.Config{
 		AttachStdout: true,
 		AttachStderr: true,
 		Image:        opts.Image,
@@ -281,7 +281,9 @@ func (c *codeConfig) collectOne(handler string) error {
 		Cmd:        opts.Cmd,
 		Entrypoint: opts.Entrypoint,
 		WorkingDir: opts.TargetWD,
-	}, hostConfig, nil, rt.ContainerName())
+	}
+
+	cID, err := ce.ContainerCreate(cc, hostConfig, nil, rt.ContainerName())
 	if err != nil {
 		return err
 	}
@@ -292,6 +294,8 @@ func (c *codeConfig) collectOne(handler string) error {
 	}
 
 	if output.VerboseLevel > 1 {
+		fmt.Println(containerengine.Cli(cc, hostConfig))
+
 		logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
 			ShowStdout: true,
 			ShowStderr: true,

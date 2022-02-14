@@ -16,9 +16,11 @@
 
 package types
 
+import "github.com/nitrictech/cli/pkg/output"
+
 type Provider interface {
-	Apply(deploymentName string) error
-	Delete(deploymentName string) error
+	Apply(log output.Progress, deploymentName string) error
+	Delete(log output.Progress, deploymentName string) error
 	List() (interface{}, error)
 	//Status()
 }

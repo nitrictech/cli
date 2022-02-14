@@ -59,7 +59,7 @@ var runCmd = &cobra.Command{
 
 		createBaseImage := tasklet.Runner{
 			StartMsg: "Creating Dev Image",
-			Runner: func(tCtx tasklet.TaskletContext) error {
+			Runner: func(_ output.Progress) error {
 				return build.CreateBaseDev(s)
 			},
 			StopMsg: "Created Dev Image!",
@@ -71,7 +71,7 @@ var runCmd = &cobra.Command{
 
 		startLocalServices := tasklet.Runner{
 			StartMsg: "Starting Local Services",
-			Runner: func(tCtx tasklet.TaskletContext) error {
+			Runner: func(progress output.Progress) error {
 				go func(errch chan error) {
 					errch <- ls.Start()
 				}(memerr)
@@ -88,7 +88,7 @@ var runCmd = &cobra.Command{
 					if ls.Running() {
 						break
 					}
-					tCtx.Spinner().UpdateText("Waiting for Local Services to be ready")
+					progress.Busyf("Waiting for Local Services to be ready")
 					time.Sleep(time.Second)
 				}
 				return nil
@@ -103,7 +103,7 @@ var runCmd = &cobra.Command{
 
 		startFunctions := tasklet.Runner{
 			StartMsg: "Starting Functions",
-			Runner: func(tCtx tasklet.TaskletContext) error {
+			Runner: func(_ output.Progress) error {
 				functions, err = run.FunctionsFromHandlers(s)
 				if err != nil {
 					return err

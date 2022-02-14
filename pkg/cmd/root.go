@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -53,6 +54,10 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	if output.VerboseLevel > 1 {
+		pterm.EnableDebugMessages()
+	}
+
 	cobra.CheckErr(rootCmd.Execute())
 }
 
@@ -136,7 +141,7 @@ func ensureConfigDefaults() {
 	if needsWrite {
 		tasklet.MustRun(tasklet.Runner{
 			StartMsg: "Updating configfile to include defaults",
-			Runner: func(_ tasklet.TaskletContext) error {
+			Runner: func(_ output.Progress) error {
 				// ensure .config/nitric exists
 				err := os.MkdirAll(utils.NitricConfigDir(), os.ModePerm)
 				if err != nil {

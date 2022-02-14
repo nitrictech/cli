@@ -17,7 +17,6 @@
 package utils
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +39,6 @@ func GlobInDir(dir, pattern string) ([]string, error) {
 	if !strings.HasPrefix(pattern, dir) {
 		pattern = filepath.Join(dir, pattern)
 	}
-	fmt.Println(pattern)
 	files, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err

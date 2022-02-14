@@ -20,6 +20,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/nitrictech/cli/pkg/output"
 )
 
 func TestRun(t *testing.T) {
@@ -30,28 +32,16 @@ func TestRun(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "success no opts",
-			runner: Runner{
-				StartMsg: "start test 22",
-				Runner: func(tc TaskletContext) error {
-					if tc.Spinner().Text != "start test 22" {
-						return errors.New("start text not set")
-					}
-					return nil
-				},
-			},
-		},
-		{
 			name: "fail no opts",
 			runner: Runner{
-				Runner: func(tc TaskletContext) error { return errors.New("bang!") },
+				Runner: func(log output.Progress) error { return errors.New("bang!") },
 			},
 			wantErr: errors.New("bang!"),
 		},
 		{
 			name: "timeout",
 			runner: Runner{
-				Runner: func(tc TaskletContext) error {
+				Runner: func(log output.Progress) error {
 					time.Sleep(time.Minute)
 					return nil
 				},

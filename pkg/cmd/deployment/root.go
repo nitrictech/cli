@@ -40,7 +40,7 @@ The deployment commands generally need 3 things:
 2. a deployment name (either explicitly with -n <deployment name> or use the default name of "dep")
 3. a stack definition, this could be a supplied by any of the following ways:
   - Provide a nitric.yaml configuration file, the path to which is provided either explicitly with "-s <stack dir> or in the current director.
-  -	A Glob to the functions from which the configuration is derived.
+  - A Glob to the functions from which the configuration is derived.
 	`,
 	Example: `nitric deployment apply
 nitric deployment delete

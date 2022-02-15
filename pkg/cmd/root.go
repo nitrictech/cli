@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -136,7 +137,7 @@ func ensureConfigDefaults() {
 		tasklet.MustRun(tasklet.Runner{
 			StartMsg: "Updating configfile to include defaults",
 			Runner: func(_ tasklet.TaskletContext) error {
-				return viper.WriteConfig()
+				return viper.SafeWriteConfigAs(path.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
 			},
 			StopMsg: "Configfile updated"}, tasklet.Opts{})
 	}

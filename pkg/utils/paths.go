@@ -25,6 +25,16 @@ import (
 	"strings"
 )
 
+var isWsl = false
+
+func init() {
+	osrelease, err := os.ReadFile("/proc/sys/kernel/osrelease")
+	if err != nil {
+		isWsl = false
+	}
+	isWsl = strings.Contains(string(osrelease), "WSL2")
+}
+
 // slashSplitter - used to split strings, with the same output regardless of leading or trailing slashes
 // e.g - strings.FieldsFunc("/one/two/three/", f) == strings.FieldsFunc("/one/two/three", f) == strings.FieldsFunc("one/two/three", f) == ["one" "two" "three"]
 func slashSplitter(c rune) bool {
@@ -54,7 +64,7 @@ func homeDir() string {
 
 // NitricRunDir returns the directory to place runtime data.
 func NitricRunDir() string {
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" && !isWsl {
 		u, err := user.Current()
 		if err != nil {
 			log.Fatal(err)

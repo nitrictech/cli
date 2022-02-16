@@ -39,7 +39,7 @@ var runCmd = &cobra.Command{
 	Short: "run a nitric stack",
 	Long: `Run a nitric stack locally for development or testing
 `,
-	Example: `nitric run -s projectX "functions/*.ts"`,
+	Example: `nitric run -s ../projectX "functions/*.ts"`,
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)

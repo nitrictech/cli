@@ -35,7 +35,7 @@ var (
 
 func wrapStatError(err error) error {
 	if os.IsNotExist(err) {
-		return errors.WithMessage(err, "Please provide the correct path to the stack (eg. -s ./nitric.yaml)")
+		return errors.WithMessage(err, "Please provide the correct path to the stack (eg. -s ../projectX)")
 	}
 	if os.IsPermission(err) {
 		return errors.WithMessagef(err, "Please make sure that %s has the correct permissions", stackPath)

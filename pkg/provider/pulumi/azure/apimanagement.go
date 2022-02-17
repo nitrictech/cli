@@ -19,7 +19,7 @@ package azure
 import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/pkg/errors"
-	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20210801"
+	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20201201"
 
 	//"github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -41,23 +41,7 @@ type AzureApiManagement struct {
 	Service *apimanagement.ApiManagementService
 }
 
-const policyTemplate = `
-<policies>
-<inbound>
-	<base />
-	<set-backend-service base-url="https://%s" />
-</inbound>
-<backend>
-	<base />
-</backend>
-<outbound>
-	<base />
-</outbound>
-<on-error>
-	<base />
-</on-error>
-</policies>
-`
+const policyTemplate = `<policies><inbound><base /><set-backend-service base-url="https://%s" /></inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
 
 func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManagementArgs, opts ...pulumi.ResourceOption) (*AzureApiManagement, error) {
 	res := &AzureApiManagement{Name: name}
@@ -90,7 +74,7 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 
 	res.Api, err = apimanagement.NewApi(ctx, resourceName(ctx, name, ApiRT), &apimanagement.ApiArgs{
 		DisplayName:          pulumi.String(displayName),
-		Protocols:            pulumi.StringArray{pulumi.String("https")},
+		Protocols:            apimanagement.ProtocolArray{"https"},
 		ApiId:                pulumi.String(name),
 		Format:               pulumi.String("openapi+json"),
 		Path:                 pulumi.String("/"),
@@ -123,7 +107,7 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 				// this.api.id returns a URL path, which is the incorrect value here.
 				//   We instead need the value passed to apiId in the api creation above.
 				// However, we want to maintain the pulumi dependency, so we need to keep the 'apply' call.
-				apiId := res.Api.ID().ApplyT(func(id interface{}) string {
+				apiId := res.Api.ID().ToStringOutput().ApplyT(func(id string) string {
 					return name
 				}).(pulumi.StringOutput)
 

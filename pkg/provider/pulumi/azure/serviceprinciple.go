@@ -61,7 +61,7 @@ func newSevicePrinciple(ctx *pulumi.Context, name string, args *SevicePrincipleA
 	res.ServicePrincipalId = pulumi.StringOutput(sp.ID())
 
 	spPwd, err := azuread.NewServicePrincipalPassword(ctx, resourceName(ctx, name, ADServicePrincipalPasswordRT), &azuread.ServicePrincipalPasswordArgs{
-		ServicePrincipalId: sp.ID(),
+		ServicePrincipalId: sp.ID().ToStringOutput(),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err

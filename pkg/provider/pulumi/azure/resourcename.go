@@ -79,7 +79,7 @@ var (
 	EventGridRT = ResouceType{Abbreviation: "evgt", MaxLen: 24, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 
 	//Alphanumerics and hyphens.
-	EventSubscriptionRT = ResouceType{Abbreviation: "evt-sub", MaxLen: 64, AllowUpperCase: true, AllowHyphen: true, UseName: true}
+	EventSubscriptionRT = ResouceType{Abbreviation: "evt-sub", MaxLen: 24, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 
 	// Alphanumerics and hyphens, Start with letter and end with alphanumeric.
 	ApiRT = ResouceType{Abbreviation: "api", MaxLen: 80, AllowHyphen: true, AllowUpperCase: true}
@@ -91,12 +91,14 @@ var (
 	ApiOperationPolicyRT = ResouceType{Abbreviation: "api-op-pol", MaxLen: 80, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 )
 
+const autoNameLength = 7
+
 func stringHead(l pulumi.Log, s string, maxLen int) string {
-	if len(s) <= maxLen {
+	if len(s) <= maxLen-autoNameLength {
 		return s
 	}
-	_ = l.Info("shortening name from '"+s+"' to '"+s[:maxLen]+"'", &pulumi.LogArgs{Ephemeral: true})
-	return s[:maxLen]
+	_ = l.Info("shortening name from '"+s+"' to '"+s[:maxLen-autoNameLength]+"'", &pulumi.LogArgs{Ephemeral: true})
+	return s[:maxLen-autoNameLength]
 }
 
 func joinCamelCase(ss []string) string {

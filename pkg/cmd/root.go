@@ -143,7 +143,7 @@ func ensureConfigDefaults() {
 					return err
 				}
 
-				return viper.SafeWriteConfigAs(path.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
+				return viper.WriteConfigAs(path.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
 			},
 			StopMsg: "Configfile updated"}, tasklet.Opts{})
 	}

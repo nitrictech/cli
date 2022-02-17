@@ -49,10 +49,8 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 		if len(app.Subscriptions) == 0 {
 			continue
 		}
-		pulumi.All(app, app.App.LatestRevisionFqdn).ApplyT(func(appArgs []interface{}) error {
-			app := appArgs[0].(*ContainerApp)
-			fqdn := appArgs[1].(string)
 
+		app.App.LatestRevisionFqdn.ApplyT(func(fqdn string) (string, error) {
 			_ = ctx.Log.Info("waiting for "+app.Name+" to start before creating subscriptions", &pulumi.LogArgs{Ephemeral: true})
 
 			// Get the full URL of the deployed container
@@ -74,13 +72,13 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 				}
 				jsonStr, err := dummyEvgt.MarshalJSON()
 				if err != nil {
-					return err
+					return "", err
 				}
 
 				body := bytes.NewBuffer(jsonStr)
 				req, err := http.NewRequestWithContext(hCtx, "POST", hostUrl, body)
 				if err != nil {
-					return err
+					return "", err
 				}
 
 				// TODO: Implement a membrane health check handler in the Membrane and trigger that instead.
@@ -99,25 +97,21 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 			}
 
 			_ = ctx.Log.Info("creating subscriptions for "+app.Name, &pulumi.LogArgs{})
-			for _, sub := range app.Subscriptions {
-				pulumi.All(app.Name, sub.Name).ApplyT(func(applyArgs []interface{}) (*pulumiEventgrid.EventSubscription, error) {
-					appName := applyArgs[0].(string)
-					subName := applyArgs[1].(string)
-					return pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, appName+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
-						Scope: sub.ID(),
-						WebhookEndpoint: pulumiEventgrid.EventSubscriptionWebhookEndpointArgs{
-							Url: pulumi.String(hostUrl),
-							// TODO: Reduce event chattiness here and handle internally in the Azure AppService HTTP Gateway?
-							MaxEventsPerBatch: pulumi.Int(1),
-						},
-						RetryPolicy: pulumiEventgrid.EventSubscriptionRetryPolicyArgs{
-							MaxDeliveryAttempts: pulumi.Int(30),
-							EventTimeToLive:     pulumi.Int(5),
-						},
-					})
+			for subName, sub := range app.Subscriptions {
+				pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, app.Name+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
+					Scope: sub.ID(),
+					WebhookEndpoint: pulumiEventgrid.EventSubscriptionWebhookEndpointArgs{
+						Url: pulumi.String(hostUrl),
+						// TODO: Reduce event chattiness here and handle internally in the Azure AppService HTTP Gateway?
+						MaxEventsPerBatch: pulumi.Int(1),
+					},
+					RetryPolicy: pulumiEventgrid.EventSubscriptionRetryPolicyArgs{
+						MaxDeliveryAttempts: pulumi.Int(30),
+						EventTimeToLive:     pulumi.Int(5),
+					},
 				})
 			}
-			return nil
+			return fqdn, nil
 		})
 	}
 

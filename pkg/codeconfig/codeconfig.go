@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	osruntime "runtime"
 	"strings"
 	"sync"
@@ -117,6 +118,8 @@ type apiHandler struct {
 	target string
 }
 
+var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
+
 // apiSpec produces an open api v3 spec for the requests API name
 func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	doc := &openapi3.T{
@@ -198,7 +201,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 			}
 
 			doc.AddOperation(normalizedPath, m, &openapi3.Operation{
-				OperationID: normalizedPath + m,
+				OperationID: strings.ToLower(alphanumeric.ReplaceAllString(normalizedPath+m, "")),
 				Responses:   openapi3.NewResponses(),
 				ExtensionProps: openapi3.ExtensionProps{
 					Extensions: map[string]interface{}{

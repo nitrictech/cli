@@ -61,27 +61,41 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		return nil, err
 	}
 
-	env := web.EnvironmentVarArray{
-		web.EnvironmentVarArgs{
+	env := web.EnvironmentVarArray{}
+
+	if args.StorageAccountBlobEndpoint != nil {
+		env = append(env, web.EnvironmentVarArgs{
 			Name:  pulumi.String("AZURE_STORAGE_ACCOUNT_BLOB_ENDPOINT"),
 			Value: args.StorageAccountBlobEndpoint,
-		},
-		web.EnvironmentVarArgs{
+		})
+	}
+
+	if args.StorageAccountQueueEndpoint != nil {
+		env = append(env, web.EnvironmentVarArgs{
 			Name:  pulumi.String("AZURE_STORAGE_ACCOUNT_QUEUE_ENDPOINT"),
 			Value: args.StorageAccountQueueEndpoint,
-		},
-		web.EnvironmentVarArgs{
+		})
+	}
+
+	if args.MongoDatabaseConnectionString != nil {
+		env = append(env, web.EnvironmentVarArgs{
 			Name:  pulumi.String("MONGODB_CONNECTION_STRING"),
 			Value: args.MongoDatabaseConnectionString,
-		},
-		web.EnvironmentVarArgs{
+		})
+	}
+
+	if args.MongoDatabaseName != nil {
+		env = append(env, web.EnvironmentVarArgs{
 			Name:  pulumi.String("MONGODB_DATABASE"),
 			Value: args.MongoDatabaseName,
-		},
-		web.EnvironmentVarArgs{
+		})
+	}
+
+	if args.KVaultName != nil {
+		env = append(env, web.EnvironmentVarArgs{
 			Name:  pulumi.String("KVAULT_NAME"),
 			Value: args.KVaultName,
-		},
+		})
 	}
 
 	res.Registry, err = containerservice.NewRegistry(ctx, resourceName(ctx, name, RegistryRT), &containerservice.RegistryArgs{
@@ -185,7 +199,7 @@ type ContainerApp struct {
 	Name          string
 	Sp            *SevicePrinciple
 	App           *web.ContainerApp
-	Subscriptions []*eventgrid.Topic
+	Subscriptions map[string]*eventgrid.Topic
 }
 
 // Built in role definitions for Azure
@@ -201,7 +215,7 @@ var RoleDefinitions = map[string]string{
 func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *ContainerAppArgs, opts ...pulumi.ResourceOption) (*ContainerApp, error) {
 	res := &ContainerApp{
 		Name:          name,
-		Subscriptions: []*eventgrid.Topic{},
+		Subscriptions: map[string]*eventgrid.Topic{},
 	}
 	err := ctx.RegisterComponentResource("nitric:func:ContainerApp", name, res, opts...)
 	if err != nil {
@@ -306,7 +320,7 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 	for _, t := range args.Compute.Unit().Triggers.Topics {
 		topic, ok := args.Topics[t]
 		if ok {
-			res.Subscriptions = append(res.Subscriptions, topic)
+			res.Subscriptions[t] = topic
 		}
 	}
 

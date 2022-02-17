@@ -59,7 +59,7 @@ func Test_resourceName(t *testing.T) {
 			project:    "looooooooooooooooooooong",
 			stackName:  "looooooooooooooooooooong-dep",
 			rt:         StorageAccountRT,
-			want:       "looooooooodepst",
+			want:       "loooooodepst",
 		},
 		{
 			name:       "long deployment name",
@@ -67,7 +67,7 @@ func Test_resourceName(t *testing.T) {
 			project:    "stack",
 			stackName:  "stack-deploooooooooooooooooy",
 			rt:         StorageAccountRT,
-			want:       "stackdeploooooost",
+			want:       "stackdeplooost",
 		},
 		{
 			name:       "camelCase name",
@@ -75,7 +75,7 @@ func Test_resourceName(t *testing.T) {
 			project:    "stack",
 			stackName:  "stack-deploy",
 			rt:         KeyVaultRT,
-			want:       "stackDeployKv",
+			want:       "stDeKv",
 		},
 		{
 			name:       "camelCase name with hyphen",
@@ -83,7 +83,7 @@ func Test_resourceName(t *testing.T) {
 			project:    "stack",
 			stackName:  "stack--deploy",
 			rt:         KeyVaultRT,
-			want:       "stackDeployKv",
+			want:       "stDeKv",
 		},
 		{
 			name:       "long stack and deployment name",
@@ -91,7 +91,7 @@ func Test_resourceName(t *testing.T) {
 			project:    "staaaaaaaaaaaaaaack",
 			stackName:  "staaaaaaaaaaaaaaack-deploooooooooooooooooy",
 			rt:         StorageAccountRT,
-			want:       "staaaaaaaadeploooooost",
+			want:       "staaaaadeplooost",
 		},
 		{
 			name:       "containerApp non alphanumeric",
@@ -123,7 +123,7 @@ func Test_resourceName(t *testing.T) {
 			project:    "stack123456789",
 			stackName:  "stack123456789-deploy123456789",
 			rt:         StorageAccountRT,
-			want:       "stack12345deploy1234st",
+			want:       "stack12deploy1st",
 		},
 		{
 			name:       "overall too long",
@@ -131,7 +131,7 @@ func Test_resourceName(t *testing.T) {
 			project:    "stack123456789",
 			stackName:  "stack123456789-deploy123456789",
 			rt:         EventGridRT,
-			want:       "wow-this-is-long-is-evgt",
+			want:       "wow-this-is-evgt",
 		},
 		{
 			name:       "first char not a letter",

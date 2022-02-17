@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	maxLenProject    = 10
-	maxLenDeployment = 10
+	autoNameLength = 7
 )
 
 type ResouceType struct {
@@ -91,14 +90,12 @@ var (
 	ApiOperationPolicyRT = ResouceType{Abbreviation: "api-op-pol", MaxLen: 80, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 )
 
-const autoNameLength = 7
-
 func stringHead(l pulumi.Log, s string, maxLen int) string {
-	if len(s) <= maxLen-autoNameLength {
+	if len(s) <= maxLen {
 		return s
 	}
-	_ = l.Info("shortening name from '"+s+"' to '"+s[:maxLen-autoNameLength]+"'", &pulumi.LogArgs{Ephemeral: true})
-	return s[:maxLen-autoNameLength]
+	_ = l.Info("shortening name from '"+s+"' to '"+s[:maxLen]+"'", &pulumi.LogArgs{Ephemeral: true})
+	return s[:maxLen]
 }
 
 func joinCamelCase(ss []string) string {
@@ -111,32 +108,39 @@ func joinCamelCase(ss []string) string {
 	return res
 }
 
+func cleanPart(p string, rt ResouceType) string {
+	r := alphanumeric.ReplaceAllString(p, "")
+	if !rt.AllowHyphen {
+		r = strings.ReplaceAll(r, "-", "")
+	}
+	return r
+}
+
 func resourceName(ctx *pulumi.Context, name string, rt ResouceType) string {
 	var parts []string
 
+	maxLen := rt.MaxLen - autoNameLength
+	abbrLen := len(rt.Abbreviation)
+	if rt.AllowHyphen {
+		abbrLen += 1
+	}
 	if rt.UseName {
 		parts = []string{
-			stringHead(ctx.Log, name, rt.MaxLen-len(rt.Abbreviation)-1),
+			stringHead(ctx.Log, cleanPart(name, rt), maxLen-abbrLen),
 			rt.Abbreviation,
 		}
 	} else {
 		deployName := strings.TrimPrefix(ctx.Stack(), ctx.Project()+"-")
+		partLen := (maxLen - abbrLen) / 2
 		parts = []string{
-			stringHead(ctx.Log, ctx.Project(), maxLenProject),
-			stringHead(ctx.Log, deployName, maxLenDeployment),
+			stringHead(ctx.Log, cleanPart(ctx.Project(), rt), partLen),
+			stringHead(ctx.Log, cleanPart(deployName, rt), partLen),
 			rt.Abbreviation,
 		}
 	}
 
 	// first char must be a letter
 	parts[0] = strings.TrimLeft(parts[0], "0123456789-")
-
-	for px, p := range parts {
-		parts[px] = alphanumeric.ReplaceAllString(p, "")
-		if !rt.AllowHyphen {
-			parts[px] = strings.ReplaceAll(parts[px], "-", "")
-		}
-	}
 
 	var s string
 
@@ -157,5 +161,5 @@ func resourceName(ctx *pulumi.Context, name string, rt ResouceType) string {
 		s = strings.ToLower(s)
 	}
 
-	return stringHead(ctx.Log, s, rt.MaxLen)
+	return stringHead(ctx.Log, s, maxLen)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
 )
 
@@ -69,7 +70,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 
 	res.Role, err = iam.NewRole(ctx, name+"LambdaRole", &iam.RoleArgs{
 		AssumeRolePolicy: pulumi.String(tmpJSON),
-		Tags:             commonTags(ctx, name+"LambdaRole"),
+		Tags:             common.Tags(ctx, name+"LambdaRole"),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
@@ -164,7 +165,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		Timeout:     pulumi.IntPtr(15),
 		PackageType: pulumi.String("Image"),
 		Role:        res.Role.Arn,
-		Tags:        commonTags(ctx, name),
+		Tags:        common.Tags(ctx, name),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err

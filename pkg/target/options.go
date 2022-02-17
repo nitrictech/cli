@@ -17,7 +17,11 @@
 package target
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -34,31 +38,81 @@ const (
 )
 
 var (
-	target    string
-	provider  string
-	region    string
-	Providers = []string{Aws, Azure, Gcp, Digitalocean}
+	target      string
+	provider    string
+	region      string
+	extraConfig []string
+	Providers   = []string{Aws, Azure, Gcp, Digitalocean}
 )
+
+func toStringMapStringMapStringE(i interface{}) (map[string]map[string]interface{}, error) {
+	switch v := i.(type) {
+	case map[string]map[string]interface{}:
+		return v, nil
+	case map[string]interface{}:
+		var err error
+		m := make(map[string]map[string]interface{})
+
+		for k, val := range v {
+			m[k], err = cast.ToStringMapE(val)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return m, nil
+	default:
+		return nil, fmt.Errorf("unable to cast %#v of type %T to map[string]map[string]interface{}", i, i)
+	}
+}
 
 func FromOptions() (*Target, error) {
 	t := Target{}
+
 	if target == "" {
 		target = DefaultTarget
 		t.Provider = DefaultProvider
-		if provider != "" {
-			t.Provider = provider
-		}
-		if region != "" {
-			t.Region = region
-		}
-	} else {
-		targets := map[string]Target{}
-		err := mapstructure.Decode(viper.GetStringMap("targets"), &targets)
+	}
+	targets, err := toStringMapStringMapStringE(viper.Get("targets"))
+	if err != nil {
+		return nil, err
+	}
+	tMap := targets[target]
+	if tMap != nil {
+		err := mapstructure.Decode(tMap, &t)
 		if err != nil {
 			return nil, err
 		}
-		t = targets[target]
+
+		if len(tMap) > 3 {
+			// Decode the "extra" map for provider specific values
+			delete(tMap, "provider")
+			delete(tMap, "region")
+			delete(tMap, "name")
+			err := mapstructure.Decode(tMap, &t.Extra)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
+
+	if provider != "" {
+		t.Provider = provider
+	}
+
+	if region != "" {
+		t.Region = region
+	}
+
+	if len(extraConfig) > 0 && t.Extra == nil {
+		t.Extra = map[string]interface{}{}
+	}
+	for _, c := range extraConfig {
+		sc := strings.Split(c, "=")
+		if len(sc) == 2 {
+			t.Extra[sc[0]] = sc[1]
+		}
+	}
+
 	return &t, nil
 }
 
@@ -77,7 +131,7 @@ func AddOptions(cmd *cobra.Command, providerOnly bool) error {
 		return err
 	}
 
-	cmd.Flags().VarP(pflagext.NewStringEnumVar(&provider, Providers, Aws), "provider", "p", "the provider to deploy to")
+	cmd.Flags().VarP(pflagext.NewStringEnumVar(&provider, Providers, ""), "provider", "p", "the provider to deploy to")
 	err = cmd.RegisterFlagCompletionFunc("provider", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return Providers, cobra.ShellCompDirectiveDefault
 	})
@@ -87,6 +141,7 @@ func AddOptions(cmd *cobra.Command, providerOnly bool) error {
 
 	if !providerOnly {
 		cmd.Flags().StringVarP(&region, "region", "r", "", "the region to deploy to")
+		cmd.Flags().StringSliceVarP(&extraConfig, "extra", "e", nil, "provider specific extra config")
 	}
 	return nil
 }

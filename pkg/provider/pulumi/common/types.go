@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package common
 
 import (
 	"context"
@@ -23,10 +23,27 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
+type Plugin struct {
+	Name    string
+	Version string
+}
+
+func (p *Plugin) String() string {
+	return p.Name + " " + p.Version
+}
+
 type PulumiProvider interface {
-	PluginVersion() string
-	PluginName() string
+	Validate() error
+	Plugins() []Plugin
 	Configure(context.Context, *auto.Stack) error
 	Deploy(*pulumi.Context) error
 	CleanUp()
+}
+
+func Tags(ctx *pulumi.Context, name string) pulumi.StringMap {
+	return pulumi.StringMap{
+		"x-nitric-project": pulumi.String(ctx.Project()),
+		"x-nitric-stack":   pulumi.String(ctx.Stack()),
+		"x-nitric-name":    pulumi.String(name),
+	}
 }

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	osruntime "runtime"
 	"strings"
 	"sync"
@@ -117,6 +118,8 @@ type apiHandler struct {
 	target string
 }
 
+var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
+
 // apiSpec produces an open api v3 spec for the requests API name
 func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	doc := &openapi3.T{
@@ -198,7 +201,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 			}
 
 			doc.AddOperation(normalizedPath, m, &openapi3.Operation{
-				OperationID: normalizedPath + m,
+				OperationID: strings.ToLower(alphanumeric.ReplaceAllString(normalizedPath+m, "")),
 				Responses:   openapi3.NewResponses(),
 				ExtensionProps: openapi3.ExtensionProps{
 					Extensions: map[string]interface{}{
@@ -268,7 +271,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
-	cID, err := ce.ContainerCreate(&container.Config{
+	cc := &container.Config{
 		AttachStdout: true,
 		AttachStderr: true,
 		Image:        opts.Image,
@@ -281,7 +284,9 @@ func (c *codeConfig) collectOne(handler string) error {
 		Cmd:        opts.Cmd,
 		Entrypoint: opts.Entrypoint,
 		WorkingDir: opts.TargetWD,
-	}, hostConfig, nil, rt.ContainerName())
+	}
+
+	cID, err := ce.ContainerCreate(cc, hostConfig, nil, rt.ContainerName())
 	if err != nil {
 		return err
 	}
@@ -292,6 +297,8 @@ func (c *codeConfig) collectOne(handler string) error {
 	}
 
 	if output.VerboseLevel > 1 {
+		fmt.Println(containerengine.Cli(cc, hostConfig))
+
 		logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
 			ShowStdout: true,
 			ShowStderr: true,
@@ -305,7 +312,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		}()
 	}
 
-	errs := utils.NewErrorList()
+	errs := utils.NewErrorList().WithSubject(handler)
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
 	select {
 	case done := <-waitChan:
@@ -314,7 +321,7 @@ func (c *codeConfig) collectOne(handler string) error {
 			msg = done.Error.Message
 		}
 		if msg != "" || done.StatusCode != 0 {
-			errs.Add(fmt.Errorf("error executing container (code %d) %s", done.StatusCode, msg))
+			errs.Add(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
 		}
 	case cErr := <-cErrChan:
 		errs.Add(cErr)

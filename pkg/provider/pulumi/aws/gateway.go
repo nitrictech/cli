@@ -23,6 +23,8 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/apigatewayv2"
 	awslambda "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/lambda"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 )
 
 type ApiGatewayArgs struct {
@@ -100,7 +102,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	res.Api, err = apigatewayv2.NewApi(ctx, name, &apigatewayv2.ApiArgs{
 		Body:         doc,
 		ProtocolType: pulumi.String("HTTP"),
-		Tags:         commonTags(ctx, name),
+		Tags:         common.Tags(ctx, name),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
@@ -110,7 +112,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		AutoDeploy: pulumi.BoolPtr(true),
 		Name:       pulumi.String("$default"),
 		ApiId:      res.Api.ID(),
-		Tags:       commonTags(ctx, name+"DefaultStage"),
+		Tags:       common.Tags(ctx, name+"DefaultStage"),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err

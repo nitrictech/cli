@@ -81,12 +81,22 @@ func printTable(object interface{}) {
 	}
 }
 
-func nameFromField(f reflect.StructField) string {
-	if f.Tag != "" && f.Tag.Get("yaml") != "" {
-		return strings.Split(f.Tag.Get("yaml"), ",")[0]
+func tags(f reflect.StructField) []string {
+	if f.Tag != "" {
+		for _, tName := range []string{"yaml", "json"} {
+			if f.Tag.Get(tName) != "" {
+				return strings.Split(f.Tag.Get(tName), ",")
+			}
+		}
 	}
-	if f.Tag != "" && f.Tag.Get("json") != "" {
-		return strings.Split(f.Tag.Get("json"), ",")[0]
+
+	return nil
+}
+
+func nameFromField(f reflect.StructField) string {
+	t := tags(f)
+	if len(t) > 0 {
+		return t[0]
 	}
 	return ""
 }
@@ -136,7 +146,9 @@ func printList(object interface{}, out io.Writer) {
 		case reflect.Struct:
 			row := table.Row{}
 			for fi := 0; fi < v.Index(i).NumField(); fi++ {
-				row = append(row, v.Index(i).Field(fi))
+				if len(row) < len(names) {
+					row = append(row, v.Index(i).Field(fi))
+				}
 			}
 			rows = append(rows, row)
 		case reflect.Slice, reflect.Array, reflect.Func, reflect.Chan, reflect.Interface, reflect.Map:
@@ -183,7 +195,9 @@ func printMap(object interface{}, out io.Writer) {
 		case reflect.Struct:
 			row := table.Row{k}
 			for fi := 0; fi < v.NumField(); fi++ {
-				row = append(row, v.Field(fi))
+				if len(row) <= len(names) {
+					row = append(row, v.Field(fi))
+				}
 			}
 			rows = append(rows, row)
 		case reflect.Slice, reflect.Array, reflect.Func, reflect.Chan, reflect.Interface, reflect.Map:
@@ -212,7 +226,10 @@ func printStruct(object interface{}, out io.Writer) {
 	v := reflect.ValueOf(object)
 	t := reflect.TypeOf(object)
 	for fi := 0; fi < v.NumField(); fi++ {
-		rows = append(rows, table.Row{strings.ToUpper(nameFromField(t.Field(fi))), v.Field(fi)})
+		name := nameFromField(t.Field(fi))
+		if name != "" {
+			rows = append(rows, table.Row{strings.ToUpper(name), v.Field(fi)})
+		}
 	}
 
 	tab.AppendRows(rows)

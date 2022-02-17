@@ -17,6 +17,7 @@
 package target
 
 type Target struct {
-	Provider string `json:"provider,omitempty"`
-	Region   string `json:"region,omitempty"`
+	Provider string                 `json:"provider,omitempty"`
+	Region   string                 `json:"region,omitempty"`
+	Extra    map[string]interface{} `json:",inline,omitempty"`
 }

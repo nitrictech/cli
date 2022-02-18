@@ -300,12 +300,12 @@ func FromFile(name string) (*Stack, error) {
 	return stack, nil
 }
 
-func (s *Stack) ToFile(name string) error {
+func (s *Stack) ToFile(file string) error {
 	b, err := yaml.Marshal(s)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(path.Join(s.Dir, name), b, 0644)
+	err = ioutil.WriteFile(file, b, 0644)
 	if err != nil {
 		return err
 	}

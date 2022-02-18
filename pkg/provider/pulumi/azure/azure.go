@@ -74,19 +74,23 @@ func (a *azureProvider) SupportedRegions() []string {
 func (a *azureProvider) Validate() error {
 	errList := utils.NewErrorList()
 
-	if !sliceutil.Contains(a.SupportedRegions(), a.t.Region) {
+	if a.t.Region == "" {
+		errList.Add(fmt.Errorf("target %s requires \"region\"", a.t.Provider))
+	} else if !sliceutil.Contains(a.SupportedRegions(), a.t.Region) {
 		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.t.Region, a.t.Provider)))
 	}
 
 	if _, ok := a.t.Extra["org"]; !ok {
 		errList.Add(fmt.Errorf("target %s requires \"org\"", a.t.Provider))
+	} else {
+		a.org = a.t.Extra["org"].(string)
 	}
-	a.org = a.t.Extra["org"].(string)
 
 	if _, ok := a.t.Extra["adminemail"]; !ok {
 		errList.Add(fmt.Errorf("target %s requires \"adminemail\"", a.t.Provider))
+	} else {
+		a.adminEmail = a.t.Extra["adminemail"].(string)
 	}
-	a.adminEmail = a.t.Extra["adminemail"].(string)
 
 	return errList.Aggregate()
 }

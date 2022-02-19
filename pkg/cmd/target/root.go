@@ -17,9 +17,7 @@
 package target
 
 import (
-	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/target"
@@ -38,8 +36,8 @@ var targetListCmd = &cobra.Command{
 	Short: "List configured targets",
 	Long:  `Lists configured taregts.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		targets := map[string]target.Target{}
-		cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("targets"), &targets))
+		targets, err := target.AllFromConfig()
+		cobra.CheckErr(err)
 		output.Print(targets)
 	},
 	Args: cobra.MaximumNArgs(0),

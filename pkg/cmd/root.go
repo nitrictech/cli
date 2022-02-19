@@ -33,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/tasklet"
 	"github.com/nitrictech/cli/pkg/utils"
 )
@@ -68,9 +69,12 @@ An example of the format is:
     new: stack create
 
   targets:
-    test-app:
+    aws:
       region: eastus
       provider: aws
+	azure:
+	  region: eastus
+	  provider: azure
   `,
 }
 
@@ -133,6 +137,10 @@ func ensureConfigDefaults() {
 		viper.Set("build_timeout", 5*time.Minute)
 	}
 
+	if target.EnsureDefaultConfig() {
+		needsWrite = true
+	}
+
 	if needsWrite {
 		tasklet.MustRun(tasklet.Runner{
 			StartMsg: "Updating configfile to include defaults",
@@ -143,7 +151,7 @@ func ensureConfigDefaults() {
 					return err
 				}
 
-				return viper.SafeWriteConfigAs(path.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
+				return viper.WriteConfigAs(path.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
 			},
 			StopMsg: "Configfile updated"}, tasklet.Opts{})
 	}

@@ -57,10 +57,6 @@ type LaunchOpts struct {
 	Mounts     []mount.Mount
 }
 
-func (o *LaunchOpts) String() string {
-	return fmt.Sprintf("docker run -v <stackDir>:%s -w %s %s %v %v", o.TargetWD, o.TargetWD, o.Image, strings.Join(o.Entrypoint, " "), strings.Join(o.Cmd, " "))
-}
-
 func NewRunTimeFromHandler(handler string) (Runtime, error) {
 	rt := RuntimeExt(strings.Replace(filepath.Ext(handler), ".", "", -1))
 

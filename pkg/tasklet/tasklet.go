@@ -19,15 +19,19 @@ package tasklet
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"time"
 
 	"github.com/pterm/pterm"
+
+	"github.com/nitrictech/cli/pkg/output"
 )
 
 var defaultSequence = []string{"⠟", "⠯", "⠷", "⠾", "⠽", "⠻"}
 
-type TaskletFn func(TaskletContext) error
+type TaskletFn func(output.Progress) error
 
 type Runner struct {
 	Runner   TaskletFn
@@ -36,20 +40,32 @@ type Runner struct {
 }
 
 type Opts struct {
-	Signal  chan os.Signal
-	Timeout time.Duration
-}
-
-type TaskletContext interface {
-	Spinner() *pterm.SpinnerPrinter
+	Signal        chan os.Signal
+	Timeout       time.Duration
+	LogToPterm    bool
+	SuccessPrefix string
 }
 
 type taskletContext struct {
 	spinner *pterm.SpinnerPrinter
 }
 
-func (c *taskletContext) Spinner() *pterm.SpinnerPrinter {
-	return c.spinner
+var _ output.Progress = &taskletContext{}
+
+func (c *taskletContext) Debugf(format string, a ...interface{}) {
+	pterm.Debug.Printf(format, a...)
+}
+
+func (c *taskletContext) Busyf(format string, a ...interface{}) {
+	c.spinner.UpdateText(fmt.Sprintf(format, a...))
+}
+
+func (c *taskletContext) Successf(format string, a ...interface{}) {
+	c.spinner.SuccessPrinter.Printf(format, a...)
+}
+
+func (c *taskletContext) Failf(format string, a ...interface{}) {
+	pterm.Error.Printf(format, a...)
 }
 
 func MustRun(runner Runner, opts Opts) {
@@ -59,9 +75,33 @@ func MustRun(runner Runner, opts Opts) {
 }
 
 func Run(runner Runner, opts Opts) error {
-	spinner, err := pterm.DefaultSpinner.WithSequence(defaultSequence...).Start(runner.StartMsg)
+	spinner, err := pterm.DefaultSpinner.WithShowTimer().WithSequence(defaultSequence...).Start(runner.StartMsg)
 	if err != nil {
 		return err
+	}
+	defer func() {
+		_ = spinner.Stop()
+	}()
+
+	if opts.SuccessPrefix != "" {
+		spinner.SuccessPrinter = &pterm.PrefixPrinter{
+			MessageStyle: &pterm.ThemeDefault.SuccessMessageStyle,
+			Prefix: pterm.Prefix{
+				Style: &pterm.ThemeDefault.SuccessPrefixStyle,
+				Text:  opts.SuccessPrefix,
+			},
+		}
+	}
+
+	tCtx := &taskletContext{spinner: spinner}
+	if opts.LogToPterm {
+		piper, pipew := io.Pipe()
+		log.SetOutput(pipew)
+		defer func() {
+			pipew.Close()
+			log.SetOutput(os.Stdout)
+		}()
+		go output.StdoutToPtermDebug(piper, tCtx, runner.StartMsg)
 	}
 
 	start := time.Now()
@@ -74,7 +114,7 @@ func Run(runner Runner, opts Opts) error {
 	timer := time.NewTimer(opts.Timeout)
 
 	go func() {
-		err = runner.Runner(&taskletContext{spinner: spinner})
+		err = runner.Runner(tCtx)
 		if err != nil {
 			doErr <- err
 		}
@@ -99,6 +139,7 @@ func Run(runner Runner, opts Opts) error {
 		return err
 	}
 
-	spinner.Success(runner.StopMsg)
+	spinner.SuccessPrinter.Printf("%s (%s)", runner.StopMsg, elapsed.Round(time.Second).String())
+
 	return nil
 }

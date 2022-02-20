@@ -18,8 +18,8 @@ package codeconfig
 
 import (
 	"fmt"
+	"log"
 	"net"
-	"os"
 	"regexp"
 	osruntime "runtime"
 	"strings"
@@ -31,6 +31,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/moby/moby/pkg/stdcopy"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 
 	"github.com/nitrictech/cli/pkg/build"
@@ -296,9 +297,8 @@ func (c *codeConfig) collectOne(handler string) error {
 		return err
 	}
 
+	pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
 	if output.VerboseLevel > 1 {
-		fmt.Println(containerengine.Cli(cc, hostConfig))
-
 		logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
 			ShowStdout: true,
 			ShowStderr: true,
@@ -308,7 +308,7 @@ func (c *codeConfig) collectOne(handler string) error {
 			return err
 		}
 		go func() {
-			_, _ = stdcopy.StdCopy(os.Stdout, os.Stderr, logreader)
+			_, _ = stdcopy.StdCopy(log.Writer(), log.Writer(), logreader)
 		}()
 	}
 

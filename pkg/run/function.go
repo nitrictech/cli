@@ -17,14 +17,13 @@ package run
 
 import (
 	"fmt"
-	"log"
 	goruntime "runtime"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
-	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/stack"
 )
@@ -73,9 +72,7 @@ func (f *Function) Start() error {
 		WorkingDir: launchOpts.TargetWD,
 	}
 
-	if output.VerboseLevel > 1 {
-		log.Default().Print(containerengine.Cli(cc, hc))
-	}
+	pterm.Debug.Print(containerengine.Cli(cc, hc))
 
 	cID, err := f.ce.ContainerCreate(cc, hc, nil, f.Name())
 	if err != nil {

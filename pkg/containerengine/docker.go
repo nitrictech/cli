@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -38,6 +37,7 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/utils"
 )
@@ -187,7 +187,7 @@ func print(rd io.Reader) error {
 			return err
 		}
 		if len(line.Stream) > 0 {
-			log.Default().Print(line.Stream)
+			pterm.Debug.Print(line.Stream)
 		}
 	}
 

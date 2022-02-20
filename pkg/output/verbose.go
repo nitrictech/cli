@@ -16,4 +16,29 @@
 
 package output
 
-var VerboseLevel int
+import (
+	"io"
+)
+
+var (
+	VerboseLevel int
+)
+
+type Progress interface {
+	Debugf(format string, a ...interface{})
+	Busyf(format string, a ...interface{})
+	Successf(format string, a ...interface{})
+	Failf(format string, a ...interface{})
+}
+
+func StdoutToPtermDebug(b io.ReadCloser, p Progress, prefix string) {
+	defer b.Close()
+	buf := make([]byte, 1024)
+	for {
+		n, err := b.Read(buf)
+		if err != nil {
+			break
+		}
+		p.Debugf("%s %v", prefix, string(buf[:n]))
+	}
+}

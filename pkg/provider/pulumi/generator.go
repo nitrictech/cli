@@ -21,8 +21,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
-	"github.com/pulumi/pulumi/sdk/v3/go/auto/debug"
-	"github.com/pulumi/pulumi/sdk/v3/go/auto/optup"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
 
@@ -100,18 +98,13 @@ func (p *pulumiDeployment) load(name string) (*auto.Stack, error) {
 	return &s, errors.WithMessage(err, "Refresh")
 }
 
-func (p *pulumiDeployment) Apply(name string) error {
+func (p *pulumiDeployment) Apply(log output.Progress, name string) error {
 	s, err := p.load(name)
 	if err != nil {
 		return errors.WithMessage(err, "loading pulumi stack")
 	}
 
-	var loglevel uint = uint(output.VerboseLevel)
-	dbg := optup.DebugLogging(debug.LoggingOptions{
-		LogLevel:    &loglevel,
-		LogToStdErr: true})
-
-	res, err := s.Up(context.Background(), dbg)
+	res, err := s.Up(context.Background(), updateLoggingOpts(log)...)
 	defer p.p.CleanUp()
 	if err != nil {
 		return errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
@@ -136,12 +129,13 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 	return ws.ListStacks(context.Background())
 }
 
-func (a *pulumiDeployment) Delete(name string) error {
+func (a *pulumiDeployment) Delete(log output.Progress, name string) error {
 	s, err := a.load(name)
 	if err != nil {
 		return err
 	}
-	res, err := s.Destroy(context.Background())
+
+	res, err := s.Destroy(context.Background(), destroyLoggingOpts(log)...)
 	if err != nil {
 		return errors.WithMessage(err, res.Summary.Message)
 	}

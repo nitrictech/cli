@@ -17,7 +17,6 @@ package run
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,9 +27,9 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
-	"github.com/nitrictech/cli/pkg/output"
 )
 
 type MinioServer struct {
@@ -123,9 +122,7 @@ func (m *MinioServer) Start() error {
 	m.cid = cID
 	m.apiPort = minioPort
 
-	if output.VerboseLevel > 1 {
-		log.Default().Print(containerengine.Cli(cc, hc))
-	}
+	pterm.Debug.Print(containerengine.Cli(cc, hc))
 
 	return m.ce.Start(cID)
 }

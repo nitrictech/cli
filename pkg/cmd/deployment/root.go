@@ -66,33 +66,44 @@ nitric deployment apply -n prod-aws -s ../project/ -t prod "functions/*.ts"
 
 		s, err := stack.FromOptions()
 		if err != nil && len(args) > 0 {
-			s, err = stack.FromGlobArgs(args)
-			cobra.CheckErr(err)
+			codeAsConfig := tasklet.Runner{
+				StartMsg: "Gathering configuration from code..",
+				Runner: func(_ output.Progress) error {
+					s, err = stack.FromGlobArgs(args)
+					if err != nil {
+						return err
+					}
 
-			s, err = codeconfig.Populate(s)
+					s, err = codeconfig.Populate(s)
+					return err
+				},
+				StopMsg: "Configuration gathered",
+			}
+			tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
 		}
-		cobra.CheckErr(err)
 
 		p, err := provider.NewProvider(s, t)
 		cobra.CheckErr(err)
 
 		buildImages := tasklet.Runner{
 			StartMsg: "Building Images",
-			Runner: func(tCtx tasklet.TaskletContext) error {
+			Runner: func(_ output.Progress) error {
 				return build.Create(s, t)
 			},
-			StopMsg: "Images built!",
+			StopMsg: "Images built",
 		}
-		tasklet.MustRun(buildImages, tasklet.Opts{})
+		tasklet.MustRun(buildImages, tasklet.Opts{
+			LogToPterm: true,
+		})
 
 		deploy := tasklet.Runner{
 			StartMsg: "Deploying..",
-			Runner: func(tCtx tasklet.TaskletContext) error {
-				return p.Apply(deploymentName)
+			Runner: func(progress output.Progress) error {
+				return p.Apply(progress, deploymentName)
 			},
-			StopMsg: "Deployment complete!",
+			StopMsg: "Stack",
 		}
-		tasklet.MustRun(deploy, tasklet.Opts{})
+		tasklet.MustRun(deploy, tasklet.Opts{SuccessPrefix: "Deployed"})
 	},
 	Args: cobra.MinimumNArgs(0),
 }
@@ -117,13 +128,15 @@ nitric deployment delete -n prod-aws -s ../project/ -t prod
 
 		deploy := tasklet.Runner{
 			StartMsg: "Deleting..",
-			Runner: func(tCtx tasklet.TaskletContext) error {
-				return p.Delete(deploymentName)
+			Runner: func(progress output.Progress) error {
+				return p.Delete(progress, deploymentName)
 			},
-			StopMsg: "Deployment deleted!",
+			StopMsg: "Deployment",
 		}
-		tasklet.MustRun(deploy, tasklet.Opts{})
-
+		tasklet.MustRun(deploy, tasklet.Opts{
+			LogToPterm:    true,
+			SuccessPrefix: "Deleted",
+		})
 	},
 	Args: cobra.ExactArgs(0),
 }

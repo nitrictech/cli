@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/imdario/mergo"
 	"github.com/spf13/viper"
 )
 
@@ -41,7 +42,7 @@ func TestFromOptions(t *testing.T) {
 					"region":   "westus",
 				},
 			},
-			want: &Target{Provider: Aws, Region: ""},
+			want: &Target{Provider: Aws, Region: "us-east-1"},
 		},
 		{
 			name:   "from config",
@@ -105,6 +106,12 @@ func TestFromOptions(t *testing.T) {
 			provider = tt.provider
 			region = tt.region
 			extraConfig = tt.extraConfig
+			EnsureDefaultConfig()
+			err := mergo.Map(&tt.config, viper.Get("targets"))
+			if err != nil {
+				t.Errorf("mergo.Map() error = %v", err)
+				return
+			}
 			viper.Set("targets", tt.config)
 			got, err := FromOptions()
 			if err != nil {

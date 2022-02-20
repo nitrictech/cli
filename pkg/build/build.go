@@ -29,6 +29,11 @@ import (
 	"github.com/nitrictech/cli/pkg/target"
 )
 
+func dynamicDockerfile(dir, name string) (*os.File, error) {
+	// create a more stable file name for the hashing
+	return os.CreateTemp(dir, "nitric.dynamic.Dockerfile.*")
+}
+
 func Create(s *stack.Stack, t *target.Target) error {
 	cr, err := containerengine.Discover()
 	if err != nil {
@@ -44,7 +49,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 			}
 		}
 
-		fh, err := os.CreateTemp(s.Dir, "Dockerfile.*")
+		fh, err := dynamicDockerfile(s.Dir, f.Name)
 		if err != nil {
 			return err
 		}
@@ -95,7 +100,7 @@ func CreateBaseDev(s *stack.Stack) error {
 			continue
 		}
 
-		f, err := os.CreateTemp(s.Dir, fmt.Sprintf("%s.*.dockerfile", lang))
+		f, err := dynamicDockerfile(s.Dir, f.Name)
 		if err != nil {
 			return err
 		}

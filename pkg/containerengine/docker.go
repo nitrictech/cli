@@ -19,6 +19,8 @@ package containerengine
 import (
 	"bufio"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -93,23 +95,64 @@ func tarContextDir(relDockerfile, contextDir string, extraExcludes []string) (io
 	})
 }
 
+func imageNameFromBuildContext(dockerfile, srcPath, imageTag string, excludes []string) (string, error) {
+	var buildContext io.ReadCloser
+	var err error
+	if strings.Contains(dockerfile, "nitric.dynamic.") {
+		// don't include the dynamic dockerfile as the timestamp on the file will cause it to have a different hash.
+		buildContext, err = tarContextDir("", srcPath, append(excludes, dockerfile))
+	} else {
+		buildContext, err = tarContextDir(dockerfile, srcPath, excludes)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	hash := md5.New()
+	_, err = io.Copy(hash, buildContext)
+	if err != nil {
+		return "", err
+	}
+
+	imageName := imageTag
+	if strings.Contains(imageTag, ":") {
+		imageName = strings.Split(imageTag, ":")[0]
+	}
+
+	return imageName + ":" + hex.EncodeToString(hash.Sum(nil)), nil
+}
+
 func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), buildTimeout())
 	defer cancel()
 
-	dockerBuildContext, err := tarContextDir(dockerfile, srcPath, excludes)
+	imageTagWithHash, err := imageNameFromBuildContext(dockerfile, srcPath, imageTag, excludes)
 	if err != nil {
 		return err
 	}
+
+	buildContext, err := tarContextDir(dockerfile, srcPath, excludes)
+	if err != nil {
+		return err
+	}
+
+	// try and find an existing image with this hash.
+	listOpts := types.ImageListOptions{Filters: filters.NewArgs()}
+	listOpts.Filters.Add("reference", imageTagWithHash)
+	imageSummaries, err := d.cli.ImageList(ctx, listOpts)
+	if err == nil && len(imageSummaries) > 0 {
+		return nil
+	}
+
 	opts := types.ImageBuildOptions{
 		SuppressOutput: false,
 		Dockerfile:     dockerfile,
-		Tags:           []string{imageTag},
+		Tags:           []string{imageTag, imageTagWithHash},
 		Remove:         true,
 		ForceRemove:    true,
 		PullParent:     true,
 	}
-	res, err := d.cli.ImageBuild(ctx, dockerBuildContext, opts)
+	res, err := d.cli.ImageBuild(ctx, buildContext, opts)
 	if err != nil {
 		return err
 	}

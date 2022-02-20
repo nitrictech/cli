@@ -53,7 +53,11 @@ var deploymentApplyCmd = &cobra.Command{
 	Short: "Create or Update a new application deployment",
 	Long:  `Applies a Nitric application deployment.`,
 	Example: `nitric deployment apply
+
+# When using a nitric.yaml
 nitric deployment apply -n prod-aws -s ../project/ -t prod
+
+# When using code-as-config, specify the functions.
 nitric deployment apply -n prod-aws -s ../project/ -t prod "functions/*.ts"
 		`,
 	Run: func(cmd *cobra.Command, args []string) {

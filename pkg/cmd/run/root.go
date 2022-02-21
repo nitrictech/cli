@@ -33,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/tasklet"
+	"github.com/nitrictech/nitric/pkg/worker"
 )
 
 var runCmd = &cobra.Command{
@@ -85,11 +86,16 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		ls := run.NewLocalServices(s.Name, s.Dir)
 		memerr := make(chan error)
 
+		pool := worker.NewProcessPool(&worker.ProcessPoolOptions{
+			MinWorkers: 0,
+			MaxWorkers: 100,
+		})
+
 		startLocalServices := tasklet.Runner{
 			StartMsg: "Starting Local Services",
 			Runner: func(progress output.Progress) error {
 				go func(errch chan error) {
-					errch <- ls.Start()
+					errch <- ls.Start(pool)
 				}(memerr)
 
 				for {
@@ -143,16 +149,24 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			Api      string `yaml:"api"`
 			Endpoint string `yaml:"endpoint"`
 		}
-		apis := []apiendpoint{}
+		apis := make(map[string]string)
 
-		for a := range s.ApiDocs {
-			apis = append(apis, apiendpoint{Api: a, Endpoint: fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)})
+		<-time.NewTimer(time.Second * 2).C
+
+		workers := pool.GetWorkers(&worker.GetWorkerOptions{})
+
+		for _, w := range workers {
+			if apiW, ok := w.(*worker.RouteWorker); ok {
+				if _, ok := apis[apiW.Api()]; !ok {
+					apis[apiW.Api()] = fmt.Sprintf("http://127.0.0.1:9001/apis/%s", apiW.Api())
+				}
+			}
 		}
 
 		if len(apis) == 0 {
 			// if we have a nitric.yaml then ApiDocs will be empty
 			for a := range s.Apis {
-				apis = append(apis, apiendpoint{Api: a, Endpoint: fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)})
+				apis[a] = fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)
 			}
 		}
 		output.Print(apis)

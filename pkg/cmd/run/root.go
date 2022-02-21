@@ -111,7 +111,10 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			},
 			StopMsg: "Started Local Services!",
 		}
-		tasklet.MustRun(startLocalServices, tasklet.Opts{Signal: term})
+		tasklet.MustRun(startLocalServices, tasklet.Opts{
+			Signal:     term,
+			LogToPterm: true,
+		})
 
 		var functions []*run.Function
 

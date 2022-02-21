@@ -128,6 +128,7 @@ type Queue struct{}
 
 type Stack struct {
 	Dir         string                 `yaml:"-"`
+	Loaded      bool                   `yaml:"-"`
 	Name        string                 `yaml:"name"`
 	Functions   map[string]Function    `yaml:"functions,omitempty"`
 	Collections map[string]Collection  `yaml:"collections,omitempty"`
@@ -150,6 +151,7 @@ func New(name, dir string) *Stack {
 	return &Stack{
 		Name:        name,
 		Dir:         dir,
+		Loaded:      false,
 		Containers:  map[string]Container{},
 		Collections: map[string]Collection{},
 		Functions:   map[string]Function{},
@@ -296,6 +298,8 @@ func FromFile(name string) (*Stack, error) {
 
 	// Calculate default policies
 	stack.Policies = calculateDefaultPolicies(stack)
+
+	stack.Loaded = true
 
 	return stack, nil
 }

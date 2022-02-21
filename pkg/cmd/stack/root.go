@@ -132,8 +132,10 @@ nitric stack describe -s ../projectX "functions/*/*.go"`,
 		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
 
-		s, err = codeconfig.Populate(s)
-		cobra.CheckErr(err)
+		if !s.Loaded {
+			s, err = codeconfig.Populate(s)
+			cobra.CheckErr(err)
+		}
 
 		output.Print(s)
 	},

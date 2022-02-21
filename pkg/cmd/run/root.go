@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/build"
+	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/run"
@@ -54,6 +55,17 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 
 		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
+		if !s.Loaded {
+			codeAsConfig := tasklet.Runner{
+				StartMsg: "Gathering configuration from code..",
+				Runner: func(_ output.Progress) error {
+					s, err = codeconfig.Populate(s)
+					return err
+				},
+				StopMsg: "Configuration gathered",
+			}
+			tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
+		}
 
 		ce, err := containerengine.Discover()
 		cobra.CheckErr(err)
@@ -101,8 +113,6 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		}
 		tasklet.MustRun(startLocalServices, tasklet.Opts{Signal: term})
 
-		output.Print(*ls.Status())
-
 		var functions []*run.Function
 
 		startFunctions := tasklet.Runner{
@@ -135,6 +145,7 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		for a := range s.ApiDocs {
 			apis = append(apis, apiendpoint{Api: a, Endpoint: fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)})
 		}
+
 		if len(apis) == 0 {
 			// if we have a nitric.yaml then ApiDocs will be empty
 			for a := range s.Apis {

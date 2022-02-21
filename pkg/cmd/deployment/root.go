@@ -68,15 +68,11 @@ nitric deployment apply -n prod -t aws`,
 		cobra.CheckErr(err)
 
 		s, err := stack.FromOptions(args)
-		if err != nil && len(args) > 0 {
+		cobra.CheckErr(err)
+		if !s.Loaded {
 			codeAsConfig := tasklet.Runner{
 				StartMsg: "Gathering configuration from code..",
 				Runner: func(_ output.Progress) error {
-					s, err = stack.FromOptions(args)
-					if err != nil {
-						return err
-					}
-
 					s, err = codeconfig.Populate(s)
 					return err
 				},

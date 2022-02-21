@@ -30,6 +30,9 @@ test:
 test-coverage:
 	@go test -cover -outputdir=./ -coverprofile=all.coverprofile ./pkg/...
 
+coverage-html: test-coverage
+	@go tool cover -html=all.coverprofile
+
 generate_check: generate fmt
 	@if [ -n "$$(git ls-files -m)" ]; then \
         echo "'make generate' requires you to check in the following files:"; \

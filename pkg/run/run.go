@@ -129,14 +129,6 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		return err
 	}
 
-	// Create a new Worker Pool
-	// TODO: We may want to override GetWorker on the default ProcessPool
-	// For now we'll use the default and expand from there
-	// pool := worker.NewProcessPool(&worker.ProcessPoolOptions{
-	// 	MinWorkers: 0,
-	// 	MaxWorkers: 100,
-	// })
-
 	ev, err := NewEvents(pool)
 	if err != nil {
 		return err

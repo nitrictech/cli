@@ -51,15 +51,16 @@ var rootCmd = &cobra.Command{
 	Use:   "nitric",
 	Short: "helper CLI for nitric applications",
 	Long:  ``,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if output.VerboseLevel > 1 {
+			pterm.EnableDebugMessages()
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if output.VerboseLevel > 1 {
-		pterm.EnableDebugMessages()
-	}
-
 	cobra.CheckErr(rootCmd.Execute())
 }
 

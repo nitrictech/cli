@@ -25,11 +25,11 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type MinioServer struct {
@@ -68,7 +68,7 @@ func (m *MinioServer) Start() error {
 	//for bName := range l.s.Buckets {
 	//	os.MkdirAll(path.Join(nitricRunDir, "buckets", bName), runPerm)
 	//}
-	ports, err := freeport.Take(2)
+	ports, err := utils.Take(2)
 	if err != nil {
 		return errors.WithMessage(err, "freeport.Take")
 	}

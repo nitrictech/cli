@@ -28,7 +28,6 @@ import (
 	"path"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/hashicorp/consul/sdk/freeport"
 	"gopkg.in/mcuadros/go-syslog.v2"
 
 	"github.com/nitrictech/cli/pkg/utils"
@@ -66,7 +65,7 @@ func (s *localSyslog) Config() *container.LogConfig {
 }
 
 func (s *localSyslog) Start() error {
-	ports, err := freeport.Take(1)
+	ports, err := utils.Take(1)
 	if err != nil {
 		return err
 	}

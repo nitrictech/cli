@@ -42,6 +42,7 @@ require (
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.39.0
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.17.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0
+	github.com/pulumi/pulumi-gcp/sdk/v6 v6.12.0
 	github.com/pulumi/pulumi/sdk/v3 v3.25.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savsgio/gotils v0.0.0-20220201163454-d252f0a44d5b // indirect
@@ -55,7 +56,7 @@ require (
 	github.com/valyala/fasthttp v1.33.0
 	golang.org/x/mod v0.5.1
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
-	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
+	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b
 	golang.org/x/sys v0.0.0-20220224120231-95c6836cb0e7 // indirect
 	google.golang.org/grpc v1.44.0
 	gopkg.in/ini.v1 v1.66.4 // indirect

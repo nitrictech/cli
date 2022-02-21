@@ -137,12 +137,10 @@ func FromOptionsMinimal() (*Stack, error) {
 func FunctionFromHandler(h, stackDir string) Function {
 	pterm.Debug.Println("Using function from " + h)
 	rt, _ := runtime.NewRunTimeFromHandler(h)
-	fn := Function{
+	return Function{
 		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
 		Handler:     h,
 	}
-
-	return fn
 }
 
 func AddOptions(cmd *cobra.Command) {

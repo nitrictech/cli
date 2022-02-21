@@ -31,6 +31,7 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/pulumi/aws"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/azure"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/gcp"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
@@ -63,6 +64,8 @@ func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
 		prov = aws.New(s, t)
 	case target.Azure:
 		prov = azure.New(s, t)
+	case target.Gcp:
+		prov = gcp.New(s, t)
 	default:
 		return nil, utils.NewNotSupportedErr("pulumi provider " + t.Provider + " not suppored")
 	}

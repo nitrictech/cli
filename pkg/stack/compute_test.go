@@ -24,8 +24,7 @@ import (
 func TestCompute(t *testing.T) {
 	s := &Stack{Dir: "../run", Name: "test"}
 	cu := ComputeUnit{
-		Name:    "unit",
-		Context: "feat5",
+		Name: "unit",
 	}
 
 	for _, c := range []Compute{&Container{ComputeUnit: cu}, &Function{ComputeUnit: cu}} {
@@ -36,11 +35,6 @@ func TestCompute(t *testing.T) {
 
 		if !reflect.DeepEqual(c.Unit(), &cu) {
 			t.Error("unit", c.Unit())
-		}
-
-		c.SetContextDirectory(s.Dir)
-		if c.Unit().ContextDirectory != "../run/feat5" {
-			t.Error("ContextDirectory", c.Unit().ContextDirectory)
 		}
 	}
 }

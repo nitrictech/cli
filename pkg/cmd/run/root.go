@@ -159,15 +159,6 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			)
 		})
 
-		// TODO: revisit nitric.yaml support for this output
-		// if len(apis) == 0 {
-		// 	// if we have a nitric.yaml then ApiDocs will be empty
-		// 	for a := range s.Apis {
-		// 		apis[a] = fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)
-		// 	}
-		// }
-		// output.Print(apis)
-
 		select {
 		case membraneError := <-memerr:
 			fmt.Println(errors.WithMessage(membraneError, "membrane error, exiting"))

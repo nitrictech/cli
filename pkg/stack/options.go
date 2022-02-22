@@ -138,7 +138,6 @@ func FunctionFromHandler(h, stackDir string) Function {
 		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
 		Handler:     h,
 	}
-	fn.SetContextDirectory(stackDir)
 
 	return fn
 }

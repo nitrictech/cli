@@ -19,7 +19,6 @@ package stack
 import (
 	_ "embed"
 	"fmt"
-	"path"
 	"path/filepath"
 )
 
@@ -32,18 +31,7 @@ func (f *Function) Unit() *ComputeUnit {
 	return &f.ComputeUnit
 }
 
-func (f *Function) SetContextDirectory(stackDir string) {
-	if f.Context != "" {
-		f.ContextDirectory = path.Join(stackDir, f.Context)
-	} else {
-		f.ContextDirectory = stackDir
-	}
-}
-
 func (f *Function) VersionString(s *Stack) string {
-	if f.Version != "" {
-		return f.Version
-	}
 	return DefaultMembraneVersion
 }
 
@@ -62,9 +50,6 @@ func (f *Function) RelativeHandlerPath(s *Stack) (string, error) {
 // ImageTagName returns the default image tag for a source image built from this function
 // provider the provider name (e.g. aws), used to uniquely identify builds for specific providers
 func (f *Function) ImageTagName(s *Stack, provider string) string {
-	if f.Tag != "" {
-		return f.Tag
-	}
 	providerString := ""
 	if provider != "" {
 		providerString = "-" + provider

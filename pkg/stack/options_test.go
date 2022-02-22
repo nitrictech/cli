@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -254,5 +255,25 @@ func TestFromOptionsMinimal(t *testing.T) {
 				t.Errorf("FromOptionsMinimal() got.Name = %s, wantName %v", got.Name, tt.wantName)
 			}
 		})
+	}
+}
+
+func TestEnsureRuntimeDefaults(t *testing.T) {
+	want := true
+
+	if got := EnsureRuntimeDefaults(); got != want {
+		t.Errorf("EnsureRuntimeDefaults() = %v, want %v", got, want)
+	}
+	expectGlobs := []string{"functions/*/*.go", "functions/*.ts"}
+	sort.SliceStable(expectGlobs, func(i, j int) bool {
+		return expectGlobs[i] < expectGlobs[j]
+	})
+	globs := defaultGlobsFromConfig()
+	sort.SliceStable(globs, func(i, j int) bool {
+		return globs[i] < globs[j]
+	})
+
+	if !cmp.Equal(expectGlobs, globs) {
+		t.Error(cmp.Diff(expectGlobs, globs))
 	}
 }

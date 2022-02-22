@@ -37,6 +37,8 @@ func ToStringMapStringMapStringE(i interface{}) (map[string]map[string]interface
 			}
 		}
 		return m, nil
+	case nil:
+		return map[string]map[string]interface{}{}, nil
 	default:
 		return nil, fmt.Errorf("unable to cast %#v of type %T to map[string]map[string]interface{}", i, i)
 	}

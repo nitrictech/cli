@@ -19,6 +19,7 @@ package stack
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -128,7 +129,7 @@ func TestFromOptions(t *testing.T) {
 
 	s := newFakeStack("test", tmpDir)
 
-	err = s.ToFile("nitric.yaml")
+	err = s.ToFile(filepath.Join(tmpDir, "nitric.yaml"))
 	if err != nil {
 		t.Error(err)
 	}

@@ -32,8 +32,8 @@ import (
 
 const (
 	rawGitHubURL        = "https://raw.githubusercontent.com"
-	templatesRepo       = "nitrictech/stack-templates"
-	templatesRepoGitURL = "github.com/nitrictech/stack-templates.git"
+	templatesRepo       = "nitrictech/templates"
+	templatesRepoGitURL = "github.com/nitrictech/templates.git"
 )
 
 type TemplateInfo struct {

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -145,11 +146,16 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		stackState := run.NewStackState()
 
 		area, _ := pterm.DefaultArea.Start()
+		lck := sync.Mutex{}
 		// React to worker pool state and update services table
 		pool.Listen(func(we run.WorkerEvent) {
+			lck.Lock()
+			defer lck.Unlock()
 			stackState.UpdateFromWorkerEvent(we)
 			apiTable := stackState.ApiTable(9001)
-			area.Update(apiTable)
+			topicsTable := stackState.TopicTable(9001)
+			schedTable := stackState.Schedules(9001)
+			area.Update(apiTable, "\n\n", topicsTable, "\n\n", schedTable)
 		})
 
 		// TODO: revisit nitric.yaml support for this output

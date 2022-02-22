@@ -47,10 +47,29 @@ type awsProvider struct {
 	s      *stack.Stack
 	t      *target.Target
 	tmpDir string
+
+	// created resources (mostly here for testing)
+	rg          *resourcegroups.Group
+	topics      map[string]*sns.Topic
+	buckets     map[string]*s3.Bucket
+	queues      map[string]*sqs.Queue
+	collections map[string]*dynamodb.Table
+	images      map[string]*common.Image
+	funcs       map[string]*Lambda
+	schedules   map[string]*Schedule
 }
 
 func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
-	return &awsProvider{s: s, t: t}
+	return &awsProvider{
+		s:           s,
+		t:           t,
+		topics:      map[string]*sns.Topic{},
+		buckets:     map[string]*s3.Bucket{},
+		queues:      map[string]*sqs.Queue{},
+		collections: map[string]*dynamodb.Table{},
+		images:      map[string]*common.Image{},
+		funcs:       map[string]*Lambda{},
+	}
 }
 
 func (a *awsProvider) Plugins() []common.Plugin {
@@ -136,7 +155,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "resource group json marshal")
 	}
 
-	_, err = resourcegroups.NewGroup(ctx, ctx.Stack(), &resourcegroups.GroupArgs{
+	a.rg, err = resourcegroups.NewGroup(ctx, ctx.Stack(), &resourcegroups.GroupArgs{
 		ResourceQuery: &resourcegroups.GroupResourceQueryArgs{
 			Query: pulumi.String(rgQueryJSON),
 		},
@@ -145,9 +164,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "resource group create")
 	}
 
-	topics := map[string]*sns.Topic{}
 	for k := range a.s.Topics {
-		topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
+		a.topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
 			// FIXME: Autonaming of topics disabled until improvements to
 			// nitric topic name discovery is made for SNS topics.
 			Name: pulumi.StringPtr(k),
@@ -158,9 +176,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	buckets := map[string]*s3.Bucket{}
 	for k := range a.s.Buckets {
-		buckets[k], err = s3.NewBucket(ctx, k, &s3.BucketArgs{
+		a.buckets[k], err = s3.NewBucket(ctx, k, &s3.BucketArgs{
 			Tags: common.Tags(ctx, k),
 		})
 		if err != nil {
@@ -168,9 +185,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	queues := map[string]*sqs.Queue{}
 	for k := range a.s.Queues {
-		queues[k], err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
+		a.queues[k], err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
 			Tags: common.Tags(ctx, k),
 		})
 		if err != nil {
@@ -178,9 +194,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	collections := map[string]*dynamodb.Table{}
 	for k := range a.s.Collections {
-		collections[k], err = dynamodb.NewTable(ctx, k, &dynamodb.TableArgs{
+		a.collections[k], err = dynamodb.NewTable(ctx, k, &dynamodb.TableArgs{
 			Attributes: dynamodb.TableAttributeArray{
 				&dynamodb.TableAttributeArgs{
 					Name: pulumi.String("_pk"),
@@ -202,8 +217,12 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	for k, s := range a.s.Schedules {
-		if len(topics) > 0 && s.Target.Type == "topic" && s.Target.Name != "" {
-			err := a.schedule(ctx, k, s.Expression, topics[s.Target.Name])
+		if len(a.topics) > 0 && s.Target.Type == "topic" && s.Target.Name != "" {
+			a.schedules[k], err = a.newSchedule(ctx, k, ScheduleArgs{
+				Expression: s.Expression,
+				TopicArn:   a.topics[s.Target.Name].Arn,
+				TopicName:  a.topics[s.Target.Name].Name,
+			})
 			if err != nil {
 				return errors.WithMessage(err, "schedule "+k)
 			}
@@ -215,7 +234,6 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
-	funcs := map[string]*Lambda{}
 	principalMap := make(map[v1.ResourceType]map[string]*iam.Role)
 	principalMap[v1.ResourceType_Function] = make(map[string]*iam.Role)
 
@@ -238,20 +256,25 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			return err
 		}
 
-		image, err := common.NewImage(ctx, c.Unit().Name, &common.ImageArgs{
-			LocalImageName:  localImageName,
-			SourceImageName: c.ImageTagName(a.s, a.t.Provider),
-			RepositoryUrl:   repo.RepositoryUrl,
-			Server:          pulumi.String(authToken.ProxyEndpoint),
-			Username:        pulumi.String(authToken.UserName),
-			Password:        pulumi.String(authToken.Password),
-			TempDir:         a.tmpDir})
-		if err != nil {
-			return errors.WithMessage(err, "function image tag "+c.Unit().Name)
+		image, ok := a.images[c.Unit().Name]
+		if !ok {
+			image, err = common.NewImage(ctx, c.Unit().Name, &common.ImageArgs{
+				LocalImageName:  localImageName,
+				SourceImageName: c.ImageTagName(a.s, a.t.Provider),
+				RepositoryUrl:   repo.RepositoryUrl,
+				Server:          pulumi.String(authToken.ProxyEndpoint),
+				Username:        pulumi.String(authToken.UserName),
+				Password:        pulumi.String(authToken.Password),
+				TempDir:         a.tmpDir})
+
+			if err != nil {
+				return errors.WithMessage(err, "function image tag "+c.Unit().Name)
+			}
+			a.images[c.Unit().Name] = image
 		}
 
-		funcs[c.Unit().Name], err = newLambda(ctx, c.Unit().Name, &LambdaArgs{
-			Topics:      topics,
+		a.funcs[c.Unit().Name], err = newLambda(ctx, c.Unit().Name, &LambdaArgs{
+			Topics:      a.topics,
 			DockerImage: image.DockerImage,
 			Compute:     c,
 		})
@@ -259,13 +282,13 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			return errors.WithMessage(err, "lambda container "+c.Unit().Name)
 		}
 
-		principalMap[v1.ResourceType_Function][c.Unit().Name] = funcs[c.Unit().Name].Role
+		principalMap[v1.ResourceType_Function][c.Unit().Name] = a.funcs[c.Unit().Name].Role
 	}
 
 	for k, v := range a.s.ApiDocs {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
 			OpenAPISpec:     v,
-			LambdaFunctions: funcs})
+			LambdaFunctions: a.funcs})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)
 		}
@@ -280,10 +303,10 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		if _, err := newPolicy(ctx, policyName, &PolicyArgs{
 			Policy: p,
 			Resources: &StackResources{
-				Topics:      topics,
-				Queues:      queues,
-				Buckets:     buckets,
-				Collections: collections,
+				Topics:      a.topics,
+				Queues:      a.queues,
+				Buckets:     a.buckets,
+				Collections: a.collections,
 			},
 			Principals: principalMap,
 		}); err != nil {

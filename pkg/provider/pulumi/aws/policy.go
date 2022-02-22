@@ -162,7 +162,7 @@ func roleForPrincipal(resource *v1.Resource, principals PrincipalMap) (*iam.Role
 
 func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulumi.ResourceOption) (*Policy, error) {
 	res := &Policy{Name: name, RolePolicies: make([]*iam.RolePolicy, 0)}
-	err := ctx.RegisterComponentResource("nitric:func:AWSLambda", name, res, opts...)
+	err := ctx.RegisterComponentResource("nitric:policy:AWSPolicyRoles", name, res, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,6 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 
 		return string(jsonb), nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("error creating policy document")
 	}

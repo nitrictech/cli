@@ -28,26 +28,46 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 )
 
-func (a *awsProvider) schedule(ctx *pulumi.Context, name, expression string, topic *sns.Topic) error {
-	awsCronValue, err := cron.ConvertToAWS(expression)
+type ScheduleArgs struct {
+	Expression string
+	TopicArn   pulumi.StringInput
+	TopicName  pulumi.StringInput
+}
+
+type Schedule struct {
+	pulumi.ResourceState
+
+	Name        string
+	EventRule   *cloudwatch.EventRule
+	EventTarget *cloudwatch.EventTarget
+}
+
+func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args ScheduleArgs, opts ...pulumi.ResourceOption) (*Schedule, error) {
+	res := &Schedule{Name: name}
+	err := ctx.RegisterComponentResource("nitric:schedule:AwsSchedule", name, res, opts...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	eventRule, err := cloudwatch.NewEventRule(ctx, name+"Schedule", &cloudwatch.EventRuleArgs{
+	awsCronValue, err := cron.ConvertToAWS(args.Expression)
+	if err != nil {
+		return nil, err
+	}
+
+	res.EventRule, err = cloudwatch.NewEventRule(ctx, name+"Schedule", &cloudwatch.EventRuleArgs{
 		ScheduleExpression: pulumi.String("cron(" + awsCronValue + ")"),
 		Tags:               common.Tags(ctx, name+"Schedule"),
-	})
+	}, pulumi.Parent(res))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = cloudwatch.NewEventTarget(ctx, name+"Target", &cloudwatch.EventTargetArgs{
-		Rule: eventRule.Name,
-		Arn:  topic.Arn,
-	})
+	res.EventTarget, err = cloudwatch.NewEventTarget(ctx, name+"Target", &cloudwatch.EventTargetArgs{
+		Rule: res.EventRule.Name,
+		Arn:  args.TopicArn,
+	}, pulumi.Parent(res))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	rolepolicyJSON, err := json.Marshal(map[string]interface{}{
@@ -60,18 +80,18 @@ func (a *awsProvider) schedule(ctx *pulumi.Context, name, expression string, top
 				"Principal": map[string]interface{}{
 					"Service": "events.amazonaws.com",
 				},
-				"Resource": topic.Arn.ToStringOutput(),
+				"Resource": args.TopicArn.ToStringOutput(),
 			},
 		},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = sns.NewTopicPolicy(ctx, fmt.Sprintf("%sTarget%vPolicy", name, topic.Name), &sns.TopicPolicyArgs{
-		Arn:    topic.Arn,
+	_, err = sns.NewTopicPolicy(ctx, fmt.Sprintf("%sTarget%vPolicy", name, args.TopicName), &sns.TopicPolicyArgs{
+		Arn:    args.TopicArn,
 		Policy: pulumi.String(rolepolicyJSON),
-	})
+	}, pulumi.Parent(res))
 
-	return err
+	return res, err
 }

@@ -17,6 +17,7 @@
 package target
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -45,7 +46,7 @@ var (
 	Providers   = []string{Aws, Azure, Gcp, Digitalocean}
 )
 
-func toStringMapStringMapStringE(i interface{}) (map[string]map[string]interface{}, error) {
+func ToStringMapStringMapStringE(i interface{}) (map[string]map[string]interface{}, error) {
 	switch v := i.(type) {
 	case map[string]map[string]interface{}:
 		return v, nil
@@ -65,34 +66,77 @@ func toStringMapStringMapStringE(i interface{}) (map[string]map[string]interface
 	}
 }
 
-func FromOptions() (*Target, error) {
-	t := Target{}
+func EnsureDefaultConfig() bool {
+	written := false
 
-	if target == "" {
-		target = DefaultTarget
-		t.Provider = DefaultProvider
+	targets, err := ToStringMapStringMapStringE(viper.Get("targets"))
+	if err != nil {
+		targets = map[string]map[string]interface{}{}
 	}
-	targets, err := toStringMapStringMapStringE(viper.Get("targets"))
+
+	if _, ok := targets[Aws]; !ok {
+		targets[Aws] = map[string]interface{}{
+			"provider": Aws,
+			"region":   "us-east-1",
+		}
+		viper.Set("targets", targets)
+		written = true
+	}
+
+	if _, ok := targets[Azure]; !ok {
+		targets[Azure] = map[string]interface{}{
+			"adminemail": "admin@example.com",
+			"org":        "example.com",
+			"region":     "eastus2",
+			"provider":   Azure,
+		}
+		viper.Set("targets", targets)
+		written = true
+	}
+
+	return written
+}
+
+func AllFromConfig() (map[string]Target, error) {
+	tsMap, err := ToStringMapStringMapStringE(viper.Get("targets"))
 	if err != nil {
 		return nil, err
 	}
-	tMap := targets[target]
-	if tMap != nil {
+
+	targets := map[string]Target{}
+	for name, tMap := range tsMap {
+		t := Target{}
 		err := mapstructure.Decode(tMap, &t)
 		if err != nil {
 			return nil, err
 		}
-
 		if len(tMap) > 3 {
 			// Decode the "extra" map for provider specific values
 			delete(tMap, "provider")
 			delete(tMap, "region")
-			delete(tMap, "name")
 			err := mapstructure.Decode(tMap, &t.Extra)
 			if err != nil {
 				return nil, err
 			}
 		}
+		targets[name] = t
+	}
+
+	return targets, nil
+}
+
+func FromOptions() (*Target, error) {
+	if target == "" {
+		target = DefaultTarget
+	}
+
+	targets, err := AllFromConfig()
+	if err != nil {
+		return nil, err
+	}
+	t, ok := targets[target]
+	if !ok {
+		return nil, errors.New("target " + target + " not in config")
 	}
 
 	if provider != "" {

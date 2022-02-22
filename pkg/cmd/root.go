@@ -34,6 +34,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/tasklet"
 	"github.com/nitrictech/cli/pkg/utils"
 )
@@ -73,9 +74,12 @@ An example of the format is:
     new: stack create
 
   targets:
-    test-app:
+    aws:
       region: eastus
       provider: aws
+	azure:
+	  region: eastus
+	  provider: azure
   `,
 }
 
@@ -136,6 +140,10 @@ func ensureConfigDefaults() {
 	if to == 0 {
 		needsWrite = true
 		viper.Set("build_timeout", 5*time.Minute)
+	}
+
+	if target.EnsureDefaultConfig() {
+		needsWrite = true
 	}
 
 	if needsWrite {

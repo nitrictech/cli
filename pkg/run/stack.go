@@ -120,7 +120,7 @@ func (r *RunStackState) TopicTable(port int) string {
 	return str
 }
 
-func (r *RunStackState) Schedules(port int) string {
+func (r *RunStackState) SchedulesTable(port int) string {
 	tableData := pterm.TableData{{"Schedule", "Endpoint"}}
 
 	for k := range r.schedules {

@@ -152,10 +152,13 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			lck.Lock()
 			defer lck.Unlock()
 			stackState.UpdateFromWorkerEvent(we)
-			apiTable := stackState.ApiTable(9001)
-			topicsTable := stackState.TopicTable(9001)
-			schedTable := stackState.Schedules(9001)
-			area.Update(apiTable, "\n\n", topicsTable, "\n\n", schedTable)
+			area.Update(
+				stackState.ApiTable(9001),
+				"\n\n",
+				stackState.TopicTable(9001),
+				"\n\n",
+				stackState.SchedulesTable(9001),
+			)
 		})
 
 		// TODO: revisit nitric.yaml support for this output

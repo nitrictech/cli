@@ -52,28 +52,27 @@ var deploymentApplyCmd = &cobra.Command{
 	Use:   "apply [handlerGlob]",
 	Short: "Create or Update a new application deployment",
 	Long:  `Applies a Nitric application deployment.`,
-	Example: `nitric deployment apply
+	Example: `# use a nitric.yaml or configured default handlerGlob (stack in the current directory).
+nitric deployment apply -t aws
 
-# When using a nitric.yaml
-nitric deployment apply -n prod-aws -s ../project/ -t prod
+# use an explicit handlerGlob (stack in the current directory)
+nitric deployment apply -t aws "functions/*/*.go"
 
-# When using code-as-config, specify the functions.
-nitric deployment apply -n prod-aws -s ../project/ -t prod "functions/*.ts"
-		`,
+# use an explicit handlerGlob and explicit stack directory
+nitric deployment apply -s ../projectX -t aws "functions/*/*.go"
+
+# use a custom deployment name
+nitric deployment apply -n prod -t aws`,
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
 
-		s, err := stack.FromOptions()
-		if err != nil && len(args) > 0 {
+		s, err := stack.FromOptions(args)
+		cobra.CheckErr(err)
+		if !s.Loaded {
 			codeAsConfig := tasklet.Runner{
 				StartMsg: "Gathering configuration from code..",
 				Runner: func(_ output.Progress) error {
-					s, err = stack.FromGlobArgs(args)
-					if err != nil {
-						return err
-					}
-
 					s, err = codeconfig.Populate(s)
 					return err
 				},

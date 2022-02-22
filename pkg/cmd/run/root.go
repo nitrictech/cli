@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/build"
+	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/run"
@@ -39,17 +40,32 @@ var runCmd = &cobra.Command{
 	Short: "run a nitric stack",
 	Long: `Run a nitric stack locally for development or testing
 `,
-	Example: `nitric run -s ../projectX "functions/*.ts"`,
+	Example: `# use a nitric.yaml or configured default handlerGlob (stack in the current directory).
+nitric run
+
+# use an explicit handlerGlob (stack in the current directory)
+nitric run "functions/*.ts"
+
+# use an explicit handlerGlob and explicit stack directory
+nitric run -s ../projectX/ "functions/*.ts"`,
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
-		s, err := stack.FromOptions()
-		if err != nil && len(args) > 0 {
-			s, err = stack.FromGlobArgs(args)
-		}
+		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
+		if !s.Loaded {
+			codeAsConfig := tasklet.Runner{
+				StartMsg: "Gathering configuration from code..",
+				Runner: func(_ output.Progress) error {
+					s, err = codeconfig.Populate(s)
+					return err
+				},
+				StopMsg: "Configuration gathered",
+			}
+			tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
+		}
 
 		ce, err := containerengine.Discover()
 		cobra.CheckErr(err)
@@ -95,9 +111,10 @@ var runCmd = &cobra.Command{
 			},
 			StopMsg: "Started Local Services!",
 		}
-		tasklet.MustRun(startLocalServices, tasklet.Opts{Signal: term})
-
-		output.Print(*ls.Status())
+		tasklet.MustRun(startLocalServices, tasklet.Opts{
+			Signal:     term,
+			LogToPterm: true,
+		})
 
 		var functions []*run.Function
 
@@ -131,6 +148,7 @@ var runCmd = &cobra.Command{
 		for a := range s.ApiDocs {
 			apis = append(apis, apiendpoint{Api: a, Endpoint: fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)})
 		}
+
 		if len(apis) == 0 {
 			// if we have a nitric.yaml then ApiDocs will be empty
 			for a := range s.Apis {

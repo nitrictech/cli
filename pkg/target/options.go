@@ -18,15 +18,14 @@ package target
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/nitrictech/cli/pkg/pflagext"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const (
@@ -46,30 +45,10 @@ var (
 	Providers   = []string{Aws, Azure, Gcp, Digitalocean}
 )
 
-func ToStringMapStringMapStringE(i interface{}) (map[string]map[string]interface{}, error) {
-	switch v := i.(type) {
-	case map[string]map[string]interface{}:
-		return v, nil
-	case map[string]interface{}:
-		var err error
-		m := make(map[string]map[string]interface{})
-
-		for k, val := range v {
-			m[k], err = cast.ToStringMapE(val)
-			if err != nil {
-				return nil, err
-			}
-		}
-		return m, nil
-	default:
-		return nil, fmt.Errorf("unable to cast %#v of type %T to map[string]map[string]interface{}", i, i)
-	}
-}
-
 func EnsureDefaultConfig() bool {
 	written := false
 
-	targets, err := ToStringMapStringMapStringE(viper.Get("targets"))
+	targets, err := utils.ToStringMapStringMapStringE(viper.Get("targets"))
 	if err != nil {
 		targets = map[string]map[string]interface{}{}
 	}
@@ -98,7 +77,7 @@ func EnsureDefaultConfig() bool {
 }
 
 func AllFromConfig() (map[string]Target, error) {
-	tsMap, err := ToStringMapStringMapStringE(viper.Get("targets"))
+	tsMap, err := utils.ToStringMapStringMapStringE(viper.Get("targets"))
 	if err != nil {
 		return nil, err
 	}

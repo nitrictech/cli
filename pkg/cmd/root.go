@@ -31,9 +31,10 @@ import (
 	"github.com/nitrictech/cli/pkg/cmd/deployment"
 	"github.com/nitrictech/cli/pkg/cmd/provider"
 	"github.com/nitrictech/cli/pkg/cmd/run"
-	"github.com/nitrictech/cli/pkg/cmd/stack"
+	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/tasklet"
 	"github.com/nitrictech/cli/pkg/utils"
@@ -50,15 +51,16 @@ var rootCmd = &cobra.Command{
 	Use:   "nitric",
 	Short: "helper CLI for nitric applications",
 	Long:  ``,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if output.VerboseLevel > 1 {
+			pterm.EnableDebugMessages()
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if output.VerboseLevel > 1 {
-		pterm.EnableDebugMessages()
-	}
-
 	cobra.CheckErr(rootCmd.Execute())
 }
 
@@ -96,7 +98,7 @@ func init() {
 
 	rootCmd.AddCommand(deployment.RootCommand())
 	rootCmd.AddCommand(provider.RootCommand())
-	rootCmd.AddCommand(stack.RootCommand())
+	rootCmd.AddCommand(cmdstack.RootCommand())
 	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
@@ -143,6 +145,10 @@ func ensureConfigDefaults() {
 	}
 
 	if target.EnsureDefaultConfig() {
+		needsWrite = true
+	}
+
+	if stack.EnsureRuntimeDefaults() {
 		needsWrite = true
 	}
 

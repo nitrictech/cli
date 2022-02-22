@@ -17,12 +17,16 @@
 package stack
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/nitrictech/cli/pkg/pflagext"
 	"github.com/nitrictech/cli/pkg/runtime"
@@ -43,7 +47,7 @@ func wrapStatError(err error) error {
 	return err
 }
 
-func FromOptions() (*Stack, error) {
+func fromNitricFile() (*Stack, error) {
 	configPath := stackPath
 	ss, err := os.Stat(configPath)
 	if err != nil {
@@ -60,15 +64,83 @@ func FromOptions() (*Stack, error) {
 	return FromFile(configPath)
 }
 
-func FunctionFromHandler(h, stackDir string) Function {
-	rt, _ := runtime.NewRunTimeFromHandler(h)
-	fn := Function{
-		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
-		Handler:     h,
+func EnsureRuntimeDefaults() bool {
+	defaults := map[string]map[string]interface{}{
+		"ts": {
+			"functionglob": "functions/*.ts",
+		},
+		"go": {
+			"functionglob": "functions/*/*.go",
+		},
 	}
-	fn.SetContextDirectory(stackDir)
+	written := false
+	runtime, err := utils.ToStringMapStringMapStringE(viper.Get("runtime"))
+	if err != nil {
+		fmt.Println("ERROR: runtime configuration in the wrong format")
+		return false
+	}
 
-	return fn
+	for rtName, rt := range defaults {
+		if _, ok := runtime[rtName]; !ok {
+			runtime[rtName] = rt
+			written = true
+		}
+	}
+	if written {
+		viper.Set("runtime", runtime)
+	}
+	return written
+}
+
+func defaultGlobsFromConfig() []string {
+	globs := []string{}
+	runtime, err := utils.ToStringMapStringMapStringE(viper.Get("runtime"))
+	if err != nil {
+		return globs
+	}
+	for _, rt := range runtime {
+		globs = append(globs, rt["functionglob"].(string))
+	}
+
+	return globs
+}
+
+func FromOptions(glob []string) (*Stack, error) {
+	s, err := fromNitricFile()
+	if err == nil && s != nil {
+		return s, err
+	}
+
+	s, err = FromOptionsMinimal()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(glob) == 0 {
+		glob = defaultGlobsFromConfig()
+	}
+
+	for _, g := range glob {
+		if _, err := os.Stat(g); err != nil {
+			fs, err := utils.GlobInDir(stackPath, g)
+			if err != nil {
+				return nil, err
+			}
+			for _, f := range fs {
+				fn := FunctionFromHandler(f, s.Dir)
+				s.Functions[fn.Name] = fn
+			}
+		} else {
+			fn := FunctionFromHandler(g, s.Dir)
+			s.Functions[fn.Name] = fn
+		}
+	}
+
+	if len(s.Functions) == 0 {
+		return nil, fmt.Errorf("no functions were found with the glob '%s', try a new pattern", strings.Join(glob, ","))
+	}
+
+	return s, nil
 }
 
 func FromOptionsMinimal() (*Stack, error) {
@@ -92,32 +164,16 @@ func FromOptionsMinimal() (*Stack, error) {
 	return s, nil
 }
 
-func FromGlobArgs(glob []string) (*Stack, error) {
-	s, err := FromOptionsMinimal()
-	if err != nil {
-		return nil, err
+func FunctionFromHandler(h, stackDir string) Function {
+	pterm.Debug.Println("Using function from " + h)
+	rt, _ := runtime.NewRunTimeFromHandler(h)
+	fn := Function{
+		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
+		Handler:     h,
 	}
+	fn.SetContextDirectory(stackDir)
 
-	for _, g := range glob {
-		if _, err := os.Stat(g); err != nil {
-			fs, err := utils.GlobInDir(stackPath, g)
-			if err != nil {
-				return nil, err
-			}
-			for _, f := range fs {
-				fn := FunctionFromHandler(f, s.Dir)
-				s.Functions[fn.Name] = fn
-			}
-		} else {
-			fn := FunctionFromHandler(g, s.Dir)
-			s.Functions[fn.Name] = fn
-		}
-	}
-	if len(s.Functions) == 0 {
-		return nil, errors.New("No files where found with glob, try a new pattern")
-	}
-
-	return s, nil
+	return fn
 }
 
 func AddOptions(cmd *cobra.Command) {

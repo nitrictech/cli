@@ -29,7 +29,7 @@ func TestFunctionVersionString(t *testing.T) {
 	}{
 		{
 			name: "from embed",
-			want: "v0.13.0-rc.11",
+			want: "v0.13.0-rc.17",
 		},
 		{
 			name:        "from function",

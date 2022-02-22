@@ -150,7 +150,6 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			stackState.UpdateFromWorkerEvent(we)
 			apiTable := stackState.ApiTable(9001)
 			area.Update(apiTable)
-
 		})
 
 		// TODO: revisit nitric.yaml support for this output
@@ -175,7 +174,7 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			}
 		}
 
-		area.Stop()
+		_ = area.Stop()
 		_ = logger.Stop()
 		// Stop the membrane
 		cobra.CheckErr(ls.Stop())

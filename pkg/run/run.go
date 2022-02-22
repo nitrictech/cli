@@ -34,7 +34,7 @@ import (
 )
 
 type LocalServices interface {
-	Start() error
+	Start(pool worker.WorkerPool) error
 	Stop() error
 	Running() bool
 	Status() *LocalServicesStatus
@@ -85,7 +85,7 @@ func (l *localServices) Status() *LocalServicesStatus {
 	return l.status
 }
 
-func (l *localServices) Start() error {
+func (l *localServices) Start(pool worker.WorkerPool) error {
 	var err error
 	l.mio, err = NewMinio(l.status.RunDir, "minio")
 	if err != nil {
@@ -128,14 +128,6 @@ func (l *localServices) Start() error {
 	if err != nil {
 		return err
 	}
-
-	// Create a new Worker Pool
-	// TODO: We may want to override GetWorker on the default ProcessPool
-	// For now we'll use the default and expand from there
-	pool := worker.NewProcessPool(&worker.ProcessPoolOptions{
-		MinWorkers: 0,
-		MaxWorkers: 100,
-	})
 
 	ev, err := NewEvents(pool)
 	if err != nil {

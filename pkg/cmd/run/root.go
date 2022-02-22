@@ -20,10 +20,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/build"
@@ -85,11 +87,13 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		ls := run.NewLocalServices(s.Name, s.Dir)
 		memerr := make(chan error)
 
+		pool := run.NewRunProcessPool()
+
 		startLocalServices := tasklet.Runner{
 			StartMsg: "Starting Local Services",
 			Runner: func(progress output.Progress) error {
 				go func(errch chan error) {
-					errch <- ls.Start()
+					errch <- ls.Start(pool)
 				}(memerr)
 
 				for {
@@ -137,25 +141,34 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		}
 		tasklet.MustRun(startFunctions, tasklet.Opts{Signal: term})
 
-		fmt.Println("Local running, use ctrl-C to stop")
+		pterm.DefaultBasicText.Println("Local running, use ctrl-C to stop")
 
-		type apiendpoint struct {
-			Api      string `yaml:"api"`
-			Endpoint string `yaml:"endpoint"`
-		}
-		apis := []apiendpoint{}
+		stackState := run.NewStackState()
 
-		for a := range s.ApiDocs {
-			apis = append(apis, apiendpoint{Api: a, Endpoint: fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)})
-		}
+		area, _ := pterm.DefaultArea.Start()
+		lck := sync.Mutex{}
+		// React to worker pool state and update services table
+		pool.Listen(func(we run.WorkerEvent) {
+			lck.Lock()
+			defer lck.Unlock()
+			stackState.UpdateFromWorkerEvent(we)
+			area.Update(
+				stackState.ApiTable(9001),
+				"\n\n",
+				stackState.TopicTable(9001),
+				"\n\n",
+				stackState.SchedulesTable(9001),
+			)
+		})
 
-		if len(apis) == 0 {
-			// if we have a nitric.yaml then ApiDocs will be empty
-			for a := range s.Apis {
-				apis = append(apis, apiendpoint{Api: a, Endpoint: fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)})
-			}
-		}
-		output.Print(apis)
+		// TODO: revisit nitric.yaml support for this output
+		// if len(apis) == 0 {
+		// 	// if we have a nitric.yaml then ApiDocs will be empty
+		// 	for a := range s.Apis {
+		// 		apis[a] = fmt.Sprintf("http://127.0.0.1:9001/apis/%s", a)
+		// 	}
+		// }
+		// output.Print(apis)
 
 		select {
 		case membraneError := <-memerr:
@@ -170,6 +183,7 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			}
 		}
 
+		_ = area.Stop()
 		_ = logger.Stop()
 		// Stop the membrane
 		cobra.CheckErr(ls.Stop())

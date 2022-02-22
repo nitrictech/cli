@@ -38,9 +38,10 @@ var deploymentCmd = &cobra.Command{
 The deployment commands generally need 3 things:
 1. a target (either explicitly with "-t <targetname> or defined in the config)
 2. a deployment name (either explicitly with -n <deployment name> or use the default name of "dep")
-3. a stack definition, this could be a supplied by any of the following ways:
-  - Provide a nitric.yaml configuration file, the path to which is provided either explicitly with "-s <stack dir> or in the current director.
-  - A Glob to the functions from which the configuration is derived.
+3. a stack definition, this automatically collected from the code in functions.
+   A glob to the functions can be a supplied by:
+  - Configuration - there are default globs for each supported language in the .nitiric-config.yaml
+  - Aruments to the deployment actions.
 	`,
 	Example: `nitric deployment apply
 nitric deployment delete
@@ -52,7 +53,7 @@ var deploymentApplyCmd = &cobra.Command{
 	Use:   "apply [handlerGlob]",
 	Short: "Create or Update a new application deployment",
 	Long:  `Applies a Nitric application deployment.`,
-	Example: `# use a nitric.yaml or configured default handlerGlob (stack in the current directory).
+	Example: `# Configured default handlerGlob (stack in the current directory).
 nitric deployment apply -t aws
 
 # use an explicit handlerGlob (stack in the current directory)
@@ -66,20 +67,18 @@ nitric deployment apply -n prod -t aws`,
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
-
 		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
-		if !s.Loaded {
-			codeAsConfig := tasklet.Runner{
-				StartMsg: "Gathering configuration from code..",
-				Runner: func(_ output.Progress) error {
-					s, err = codeconfig.Populate(s)
-					return err
-				},
-				StopMsg: "Configuration gathered",
-			}
-			tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
+
+		codeAsConfig := tasklet.Runner{
+			StartMsg: "Gathering configuration from code..",
+			Runner: func(_ output.Progress) error {
+				s, err = codeconfig.Populate(s)
+				return err
+			},
+			StopMsg: "Configuration gathered",
 		}
+		tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
 
 		p, err := provider.NewProvider(s, t)
 		cobra.CheckErr(err)

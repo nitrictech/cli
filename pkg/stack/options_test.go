@@ -31,9 +31,8 @@ import (
 
 func newFakeStack(name, dir string) *Stack {
 	s := &Stack{
-		Name:   name,
-		Dir:    dir,
-		Loaded: true,
+		Name: name,
+		Dir:  dir,
 		Collections: map[string]Collection{
 			"dollars": {},
 		},

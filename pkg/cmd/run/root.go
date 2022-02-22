@@ -42,7 +42,7 @@ var runCmd = &cobra.Command{
 	Short: "run a nitric stack",
 	Long: `Run a nitric stack locally for development or testing
 `,
-	Example: `# use a nitric.yaml or configured default handlerGlob (stack in the current directory).
+	Example: `# Configured default handlerGlob (stack in the current directory).
 nitric run
 
 # use an explicit handlerGlob (stack in the current directory)
@@ -57,17 +57,15 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 
 		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
-		if !s.Loaded {
-			codeAsConfig := tasklet.Runner{
-				StartMsg: "Gathering configuration from code..",
-				Runner: func(_ output.Progress) error {
-					s, err = codeconfig.Populate(s)
-					return err
-				},
-				StopMsg: "Configuration gathered",
-			}
-			tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
+		codeAsConfig := tasklet.Runner{
+			StartMsg: "Gathering configuration from code..",
+			Runner: func(_ output.Progress) error {
+				s, err = codeconfig.Populate(s)
+				return err
+			},
+			StopMsg: "Configuration gathered",
 		}
+		tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
 
 		ce, err := containerengine.Discover()
 		cobra.CheckErr(err)

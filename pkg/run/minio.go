@@ -44,12 +44,10 @@ const (
 	minioImage       = "minio/minio:latest"
 	devVolume        = "/nitric/"
 	runPerm          = os.ModePerm // NOTE: octal notation is important here!!!
-	LabelRunID       = "io.nitric-run-id"
-	LabelStackName   = "io.nitric-stack"
-	LabelType        = "io.nitric-type"
+	labelStackName   = "io.nitric/stack"
+	labelType        = "io.nitric/type"
 	minioPort        = 9000
 	minioConsolePort = 9001 // TODO: Determine if we would like to expose the console
-
 )
 
 // StartMinio -
@@ -88,6 +86,10 @@ func (m *MinioServer) Start() error {
 			nat.Port(fmt.Sprintf("%d/tcp", minioPort)):        struct{}{},
 			nat.Port(fmt.Sprintf("%d/tcp", minioConsolePort)): struct{}{},
 		},
+		Labels: map[string]string{
+			labelStackName: m.name,
+			labelType:      "minio",
+		},
 	}
 
 	hc := &container.HostConfig{
@@ -115,7 +117,9 @@ func (m *MinioServer) Start() error {
 		NetworkMode: container.NetworkMode("bridge"),
 	}
 
-	cID, err := m.ce.ContainerCreate(cc, hc, &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{}}, "minio-"+m.name)
+	cID, err := m.ce.ContainerCreate(cc, hc, &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{},
+	}, "minio-"+m.name)
 	if err != nil {
 		return err
 	}
@@ -140,6 +144,15 @@ func NewMinio(dir string, name string) (*MinioServer, error) {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return nil, err
+	}
+
+	// Remove any existing containers with this label.
+	err = ce.RemoveByLabel(map[string]string{
+		labelStackName: name,
+		labelType:      "minio",
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err, "could not remove existing minio container")
 	}
 
 	return &MinioServer{

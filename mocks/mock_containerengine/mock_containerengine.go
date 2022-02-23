@@ -199,17 +199,17 @@ func (mr *MockContainerEngineMockRecorder) NetworkCreate(arg0 interface{}) *gomo
 }
 
 // RemoveByLabel mocks base method.
-func (m *MockContainerEngine) RemoveByLabel(arg0, arg1 string) error {
+func (m *MockContainerEngine) RemoveByLabel(arg0 map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveByLabel", arg0, arg1)
+	ret := m.ctrl.Call(m, "RemoveByLabel", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RemoveByLabel indicates an expected call of RemoveByLabel.
-func (mr *MockContainerEngineMockRecorder) RemoveByLabel(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockContainerEngineMockRecorder) RemoveByLabel(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveByLabel", reflect.TypeOf((*MockContainerEngine)(nil).RemoveByLabel), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveByLabel", reflect.TypeOf((*MockContainerEngine)(nil).RemoveByLabel), arg0)
 }
 
 // Start mocks base method.

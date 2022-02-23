@@ -276,12 +276,14 @@ func (d *docker) ContainersListByLabel(match map[string]string) ([]types.Contain
 	return d.cli.ContainerList(context.Background(), opts)
 }
 
-func (d *docker) RemoveByLabel(name, value string) error {
+func (d *docker) RemoveByLabel(labels map[string]string) error {
 	opts := types.ContainerListOptions{
 		All:     true,
 		Filters: filters.NewArgs(),
 	}
-	opts.Filters.Add("label", fmt.Sprintf("%s=%s", name, value))
+	for name, value := range labels {
+		opts.Filters.Add("label", fmt.Sprintf("%s=%s", name, value))
+	}
 
 	res, err := d.cli.ContainerList(context.Background(), opts)
 	if err != nil {

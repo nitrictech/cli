@@ -121,8 +121,8 @@ func (p *podman) ContainersListByLabel(match map[string]string) ([]types.Contain
 	return p.docker.ContainersListByLabel(match)
 }
 
-func (p *podman) RemoveByLabel(name, value string) error {
-	return p.docker.RemoveByLabel(name, value)
+func (p *podman) RemoveByLabel(labels map[string]string) error {
+	return p.docker.RemoveByLabel(labels)
 }
 
 func (p *podman) ContainerExec(containerName string, cmd []string, workingDir string) error {

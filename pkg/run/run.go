@@ -87,7 +87,7 @@ func (l *localServices) Status() *LocalServicesStatus {
 
 func (l *localServices) Start(pool worker.WorkerPool) error {
 	var err error
-	l.mio, err = NewMinio(l.status.RunDir, "minio")
+	l.mio, err = NewMinio(l.status.RunDir, l.stackName)
 	if err != nil {
 		return err
 	}

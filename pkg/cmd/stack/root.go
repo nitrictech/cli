@@ -71,7 +71,7 @@ var stackCreateCmd = &cobra.Command{
 		templateNameQu.Prompt = &survey.Select{
 			Message: "Choose a template:",
 			Options: dirs,
-			Default: "typescript-stack",
+			Default: "typescript-starter",
 		}
 		templateNameQu.Validate = func(ans interface{}) error {
 			if len(args) < 2 {

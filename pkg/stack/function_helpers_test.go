@@ -31,17 +31,10 @@ func TestFunctionVersionString(t *testing.T) {
 			name: "from embed",
 			want: "v0.13.0-rc.17",
 		},
-		{
-			name:        "from function",
-			funcVersion: "v0.12.0",
-			want:        "v0.12.0",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &Function{
-				Version: tt.funcVersion,
-			}
+			f := &Function{}
 			if got := f.VersionString(nil); got != tt.want {
 				t.Errorf("Function.VersionString() = '%s', want '%s'", got, tt.want)
 			}

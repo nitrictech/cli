@@ -18,7 +18,6 @@ package stack
 
 import (
 	"fmt"
-	"path"
 )
 
 var _ Compute = &Container{}
@@ -27,20 +26,9 @@ func (c *Container) Unit() *ComputeUnit {
 	return &c.ComputeUnit
 }
 
-func (c *Container) SetContextDirectory(stackDir string) {
-	if c.Context != "" {
-		c.ContextDirectory = path.Join(stackDir, c.Context)
-	} else {
-		c.ContextDirectory = stackDir
-	}
-}
-
 // ImageTagName returns the default image tag for a source image built from this function
 // provider the provider name (e.g. aws), used to uniquely identify builds for specific providers
 func (c *Container) ImageTagName(s *Stack, provider string) string {
-	if c.Tag != "" {
-		return c.Tag
-	}
 	providerString := ""
 	if provider != "" {
 		providerString = "-" + provider

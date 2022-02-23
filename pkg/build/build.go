@@ -19,7 +19,6 @@ package build
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 
@@ -40,15 +39,6 @@ func Create(s *stack.Stack, t *target.Target) error {
 		return err
 	}
 	for _, f := range s.Functions {
-		for _, script := range f.BuildScripts {
-			cmd := exec.Command(script)
-			cmd.Dir = path.Join(s.Dir, f.Context)
-			err := cmd.Run()
-			if err != nil {
-				return err
-			}
-		}
-
 		fh, err := dynamicDockerfile(s.Dir, f.Name)
 		if err != nil {
 			return err
@@ -59,14 +49,14 @@ func Create(s *stack.Stack, t *target.Target) error {
 		if err != nil {
 			return err
 		}
-		err = rt.FunctionDockerfile(f.ContextDirectory, f.VersionString(s), t.Provider, fh)
+		err = rt.FunctionDockerfile(s.Dir, f.VersionString(s), t.Provider, fh)
 		if err != nil {
 			return err
 		}
 		fh.Close()
 
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err = cr.Build(path.Base(fh.Name()), f.ContextDirectory, f.ImageTagName(s, t.Provider), buildArgs, f.Excludes)
+		err = cr.Build(path.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
@@ -74,7 +64,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 
 	for _, c := range s.Containers {
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err := cr.Build(path.Join(c.Context, c.Dockerfile), c.ContextDirectory, c.ImageTagName(s, t.Provider), buildArgs, []string{})
+		err := cr.Build(path.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
@@ -114,7 +104,7 @@ func CreateBaseDev(s *stack.Stack) error {
 			return err
 		}
 
-		if err := ce.Build(path.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}, []string{}); err != nil {
+		if err := ce.Build(path.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}); err != nil {
 			return err
 		}
 		imagesToBuild[lang] = rt.DevImageName()

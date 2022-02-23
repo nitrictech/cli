@@ -447,9 +447,5 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		s.Functions[f.name] = fun
 	}
 
-	if errs.Aggregate() == nil {
-		s.Loaded = true
-	}
-
 	return s, errs.Aggregate()
 }

@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,33 +35,6 @@ import (
 var (
 	stackPath string
 )
-
-func wrapStatError(err error) error {
-	if os.IsNotExist(err) {
-		return errors.WithMessage(err, "Please provide the correct path to the stack (eg. -s ../projectX)")
-	}
-	if os.IsPermission(err) {
-		return errors.WithMessagef(err, "Please make sure that %s has the correct permissions", stackPath)
-	}
-	return err
-}
-
-func fromNitricFile() (*Stack, error) {
-	configPath := stackPath
-	ss, err := os.Stat(configPath)
-	if err != nil {
-		return nil, wrapStatError(err)
-	}
-	if ss.IsDir() {
-		configPath = path.Join(configPath, "nitric.yaml")
-	}
-	_, err = os.Stat(configPath)
-	if err != nil {
-		return nil, wrapStatError(err)
-	}
-
-	return FromFile(configPath)
-}
 
 func EnsureRuntimeDefaults() bool {
 	defaults := map[string]map[string]interface{}{
@@ -106,12 +78,7 @@ func defaultGlobsFromConfig() []string {
 }
 
 func FromOptions(glob []string) (*Stack, error) {
-	s, err := fromNitricFile()
-	if err == nil && s != nil {
-		return s, err
-	}
-
-	s, err = FromOptionsMinimal()
+	s, err := FromOptionsMinimal()
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +138,6 @@ func FunctionFromHandler(h, stackDir string) Function {
 		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
 		Handler:     h,
 	}
-	fn.SetContextDirectory(stackDir)
 
 	return fn
 }

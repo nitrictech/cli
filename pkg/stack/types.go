@@ -36,12 +36,6 @@ type Triggers struct {
 type ComputeUnit struct {
 	Name string `yaml:"-"`
 
-	// This is the stack.Dir + Context
-	ContextDirectory string `yaml:"-"`
-
-	// Context is the directory containing the code for the function
-	Context string `yaml:"context,omitempty"`
-
 	// Triggers used to invoke this compute unit, e.g. Topic Subscriptions
 	Triggers Triggers `yaml:"triggers,omitempty"`
 
@@ -53,33 +47,11 @@ type ComputeUnit struct {
 
 	// The maximum number of instances to scale to
 	MaxScale int `yaml:"maxScale,omitempty"`
-
-	// Allow the user to specify a custom unique tag for the function
-	Tag string `yaml:"tag,omitempty"`
 }
 
 type Function struct {
 	// The location of the function handler
-	// relative to context
 	Handler string `yaml:"handler"`
-
-	// The build pack version of the membrane used for the function build
-	Version string `yaml:"version,omitempty"`
-
-	// Scripts that will be executed by the nitric
-	// build process before beginning the docker build
-	BuildScripts []string `yaml:"buildScripts,omitempty"`
-
-	// files to exclude from final build
-	Excludes []string `yaml:"excludes,omitempty"`
-
-	// The most requests a single function instance should handle
-	MaxRequests int `yaml:"maxRequests,omitempty"`
-
-	// Simple configuration to determine if the function should be directly
-	// invokable without authentication
-	// would use public, but its reserved by typescript
-	External bool `yaml:"external"`
 
 	ComputeUnit `yaml:",inline"`
 }
@@ -93,7 +65,6 @@ type Container struct {
 
 type Compute interface {
 	ImageTagName(s *Stack, provider string) string
-	SetContextDirectory(stackDir string)
 	Unit() *ComputeUnit
 }
 
@@ -128,7 +99,6 @@ type Queue struct{}
 
 type Stack struct {
 	Dir         string                 `yaml:"-"`
-	Loaded      bool                   `yaml:"-"`
 	Name        string                 `yaml:"name"`
 	Functions   map[string]Function    `yaml:"functions,omitempty"`
 	Collections map[string]Collection  `yaml:"collections,omitempty"`
@@ -151,7 +121,6 @@ func New(name, dir string) *Stack {
 	return &Stack{
 		Name:        name,
 		Dir:         dir,
-		Loaded:      false,
 		Containers:  map[string]Container{},
 		Collections: map[string]Collection{},
 		Functions:   map[string]Function{},
@@ -274,12 +243,10 @@ func FromFile(name string) (*Stack, error) {
 	}
 	for name, fn := range stack.Functions {
 		fn.Name = name
-		fn.SetContextDirectory(stack.Dir)
 		stack.Functions[name] = fn
 	}
 	for name, c := range stack.Containers {
 		c.Name = name
-		c.SetContextDirectory(stack.Dir)
 		stack.Containers[name] = c
 	}
 
@@ -298,8 +265,6 @@ func FromFile(name string) (*Stack, error) {
 
 	// Calculate default policies
 	stack.Policies = calculateDefaultPolicies(stack)
-
-	stack.Loaded = true
 
 	return stack, nil
 }

@@ -17,6 +17,9 @@
 package deployment
 
 import (
+	"log"
+
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/build"
@@ -70,6 +73,8 @@ nitric deployment apply -n prod -t aws`,
 		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
 
+		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
 			Runner: func(_ output.Progress) error {
@@ -78,7 +83,7 @@ nitric deployment apply -n prod -t aws`,
 			},
 			StopMsg: "Configuration gathered",
 		}
-		tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
+		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
 		p, err := provider.NewProvider(s, t)
 		cobra.CheckErr(err)
@@ -90,9 +95,7 @@ nitric deployment apply -n prod -t aws`,
 			},
 			StopMsg: "Images built",
 		}
-		tasklet.MustRun(buildImages, tasklet.Opts{
-			LogToPterm: true,
-		})
+		tasklet.MustRun(buildImages, tasklet.Opts{})
 
 		deploy := tasklet.Runner{
 			StartMsg: "Deploying..",
@@ -132,7 +135,6 @@ nitric deployment delete -n prod-aws -s ../project/ -t prod
 			StopMsg: "Deployment",
 		}
 		tasklet.MustRun(deploy, tasklet.Opts{
-			LogToPterm:    true,
 			SuccessPrefix: "Deleted",
 		})
 	},

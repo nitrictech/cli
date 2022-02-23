@@ -18,6 +18,7 @@ package run
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -55,6 +56,9 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		signal.Notify(term, os.Interrupt, syscall.SIGINT)
 
+		// Divert default log output to pterm debug
+		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+
 		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
 		codeAsConfig := tasklet.Runner{
@@ -65,7 +69,7 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			},
 			StopMsg: "Configuration gathered",
 		}
-		tasklet.MustRun(codeAsConfig, tasklet.Opts{LogToPterm: true})
+		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
 		ce, err := containerengine.Discover()
 		cobra.CheckErr(err)
@@ -114,8 +118,7 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			StopMsg: "Started Local Services!",
 		}
 		tasklet.MustRun(startLocalServices, tasklet.Opts{
-			Signal:     term,
-			LogToPterm: true,
+			Signal: term,
 		})
 
 		var functions []*run.Function
@@ -149,6 +152,8 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		pool.Listen(func(we run.WorkerEvent) {
 			lck.Lock()
 			defer lck.Unlock()
+			// area.Clear()
+
 			stackState.UpdateFromWorkerEvent(we)
 			area.Update(
 				stackState.ApiTable(9001),

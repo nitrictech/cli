@@ -18,6 +18,8 @@ package output
 
 import (
 	"io"
+
+	"github.com/pterm/pterm"
 )
 
 var (
@@ -41,4 +43,18 @@ func StdoutToPtermDebug(b io.ReadCloser, p Progress, prefix string) {
 		}
 		p.Debugf("%s %v", prefix, string(buf[:n]))
 	}
+}
+
+type pTermWriter struct {
+	prefix pterm.PrefixPrinter
+}
+
+func (p *pTermWriter) Write(b []byte) (n int, err error) {
+	p.prefix.Println(string(b))
+
+	return len(b), nil
+}
+
+func NewPtermWriter(prefix pterm.PrefixPrinter) *pTermWriter {
+	return &pTermWriter{prefix: prefix}
 }

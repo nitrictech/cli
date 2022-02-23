@@ -19,8 +19,6 @@ package tasklet
 import (
 	"errors"
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"time"
 
@@ -42,7 +40,6 @@ type Runner struct {
 type Opts struct {
 	Signal        chan os.Signal
 	Timeout       time.Duration
-	LogToPterm    bool
 	SuccessPrefix string
 }
 
@@ -94,15 +91,6 @@ func Run(runner Runner, opts Opts) error {
 	}
 
 	tCtx := &taskletContext{spinner: spinner}
-	if opts.LogToPterm {
-		piper, pipew := io.Pipe()
-		log.SetOutput(pipew)
-		defer func() {
-			pipew.Close()
-			log.SetOutput(os.Stdout)
-		}()
-		go output.StdoutToPtermDebug(piper, tCtx, runner.StartMsg)
-	}
 
 	start := time.Now()
 	done := make(chan bool, 1)

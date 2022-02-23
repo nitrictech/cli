@@ -82,7 +82,7 @@ func (d *downloader) Names() ([]string, error) {
 
 func (d *downloader) Get(name string) *TemplateInfo {
 	for _, ti := range d.repo {
-		if ti.Name == name {
+		if ti.Path == name {
 			return &ti
 		}
 	}

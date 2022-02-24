@@ -47,3 +47,10 @@ func Tags(ctx *pulumi.Context, name string) pulumi.StringMap {
 		"x-nitric-name":    pulumi.String(name),
 	}
 }
+
+func IntValueOrDefault(v, def int) int {
+	if v != 0 {
+		return v
+	}
+	return def
+}

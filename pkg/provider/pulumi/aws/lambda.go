@@ -155,10 +155,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
-	memory := 128
-	if args.Compute.Unit().Memory > 0 {
-		memory = args.Compute.Unit().Memory
-	}
+	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
 	res.Function, err = awslambda.NewFunction(ctx, name, &awslambda.FunctionArgs{
 		ImageUri:    args.DockerImage.ImageName,
 		MemorySize:  pulumi.IntPtr(memory),

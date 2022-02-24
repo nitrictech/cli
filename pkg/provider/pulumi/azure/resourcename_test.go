@@ -169,34 +169,3 @@ func Test_resourceName(t *testing.T) {
 		})
 	}
 }
-
-func Test_joinCamelCase(t *testing.T) {
-	tests := []struct {
-		name string
-		ss   []string
-		want string
-	}{
-		{
-			name: "one",
-			ss:   []string{"one"},
-			want: "one",
-		},
-		{
-			name: "two",
-			ss:   []string{"one", "two"},
-			want: "oneTwo",
-		},
-		{
-			name: "lots",
-			ss:   []string{"one", "2", "x", "eight"},
-			want: "one2XEight",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := joinCamelCase(tt.ss); got != tt.want {
-				t.Errorf("joinCamelCase() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}

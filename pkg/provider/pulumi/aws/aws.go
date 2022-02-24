@@ -237,16 +237,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	principalMap := make(map[v1.ResourceType]map[string]*iam.Role)
 	principalMap[v1.ResourceType_Function] = make(map[string]*iam.Role)
 
-	computes := []stack.Compute{}
-	for _, c := range a.s.Functions {
-		copy := c
-		computes = append(computes, &copy)
-	}
-	for _, c := range a.s.Containers {
-		copy := c
-		computes = append(computes, &copy)
-	}
-	for _, c := range computes {
+	for _, c := range a.s.Computes() {
 		localImageName := c.ImageTagName(a.s, "")
 
 		repo, err := ecr.NewRepository(ctx, localImageName, &ecr.RepositoryArgs{

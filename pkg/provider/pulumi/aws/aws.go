@@ -74,6 +74,7 @@ func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 		collections: map[string]*dynamodb.Table{},
 		images:      map[string]*common.Image{},
 		funcs:       map[string]*Lambda{},
+		schedules:   map[string]*Schedule{},
 	}
 }
 

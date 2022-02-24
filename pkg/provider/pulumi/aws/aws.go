@@ -33,6 +33,7 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/resourcegroups"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/secretsmanager"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
@@ -56,6 +57,7 @@ type awsProvider struct {
 	buckets     map[string]*s3.Bucket
 	queues      map[string]*sqs.Queue
 	collections map[string]*dynamodb.Table
+	secrets     map[string]*secretsmanager.Secret
 	images      map[string]*common.Image
 	funcs       map[string]*Lambda
 	schedules   map[string]*Schedule
@@ -72,6 +74,7 @@ func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 		buckets:     map[string]*s3.Bucket{},
 		queues:      map[string]*sqs.Queue{},
 		collections: map[string]*dynamodb.Table{},
+		secrets:     map[string]*secretsmanager.Secret{},
 		images:      map[string]*common.Image{},
 		funcs:       map[string]*Lambda{},
 		schedules:   map[string]*Schedule{},
@@ -222,6 +225,14 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	secrets := map[string]*secretsmanager.Secret{}
+	for k := range a.s.Secrets {
+		secrets[k], err = secretsmanager.NewSecret(ctx, k, &secretsmanager.SecretArgs{
+			Name: pulumi.StringPtr(k),
+			Tags: common.Tags(ctx, k),
+		})
+	}
+
 	for k, s := range a.s.Schedules {
 		if len(a.topics) > 0 && s.Target.Type == "topic" && s.Target.Name != "" {
 			topic, ok := a.topics[s.Target.Name]
@@ -308,6 +319,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 				Queues:      a.queues,
 				Buckets:     a.buckets,
 				Collections: a.collections,
+				Secrets:     a.secrets,
 			},
 			Principals: principalMap,
 		}); err != nil {

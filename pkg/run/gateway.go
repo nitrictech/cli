@@ -55,20 +55,6 @@ func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
 	// Rewrite the URL of the request to remove the /api/{name} subroute
 	pathParts := nitric_utils.SplitPath(string(ctx.Path()))
 
-	// When a request is made to the base API path, return status info
-	if len(pathParts) == 2 {
-		w := s.pool.GetWorkers(&worker.GetWorkerOptions{
-			Filter: apiWorkerFilter(apiName),
-		})
-		ctx.Response.SetBody([]byte(fmt.Sprintf("<html><body><strong>%d</strong> active route(s) detected for API %v.</body></html>", len(w), apiName)))
-		if len(w) > 0 {
-			ctx.Response.SetStatusCode(200)
-		} else {
-			ctx.Response.SetStatusCode(404)
-		}
-		return
-	}
-
 	// remove first two path parts
 	newPathParts := pathParts[2:]
 
@@ -85,7 +71,7 @@ func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
 	})
 
 	if err != nil {
-		ctx.Error("worker not found for api", 404)
+		ctx.Error("No workers found for provided API route", 404)
 		return
 	}
 

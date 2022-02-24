@@ -9,6 +9,10 @@ GOLANGCI_LINT ?= GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) go run github.com/go
 build: generate
 	CGO_ENABLED=0 go build -o bin/nitric ./pkg/cmd/
 
+.PHONY: build-windows
+build-windows: generate
+	go build -o bin/nitric.exe ./pkg/cmd/	
+
 .PHONY: generate
 generate:
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go

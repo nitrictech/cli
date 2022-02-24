@@ -232,7 +232,7 @@ func TestAWS(t *testing.T) {
 			arn := all[1].(string)
 			topicArn := all[2].(string)
 
-			assert.Equal(t, "cron(cron(0 0 * * ? *))", *expr, "wrong expression %s!=%s", "", *expr)
+			assert.Equal(t, "cron(0 0 * * ? *)", *expr, "wrong expression %s!=%s", "", *expr)
 			assert.Equal(t, topicArn, arn, "wrong arn %s!=%s", topicArn, arn)
 			wg.Done()
 			return nil

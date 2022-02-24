@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/Azure/azure-sdk-for-go v56.3.0+incompatible
+	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/cli v20.10.12+incompatible

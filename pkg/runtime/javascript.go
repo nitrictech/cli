@@ -83,7 +83,7 @@ func (t *javascript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, er
 	return LaunchOpts{
 		Image:      t.DevImageName(),
 		Entrypoint: strslice.StrSlice{"ts-node"},
-		Cmd:        strslice.StrSlice{"-T " + "/app/" + t.handler},
+		Cmd:        strslice.StrSlice{"-T " + "/app/" + filepath.ToSlash(t.handler)},
 		TargetWD:   "/app",
 		Mounts: []mount.Mount{
 			{

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/nitrictech/cli/pkg/utils"
@@ -60,7 +60,7 @@ func NewLocalServices(stackName, stackPath string) LocalServices {
 		stackName: stackName,
 		stackPath: stackPath,
 		status: &LocalServicesStatus{
-			RunDir:          path.Join(utils.NitricRunDir(), stackName),
+			RunDir:          filepath.Join(utils.NitricRunDir(), stackName),
 			GatewayAddress:  nitric_utils.GetEnv("GATEWAY_ADDRESS", ":9001"),
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
 		},

@@ -19,11 +19,13 @@ package aws
 import (
 	"context"
 	"crypto/md5"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
@@ -59,6 +61,9 @@ type awsProvider struct {
 	schedules   map[string]*Schedule
 }
 
+//go:embed pulumi-aws-version.txt
+var awsPluginVersion string
+
 func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 	return &awsProvider{
 		s:           s,
@@ -76,7 +81,7 @@ func (a *awsProvider) Plugins() []common.Plugin {
 	return []common.Plugin{
 		{
 			Name:    "aws",
-			Version: "v4.37.1",
+			Version: strings.TrimSpace(awsPluginVersion),
 		},
 	}
 }

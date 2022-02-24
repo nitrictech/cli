@@ -18,6 +18,7 @@ package aws
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -268,5 +269,15 @@ func TestValidate(t *testing.T) {
 				t.Errorf("awsProvider.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func Test_awsProvider_Plugins(t *testing.T) {
+	want := []common.Plugin{
+		{Name: "aws", Version: "v4.33.0"},
+	}
+	got := (&awsProvider{}).Plugins()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("awsProvider.Plugins() = %v, want %v", got, want)
 	}
 }

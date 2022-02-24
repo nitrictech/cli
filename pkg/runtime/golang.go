@@ -126,7 +126,7 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 	return LaunchOpts{
 		Image:    t.DevImageName(),
 		TargetWD: path.Join("/go/src", module),
-		Cmd:      strslice.StrSlice{"go", "run", "./" + t.handler},
+		Cmd:      strslice.StrSlice{"go", "run", "./" + filepath.ToSlash(t.handler)},
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",

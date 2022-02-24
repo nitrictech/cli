@@ -19,7 +19,6 @@ package stack
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -126,7 +125,7 @@ func FromOptionsMinimal() (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := New(path.Base(absDir), sDir)
+	s := New(filepath.Base(absDir), sDir)
 
 	return s, nil
 }

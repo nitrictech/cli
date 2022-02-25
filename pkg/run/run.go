@@ -145,7 +145,6 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 	// running functions will connect to
 	l.mem, err = membrane.New(&membrane.MembraneOptions{
 		ServiceAddress:          "0.0.0.0:50051",
-		ChildCommand:            []string{"echo", "running membrane 🚀"},
 		SecretPlugin:            secp,
 		QueuePlugin:             qp,
 		StoragePlugin:           sp,

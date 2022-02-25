@@ -50,14 +50,14 @@ var (
 	// Alphanumerics
 	RegistryRT = ResouceType{Abbreviation: "cr", MaxLen: 50, AllowUpperCase: true}
 	// Alphanumerics and hyphens. Start and end with alphanumeric.
-	AnalyticsWorkspaceRT = ResouceType{Abbreviation: "log", MaxLen: 63, AllowHyphen: true}
+	AnalyticsWorkspaceRT = ResouceType{Abbreviation: "log", MaxLen: 24, AllowHyphen: true}
 	AssignmentRT         = ResouceType{Abbreviation: "assign", MaxLen: 64, UseName: true}
 	// TODO find docs on this..
 	KubeRT = ResouceType{Abbreviation: "kube", MaxLen: 64, AllowUpperCase: true}
 	// lowercase letters, numbers, and the '-' character, and must be between 3 and 50 characters.
 	CosmosDBAccountRT = ResouceType{Abbreviation: "cosmos", MaxLen: 50, AllowHyphen: true}
 	// TODO find requirements
-	MongoDBRT = ResouceType{Abbreviation: "mongo", MaxLen: 64, AllowUpperCase: true}
+	MongoDBRT = ResouceType{Abbreviation: "mongo", MaxLen: 24, AllowUpperCase: true}
 	// TODO find requirements
 	MongoCollectionRT            = ResouceType{Abbreviation: "coll", MaxLen: 24, AllowUpperCase: true, UseName: true}
 	ADApplicationRT              = ResouceType{Abbreviation: "aad-app", MaxLen: 64, UseName: true}

@@ -18,6 +18,8 @@ package pulumi
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
@@ -98,18 +100,28 @@ func (p *pulumiDeployment) load(name string) (*auto.Stack, error) {
 	return &s, errors.WithMessage(err, "Refresh")
 }
 
-func (p *pulumiDeployment) Apply(log output.Progress, name string) error {
+func (p *pulumiDeployment) Apply(log output.Progress, name string) (*types.Deployment, error) {
 	s, err := p.load(name)
 	if err != nil {
-		return errors.WithMessage(err, "loading pulumi stack")
+		return nil, errors.WithMessage(err, "loading pulumi stack")
 	}
 
 	res, err := s.Up(context.Background(), updateLoggingOpts(log)...)
 	defer p.p.CleanUp()
 	if err != nil {
-		return errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
+		return nil, errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
 	}
-	return nil
+
+	d := &types.Deployment{
+		ApiEndpoints: map[string]string{},
+	}
+
+	for k, v := range res.Outputs {
+		if strings.HasPrefix(k, "api:") {
+			d.ApiEndpoints[strings.TrimPrefix(k, "api:")] = fmt.Sprint(v.Value)
+		}
+	}
+	return d, nil
 }
 
 func (p *pulumiDeployment) List() (interface{}, error) {

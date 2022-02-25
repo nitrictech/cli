@@ -257,7 +257,8 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		},
 	}
 
-	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
+	//memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
+	// we can't define memory without defining the cpu..
 	res.App, err = web.NewContainerApp(ctx, resourceName(ctx, name, ContainerAppRT), &web.ContainerAppArgs{
 		ResourceGroupName: args.ResourceGroupName,
 		Location:          args.Location,
@@ -300,9 +301,6 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 					Name:  pulumi.String("myapp"),
 					Image: args.ImageUri,
 					Env:   append(env, args.Env...),
-					Resources: web.ContainerResourcesArgs{
-						Memory: pulumi.Sprintf("%dMi", memory),
-					},
 				},
 			},
 		},

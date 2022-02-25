@@ -18,8 +18,12 @@ package types
 
 import "github.com/nitrictech/cli/pkg/output"
 
+type Deployment struct {
+	ApiEndpoints map[string]string `json:"apiEndpoints,omitempty"`
+}
+
 type Provider interface {
-	Apply(log output.Progress, deploymentName string) error
+	Apply(log output.Progress, deploymentName string) (*Deployment, error)
 	Delete(log output.Progress, deploymentName string) error
 	List() (interface{}, error)
 	//Status()

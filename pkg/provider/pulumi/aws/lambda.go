@@ -51,6 +51,8 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
+	opts = append(opts, pulumi.Parent(res))
+
 	tmpJSON, err := json.Marshal(map[string]interface{}{
 		"Version": "2012-10-17",
 		"Statement": []map[string]interface{}{
@@ -71,7 +73,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	res.Role, err = iam.NewRole(ctx, name+"LambdaRole", &iam.RoleArgs{
 		AssumeRolePolicy: pulumi.String(tmpJSON),
 		Tags:             common.Tags(ctx, name+"LambdaRole"),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +81,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	_, err = iam.NewRolePolicyAttachment(ctx, name+"LambdaBasicExecution", &iam.RolePolicyAttachmentArgs{
 		PolicyArn: iam.ManagedPolicyAWSLambdaBasicExecutionRole,
 		Role:      res.Role.ID(),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +114,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	_, err = iam.NewRolePolicy(ctx, name+"ListAccess", &iam.RolePolicyArgs{
 		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +152,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	_, err = iam.NewRolePolicy(ctx, name+"SecretsAccess", &iam.RolePolicyArgs{
 		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +165,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		PackageType: pulumi.String("Image"),
 		Role:        res.Role.Arn,
 		Tags:        common.Tags(ctx, name),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +178,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 				Function:  res.Function.Name,
 				Principal: pulumi.String("sns.amazonaws.com"),
 				Action:    pulumi.String("lambda:InvokeFunction"),
-			}, pulumi.Parent(res))
+			}, opts...)
 			if err != nil {
 				return nil, err
 			}
@@ -185,7 +187,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 				Endpoint: res.Function.Arn,
 				Protocol: pulumi.String("lambda"),
 				Topic:    topic.ID(), // TODO check (was topic.sns)
-			}, pulumi.Parent(res))
+			}, opts...)
 			if err != nil {
 				return nil, err
 			}

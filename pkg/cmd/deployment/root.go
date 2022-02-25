@@ -26,6 +26,7 @@ import (
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/provider"
+	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/tasklet"
@@ -97,14 +98,22 @@ nitric deployment apply -n prod -t aws`,
 		}
 		tasklet.MustRun(buildImages, tasklet.Opts{})
 
+		d := &types.Deployment{}
 		deploy := tasklet.Runner{
 			StartMsg: "Deploying..",
 			Runner: func(progress output.Progress) error {
-				return p.Apply(progress, deploymentName)
+				d, err = p.Apply(progress, deploymentName)
+				return err
 			},
 			StopMsg: "Stack",
 		}
 		tasklet.MustRun(deploy, tasklet.Opts{SuccessPrefix: "Deployed"})
+
+		rows := [][]string{{"API", "Endpoint"}}
+		for k, v := range d.ApiEndpoints {
+			rows = append(rows, []string{k, v})
+		}
+		_ = pterm.DefaultTable.WithBoxed().WithData(rows).Render()
 	},
 	Args: cobra.MinimumNArgs(0),
 }

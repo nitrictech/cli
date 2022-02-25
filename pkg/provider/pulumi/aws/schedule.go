@@ -50,6 +50,8 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 		return nil, err
 	}
 
+	opts = append(opts, pulumi.Parent(res))
+
 	awsCronValue, err := cron.ConvertToAWS(args.Expression)
 	if err != nil {
 		return nil, err
@@ -58,7 +60,7 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 	res.EventRule, err = cloudwatch.NewEventRule(ctx, name+"Schedule", &cloudwatch.EventRuleArgs{
 		ScheduleExpression: pulumi.String(awsCronValue),
 		Tags:               common.Tags(ctx, name+"Schedule"),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +68,7 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 	res.EventTarget, err = cloudwatch.NewEventTarget(ctx, name+"Target", &cloudwatch.EventTargetArgs{
 		Rule: res.EventRule.Name,
 		Arn:  args.TopicArn,
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +97,7 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 	_, err = sns.NewTopicPolicy(ctx, fmt.Sprintf("%sTarget%vPolicy", name, args.TopicName), &sns.TopicPolicyArgs{
 		Arn:    args.TopicArn,
 		Policy: pdocJSON,
-	}, pulumi.Parent(res))
+	}, opts...)
 
 	return res, err
 }

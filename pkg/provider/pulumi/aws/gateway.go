@@ -51,6 +51,8 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		return nil, err
 	}
 
+	opts = append(opts, pulumi.Parent(res))
+
 	nameArnPairs := make([]interface{}, 0, len(args.LambdaFunctions))
 
 	// collect name arn pairs for output iteration
@@ -103,7 +105,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		Body:         doc,
 		ProtocolType: pulumi.String("HTTP"),
 		Tags:         common.Tags(ctx, name),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +115,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		Name:       pulumi.String("$default"),
 		ApiId:      res.Api.ID(),
 		Tags:       common.Tags(ctx, name+"DefaultStage"),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -125,16 +127,19 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 			Action:    pulumi.String("lambda:InvokeFunction"),
 			Principal: pulumi.String("apigateway.amazonaws.com"),
 			SourceArn: pulumi.Sprintf("%s/*/*/*", res.Api.ExecutionArn),
-		}, pulumi.Parent(res))
+		}, opts...)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return res, ctx.RegisterResourceOutputs(res, pulumi.Map{
-		"name": pulumi.String(name),
-		"api":  res.Api,
-	})
+	endPoint := res.Api.ApiEndpoint.ApplyT(func(ep string) string {
+		return ep
+	}).(pulumi.StringInput)
+
+	ctx.Export("api:"+name, endPoint)
+
+	return res, nil
 }
 
 func awsOperation(op *openapi3.Operation, funcs map[string]string) *openapi3.Operation {

@@ -14,37 +14,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package utils
 
 import (
-	"bufio"
-	"fmt"
-	"io"
-	"os"
-	"strings"
+	"bytes"
 )
 
-func main() {
-	file, err := os.Open("go.sum")
-	if err != nil {
-		panic(err)
+func StringTrunc(s string, max int) string {
+	if len(s) <= max {
+		return s
 	}
-	defer file.Close()
+	return s[:max]
+}
 
-	reader := bufio.NewReader(file)
-	for {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			panic(err)
-		}
-
-		words := strings.Split(string(line), " ")
-		if len(words) == 3 && strings.HasPrefix(words[0], os.Args[1]) {
-			fmt.Print(words[1])
-			break
-		}
+func JoinCamelCase(ss []string) string {
+	res := ss[0]
+	for i := 1; i < len(ss); i++ {
+		word := ss[i]
+		res += string(bytes.ToUpper([]byte{word[0]}))
+		res += word[1:]
 	}
+	return res
 }

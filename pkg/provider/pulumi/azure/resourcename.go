@@ -17,11 +17,12 @@
 package azure
 
 import (
-	"bytes"
 	"regexp"
 	"strings"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const (
@@ -90,24 +91,6 @@ var (
 	ApiOperationPolicyRT = ResouceType{Abbreviation: "api-op-pol", MaxLen: 80, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 )
 
-func stringHead(l pulumi.Log, s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	_ = l.Info("shortening name from '"+s+"' to '"+s[:maxLen]+"'", &pulumi.LogArgs{Ephemeral: true})
-	return s[:maxLen]
-}
-
-func joinCamelCase(ss []string) string {
-	res := ss[0]
-	for i := 1; i < len(ss); i++ {
-		word := ss[i]
-		res += string(bytes.ToUpper([]byte{word[0]}))
-		res += word[1:]
-	}
-	return res
-}
-
 func cleanPart(p string, rt ResouceType) string {
 	r := alphanumeric.ReplaceAllString(p, "")
 	if !rt.AllowHyphen {
@@ -126,15 +109,15 @@ func resourceName(ctx *pulumi.Context, name string, rt ResouceType) string {
 	}
 	if rt.UseName {
 		parts = []string{
-			stringHead(ctx.Log, cleanPart(name, rt), maxLen-abbrLen),
+			utils.StringTrunc(cleanPart(name, rt), maxLen-abbrLen),
 			rt.Abbreviation,
 		}
 	} else {
 		deployName := strings.TrimPrefix(ctx.Stack(), ctx.Project()+"-")
 		partLen := (maxLen - abbrLen) / 2
 		parts = []string{
-			stringHead(ctx.Log, cleanPart(ctx.Project(), rt), partLen),
-			stringHead(ctx.Log, cleanPart(deployName, rt), partLen),
+			utils.StringTrunc(cleanPart(ctx.Project(), rt), partLen),
+			utils.StringTrunc(cleanPart(deployName, rt), partLen),
 			rt.Abbreviation,
 		}
 	}
@@ -148,7 +131,7 @@ func resourceName(ctx *pulumi.Context, name string, rt ResouceType) string {
 		s = strings.Join(parts, "-")
 		s = strings.ReplaceAll(s, "--", "-")
 	} else if rt.AllowUpperCase {
-		s = joinCamelCase(parts)
+		s = utils.JoinCamelCase(parts)
 	} else {
 		s = strings.Join(parts, "")
 	}
@@ -161,5 +144,5 @@ func resourceName(ctx *pulumi.Context, name string, rt ResouceType) string {
 		s = strings.ToLower(s)
 	}
 
-	return stringHead(ctx.Log, s, maxLen)
+	return utils.StringTrunc(s, maxLen)
 }

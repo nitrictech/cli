@@ -18,9 +18,11 @@ package azure
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
@@ -44,6 +46,15 @@ type azureProvider struct {
 	adminEmail string
 }
 
+var (
+	//go:embed pulumi-azure-version.txt
+	azurePluginVersion string
+	//go:embed pulumi-azuread-version.txt
+	azureADPluginVersion string
+	//go:embed pulumi-azure-native-version.txt
+	azureNativePluginVersion string
+)
+
 func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 	return &azureProvider{s: s, t: t}
 }
@@ -52,15 +63,15 @@ func (a *azureProvider) Plugins() []common.Plugin {
 	return []common.Plugin{
 		{
 			Name:    "azure-native",
-			Version: "v1.56.0",
+			Version: strings.TrimSpace(azureNativePluginVersion),
 		},
 		{
 			Name:    "azure",
-			Version: "v4.37.0",
+			Version: strings.TrimSpace(azurePluginVersion),
 		},
 		{
 			Name:    "azuread",
-			Version: "v5.16.0",
+			Version: strings.TrimSpace(azureADPluginVersion),
 		},
 	}
 }

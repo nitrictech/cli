@@ -74,6 +74,9 @@ var (
 // All others become cron expressions.
 // Exception is made for strings of the form "rate( )" or "cron( )". These are accepted as-is and
 // validated server-side by CloudFormation.
+
+// cron(Minutes Hours Day-of-month Month Day-of-week Year)
+
 func ConvertToAWS(schedule string) (string, error) {
 	if schedule == "" {
 		return "", errors.New("schedule can not be empty")
@@ -183,12 +186,6 @@ func toAWSCron(schedule string) (string, error) {
 	// Split the cron into its components. We can do this because it'll already have been validated.
 	// Use https://golang.org/pkg/strings/#Fields since it handles consecutive whitespace.
 	sched := strings.Fields(schedule)
-
-	// Replace */x (i.e. "every x minutes") style inputs to the AWS equivalent
-	// AWS uses 0 instead of * for these expressions
-	for i, s := range sched {
-		sched[i] = strings.Replace(s, "*/", "0/", 1)
-	}
 
 	// Check whether the Day of Week and Day of Month fields have a ?
 	// Possible conversion:

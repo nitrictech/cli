@@ -134,6 +134,19 @@ func New(name, dir string) *Stack {
 	}
 }
 
+func (s *Stack) Computes() []Compute {
+	computes := []Compute{}
+	for _, c := range s.Functions {
+		copy := c
+		computes = append(computes, &copy)
+	}
+	for _, c := range s.Containers {
+		copy := c
+		computes = append(computes, &copy)
+	}
+	return computes
+}
+
 // Compute default policies for a stack
 func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
 	policies := make([]*v1.PolicyResource, 0)

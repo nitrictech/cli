@@ -14,37 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package azure
 
 import (
-	"bufio"
-	"fmt"
-	"io"
-	"os"
-	"strings"
+	"reflect"
+	"testing"
+
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 )
 
-func main() {
-	file, err := os.Open("go.sum")
-	if err != nil {
-		panic(err)
+func Test_azureProvider_Plugins(t *testing.T) {
+	want := []common.Plugin{
+		{Name: "azure-native", Version: "v1.56.0"},
+		{Name: "azure", Version: "v4.36.0"},
+		{Name: "azuread", Version: "v5.16.0"},
 	}
-	defer file.Close()
-
-	reader := bufio.NewReader(file)
-	for {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			panic(err)
-		}
-
-		words := strings.Split(string(line), " ")
-		if len(words) == 3 && strings.HasPrefix(words[0], os.Args[1]) {
-			fmt.Print(words[1])
-			break
-		}
+	got := (&azureProvider{}).Plugins()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("azureProvider.Plugins() = %v, want %v", got, want)
 	}
 }

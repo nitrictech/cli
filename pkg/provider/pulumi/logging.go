@@ -40,7 +40,6 @@ func updateLoggingOpts(log output.Progress) []optup.Option {
 
 	if output.VerboseLevel >= 2 {
 		piper, pipew := io.Pipe()
-		defer pipew.Close()
 		go output.StdoutToPtermDebug(piper, log, "Deploying.. ")
 
 		opts = append(opts, optup.ProgressStreams(pipew))
@@ -65,7 +64,6 @@ func destroyLoggingOpts(log output.Progress) []optdestroy.Option {
 
 	if output.VerboseLevel >= 2 {
 		piper, pipew := io.Pipe()
-		defer pipew.Close()
 		go output.StdoutToPtermDebug(piper, log, "Deleting.. ")
 
 		opts = append(opts, optdestroy.ProgressStreams(pipew))

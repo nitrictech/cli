@@ -89,6 +89,8 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 		return err
 	}
 
+	withMembrane(con, version, provider)
+
 	err = con.Copy(dockerfile.CopyOptions{Src: "/bin/main", Dest: "/bin/main", From: "build"})
 	if err != nil {
 		return err

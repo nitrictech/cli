@@ -19,11 +19,13 @@ package aws
 import (
 	"context"
 	"crypto/md5"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
@@ -59,6 +61,9 @@ type awsProvider struct {
 	schedules   map[string]*Schedule
 }
 
+//go:embed pulumi-aws-version.txt
+var awsPluginVersion string
+
 func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 	return &awsProvider{
 		s:           s,
@@ -69,6 +74,7 @@ func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 		collections: map[string]*dynamodb.Table{},
 		images:      map[string]*common.Image{},
 		funcs:       map[string]*Lambda{},
+		schedules:   map[string]*Schedule{},
 	}
 }
 
@@ -76,7 +82,7 @@ func (a *awsProvider) Plugins() []common.Plugin {
 	return []common.Plugin{
 		{
 			Name:    "aws",
-			Version: "v4.37.1",
+			Version: strings.TrimSpace(awsPluginVersion),
 		},
 	}
 }
@@ -218,10 +224,14 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k, s := range a.s.Schedules {
 		if len(a.topics) > 0 && s.Target.Type == "topic" && s.Target.Name != "" {
+			topic, ok := a.topics[s.Target.Name]
+			if !ok {
+				return fmt.Errorf("schedule %s does not have a topic %s", k, s.Target.Name)
+			}
 			a.schedules[k], err = a.newSchedule(ctx, k, ScheduleArgs{
 				Expression: s.Expression,
-				TopicArn:   a.topics[s.Target.Name].Arn,
-				TopicName:  a.topics[s.Target.Name].Name,
+				TopicArn:   topic.Arn,
+				TopicName:  topic.Name,
 			})
 			if err != nil {
 				return errors.WithMessage(err, "schedule "+k)
@@ -237,16 +247,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	principalMap := make(map[v1.ResourceType]map[string]*iam.Role)
 	principalMap[v1.ResourceType_Function] = make(map[string]*iam.Role)
 
-	computes := []stack.Compute{}
-	for _, c := range a.s.Functions {
-		copy := c
-		computes = append(computes, &copy)
-	}
-	for _, c := range a.s.Containers {
-		copy := c
-		computes = append(computes, &copy)
-	}
-	for _, c := range computes {
+	for _, c := range a.s.Computes() {
 		localImageName := c.ImageTagName(a.s, "")
 
 		repo, err := ecr.NewRepository(ctx, localImageName, &ecr.RepositoryArgs{

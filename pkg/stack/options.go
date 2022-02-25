@@ -87,7 +87,8 @@ func FromOptions(glob []string) (*Stack, error) {
 	}
 
 	for _, g := range glob {
-		if _, err := os.Stat(g); err != nil {
+		maybeFile := filepath.Join(s.Dir, g)
+		if _, err := os.Stat(maybeFile); err != nil {
 			fs, err := utils.GlobInDir(stackPath, g)
 			if err != nil {
 				return nil, err

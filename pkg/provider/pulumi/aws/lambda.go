@@ -155,10 +155,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
-	memory := 128
-	if args.Compute.Unit().Memory > 0 {
-		memory = args.Compute.Unit().Memory
-	}
+	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
 	res.Function, err = awslambda.NewFunction(ctx, name, &awslambda.FunctionArgs{
 		ImageUri:    args.DockerImage.ImageName,
 		MemorySize:  pulumi.IntPtr(memory),
@@ -174,7 +171,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	for _, t := range args.Compute.Unit().Triggers.Topics {
 		topic, ok := args.Topics[t]
 		if ok {
-			_, err = awslambda.NewPermission(ctx, name+"Permission", &awslambda.PermissionArgs{
+			_, err = awslambda.NewPermission(ctx, name+t+"Permission", &awslambda.PermissionArgs{
 				SourceArn: topic.Arn,
 				Function:  res.Function.Name,
 				Principal: pulumi.String("sns.amazonaws.com"),
@@ -184,7 +181,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 				return nil, err
 			}
 
-			_, err = sns.NewTopicSubscription(ctx, name+"Subscription", &sns.TopicSubscriptionArgs{
+			_, err = sns.NewTopicSubscription(ctx, name+t+"Subscription", &sns.TopicSubscriptionArgs{
 				Endpoint: res.Function.Arn,
 				Protocol: pulumi.String("lambda"),
 				Topic:    topic.ID(), // TODO check (was topic.sns)

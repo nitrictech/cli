@@ -25,9 +25,9 @@ import (
 
 func Test_azureProvider_Plugins(t *testing.T) {
 	want := []common.Plugin{
-		{Name: "azure-native", Version: "v1.56.0"},
-		{Name: "azure", Version: "v4.36.0"},
-		{Name: "azuread", Version: "v5.16.0"},
+		{Name: "azure-native", Version: "v1.60.0"},
+		{Name: "azure", Version: "v4.39.0"},
+		{Name: "azuread", Version: "v5.17.0"},
 	}
 	got := (&azureProvider{}).Plugins()
 	if !reflect.DeepEqual(got, want) {

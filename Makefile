@@ -51,3 +51,8 @@ generate_check: generate fmt
 
 .PHONY: check
 check: lint test generate_check
+
+.PHONY: go-mod-update
+go-mod-update:
+	go get -u $$(go run ./hack/allmods)
+	go mod tidy

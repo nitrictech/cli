@@ -14,30 +14,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package main
 
 import (
-	_ "embed"
-	"testing"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/golangci/golangci-lint/pkg/sliceutil"
+	"golang.org/x/mod/modfile"
 )
 
-func TestFunctionVersionString(t *testing.T) {
-	tests := []struct {
-		name        string
-		funcVersion string
-		want        string
-	}{
-		{
-			name: "from embed",
-			want: "v0.14.0-rc.7",
-		},
+var ignoreList = []string{"github.com/jedib0t/go-pretty"}
+
+func main() {
+	b, err := os.ReadFile("go.mod")
+	if err != nil {
+		panic(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := &Function{}
-			if got := f.VersionString(nil); got != tt.want {
-				t.Errorf("Function.VersionString() = '%s', want '%s'", got, tt.want)
-			}
-		})
+
+	mf, err := modfile.Parse("go.mod", b, nil)
+	if err != nil {
+		panic(err)
 	}
+	mods := []string{}
+	for _, r := range mf.Require {
+		if sliceutil.Contains(ignoreList, r.Mod.Path) {
+			continue
+		}
+		if r.Indirect {
+			continue // only update directly required modules
+		}
+		mods = append(mods, r.Mod.Path)
+	}
+	fmt.Print(strings.Join(mods, " "))
 }

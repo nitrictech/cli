@@ -18,6 +18,7 @@ package run
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -36,6 +37,7 @@ type MinioServer struct {
 	dir     string
 	name    string
 	cid     string
+	buckets []string
 	ce      containerengine.ContainerEngine
 	apiPort int // external API port from the minio container
 }
@@ -50,7 +52,7 @@ const (
 	minioConsolePort = 9001 // internal minio console port
 )
 
-// StartMinio -
+// Start - Start the local Minio server
 func (m *MinioServer) Start() error {
 	runDir, err := filepath.Abs(m.dir)
 	if err != nil {
@@ -59,13 +61,17 @@ func (m *MinioServer) Start() error {
 
 	err = os.MkdirAll(runDir, runPerm)
 	if err != nil {
-		return errors.WithMessage(err, "mkdirall")
+		return errors.WithMessage(err, "os.MkdirAll")
 	}
 
-	// TODO: Create new buckets on the fly
-	//for bName := range l.s.Buckets {
-	//	os.MkdirAll(path.Join(nitricRunDir, "buckets", bName), runPerm)
-	//}
+	// create required buckets
+	for _, bName := range m.buckets {
+		err = os.MkdirAll(path.Join(runDir, "buckets", bName), runPerm)
+		if err != nil {
+			return errors.WithMessage(err, "os.MkdirAll")
+		}
+	}
+
 	ports, err := utils.Take(2)
 	if err != nil {
 		return errors.WithMessage(err, "freeport.Take")
@@ -140,7 +146,7 @@ func (m *MinioServer) Stop() error {
 	return m.ce.Stop(m.cid, &timeout)
 }
 
-func NewMinio(dir string, name string) (*MinioServer, error) {
+func NewMinio(dir string, name string, buckets []string) (*MinioServer, error) {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return nil, err
@@ -156,8 +162,9 @@ func NewMinio(dir string, name string) (*MinioServer, error) {
 	}
 
 	return &MinioServer{
-		ce:   ce,
-		dir:  dir,
-		name: name,
+		ce:      ce,
+		dir:     dir,
+		name:    name,
+		buckets: buckets,
 	}, nil
 }

@@ -86,7 +86,7 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
-		ls := run.NewLocalServices(s.Name, s.Dir)
+		ls := run.NewLocalServices(s)
 		memerr := make(chan error)
 
 		pool := run.NewRunProcessPool()

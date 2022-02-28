@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
@@ -48,19 +49,17 @@ type LocalServicesStatus struct {
 }
 
 type localServices struct {
-	stackName string
-	stackPath string
-	mio       *MinioServer
-	mem       *membrane.Membrane
-	status    *LocalServicesStatus
+	s      *stack.Stack
+	mio    *MinioServer
+	mem    *membrane.Membrane
+	status *LocalServicesStatus
 }
 
-func NewLocalServices(stackName, stackPath string) LocalServices {
+func NewLocalServices(s *stack.Stack) LocalServices {
 	return &localServices{
-		stackName: stackName,
-		stackPath: stackPath,
+		s: s,
 		status: &LocalServicesStatus{
-			RunDir:          filepath.Join(utils.NitricRunDir(), stackName),
+			RunDir:          filepath.Join(utils.NitricRunDir(), s.Name),
 			GatewayAddress:  nitric_utils.GetEnv("GATEWAY_ADDRESS", ":9001"),
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
 		},
@@ -87,7 +86,13 @@ func (l *localServices) Status() *LocalServicesStatus {
 
 func (l *localServices) Start(pool worker.WorkerPool) error {
 	var err error
-	l.mio, err = NewMinio(l.status.RunDir, l.stackName)
+
+	buckets := make([]string, 0, len(l.s.Buckets))
+	for k := range l.s.Buckets {
+		buckets = append(buckets, k)
+	}
+
+	l.mio, err = NewMinio(l.status.RunDir, l.s.Name, buckets)
 	if err != nil {
 		return err
 	}

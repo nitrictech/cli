@@ -53,7 +53,7 @@ func apiWorkerFilter(apiName string) func(w worker.Worker) bool {
 func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
 	apiName := ctx.UserValue("name").(string)
 	// Rewrite the URL of the request to remove the /api/{name} subroute
-	pathParts := nitric_utils.SplitPath(string(ctx.Path()))
+	pathParts := nitric_utils.SplitPath(string(ctx.URI().PathOriginal()))
 
 	// remove first two path parts
 	newPathParts := pathParts[2:]

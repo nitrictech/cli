@@ -20,7 +20,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -31,7 +31,7 @@ func GoModule(searchPath string) (string, error) {
 	}
 
 	for _, fname := range files {
-		f, err := os.Open(path.Join(searchPath, fname))
+		f, err := os.Open(filepath.Join(searchPath, fname))
 		if err != nil {
 			return "", err
 		}

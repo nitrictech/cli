@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -162,7 +162,7 @@ func ensureConfigDefaults() {
 					return err
 				}
 
-				return viper.WriteConfigAs(path.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
+				return viper.WriteConfigAs(filepath.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
 			},
 			StopMsg: "Configfile updated"}, tasklet.Opts{})
 	}

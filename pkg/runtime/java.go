@@ -105,14 +105,14 @@ func mavenBuild(con dockerfile.ContainerState, contextDir string) error {
 	moduleDirs := []string{}
 	for _, p := range pomFiles {
 		moduleDirs = append(moduleDirs, path.Dir(p))
-		err = con.Copy(dockerfile.CopyOptions{Src: p, Dest: path.Join("./", p)})
+		err = con.Copy(dockerfile.CopyOptions{Src: p, Dest: filepath.Join("./", p)})
 		if err != nil {
 			return err
 		}
 	}
 	con.Run(dockerfile.RunOptions{Command: []string{"mvn", "de.qaware.maven:go-offline-maven-plugin:resolve-dependencies"}})
 	for _, d := range moduleDirs {
-		err = con.Copy(dockerfile.CopyOptions{Src: d, Dest: path.Join("./", d)})
+		err = con.Copy(dockerfile.CopyOptions{Src: d, Dest: filepath.Join("./", d)})
 		if err != nil {
 			return err
 		}

@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -163,7 +163,7 @@ func validateName(val interface{}) error {
 }
 
 func setStackName(name string) error {
-	stackFilePath := path.Join("./", name, "nitric.yaml")
+	stackFilePath := filepath.Join("./", name, "nitric.yaml")
 	// Skip non nitric.yaml template renaming (config as code)
 	if _, err := os.Stat(stackFilePath); errors.Is(err, os.ErrNotExist) {
 		return nil

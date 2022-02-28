@@ -37,7 +37,7 @@ type MinioServer struct {
 	name    string
 	cid     string
 	ce      containerengine.ContainerEngine
-	apiPort int
+	apiPort int // external API port from the minio container
 }
 
 const (
@@ -46,8 +46,8 @@ const (
 	runPerm          = os.ModePerm // NOTE: octal notation is important here!!!
 	labelStackName   = "io.nitric/stack"
 	labelType        = "io.nitric/type"
-	minioPort        = 9000
-	minioConsolePort = 9001 // TODO: Determine if we would like to expose the console
+	minioPort        = 9000 // internal minio api port
+	minioConsolePort = 9001 // internal minio console port
 )
 
 // StartMinio -
@@ -124,7 +124,7 @@ func (m *MinioServer) Start() error {
 		return err
 	}
 	m.cid = cID
-	m.apiPort = minioPort
+	m.apiPort = int(port)
 
 	pterm.Debug.Print(containerengine.Cli(cc, hc))
 

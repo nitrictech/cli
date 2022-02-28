@@ -125,14 +125,12 @@ var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	doc := &openapi3.T{
 		Paths: make(openapi3.Paths),
+		Info: &openapi3.Info{
+			Title:   api,
+			Version: "v1",
+		},
+		OpenAPI: "3.0.1",
 	}
-
-	doc.Info = &openapi3.Info{
-		Title:   api,
-		Version: "v1",
-	}
-
-	doc.OpenAPI = "3.0.1"
 
 	// Compile an API specification from the functions in the stack for the given API name
 	workers := make([]*apiHandler, 0)
@@ -157,31 +155,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	// FIXME: We will need to merge path matches across all workers
 	// to ensure we don't have conflicts
 	for _, w := range workers {
-		params := make(openapi3.Parameters, 0)
-		normalizedPath := ""
-		for _, p := range strings.Split(w.worker.Path, "/") {
-			if strings.HasPrefix(p, ":") {
-				paramName := strings.Replace(p, ":", "", -1)
-				params = append(params, &openapi3.ParameterRef{
-					Value: &openapi3.Parameter{
-						In:       "path",
-						Name:     paramName,
-						Required: true,
-						Schema: &openapi3.SchemaRef{
-							Value: &openapi3.Schema{
-								Type: "string",
-							},
-						},
-					},
-				})
-				normalizedPath = normalizedPath + "{" + paramName + "}" + "/"
-			} else {
-				normalizedPath = normalizedPath + p + "/"
-			}
-		}
-		// trim off trailing slash
-		normalizedPath = strings.TrimSuffix(normalizedPath, "/")
-
+		normalizedPath, params := splitPath(w.worker.Path)
 		pathItem := doc.Paths.Find(normalizedPath)
 
 		if pathItem == nil {
@@ -217,6 +191,35 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	}
 
 	return doc, nil
+}
+
+func splitPath(workerPath string) (string, openapi3.Parameters) {
+	normalizedPath := ""
+	params := make(openapi3.Parameters, 0)
+	for _, p := range strings.Split(workerPath, "/") {
+		if strings.HasPrefix(p, ":") {
+			paramName := strings.Replace(p, ":", "", -1)
+			params = append(params, &openapi3.ParameterRef{
+				Value: &openapi3.Parameter{
+					In:       "path",
+					Name:     paramName,
+					Required: true,
+					Schema: &openapi3.SchemaRef{
+						Value: &openapi3.Schema{
+							Type: "string",
+						},
+					},
+				},
+			})
+			normalizedPath = normalizedPath + "{" + paramName + "}" + "/"
+		} else {
+			normalizedPath = normalizedPath + p + "/"
+		}
+	}
+	// trim off trailing slash
+	normalizedPath = strings.TrimSuffix(normalizedPath, "/")
+
+	return normalizedPath, params
 }
 
 // collectOne - Collects information about a function for a nitric stack
@@ -297,7 +300,9 @@ func (c *codeConfig) collectOne(handler string) error {
 		return err
 	}
 
-	pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
+	if output.VerboseLevel > 2 {
+		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
+	}
 	if output.VerboseLevel > 1 {
 		logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
 			ShowStdout: true,

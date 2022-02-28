@@ -231,6 +231,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			Name: pulumi.StringPtr(k),
 			Tags: common.Tags(ctx, k),
 		})
+		if err != nil {
+			return errors.WithMessage(err, "secretsmanager secret"+k)
+		}
 	}
 
 	for k, s := range a.s.Schedules {

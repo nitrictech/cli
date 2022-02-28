@@ -106,6 +106,6 @@ func (t *javascript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 		},
 		TargetWD:   "/app",
 		Entrypoint: strslice.StrSlice{"nodemon"},
-		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + t.handler},
+		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + filepath.ToSlash(t.handler)},
 	}, nil
 }

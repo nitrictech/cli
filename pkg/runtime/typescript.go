@@ -71,7 +71,7 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 		return err
 	}
 	con.Config(dockerfile.ConfigOptions{
-		Cmd: []string{"ts-node", "-T", t.handler},
+		Cmd: []string{"ts-node", "-T", filepath.ToSlash(t.handler)},
 	})
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err
@@ -123,6 +123,6 @@ func (t *typescript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 			},
 		},
 		Entrypoint: strslice.StrSlice{"nodemon"},
-		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + t.handler},
+		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + filepath.ToSlash(t.handler)},
 	}, nil
 }

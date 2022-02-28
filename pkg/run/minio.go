@@ -18,7 +18,6 @@ package run
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -66,7 +65,7 @@ func (m *MinioServer) Start() error {
 
 	// create required buckets
 	for _, bName := range m.buckets {
-		err = os.MkdirAll(path.Join(runDir, "buckets", bName), runPerm)
+		err = os.MkdirAll(filepath.Join(runDir, "buckets", bName), runPerm)
 		if err != nil {
 			return errors.WithMessage(err, "os.MkdirAll")
 		}

@@ -314,7 +314,7 @@ func (s *Stack) ToFile(file string) error {
 	}
 
 	for apiName, apiFile := range s.Apis {
-		apiPath := path.Join(s.Dir, apiFile)
+		apiPath := filepath.Join(s.Dir, apiFile)
 		doc, ok := s.ApiDocs[apiName]
 		if !ok {
 			return fmt.Errorf("apiDoc %s does not exist", apiPath)

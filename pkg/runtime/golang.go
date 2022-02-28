@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -127,18 +126,18 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 	}
 	return LaunchOpts{
 		Image:    t.DevImageName(),
-		TargetWD: path.Join("/go/src", module),
+		TargetWD: filepath.Join("/go/src", module),
 		Cmd:      strslice.StrSlice{"go", "run", "./" + filepath.ToSlash(t.handler)},
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
-				Source: path.Join(os.Getenv("GOPATH"), "pkg"),
+				Source: filepath.Join(os.Getenv("GOPATH"), "pkg"),
 				Target: "/go/pkg",
 			},
 			{
 				Type:   "bind",
 				Source: runCtx,
-				Target: path.Join("/go/src", module),
+				Target: filepath.Join("/go/src", module),
 			},
 		},
 	}, nil
@@ -149,7 +148,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 	if err != nil {
 		return LaunchOpts{}, err
 	}
-	containerRunCtx := path.Join("/go/src", module)
+	containerRunCtx := filepath.Join("/go/src", module)
 	relHandler := t.handler
 	if strings.HasPrefix(t.handler, runCtx) {
 		relHandler, err = filepath.Rel(runCtx, t.handler)
@@ -172,7 +171,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
-				Source: path.Join(os.Getenv("GOPATH"), "pkg"),
+				Source: filepath.Join(os.Getenv("GOPATH"), "pkg"),
 				Target: "/go/pkg",
 			},
 			{

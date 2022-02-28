@@ -81,7 +81,7 @@ func (m *MinioServer) Start() error {
 
 	cc := &container.Config{
 		Image: minioImage,
-		Cmd:   []string{"minio", "server", "/nitric/buckets", "--console-address", fmt.Sprintf(":%d", consolePort)},
+		Cmd:   []string{"minio", "server", "/nitric/buckets", "--console-address", fmt.Sprintf(":%d", minioConsolePort)},
 		ExposedPorts: nat.PortSet{
 			nat.Port(fmt.Sprintf("%d/tcp", minioPort)):        struct{}{},
 			nat.Port(fmt.Sprintf("%d/tcp", minioConsolePort)): struct{}{},

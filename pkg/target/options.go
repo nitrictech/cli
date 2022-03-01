@@ -89,7 +89,8 @@ func AllFromConfig() (map[string]Target, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(tMap) > 3 {
+
+		if len(tMap) > 2 {
 			// Decode the "extra" map for provider specific values
 			delete(tMap, "provider")
 			delete(tMap, "region")

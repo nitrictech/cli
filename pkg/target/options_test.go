@@ -80,6 +80,24 @@ func TestFromOptions(t *testing.T) {
 			},
 		},
 		{
+			name:   "from config with extra 1",
+			target: "gcp",
+			config: map[string]map[string]interface{}{
+				"gcp": {
+					"provider": "gcp",
+					"region":   "australia-southeast1",
+					"project":  "avid-life-342120",
+				},
+			},
+			want: &Target{
+				Provider: Gcp,
+				Region:   "australia-southeast1",
+				Extra: map[string]interface{}{
+					"project": "avid-life-342120",
+				},
+			},
+		},
+		{
 			name:        "from args",
 			provider:    "azure",
 			region:      "eastus",

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	osruntime "runtime"
 	"strings"
 
 	"github.com/docker/docker/api/types/mount"
@@ -110,6 +111,15 @@ func (t *javascript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, er
 }
 
 func (t *javascript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
+	var cmd []string
+
+	if osruntime.GOOS == "windows" {
+		// https://github.com/remy/nodemon#application-isnt-restarting
+		cmd = strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "-L", "--exec", "node " + "/app/" + filepath.ToSlash(t.handler)}
+	} else {
+		cmd = strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "node " + "/app/" + filepath.ToSlash(t.handler)}
+	}
+
 	return LaunchOpts{
 		Mounts: []mount.Mount{
 			{
@@ -120,6 +130,6 @@ func (t *javascript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 		},
 		TargetWD:   "/app",
 		Entrypoint: strslice.StrSlice{"nodemon"},
-		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "node " + "/app/" + filepath.ToSlash(t.handler)},
+		Cmd:        cmd,
 	}, nil
 }

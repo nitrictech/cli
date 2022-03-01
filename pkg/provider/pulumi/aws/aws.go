@@ -19,11 +19,13 @@ package aws
 import (
 	"context"
 	"crypto/md5"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
@@ -31,6 +33,7 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/resourcegroups"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/secretsmanager"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
@@ -54,10 +57,14 @@ type awsProvider struct {
 	buckets     map[string]*s3.Bucket
 	queues      map[string]*sqs.Queue
 	collections map[string]*dynamodb.Table
+	secrets     map[string]*secretsmanager.Secret
 	images      map[string]*common.Image
 	funcs       map[string]*Lambda
 	schedules   map[string]*Schedule
 }
+
+//go:embed pulumi-aws-version.txt
+var awsPluginVersion string
 
 func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 	return &awsProvider{
@@ -67,8 +74,10 @@ func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 		buckets:     map[string]*s3.Bucket{},
 		queues:      map[string]*sqs.Queue{},
 		collections: map[string]*dynamodb.Table{},
+		secrets:     map[string]*secretsmanager.Secret{},
 		images:      map[string]*common.Image{},
 		funcs:       map[string]*Lambda{},
+		schedules:   map[string]*Schedule{},
 	}
 }
 
@@ -76,7 +85,7 @@ func (a *awsProvider) Plugins() []common.Plugin {
 	return []common.Plugin{
 		{
 			Name:    "aws",
-			Version: "v4.37.1",
+			Version: strings.TrimSpace(awsPluginVersion),
 		},
 	}
 }
@@ -216,12 +225,27 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	secrets := map[string]*secretsmanager.Secret{}
+	for k := range a.s.Secrets {
+		secrets[k], err = secretsmanager.NewSecret(ctx, k, &secretsmanager.SecretArgs{
+			Name: pulumi.StringPtr(k),
+			Tags: common.Tags(ctx, k),
+		})
+		if err != nil {
+			return errors.WithMessage(err, "secretsmanager secret"+k)
+		}
+	}
+
 	for k, s := range a.s.Schedules {
 		if len(a.topics) > 0 && s.Target.Type == "topic" && s.Target.Name != "" {
+			topic, ok := a.topics[s.Target.Name]
+			if !ok {
+				return fmt.Errorf("schedule %s does not have a topic %s", k, s.Target.Name)
+			}
 			a.schedules[k], err = a.newSchedule(ctx, k, ScheduleArgs{
 				Expression: s.Expression,
-				TopicArn:   a.topics[s.Target.Name].Arn,
-				TopicName:  a.topics[s.Target.Name].Name,
+				TopicArn:   topic.Arn,
+				TopicName:  topic.Name,
 			})
 			if err != nil {
 				return errors.WithMessage(err, "schedule "+k)
@@ -237,16 +261,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	principalMap := make(map[v1.ResourceType]map[string]*iam.Role)
 	principalMap[v1.ResourceType_Function] = make(map[string]*iam.Role)
 
-	computes := []stack.Compute{}
-	for _, c := range a.s.Functions {
-		copy := c
-		computes = append(computes, &copy)
-	}
-	for _, c := range a.s.Containers {
-		copy := c
-		computes = append(computes, &copy)
-	}
-	for _, c := range computes {
+	for _, c := range a.s.Computes() {
 		localImageName := c.ImageTagName(a.s, "")
 
 		repo, err := ecr.NewRepository(ctx, localImageName, &ecr.RepositoryArgs{
@@ -295,6 +310,11 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	for _, p := range a.s.Policies {
+		if len(p.Actions) == 0 {
+			// note Topic receiving does not require an action.
+			_ = ctx.Log.Debug("policy has no actions "+fmt.Sprint(p), &pulumi.LogArgs{Ephemeral: true})
+			continue
+		}
 		policyName, err := policyResourceName(p)
 		if err != nil {
 			return err
@@ -307,6 +327,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 				Queues:      a.queues,
 				Buckets:     a.buckets,
 				Collections: a.collections,
+				Secrets:     a.secrets,
 			},
 			Principals: principalMap,
 		}); err != nil {

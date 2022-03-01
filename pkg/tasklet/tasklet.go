@@ -113,8 +113,8 @@ func Run(runner Runner, opts Opts) error {
 	case <-timer.C:
 		err = errors.New("tasklet timedout after " + opts.Timeout.String())
 	case <-done:
-	case sigTerm := <-opts.Signal:
-		err = fmt.Errorf("received %v, exiting", sigTerm)
+	case <-opts.Signal:
+		fmt.Println("Shutting down services - exiting")
 	}
 
 	elapsed := time.Since(start)

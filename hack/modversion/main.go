@@ -42,7 +42,7 @@ func main() {
 		}
 
 		words := strings.Split(string(line), " ")
-		if len(words) == 3 && words[0] == "github.com/nitrictech/nitric" {
+		if len(words) == 3 && strings.HasPrefix(words[0], os.Args[1]) {
 			fmt.Print(words[1])
 			break
 		}

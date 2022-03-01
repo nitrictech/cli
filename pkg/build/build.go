@@ -19,7 +19,7 @@ package build
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
@@ -56,7 +56,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 		fh.Close()
 
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err = cr.Build(path.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs)
+		err = cr.Build(filepath.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 
 	for _, c := range s.Containers {
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err := cr.Build(path.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs)
+		err := cr.Build(filepath.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs)
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func CreateBaseDev(s *stack.Stack) error {
 		if err != nil {
 			return err
 		}
-		lang := strings.Replace(path.Ext(f.Handler), ".", "", 1)
+		lang := strings.Replace(filepath.Ext(f.Handler), ".", "", 1)
 		_, ok := imagesToBuild[lang]
 		if ok {
 			continue
@@ -104,7 +104,7 @@ func CreateBaseDev(s *stack.Stack) error {
 			return err
 		}
 
-		if err := ce.Build(path.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}); err != nil {
+		if err := ce.Build(filepath.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}); err != nil {
 			return err
 		}
 		imagesToBuild[lang] = rt.DevImageName()

@@ -49,21 +49,6 @@ func TestFromGlobArgs(t *testing.T) {
 			},
 		},
 		{
-			name:      "glob",
-			glob:      []string{"utils/*.go"},
-			stackPath: "../../pkg",
-			want: &Stack{
-				Dir:  "../../pkg",
-				Name: "pkg",
-				Functions: map[string]Function{
-					"utils": {
-						Handler:     "utils/paths.go",
-						ComputeUnit: ComputeUnit{Name: "utils"},
-					},
-				},
-			},
-		},
-		{
 			name:      "files",
 			glob:      []string{"stack/types.go", "stack/options.go"},
 			stackPath: "../../pkg",
@@ -143,7 +128,7 @@ func TestEnsureRuntimeDefaults(t *testing.T) {
 	if got := EnsureRuntimeDefaults(); got != want {
 		t.Errorf("EnsureRuntimeDefaults() = %v, want %v", got, want)
 	}
-	expectGlobs := []string{"functions/*/*.go", "functions/*.ts"}
+	expectGlobs := []string{"functions/*/*.go", "functions/*.ts", "functions/*.js"}
 	sort.SliceStable(expectGlobs, func(i, j int) bool {
 		return expectGlobs[i] < expectGlobs[j]
 	})

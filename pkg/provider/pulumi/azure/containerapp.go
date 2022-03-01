@@ -135,16 +135,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		return nil, err
 	}
 
-	computes := []stack.Compute{}
-	for _, c := range a.s.Functions {
-		copy := c
-		computes = append(computes, &copy)
-	}
-	for _, c := range a.s.Containers {
-		copy := c
-		computes = append(computes, &copy)
-	}
-	for _, c := range computes {
+	for _, c := range a.s.Computes() {
 		localImageName := c.ImageTagName(a.s, "")
 		repositoryUrl := res.Registry.LoginServer.ApplyT(func(server string) string {
 			return server + "/" + c.ImageTagName(a.s, a.t.Provider)
@@ -266,6 +257,8 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		},
 	}
 
+	//memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
+	// we can't define memory without defining the cpu..
 	res.App, err = web.NewContainerApp(ctx, resourceName(ctx, name, ContainerAppRT), &web.ContainerAppArgs{
 		ResourceGroupName: args.ResourceGroupName,
 		Location:          args.Location,

@@ -19,7 +19,6 @@ package stack
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -40,6 +39,9 @@ func EnsureRuntimeDefaults() bool {
 	defaults := map[string]map[string]interface{}{
 		"ts": {
 			"functionglob": "functions/*.ts",
+		},
+		"js": {
+			"functionglob": "functions/*.js",
 		},
 		"go": {
 			"functionglob": "functions/*/*.go",
@@ -88,7 +90,8 @@ func FromOptions(glob []string) (*Stack, error) {
 	}
 
 	for _, g := range glob {
-		if _, err := os.Stat(g); err != nil {
+		maybeFile := filepath.Join(s.Dir, g)
+		if _, err := os.Stat(maybeFile); err != nil {
 			fs, err := utils.GlobInDir(stackPath, g)
 			if err != nil {
 				return nil, err
@@ -126,7 +129,7 @@ func FromOptionsMinimal() (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := New(path.Base(absDir), sDir)
+	s := New(filepath.Base(absDir), sDir)
 
 	return s, nil
 }

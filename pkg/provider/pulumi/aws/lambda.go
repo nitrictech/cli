@@ -51,6 +51,8 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
+	opts = append(opts, pulumi.Parent(res))
+
 	tmpJSON, err := json.Marshal(map[string]interface{}{
 		"Version": "2012-10-17",
 		"Statement": []map[string]interface{}{
@@ -71,7 +73,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	res.Role, err = iam.NewRole(ctx, name+"LambdaRole", &iam.RoleArgs{
 		AssumeRolePolicy: pulumi.String(tmpJSON),
 		Tags:             common.Tags(ctx, name+"LambdaRole"),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +81,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	_, err = iam.NewRolePolicyAttachment(ctx, name+"LambdaBasicExecution", &iam.RolePolicyAttachmentArgs{
 		PolicyArn: iam.ManagedPolicyAWSLambdaBasicExecutionRole,
 		Role:      res.Role.ID(),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -112,53 +114,12 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	_, err = iam.NewRolePolicy(ctx, name+"ListAccess", &iam.RolePolicyArgs{
 		Role:   res.Role.ID(),
 		Policy: pulumi.String(tmpJSON),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	tmpJSON, err = json.Marshal(map[string]interface{}{
-		"Version": "2012-10-17",
-		"Statement": []map[string]interface{}{
-			{
-				"Action": []string{
-					"secretsmanager:DescribeSecret",
-					"secretsmanager:PutSecretValue",
-					"secretsmanager:CreateSecret",
-					"secretsmanager:DeleteSecret",
-					"secretsmanager:CancelRotateSecret",
-					"secretsmanager:ListSecretVersionIds",
-					"secretsmanager:UpdateSecret",
-					"secretsmanager:GetRandomPassword",
-					"secretsmanager:GetResourcePolicy",
-					"secretsmanager:GetSecretValue",
-					"secretsmanager:StopReplicationToReplica",
-					"secretsmanager:ReplicateSecretToRegions",
-					"secretsmanager:RestoreSecret",
-					"secretsmanager:RotateSecret",
-					"secretsmanager:UpdateSecretVersionStage",
-					"secretsmanager:RemoveRegionsFromReplication",
-				},
-				"Effect":   "Allow",
-				"Resource": "*",
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	_, err = iam.NewRolePolicy(ctx, name+"SecretsAccess", &iam.RolePolicyArgs{
-		Role:   res.Role.ID(),
-		Policy: pulumi.String(tmpJSON),
-	}, pulumi.Parent(res))
-	if err != nil {
-		return nil, err
-	}
-
-	memory := 128
-	if args.Compute.Unit().Memory > 0 {
-		memory = args.Compute.Unit().Memory
-	}
+	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
 	res.Function, err = awslambda.NewFunction(ctx, name, &awslambda.FunctionArgs{
 		ImageUri:    args.DockerImage.ImageName,
 		MemorySize:  pulumi.IntPtr(memory),
@@ -166,7 +127,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		PackageType: pulumi.String("Image"),
 		Role:        res.Role.Arn,
 		Tags:        common.Tags(ctx, name),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -174,21 +135,21 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	for _, t := range args.Compute.Unit().Triggers.Topics {
 		topic, ok := args.Topics[t]
 		if ok {
-			_, err = awslambda.NewPermission(ctx, name+"Permission", &awslambda.PermissionArgs{
+			_, err = awslambda.NewPermission(ctx, name+t+"Permission", &awslambda.PermissionArgs{
 				SourceArn: topic.Arn,
 				Function:  res.Function.Name,
 				Principal: pulumi.String("sns.amazonaws.com"),
 				Action:    pulumi.String("lambda:InvokeFunction"),
-			}, pulumi.Parent(res))
+			}, opts...)
 			if err != nil {
 				return nil, err
 			}
 
-			_, err = sns.NewTopicSubscription(ctx, name+"Subscription", &sns.TopicSubscriptionArgs{
+			_, err = sns.NewTopicSubscription(ctx, name+t+"Subscription", &sns.TopicSubscriptionArgs{
 				Endpoint: res.Function.Arn,
 				Protocol: pulumi.String("lambda"),
 				Topic:    topic.ID(), // TODO check (was topic.sns)
-			}, pulumi.Parent(res))
+			}, opts...)
 			if err != nil {
 				return nil, err
 			}

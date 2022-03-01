@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	osruntime "runtime"
 	"strings"
 
 	"github.com/docker/docker/api/types/mount"
@@ -71,7 +72,7 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 		return err
 	}
 	con.Config(dockerfile.ConfigOptions{
-		Cmd: []string{"ts-node", "-T", t.handler},
+		Cmd: []string{"ts-node", "-T", filepath.ToSlash(t.handler)},
 	})
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err
@@ -100,7 +101,7 @@ func (t *typescript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, er
 	return LaunchOpts{
 		Image:      t.DevImageName(),
 		Entrypoint: strslice.StrSlice{"ts-node"},
-		Cmd:        strslice.StrSlice{"-T", "/app/" + t.handler},
+		Cmd:        strslice.StrSlice{"-T", "/app/" + filepath.ToSlash(t.handler)},
 		TargetWD:   "/app",
 		Mounts: []mount.Mount{
 			{
@@ -113,6 +114,15 @@ func (t *typescript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, er
 }
 
 func (t *typescript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
+	var cmd []string
+
+	if osruntime.GOOS == "windows" {
+		// https://github.com/remy/nodemon#application-isnt-restarting
+		cmd = strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "-L", "--exec", "ts-node -T " + "/app/" + filepath.ToSlash(t.handler)}
+	} else {
+		cmd = strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + filepath.ToSlash(t.handler)}
+	}
+
 	return LaunchOpts{
 		TargetWD: "/app",
 		Mounts: []mount.Mount{
@@ -123,6 +133,6 @@ func (t *typescript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 			},
 		},
 		Entrypoint: strslice.StrSlice{"nodemon"},
-		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + t.handler},
+		Cmd:        cmd,
 	}, nil
 }

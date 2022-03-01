@@ -14,26 +14,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package utils
 
 import (
-	"fmt"
-	"runtime"
-
-	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkg/utils"
+	"bytes"
 )
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of this CLI",
-	Long:  `All software has versions. This is Nitric's`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Go Version: %s\n", runtime.Version())
-		fmt.Printf("Go OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
-		fmt.Printf("Git commit: %s\n", utils.Commit)
-		fmt.Printf("Build time: %s\n", utils.BuildTime)
-		fmt.Printf("Nitric CLI: %s\n", utils.Version)
-	},
+func StringTrunc(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max]
+}
+
+func JoinCamelCase(ss []string) string {
+	res := ss[0]
+	for i := 1; i < len(ss); i++ {
+		word := ss[i]
+		res += string(bytes.ToUpper([]byte{word[0]}))
+		res += word[1:]
+	}
+	return res
 }

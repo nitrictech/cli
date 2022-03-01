@@ -17,10 +17,11 @@
 package aws
 
 import (
-	"encoding/json"
 	"fmt"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/cloudwatch"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
@@ -30,7 +31,7 @@ import (
 
 type ScheduleArgs struct {
 	Expression string
-	TopicArn   pulumi.StringInput
+	TopicArn   pulumi.StringOutput
 	TopicName  pulumi.StringInput
 }
 
@@ -49,15 +50,17 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 		return nil, err
 	}
 
+	opts = append(opts, pulumi.Parent(res))
+
 	awsCronValue, err := cron.ConvertToAWS(args.Expression)
 	if err != nil {
 		return nil, err
 	}
 
 	res.EventRule, err = cloudwatch.NewEventRule(ctx, name+"Schedule", &cloudwatch.EventRuleArgs{
-		ScheduleExpression: pulumi.String("cron(" + awsCronValue + ")"),
+		ScheduleExpression: pulumi.String(awsCronValue),
 		Tags:               common.Tags(ctx, name+"Schedule"),
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,33 +68,36 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 	res.EventTarget, err = cloudwatch.NewEventTarget(ctx, name+"Target", &cloudwatch.EventTargetArgs{
 		Rule: res.EventRule.Name,
 		Arn:  args.TopicArn,
-	}, pulumi.Parent(res))
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	rolepolicyJSON, err := json.Marshal(map[string]interface{}{
-		"Version": "2012-10-17",
-		"Statement": []interface{}{
-			map[string]interface{}{
-				"SID":    "__default_statement_ID",
-				"Effect": "Allow",
-				"Action": []string{"SNS:Publish*"},
-				"Principal": map[string]interface{}{
-					"Service": "events.amazonaws.com",
+	pdocJSON := args.TopicArn.ApplyT(func(arn string) (string, error) {
+		pdoc, err := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
+			PolicyId: to.StringPtr("__default_policy_ID"),
+			Statements: []iam.GetPolicyDocumentStatement{
+				{
+					Sid:     to.StringPtr("__default_statement_ID"),
+					Effect:  to.StringPtr("Allow"),
+					Actions: []string{"SNS:Publish"},
+					Principals: []iam.GetPolicyDocumentStatementPrincipal{
+						{Type: "Service", Identifiers: []string{"events.amazonaws.com"}},
+					},
+					Resources: []string{arn},
 				},
-				"Resource": args.TopicArn.ToStringOutput(),
 			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
+		})
+		if err != nil {
+			return "", err
+		}
+		return pdoc.Json, nil
+	}).(pulumi.StringInput)
 
 	_, err = sns.NewTopicPolicy(ctx, fmt.Sprintf("%sTarget%vPolicy", name, args.TopicName), &sns.TopicPolicyArgs{
 		Arn:    args.TopicArn,
-		Policy: pulumi.String(rolepolicyJSON),
-	}, pulumi.Parent(res))
+		Policy: pdocJSON,
+	}, opts...)
 
 	return res, err
 }

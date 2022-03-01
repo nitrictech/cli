@@ -18,22 +18,34 @@ package main
 
 import (
 	"fmt"
-	"runtime"
+	"os"
+	"strings"
 
-	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/golangci/golangci-lint/pkg/sliceutil"
+	"golang.org/x/mod/modfile"
 )
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of this CLI",
-	Long:  `All software has versions. This is Nitric's`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Go Version: %s\n", runtime.Version())
-		fmt.Printf("Go OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
-		fmt.Printf("Git commit: %s\n", utils.Commit)
-		fmt.Printf("Build time: %s\n", utils.BuildTime)
-		fmt.Printf("Nitric CLI: %s\n", utils.Version)
-	},
+var ignoreList = []string{"github.com/jedib0t/go-pretty"}
+
+func main() {
+	b, err := os.ReadFile("go.mod")
+	if err != nil {
+		panic(err)
+	}
+
+	mf, err := modfile.Parse("go.mod", b, nil)
+	if err != nil {
+		panic(err)
+	}
+	mods := []string{}
+	for _, r := range mf.Require {
+		if sliceutil.Contains(ignoreList, r.Mod.Path) {
+			continue
+		}
+		if r.Indirect {
+			continue // only update directly required modules
+		}
+		mods = append(mods, r.Mod.Path)
+	}
+	fmt.Print(strings.Join(mods, " "))
 }

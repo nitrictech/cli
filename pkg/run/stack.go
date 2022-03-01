@@ -111,7 +111,7 @@ func (r *RunStackState) TopicTable(port int) string {
 
 	for k := range r.subs {
 		tableData = append(tableData, []string{
-			k, fmt.Sprintf("http://localhost:%d/topics/%s", port, k),
+			k, fmt.Sprintf("http://localhost:%d/topic/%s", port, k),
 		})
 	}
 
@@ -126,7 +126,7 @@ func (r *RunStackState) SchedulesTable(port int) string {
 	for k := range r.schedules {
 		nKey := strings.ToLower(strings.ReplaceAll(k, " ", "-"))
 		tableData = append(tableData, []string{
-			k, fmt.Sprintf("http://localhost:%d/topics/%s", port, nKey),
+			k, fmt.Sprintf("http://localhost:%d/topic/%s", port, nKey),
 		})
 	}
 

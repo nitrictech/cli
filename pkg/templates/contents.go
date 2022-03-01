@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/hashicorp/go-getter"
@@ -61,7 +60,7 @@ var _ Downloader = &downloader{}
 
 func NewDownloader() Downloader {
 	return &downloader{
-		configPath: path.Join(utils.NitricTemplatesDir(), "repositories.yml"),
+		configPath: filepath.Join(utils.NitricTemplatesDir(), "repositories.yml"),
 		newGetter:  utils.NewGetter,
 	}
 }
@@ -82,7 +81,7 @@ func (d *downloader) Names() ([]string, error) {
 
 func (d *downloader) Get(name string) *TemplateInfo {
 	for _, ti := range d.repo {
-		if ti.Path == name {
+		if ti.Name == name {
 			return &ti
 		}
 	}
@@ -110,7 +109,7 @@ func officialStackName(name string) string {
 }
 
 func (d *downloader) repository() error {
-	src := rawGitHubURL + "/" + path.Join(templatesRepo, "main/repository.yaml")
+	src := rawGitHubURL + "/" + filepath.Join(templatesRepo, "main/repository.yaml")
 	client := d.newGetter(&getter.Client{
 		Ctx: context.Background(),
 		//define the destination to where the directory will be stored. This will create the directory if it doesnt exist

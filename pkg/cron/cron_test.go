@@ -57,6 +57,10 @@ func TestAwsSchedule(t *testing.T) {
 			inputSchedule:  "@daily",
 			wantedSchedule: "cron(0 0 * * ? *)",
 		},
+		"correctly converts once a day": {
+			inputSchedule:  "0 0 */1 * *",
+			wantedSchedule: "cron(0 0 * * ? *)",
+		},
 		"unrecognized predefined schedule": {
 			inputSchedule: "@minutely",
 			wantedError:   errors.New("schedule is not valid cron, rate, or preset: unrecognized descriptor: @minutely"),
@@ -139,19 +143,19 @@ func TestAwsSchedule(t *testing.T) {
 		},
 		"Given a valid cron expression": {
 			inputSchedule:  "*/1 * * * *",
-			wantedSchedule: "cron(0/1 * * * ? *)",
+			wantedSchedule: "cron(*/1 * * * ? *)",
 		},
 		"Given a valid cron with a Day of Week value between 0-6": {
 			inputSchedule:  "*/1 * * * 3",
-			wantedSchedule: "cron(0/1 * ? * 4 *)",
+			wantedSchedule: "cron(*/1 * ? * 4 *)",
 		},
 		"Given a valid cron with a Day of Week value of 0 (Sunday)": {
 			inputSchedule:  "*/1 * * * 0",
-			wantedSchedule: "cron(0/1 * ? * 1 *)",
+			wantedSchedule: "cron(*/1 * ? * 1 *)",
 		},
 		"Given a valid cron with a Day of Week value range": {
 			inputSchedule:  "*/1 * * * 1-3",
-			wantedSchedule: "cron(0/1 * ? * 2-4 *)",
+			wantedSchedule: "cron(*/1 * ? * 2-4 *)",
 		},
 	}
 	for name, tc := range testCases {

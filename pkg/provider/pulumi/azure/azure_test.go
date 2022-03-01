@@ -14,26 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package azure
 
 import (
-	"fmt"
-	"runtime"
+	"reflect"
+	"testing"
 
-	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 )
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of this CLI",
-	Long:  `All software has versions. This is Nitric's`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Go Version: %s\n", runtime.Version())
-		fmt.Printf("Go OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
-		fmt.Printf("Git commit: %s\n", utils.Commit)
-		fmt.Printf("Build time: %s\n", utils.BuildTime)
-		fmt.Printf("Nitric CLI: %s\n", utils.Version)
-	},
+func Test_azureProvider_Plugins(t *testing.T) {
+	want := []common.Plugin{
+		{Name: "azure-native", Version: "v1.60.0"},
+		{Name: "azure", Version: "v4.39.0"},
+		{Name: "azuread", Version: "v5.17.0"},
+	}
+	got := (&azureProvider{}).Plugins()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("azureProvider.Plugins() = %v, want %v", got, want)
+	}
 }

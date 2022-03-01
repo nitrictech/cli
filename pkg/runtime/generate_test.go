@@ -63,6 +63,9 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/main pkg/handler/list.go
 FROM alpine
+ADD https://github.com/nitrictech/nitric/releases/download/v1.2.3/membrane-aws /usr/local/bin/membrane
+RUN chmod +x-rw /usr/local/bin/membrane
+ENTRYPOINT ["/usr/local/bin/membrane"]
 COPY --from=build /bin/main /bin/main
 RUN chmod +x-rw /bin/main
 WORKDIR /

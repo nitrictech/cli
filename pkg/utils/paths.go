@@ -20,7 +20,7 @@ import (
 	"log"
 	"os"
 	"os/user"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -59,7 +59,7 @@ func homeDir() string {
 		log.Fatal(err)
 	}
 
-	return path.Join(dirname, ".nitric")
+	return filepath.Join(dirname, ".nitric")
 }
 
 // NitricRunDir returns the directory to place runtime data.
@@ -69,14 +69,14 @@ func NitricRunDir() string {
 		if err != nil {
 			log.Fatal(err)
 		}
-		return path.Join("/run/user/", u.Uid, "nitric")
+		return filepath.Join("/run/user/", u.Uid, "nitric")
 	}
-	return path.Join(homeDir(), "run")
+	return filepath.Join(homeDir(), "run")
 }
 
 // NitricTemplatesDir returns the directory to place template related data.
 func NitricTemplatesDir() string {
-	return path.Join(homeDir(), "store")
+	return filepath.Join(homeDir(), "store")
 }
 
 // NitricConfigDir returns the directory to find configuration.
@@ -87,14 +87,14 @@ func NitricConfigDir() string {
 			log.Fatal(err)
 		}
 
-		return path.Join(dirname, ".config", "nitric")
+		return filepath.Join(dirname, ".config", "nitric")
 	}
 	return homeDir()
 }
 
 // NitricLogDir returns the directory to find log files.
 func NitricLogDir(stackPath string) string {
-	return path.Join(stackPath, ".nitric")
+	return filepath.Join(stackPath, ".nitric")
 }
 
 // NewNitricLogFile returns a path to a unique log file that does not exist.

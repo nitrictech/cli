@@ -97,6 +97,8 @@ type Topic struct{}
 
 type Queue struct{}
 
+type Secret struct{}
+
 type Stack struct {
 	Dir         string                 `yaml:"-"`
 	Name        string                 `yaml:"name"`
@@ -115,6 +117,7 @@ type Stack struct {
 	// repetition/redefinition
 	// NOTE: if we want to use the proto definition here we would need support for yaml parsing to use customisable tags
 	Policies []*v1.PolicyResource `yaml:"-"`
+	Secrets  map[string]Secret    `yaml:"secrets,omitempty"`
 }
 
 func New(name, dir string) *Stack {
@@ -131,7 +134,21 @@ func New(name, dir string) *Stack {
 		Apis:        map[string]string{},
 		ApiDocs:     map[string]*openapi3.T{},
 		Policies:    make([]*v1.PolicyResource, 0),
+		Secrets:     map[string]Secret{},
 	}
+}
+
+func (s *Stack) Computes() []Compute {
+	computes := []Compute{}
+	for _, c := range s.Functions {
+		copy := c
+		computes = append(computes, &copy)
+	}
+	for _, c := range s.Containers {
+		copy := c
+		computes = append(computes, &copy)
+	}
+	return computes
 }
 
 // Compute default policies for a stack
@@ -223,6 +240,23 @@ func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
 		Resources: collectionResources,
 	})
 
+	secretResources := make([]*v1.Resource, 0, len(s.Secrets))
+	for name := range s.Secrets {
+		secretResources = append(secretResources, &v1.Resource{
+			Name: name,
+			Type: v1.ResourceType_Secret,
+		})
+	}
+
+	policies = append(policies, &v1.PolicyResource{
+		Principals: principals,
+		Actions: []v1.Action{
+			v1.Action_SecretAccess,
+			v1.Action_SecretPut,
+		},
+		Resources: secretResources,
+	})
+
 	// TODO: Calculate policies for stacks loaded from a file
 	return policies
 }
@@ -280,7 +314,7 @@ func (s *Stack) ToFile(file string) error {
 	}
 
 	for apiName, apiFile := range s.Apis {
-		apiPath := path.Join(s.Dir, apiFile)
+		apiPath := filepath.Join(s.Dir, apiFile)
 		doc, ok := s.ApiDocs[apiName]
 		if !ok {
 			return fmt.Errorf("apiDoc %s does not exist", apiPath)

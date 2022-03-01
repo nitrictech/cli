@@ -40,7 +40,6 @@ func updateLoggingOpts(log output.Progress) []optup.Option {
 
 	if output.VerboseLevel >= 2 {
 		piper, pipew := io.Pipe()
-		defer pipew.Close()
 		go output.StdoutToPtermDebug(piper, log, "Deploying.. ")
 
 		opts = append(opts, optup.ProgressStreams(pipew))
@@ -65,7 +64,6 @@ func destroyLoggingOpts(log output.Progress) []optdestroy.Option {
 
 	if output.VerboseLevel >= 2 {
 		piper, pipew := io.Pipe()
-		defer pipew.Close()
 		go output.StdoutToPtermDebug(piper, log, "Deleting.. ")
 
 		opts = append(opts, optdestroy.ProgressStreams(pipew))
@@ -96,11 +94,13 @@ func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, 
 
 	getBusyList := func() string {
 		ls := []string{}
+		lsLen := 0
 		for res := range busyList {
-			if len(ls) == 5 && len(busyList) > 5 {
+			if lsLen > 60 {
 				ls = append(ls, "...")
 				break
 			}
+			lsLen += len(ls)
 			ls = append(ls, res)
 		}
 		return prefix + strings.Join(ls, ",")

@@ -14,26 +14,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package utils
 
-import (
-	"fmt"
-	"runtime"
+var (
+	// Raw is the string representation of the version. This will be replaced
+	// with the calculated version at build time.
+	// set in the Makefile.
+	Version = "was not built with version info"
 
-	"github.com/spf13/cobra"
+	// Commit is the commit hash from which the software was built.
+	// Set via LDFLAGS in Makefile.
+	Commit = "unknown"
 
-	"github.com/nitrictech/cli/pkg/utils"
+	// BuildTime is the string representation of build time.
+	// Set via LDFLAGS in Makefile.
+	BuildTime = "unknown"
 )
-
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of this CLI",
-	Long:  `All software has versions. This is Nitric's`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Go Version: %s\n", runtime.Version())
-		fmt.Printf("Go OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
-		fmt.Printf("Git commit: %s\n", utils.Commit)
-		fmt.Printf("Build time: %s\n", utils.BuildTime)
-		fmt.Printf("Nitric CLI: %s\n", utils.Version)
-	},
-}

@@ -18,6 +18,7 @@ package aws
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -231,7 +232,7 @@ func TestAWS(t *testing.T) {
 			arn := all[1].(string)
 			topicArn := all[2].(string)
 
-			assert.Equal(t, "cron(cron(0 0 * * ? *))", *expr, "wrong expression %s!=%s", "", *expr)
+			assert.Equal(t, "cron(0 0 * * ? *)", *expr, "wrong expression %s!=%s", "", *expr)
 			assert.Equal(t, topicArn, arn, "wrong arn %s!=%s", topicArn, arn)
 			wg.Done()
 			return nil
@@ -268,5 +269,15 @@ func TestValidate(t *testing.T) {
 				t.Errorf("awsProvider.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func Test_awsProvider_Plugins(t *testing.T) {
+	want := []common.Plugin{
+		{Name: "aws", Version: "v4.37.5"},
+	}
+	got := (&awsProvider{}).Plugins()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("awsProvider.Plugins() = %v, want %v", got, want)
 	}
 }

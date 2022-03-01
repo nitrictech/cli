@@ -86,7 +86,7 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
-		ls := run.NewLocalServices(s.Name, s.Dir)
+		ls := run.NewLocalServices(s)
 		memerr := make(chan error)
 
 		pool := run.NewRunProcessPool()
@@ -167,8 +167,8 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		select {
 		case membraneError := <-memerr:
 			fmt.Println(errors.WithMessage(membraneError, "membrane error, exiting"))
-		case sigTerm := <-term:
-			fmt.Printf("Received %v, exiting\n", sigTerm)
+		case <-term:
+			fmt.Println("Shutting down services - exiting")
 		}
 
 		for _, f := range functions {

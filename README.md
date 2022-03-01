@@ -1,12 +1,12 @@
-<p align="center">
-  <img src="./logo.png" alt="Nitric Logo"/>
-</p>
-
 # Nitric CLI
+![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/nitrictech/cli/Tests/develop?label=tests)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nitrictech/cli)
+![GitHub all releases](https://img.shields.io/github/downloads/nitrictech/cli/total)
+
 
 ## Overview
 
-Nitric provides a command-line interface (CLI) to assist with various tasks when building applications with Nitric. To view a list of available commands, you can call the CLI without specifying any subcommands or arguments:
+Nitric provides a command-line interface (CLI) to assist with various tasks when building applications with [Nitric](https://nitric.io). To view a list of available commands, you can call the CLI without specifying any subcommands or arguments:
 
 ```bash
 nitric

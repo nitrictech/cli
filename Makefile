@@ -5,13 +5,22 @@ GOLANGCI_LINT_CACHE=${HOME}/.cache/golangci-lint
 endif
 GOLANGCI_LINT ?= GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) go run github.com/golangci/golangci-lint/cmd/golangci-lint
 
+
+# See pkg/cmd/version.go for details
+SOURCE_GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
+BUILD_VERSION ?= $(shell git describe --tags --abbrev=40 --dirty)
+VERSION_URI = "github.com/nitrictech/cli/pkg/utils"
+export LDFLAGS="-X $(VERSION_URI).Version=${BUILD_VERSION} \
+                -X $(VERSION_URI).Commit=${SOURCE_GIT_COMMIT} \
+                -X $(VERSION_URI).BuildTime=$(shell date +%Y-%m-%dT%H:%M:%S%z)"
+
 .PHONY: build
 build: generate
-	CGO_ENABLED=0 go build -o bin/nitric ./pkg/cmd/
+	CGO_ENABLED=0 go build -ldflags $(LDFLAGS)  -o bin/nitric ./pkg/cmd/
 
 .PHONY: build-windows
 build-windows: generate
-	go build -o bin/nitric.exe ./pkg/cmd/	
+	go build -ldflags $(LDFLAGS) -o bin/nitric.exe ./pkg/cmd/
 
 .PHONY: generate
 generate:

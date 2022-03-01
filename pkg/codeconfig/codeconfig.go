@@ -193,6 +193,13 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	return doc, nil
 }
 
+func ensureOneTrailingSlash(p string) string {
+	if len(p) > 0 && string(p[len(p)-1]) == "/" {
+		return p
+	}
+	return p + "/"
+}
+
 func splitPath(workerPath string) (string, openapi3.Parameters) {
 	normalizedPath := ""
 	params := make(openapi3.Parameters, 0)
@@ -211,9 +218,9 @@ func splitPath(workerPath string) (string, openapi3.Parameters) {
 					},
 				},
 			})
-			normalizedPath = normalizedPath + "{" + paramName + "}" + "/"
+			normalizedPath = ensureOneTrailingSlash(normalizedPath + "{" + paramName + "}")
 		} else {
-			normalizedPath = normalizedPath + p + "/"
+			normalizedPath = ensureOneTrailingSlash(normalizedPath + p)
 		}
 	}
 	// trim off trailing slash

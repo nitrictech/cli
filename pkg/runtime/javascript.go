@@ -26,7 +26,6 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type javascript struct {
@@ -45,7 +44,22 @@ func (t *javascript) ContainerName() string {
 }
 
 func (t *javascript) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
-	return utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
+	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+		From:   "node:alpine",
+		Ignore: []string{"node_modules/", ".nitric/", ".git/", ".idea/"},
+	})
+	if err != nil {
+		return err
+	}
+
+	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "nodemon"}})
+	con.Config(dockerfile.ConfigOptions{
+		Entrypoint: []string{"node"},
+		WorkingDir: "/app/",
+	})
+
+	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+	return err
 }
 
 func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
@@ -82,8 +96,8 @@ func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 func (t *javascript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
 	return LaunchOpts{
 		Image:      t.DevImageName(),
-		Entrypoint: strslice.StrSlice{"ts-node"},
-		Cmd:        strslice.StrSlice{"-T " + "/app/" + filepath.ToSlash(t.handler)},
+		Entrypoint: strslice.StrSlice{"node"},
+		Cmd:        strslice.StrSlice{"/app/" + filepath.ToSlash(t.handler)},
 		TargetWD:   "/app",
 		Mounts: []mount.Mount{
 			{
@@ -106,6 +120,6 @@ func (t *javascript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 		},
 		TargetWD:   "/app",
 		Entrypoint: strslice.StrSlice{"nodemon"},
-		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T " + "/app/" + filepath.ToSlash(t.handler)},
+		Cmd:        strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "node " + "/app/" + filepath.ToSlash(t.handler)},
 	}, nil
 }

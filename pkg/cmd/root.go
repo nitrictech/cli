@@ -36,7 +36,6 @@ import (
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
-	"github.com/nitrictech/cli/pkg/tasklet"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
@@ -153,18 +152,12 @@ func ensureConfigDefaults() {
 	}
 
 	if needsWrite {
-		tasklet.MustRun(tasklet.Runner{
-			StartMsg: "Updating configfile to include defaults",
-			Runner: func(_ output.Progress) error {
-				// ensure .config/nitric exists
-				err := os.MkdirAll(utils.NitricConfigDir(), os.ModePerm)
-				if err != nil {
-					return err
-				}
+		// ensure .config/nitric exists
+		err := os.MkdirAll(utils.NitricConfigDir(), os.ModePerm)
+		cobra.CheckErr(err)
 
-				return viper.WriteConfigAs(filepath.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
-			},
-			StopMsg: "Configfile updated"}, tasklet.Opts{})
+		err = viper.WriteConfigAs(filepath.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
+		cobra.CheckErr(err)
 	}
 }
 

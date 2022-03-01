@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -37,8 +38,8 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
 
+	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
@@ -186,8 +187,14 @@ func print(rd io.Reader) error {
 		if err != nil {
 			return err
 		}
-		if len(line.Stream) > 0 {
-			pterm.Debug.Print(line.Stream)
+		if len(strings.TrimSpace(line.Stream)) > 0 {
+			if strings.Contains(line.Stream, "--->") {
+				if output.VerboseLevel >= 3 {
+					log.Default().Print(line.Stream)
+				}
+			} else {
+				log.Default().Print(line.Stream)
+			}
 		}
 	}
 

@@ -24,8 +24,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/target"
+	"github.com/nitrictech/cli/pkg/templates"
 )
 
 func Test_printStruct(t *testing.T) {
@@ -45,13 +45,11 @@ func Test_printStruct(t *testing.T) {
 		},
 		{
 			name:   "yaml tags",
-			object: containerengine.Image{ID: "34234242", Repository: "my-app", Tag: "latest"},
-			expect: `+------------+----------+
-| ID         | 34234242 |
-| REPOSITORY | my-app   |
-| TAG        | latest   |
-| CREATEDAT  |          |
-+------------+----------+
+			object: templates.TemplateInfo{Name: "simple", Path: "/here"},
+			expect: `+------+--------+
+| NAME | simple |
+| PATH | /here  |
++------+--------+
 `,
 		},
 	}

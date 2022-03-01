@@ -40,6 +40,9 @@ func EnsureRuntimeDefaults() bool {
 		"ts": {
 			"functionglob": "functions/*.ts",
 		},
+		"js": {
+			"functionglob": "functions/*.js",
+		},
 		"go": {
 			"functionglob": "functions/*/*.go",
 		},

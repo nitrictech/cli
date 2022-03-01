@@ -128,7 +128,7 @@ func TestEnsureRuntimeDefaults(t *testing.T) {
 	if got := EnsureRuntimeDefaults(); got != want {
 		t.Errorf("EnsureRuntimeDefaults() = %v, want %v", got, want)
 	}
-	expectGlobs := []string{"functions/*/*.go", "functions/*.ts"}
+	expectGlobs := []string{"functions/*/*.go", "functions/*.ts", "functions/*.js"}
 	sort.SliceStable(expectGlobs, func(i, j int) bool {
 		return expectGlobs[i] < expectGlobs[j]
 	})

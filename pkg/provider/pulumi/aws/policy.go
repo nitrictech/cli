@@ -23,6 +23,7 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	iam "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/secretsmanager"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -42,6 +43,7 @@ type StackResources struct {
 	Queues      map[string]*sqs.Queue
 	Buckets     map[string]*s3.Bucket
 	Collections map[string]*dynamodb.Table
+	Secrets     map[string]*secretsmanager.Secret
 }
 
 type PrincipalMap = map[v1.ResourceType]map[string]*iam.Role
@@ -112,6 +114,12 @@ var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	// v1.Action_CollectionList: {
 	// 	"dynamodb:ListTables",
 	// },
+	v1.Action_SecretAccess: {
+		"secretsmanager:GetSecretValue",
+	},
+	v1.Action_SecretPut: {
+		"secretsmanager:PutSecretValue",
+	},
 }
 
 func actionsToAwsActions(actions []v1.Action) []string {
@@ -141,6 +149,10 @@ func arnForResource(resource *v1.Resource, resources *StackResources) (pulumi.St
 	case v1.ResourceType_Collection:
 		if c, ok := resources.Collections[resource.Name]; ok {
 			return c.Arn, nil
+		}
+	case v1.ResourceType_Secret:
+		if s, ok := resources.Secrets[resource.Name]; ok {
+			return s.Arn, nil
 		}
 	default:
 		return pulumi.StringOutput{}, fmt.Errorf(

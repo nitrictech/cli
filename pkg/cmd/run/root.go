@@ -167,8 +167,8 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		select {
 		case membraneError := <-memerr:
 			fmt.Println(errors.WithMessage(membraneError, "membrane error, exiting"))
-		case sigTerm := <-term:
-			fmt.Printf("Received %v, exiting\n", sigTerm)
+		case <-term:
+			fmt.Println("Shutting down services - exiting")
 		}
 
 		for _, f := range functions {

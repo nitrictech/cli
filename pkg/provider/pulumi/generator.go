@@ -19,6 +19,7 @@ package pulumi
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -47,6 +48,15 @@ var (
 )
 
 func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
+	pv := exec.Command("pulumi", "version")
+	err := pv.Run()
+	if err != nil {
+		if strings.Contains(err.Error(), "executable file not found") {
+			return nil, errors.WithMessage(err, "Please install pulumi from https://www.pulumi.com/docs/get-started/install/")
+		}
+		return nil, err
+	}
+
 	var prov common.PulumiProvider
 	switch t.Provider {
 	case target.Aws:

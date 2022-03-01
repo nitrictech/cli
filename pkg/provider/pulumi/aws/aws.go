@@ -310,6 +310,11 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	for _, p := range a.s.Policies {
+		if len(p.Actions) == 0 {
+			// note Topic receiving does not require an action.
+			_ = ctx.Log.Debug("policy has no actions "+fmt.Sprint(p), &pulumi.LogArgs{Ephemeral: true})
+			continue
+		}
 		policyName, err := policyResourceName(p)
 		if err != nil {
 			return err

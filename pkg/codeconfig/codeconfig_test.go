@@ -37,6 +37,12 @@ func Test_splitPath(t *testing.T) {
 			want1:      openapi3.Parameters{},
 		},
 		{
+			name:       "trailing slash",
+			workerPath: "/orders/",
+			want:       "/orders",
+			want1:      openapi3.Parameters{},
+		},
+		{
 			name:       "with param",
 			workerPath: "/orders/:id",
 			want:       "/orders/{id}",

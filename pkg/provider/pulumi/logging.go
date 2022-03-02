@@ -89,22 +89,14 @@ func stepEventToString(eType string, evt *apitype.StepEventMetadata) string {
 	return fmt.Sprintf("%s/%s", rType, name)
 }
 
+const busyMsg = "%s %d/%d resources (%d failed)"
+
 func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, prefix string) {
 	busyList := map[string]time.Time{}
 
-	getBusyList := func() string {
-		ls := []string{}
-		lsLen := 0
-		for res := range busyList {
-			if lsLen > 60 {
-				ls = append(ls, "...")
-				break
-			}
-			lsLen += len(ls)
-			ls = append(ls, res)
-		}
-		return prefix + strings.Join(ls, ",")
-	}
+	busy := 0
+	done := 0
+	failed := 0
 
 	for {
 		var event events.EngineEvent
@@ -116,9 +108,10 @@ func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, 
 		}
 
 		if event.ResourcePreEvent != nil && event.ResourcePreEvent.Metadata.Op != apitype.OpSame {
+			busy++
 			lastCreating := stepEventToString("ResourcePreEvent", &event.ResourcePreEvent.Metadata)
 			busyList[lastCreating] = time.Now()
-			log.Busyf("%s", getBusyList())
+			log.Busyf(busyMsg, prefix, done, busy, failed)
 		}
 		if event.ResOutputsEvent != nil {
 			lc := stepEventToString("ResOutputsEvent", &event.ResOutputsEvent.Metadata)
@@ -135,11 +128,8 @@ func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, 
 				}
 			}
 
-			delete(busyList, lc)
-
-			if len(busyList) > 0 {
-				log.Busyf("%s", getBusyList())
-			}
+			done++
+			log.Busyf(busyMsg, prefix, done, busy, failed)
 		}
 		if event.ResOpFailedEvent != nil {
 			lc := stepEventToString("ResOpFailedEvent", &event.ResOpFailedEvent.Metadata)
@@ -147,8 +137,11 @@ func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, 
 
 			delete(busyList, lc)
 
+			done++
+			failed++
+
 			if len(busyList) > 0 {
-				log.Busyf("%s", getBusyList())
+				log.Busyf(busyMsg, prefix, done, busy, failed)
 			}
 		}
 	}

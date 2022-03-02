@@ -132,34 +132,34 @@ func actionsToAwsActions(actions []v1.Action) []string {
 }
 
 // discover the arn of a deployed resource
-func arnForResource(resource *v1.Resource, resources *StackResources) (pulumi.StringOutput, error) {
+func arnForResource(resource *v1.Resource, resources *StackResources) ([]interface{}, error) {
 	switch resource.Type {
 	case v1.ResourceType_Bucket:
 		if b, ok := resources.Buckets[resource.Name]; ok {
-			return b.Arn, nil
+			return []interface{}{b.Arn, pulumi.Sprintf("%s/*", b.Arn)}, nil
 		}
 	case v1.ResourceType_Topic:
 		if t, ok := resources.Topics[resource.Name]; ok {
-			return t.Arn, nil
+			return []interface{}{t.Arn}, nil
 		}
 	case v1.ResourceType_Queue:
 		if q, ok := resources.Queues[resource.Name]; ok {
-			return q.Arn, nil
+			return []interface{}{q.Arn}, nil
 		}
 	case v1.ResourceType_Collection:
 		if c, ok := resources.Collections[resource.Name]; ok {
-			return c.Arn, nil
+			return []interface{}{c.Arn}, nil
 		}
 	case v1.ResourceType_Secret:
 		if s, ok := resources.Secrets[resource.Name]; ok {
-			return s.Arn, nil
+			return []interface{}{s.Arn}, nil
 		}
 	default:
-		return pulumi.StringOutput{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid resource type: %s. Did you mean to define it as a principal?", resource.Type)
 	}
 
-	return pulumi.StringOutput{}, fmt.Errorf("unable to find resource %s::%s", resource.Type, resource.Name)
+	return nil, fmt.Errorf("unable to find resource %s::%s", resource.Type, resource.Name)
 }
 
 func roleForPrincipal(resource *v1.Resource, principals PrincipalMap) (*iam.Role, error) {
@@ -186,7 +186,7 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 	targetArns := make([]interface{}, 0, len(args.Policy.Resources))
 	for _, princ := range args.Policy.Resources {
 		if arn, err := arnForResource(princ, args.Resources); err == nil {
-			targetArns = append(targetArns, arn)
+			targetArns = append(targetArns, arn...)
 		} else {
 			return nil, err
 		}

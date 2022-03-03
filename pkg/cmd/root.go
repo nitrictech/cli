@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/nitrictech/cli/pkg/cmd/provider"
 	"github.com/nitrictech/cli/pkg/cmd/run"
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
@@ -69,9 +68,6 @@ ${HOME}/.nitric-config.yaml
 ${HOME}/.config/nitric/.nitric-config.yaml
 
 An example of the format is:
-  aliases:
-    new: stack create
-
   targets:
     aws:
       region: eastus
@@ -96,7 +92,6 @@ func init() {
 	newProjectCmd.Flags().BoolVarP(&force, "force", "f", false, "force project creation, even in non-empty directories.")
 	rootCmd.AddCommand(newProjectCmd)
 	rootCmd.AddCommand(cmdstack.RootCommand())
-	rootCmd.AddCommand(provider.RootCommand())
 	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)

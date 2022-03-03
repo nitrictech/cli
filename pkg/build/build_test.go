@@ -25,7 +25,7 @@ import (
 
 	"github.com/nitrictech/cli/mocks/mock_containerengine"
 	"github.com/nitrictech/cli/pkg/containerengine"
-	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/target"
 )
 
@@ -39,8 +39,8 @@ func TestCreateBaseDev(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	s := stack.New("", dir)
-	s.Functions = map[string]stack.Function{"foo": {Handler: "functions/list.ts"}}
+	s := project.New("", dir)
+	s.Functions = map[string]project.Function{"foo": {Handler: "functions/list.ts"}}
 
 	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{})
 
@@ -59,19 +59,19 @@ func TestCreate(t *testing.T) {
 
 	containerengine.DiscoveredEngine = me
 
-	s := &stack.Stack{
+	s := &project.Project{
 		Name: "test-stack",
 		Dir:  ".",
-		Functions: map[string]stack.Function{
+		Functions: map[string]project.Function{
 			"list": {
 				Handler:     "functions/list.ts",
-				ComputeUnit: stack.ComputeUnit{},
+				ComputeUnit: project.ComputeUnit{},
 			},
 		},
-		Containers: map[string]stack.Container{
+		Containers: map[string]project.Container{
 			"doit": {
 				Dockerfile:  "Dockerfile.custom",
-				ComputeUnit: stack.ComputeUnit{},
+				ComputeUnit: project.ComputeUnit{},
 			},
 		},
 	}

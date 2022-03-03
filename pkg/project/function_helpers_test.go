@@ -14,24 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package project
 
 import (
-	"fmt"
+	_ "embed"
+	"testing"
 )
 
-var _ Compute = &Container{}
-
-func (c *Container) Unit() *ComputeUnit {
-	return &c.ComputeUnit
-}
-
-// ImageTagName returns the default image tag for a source image built from this function
-// provider the provider name (e.g. aws), used to uniquely identify builds for specific providers
-func (c *Container) ImageTagName(s *Stack, provider string) string {
-	providerString := ""
-	if provider != "" {
-		providerString = "-" + provider
+func TestFunctionVersionString(t *testing.T) {
+	tests := []struct {
+		name        string
+		funcVersion string
+		want        string
+	}{
+		{
+			name: "from embed",
+			want: "v0.14.0",
+		},
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, c.Name, providerString)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &Function{}
+			if got := f.VersionString(nil); got != tt.want {
+				t.Errorf("Function.VersionString() = '%s', want '%s'", got, tt.want)
+			}
+		})
+	}
 }

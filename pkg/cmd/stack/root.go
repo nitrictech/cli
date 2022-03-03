@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package project
 
 import (
 	"log"
@@ -25,9 +25,9 @@ import (
 	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider"
 	"github.com/nitrictech/cli/pkg/provider/types"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/tasklet"
 )
@@ -36,13 +36,13 @@ var stackName string
 
 var stackCmd = &cobra.Command{
 	Use:   "stack",
-	Short: "operate on your project in a cloud",
+	Short: "deploy your project to the cloud",
 	Long: `Stack command set.
 
 The stack commands generally need 3 things:
 1. a target (either explicitly with "-t <targetname> or defined in the config)
 2. a stack name (either explicitly with -n <stack name> or use the default name of "dep")
-3. a stack definition, this automatically collected from the code in functions.
+3. a project definition, this automatically collected from the code in functions.
    A glob to the functions can be a supplied by:
   - Configuration - there are default globs for each supported language in the .nitiric-config.yaml
   - Aruments to the stack actions.
@@ -57,13 +57,13 @@ var stackUpdateCmd = &cobra.Command{
 	Use:   "update [handlerGlob]",
 	Short: "Create or Update a new application stack",
 	Long:  `Updates a Nitric application stack.`,
-	Example: `# Configured default handlerGlob (stack in the current directory).
+	Example: `# Configured default handlerGlob (project in the current directory).
 nitric stack up -t aws
 
-# use an explicit handlerGlob (stack in the current directory)
+# use an explicit handlerGlob (project in the current directory)
 nitric stack up -t aws "functions/*/*.go"
 
-# use an explicit handlerGlob and explicit stack directory
+# use an explicit handlerGlob and explicit project directory
 nitric stack up -s ../projectX -t aws "functions/*/*.go"
 
 # use a custom stack name
@@ -71,7 +71,7 @@ nitric stack up -n prod -t aws`,
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
-		s, err := stack.FromOptions(args)
+		s, err := project.FromOptions(args)
 		cobra.CheckErr(err)
 
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
@@ -121,17 +121,17 @@ nitric stack up -n prod -t aws`,
 
 var stackDeleteCmd = &cobra.Command{
 	Use:   "down",
-	Short: "Brings downs an application stack",
-	Long:  `Brings downs a Nitric application stack.`,
-	Example: `nitric stack down
-nitric stack down -s ../project/ -t prod
-nitric stack down -n prod-aws -s ../project/ -t prod
+	Short: "Brings downs an application project",
+	Long:  `Brings downs a Nitric application project.`,
+	Example: `nitric project down
+nitric project down -s ../project/ -t prod
+nitric project down -n prod-aws -s ../project/ -t prod
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
 
-		s, err := stack.FromOptionsMinimal()
+		s, err := project.FromOptionsMinimal()
 		cobra.CheckErr(err)
 
 		p, err := provider.NewProvider(s, t)
@@ -156,13 +156,13 @@ var stackListCmd = &cobra.Command{
 	Short: "list stacks for a project",
 	Long:  `Lists Nitric application stacks for a project.`,
 	Example: `nitric list
-nitric stack list -s ../project/ -t prod
+nitric project list -s ../project/ -t prod
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := target.FromOptions()
 		cobra.CheckErr(err)
 
-		s, err := stack.FromOptionsMinimal()
+		s, err := project.FromOptionsMinimal()
 		cobra.CheckErr(err)
 
 		p, err := provider.NewProvider(s, t)
@@ -179,17 +179,17 @@ nitric stack list -s ../project/ -t prod
 
 func RootCommand() *cobra.Command {
 	stackCmd.AddCommand(stackUpdateCmd)
-	stackUpdateCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the stack")
+	stackUpdateCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the project")
 	cobra.CheckErr(target.AddOptions(stackUpdateCmd, false))
-	stack.AddOptions(stackUpdateCmd)
+	project.AddOptions(stackUpdateCmd)
 
 	stackCmd.AddCommand(stackDeleteCmd)
-	stackDeleteCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the stack")
+	stackDeleteCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the project")
 	cobra.CheckErr(target.AddOptions(stackDeleteCmd, false))
-	stack.AddOptions(stackDeleteCmd)
+	project.AddOptions(stackDeleteCmd)
 
 	stackCmd.AddCommand(stackListCmd)
-	stack.AddOptions(stackListCmd)
+	project.AddOptions(stackListCmd)
 	cobra.CheckErr(target.AddOptions(stackListCmd, false))
 	return stackCmd
 }

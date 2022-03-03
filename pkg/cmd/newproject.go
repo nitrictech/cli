@@ -27,7 +27,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/templates"
 )
 
@@ -120,16 +120,16 @@ func validateName(val interface{}) error {
 }
 
 func setStackName(name string) error {
-	stackFilePath := filepath.Join("./", name, "nitric.yaml")
+	projectFilePath := filepath.Join("./", name, "nitric.yaml")
 	// Skip non nitric.yaml template renaming (config as code)
-	if _, err := os.Stat(stackFilePath); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(projectFilePath); errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 
-	s, err := stack.FromFile(stackFilePath)
+	s, err := project.FromFile(projectFilePath)
 	if err != nil {
 		return err
 	}
 	s.Name = name
-	return s.ToFile(stackFilePath)
+	return s.ToFile(projectFilePath)
 }

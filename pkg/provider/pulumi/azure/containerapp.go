@@ -25,8 +25,8 @@ import (
 	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/operationalinsights"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
 )
 
 type ContainerAppsArgs struct {
@@ -180,7 +180,7 @@ type ContainerAppArgs struct {
 	KubeEnv           *web.KubeEnvironment
 	ImageUri          pulumi.StringInput
 	Env               web.EnvironmentVarArray
-	Compute           stack.Compute
+	Compute           project.Compute
 	Topics            map[string]*eventgrid.Topic
 }
 

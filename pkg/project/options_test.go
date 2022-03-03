@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package project
 
 import (
 	"reflect"
@@ -30,35 +30,35 @@ func TestFromGlobArgs(t *testing.T) {
 		name      string
 		glob      []string
 		stackPath string
-		want      *Stack
+		want      *Project
 		wantErr   bool
 	}{
 		{
 			name:      "glob - current dir",
 			glob:      []string{"*.go"},
 			stackPath: ".",
-			want: &Stack{
+			want: &Project{
 				Dir:  ".",
-				Name: "stack",
+				Name: "project",
 				Functions: map[string]Function{
-					"stack": {
+					"project": {
 						Handler:     "types.go",
-						ComputeUnit: ComputeUnit{Name: "stack"},
+						ComputeUnit: ComputeUnit{Name: "project"},
 					},
 				},
 			},
 		},
 		{
 			name:      "files",
-			glob:      []string{"stack/types.go", "stack/options.go"},
+			glob:      []string{"project/types.go", "project/options.go"},
 			stackPath: "../../pkg",
-			want: &Stack{
+			want: &Project{
 				Dir:  "../../pkg",
 				Name: "pkg",
 				Functions: map[string]Function{
-					"stack": {
-						Handler:     "stack/options.go",
-						ComputeUnit: ComputeUnit{Name: "stack"},
+					"project": {
+						Handler:     "project/options.go",
+						ComputeUnit: ComputeUnit{Name: "project"},
 					},
 				},
 			},
@@ -95,7 +95,7 @@ func TestFromOptionsMinimal(t *testing.T) {
 			name:      "current dir",
 			stackPath: ".",
 			wantDir:   ".",
-			wantName:  "stack",
+			wantName:  "project",
 		},
 		{
 			name:      "relative",

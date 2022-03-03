@@ -38,8 +38,8 @@ import (
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/cron"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
@@ -47,17 +47,17 @@ import (
 // CodeConfig - represents a collection of related functions and their shared dependencies.
 type CodeConfig interface {
 	Collect() error
-	ToStack() (*stack.Stack, error)
+	ToProject() (*project.Project, error)
 }
 
 type codeConfig struct {
 	// A stack can be composed of one or more applications
 	functions    map[string]*FunctionDependencies
-	initialStack *stack.Stack
+	initialStack *project.Project
 	lock         sync.RWMutex
 }
 
-func New(s *stack.Stack) (CodeConfig, error) {
+func New(s *project.Project) (CodeConfig, error) {
 	return &codeConfig{
 		initialStack: s,
 		functions:    map[string]*FunctionDependencies{},
@@ -65,7 +65,7 @@ func New(s *stack.Stack) (CodeConfig, error) {
 	}, nil
 }
 
-func Populate(initial *stack.Stack) (*stack.Stack, error) {
+func Populate(initial *project.Project) (*project.Project, error) {
 	cc, err := New(initial)
 	if err != nil {
 		return nil, err
@@ -81,10 +81,10 @@ func Populate(initial *stack.Stack) (*stack.Stack, error) {
 		return nil, err
 	}
 
-	return cc.ToStack()
+	return cc.ToProject()
 }
 
-// Collect - Collects information about all functions for a nitric stack
+// Collect - Collects information about all functions for a nitric project
 func (c *codeConfig) Collect() error {
 	wg := sync.WaitGroup{}
 	errList := utils.NewErrorList()
@@ -93,7 +93,7 @@ func (c *codeConfig) Collect() error {
 		wg.Add(1)
 
 		// run files in parallel
-		go func(fn stack.Function) {
+		go func(fn project.Function) {
 			defer wg.Done()
 			rel, err := fn.RelativeHandlerPath(c.initialStack)
 			if err != nil {
@@ -355,8 +355,8 @@ func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
 	c.functions[handler] = fun
 }
 
-func (c *codeConfig) ToStack() (*stack.Stack, error) {
-	s := stack.New(c.initialStack.Name, c.initialStack.Dir)
+func (c *codeConfig) ToProject() (*project.Project, error) {
+	s := project.New(c.initialStack.Name, c.initialStack.Dir)
 
 	err := mergo.Merge(s, c.initialStack)
 	if err != nil {
@@ -376,16 +376,16 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			s.ApiDocs[k] = spec
 		}
 		for k := range f.buckets {
-			s.Buckets[k] = stack.Bucket{}
+			s.Buckets[k] = project.Bucket{}
 		}
 		for k := range f.collections {
-			s.Collections[k] = stack.Collection{}
+			s.Collections[k] = project.Collection{}
 		}
 		for k := range f.queues {
-			s.Queues[k] = stack.Queue{}
+			s.Queues[k] = project.Queue{}
 		}
 		for k := range f.secrets {
-			s.Secrets[k] = stack.Secret{}
+			s.Secrets[k] = project.Secret{}
 		}
 
 		// Add policies
@@ -395,7 +395,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			// Create a new topic target
 			// replace spaced with hyphens
 			topicName := strings.ToLower(strings.ReplaceAll(k, " ", "-"))
-			s.Topics[topicName] = stack.Topic{}
+			s.Topics[topicName] = project.Topic{}
 
 			topicTriggers = append(topicTriggers, topicName)
 
@@ -416,13 +416,13 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 				continue
 			}
 
-			newS := stack.Schedule{
+			newS := project.Schedule{
 				Expression: exp,
-				Target: stack.ScheduleTarget{
+				Target: project.ScheduleTarget{
 					Type: "topic",
 					Name: topicName,
 				},
-				Event: stack.ScheduleEvent{
+				Event: project.ScheduleEvent{
 					PayloadType: "io.nitric.schedule",
 					Payload: map[string]interface{}{
 						"schedule": k,
@@ -441,7 +441,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		}
 
 		for k := range f.topics {
-			s.Topics[k] = stack.Topic{}
+			s.Topics[k] = project.Topic{}
 		}
 
 		for k := range f.subscriptions {
@@ -454,9 +454,9 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 
 		fun, ok := s.Functions[f.name]
 		if !ok {
-			fun = stack.FunctionFromHandler(handler, s.Dir)
+			fun = project.FunctionFromHandler(handler, s.Dir)
 		}
-		fun.ComputeUnit.Triggers = stack.Triggers{
+		fun.ComputeUnit.Triggers = project.Triggers{
 			Topics: topicTriggers,
 		}
 		s.Functions[f.name] = fun

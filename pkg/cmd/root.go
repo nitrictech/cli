@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -96,6 +97,9 @@ func init() {
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(configHelpTopic)
+	addAlias("stack update", "up")
+	addAlias("stack down", "down")
+	addAlias("stack list", "list")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -152,4 +156,25 @@ func ensureConfigDefaults() {
 			},
 			StopMsg: "Configfile updated"}, tasklet.Opts{})
 	}
+}
+
+func addAlias(from, to string) {
+	cmd, _, err := rootCmd.Find(strings.Split(from, " "))
+	cobra.CheckErr(err)
+
+	alias := &cobra.Command{
+		Use:     to,
+		Short:   cmd.Short,
+		Long:    cmd.Long,
+		Example: cmd.Example,
+		Run: func(cmd *cobra.Command, args []string) {
+			newArgs := []string{os.Args[0]}
+			newArgs = append(newArgs, strings.Split(from, " ")...)
+			newArgs = append(newArgs, args...)
+			os.Args = newArgs
+			cobra.CheckErr(rootCmd.Execute())
+		},
+		DisableFlagParsing: true, // the real command will parse the flags
+	}
+	rootCmd.AddCommand(alias)
 }

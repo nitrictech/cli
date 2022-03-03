@@ -17,8 +17,8 @@ nitric
 Each command is self documented and provides a "help" interface describing the usage, arguments and options for the command. Use the `help` command to view the help information for any other command:
 
 ```bash
-# Example displaying help for the `build` command
-nitric help build
+# Example displaying help for the `stack up` command
+nitric help stack up
 ```
 
 ### Bash Completion

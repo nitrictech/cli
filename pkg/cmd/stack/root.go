@@ -17,162 +17,179 @@
 package stack
 
 import (
-	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
+	"log"
 
-	"github.com/AlecAivazis/survey/v2"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/provider"
+	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/templates"
+	"github.com/nitrictech/cli/pkg/target"
+	"github.com/nitrictech/cli/pkg/tasklet"
 )
 
-var (
-	force       bool
-	nameRegex   = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
-	stackNameQu = survey.Question{
-		Name:     "stackName",
-		Prompt:   &survey.Input{Message: "What is the name of the stack?"},
-		Validate: validateName,
-	}
-	templateNameQu = survey.Question{
-		Name: "templateName",
-	}
-)
+var stackName string
 
 var stackCmd = &cobra.Command{
 	Use:   "stack",
-	Short: "work with stack objects",
-	Long: `Choose an action to perform on a stack, e.g.
-nitric stack create
+	Short: "operate on your project in a cloud",
+	Long: `Stack command set.
+
+The stack commands generally need 3 things:
+1. a target (either explicitly with "-t <targetname> or defined in the config)
+2. a stack name (either explicitly with -n <stack name> or use the default name of "dep")
+3. a stack definition, this automatically collected from the code in functions.
+   A glob to the functions can be a supplied by:
+  - Configuration - there are default globs for each supported language in the .nitiric-config.yaml
+  - Aruments to the stack actions.
+	`,
+	Example: `nitric stack up
+nitric stack down
+nitric stack list
 `,
 }
 
-var stackCreateCmd = &cobra.Command{
-	Use:   "create [stackName] [templateName]",
-	Short: "create a new application stack",
-	Long:  `Creates a new Nitric application stack from a template.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		answers := struct {
-			StackName    string
-			TemplateName string
-		}{}
-
-		downloadr := templates.NewDownloader()
-		dirs, err := downloadr.Names()
-		cobra.CheckErr(err)
-
-		templateNameQu.Prompt = &survey.Select{
-			Message: "Choose a template:",
-			Options: dirs,
-		}
-		templateNameQu.Validate = func(ans interface{}) error {
-			if len(args) < 2 {
-				return nil
-			}
-
-			a, ok := ans.(string)
-			if !ok {
-				return errors.New("wrong type, need a string")
-			}
-
-			if downloadr.Get(a) == nil {
-				return fmt.Errorf("%s not in %v", a, dirs)
-			}
-			return nil
-		}
-
-		qs := []*survey.Question{}
-		if len(args) > 0 && stackNameQu.Validate(args[0]) == nil {
-			answers.StackName = args[0]
-		} else {
-			qs = append(qs, &stackNameQu)
-		}
-
-		if len(args) > 1 && templateNameQu.Validate(args[1]) == nil {
-			answers.TemplateName = args[1]
-		} else {
-			qs = append(qs, &templateNameQu)
-			args = []string{} // reassign args to ensure validation works correctly.
-		}
-
-		if len(qs) > 0 {
-			err = survey.Ask(qs, &answers)
-			cobra.CheckErr(err)
-		}
-
-		err = downloadr.DownloadDirectoryContents(answers.TemplateName, "./"+answers.StackName, force)
-		cobra.CheckErr(err)
-		err = setStackName(answers.StackName)
-		cobra.CheckErr(err)
-	},
-	Args: cobra.MaximumNArgs(2),
-}
-
-var stackDescribeCmd = &cobra.Command{
-	Use:   "describe [handlerGlob]",
-	Short: "describe stack dependencies",
-	Long:  `Describes stack dependencies`,
-	Example: `# use a nitric.yaml or configured default handlerGlob (stack in the current directory).
-nitric stack describe
+var stackUpdateCmd = &cobra.Command{
+	Use:   "update [handlerGlob]",
+	Short: "Create or Update a new application stack",
+	Long:  `Updates a Nitric application stack.`,
+	Example: `# Configured default handlerGlob (stack in the current directory).
+nitric stack up -t aws
 
 # use an explicit handlerGlob (stack in the current directory)
-nitric stack describe "functions/*/*.go"
+nitric stack up -t aws "functions/*/*.go"
 
 # use an explicit handlerGlob and explicit stack directory
-nitric stack describe -s ../projectX "functions/*/*.go"`,
+nitric stack up -s ../projectX -t aws "functions/*/*.go"
+
+# use a custom stack name
+nitric stack up -n prod -t aws`,
 	Run: func(cmd *cobra.Command, args []string) {
+		t, err := target.FromOptions()
+		cobra.CheckErr(err)
 		s, err := stack.FromOptions(args)
 		cobra.CheckErr(err)
 
-		s, err = codeconfig.Populate(s)
+		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+
+		codeAsConfig := tasklet.Runner{
+			StartMsg: "Gathering configuration from code..",
+			Runner: func(_ output.Progress) error {
+				s, err = codeconfig.Populate(s)
+				return err
+			},
+			StopMsg: "Configuration gathered",
+		}
+		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
+
+		p, err := provider.NewProvider(s, t)
 		cobra.CheckErr(err)
 
-		output.Print(s)
+		buildImages := tasklet.Runner{
+			StartMsg: "Building Images",
+			Runner: func(_ output.Progress) error {
+				return build.Create(s, t)
+			},
+			StopMsg: "Images built",
+		}
+		tasklet.MustRun(buildImages, tasklet.Opts{})
+
+		d := &types.Deployment{}
+		deploy := tasklet.Runner{
+			StartMsg: "Deploying..",
+			Runner: func(progress output.Progress) error {
+				d, err = p.Apply(progress, stackName)
+				return err
+			},
+			StopMsg: "Stack",
+		}
+		tasklet.MustRun(deploy, tasklet.Opts{SuccessPrefix: "Deployed"})
+
+		rows := [][]string{{"API", "Endpoint"}}
+		for k, v := range d.ApiEndpoints {
+			rows = append(rows, []string{k, v})
+		}
+		_ = pterm.DefaultTable.WithBoxed().WithData(rows).Render()
 	},
-	Args: cobra.MinimumNArgs(0),
+	Args:    cobra.MinimumNArgs(0),
+	Aliases: []string{"up"},
+}
+
+var stackDeleteCmd = &cobra.Command{
+	Use:   "down",
+	Short: "Brings downs an application stack",
+	Long:  `Brings downs a Nitric application stack.`,
+	Example: `nitric stack down
+nitric stack down -s ../project/ -t prod
+nitric stack down -n prod-aws -s ../project/ -t prod
+`,
+	Run: func(cmd *cobra.Command, args []string) {
+		t, err := target.FromOptions()
+		cobra.CheckErr(err)
+
+		s, err := stack.FromOptionsMinimal()
+		cobra.CheckErr(err)
+
+		p, err := provider.NewProvider(s, t)
+		cobra.CheckErr(err)
+
+		deploy := tasklet.Runner{
+			StartMsg: "Deleting..",
+			Runner: func(progress output.Progress) error {
+				return p.Delete(progress, stackName)
+			},
+			StopMsg: "Stack",
+		}
+		tasklet.MustRun(deploy, tasklet.Opts{
+			SuccessPrefix: "Deleted",
+		})
+	},
+	Args: cobra.ExactArgs(0),
+}
+
+var stackListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "list stacks for a project",
+	Long:  `Lists Nitric application stacks for a project.`,
+	Example: `nitric list
+nitric stack list -s ../project/ -t prod
+`,
+	Run: func(cmd *cobra.Command, args []string) {
+		t, err := target.FromOptions()
+		cobra.CheckErr(err)
+
+		s, err := stack.FromOptionsMinimal()
+		cobra.CheckErr(err)
+
+		p, err := provider.NewProvider(s, t)
+		cobra.CheckErr(err)
+
+		deps, err := p.List()
+		cobra.CheckErr(err)
+
+		output.Print(deps)
+	},
+	Args:    cobra.ExactArgs(0),
+	Aliases: []string{"ls"},
 }
 
 func RootCommand() *cobra.Command {
-	stackCreateCmd.Flags().BoolVarP(&force, "force", "f", false, "force stack creation, even in non-empty directories.")
-	stackCmd.AddCommand(stackCreateCmd)
+	stackCmd.AddCommand(stackUpdateCmd)
+	stackUpdateCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the stack")
+	cobra.CheckErr(target.AddOptions(stackUpdateCmd, false))
+	stack.AddOptions(stackUpdateCmd)
 
-	stack.AddOptions(stackDescribeCmd)
-	stackCmd.AddCommand(stackDescribeCmd)
+	stackCmd.AddCommand(stackDeleteCmd)
+	stackDeleteCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the stack")
+	cobra.CheckErr(target.AddOptions(stackDeleteCmd, false))
+	stack.AddOptions(stackDeleteCmd)
+
+	stackCmd.AddCommand(stackListCmd)
+	stack.AddOptions(stackListCmd)
+	cobra.CheckErr(target.AddOptions(stackListCmd, false))
 	return stackCmd
-}
-
-func validateName(val interface{}) error {
-	name, ok := val.(string)
-	if !ok {
-		return errors.New("stack name must be a string")
-	}
-	if name == "" {
-		return errors.New("stack name can not be empty")
-	}
-	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") || !nameRegex.MatchString(name) {
-		return errors.New("invalid stack name, only letters, numbers and dashes are supported")
-	}
-	return nil
-}
-
-func setStackName(name string) error {
-	stackFilePath := filepath.Join("./", name, "nitric.yaml")
-	// Skip non nitric.yaml template renaming (config as code)
-	if _, err := os.Stat(stackFilePath); errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
-	s, err := stack.FromFile(stackFilePath)
-	if err != nil {
-		return err
-	}
-	s.Name = name
-	return s.ToFile(stackFilePath)
 }

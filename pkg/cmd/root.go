@@ -23,13 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/nitrictech/cli/pkg/cmd/deployment"
-	"github.com/nitrictech/cli/pkg/cmd/provider"
 	"github.com/nitrictech/cli/pkg/cmd/run"
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
@@ -72,9 +69,6 @@ ${HOME}/.nitric-config.yaml
 ${HOME}/.config/nitric/.nitric-config.yaml
 
 An example of the format is:
-  aliases:
-    new: stack create
-
   targets:
     aws:
       region: eastus
@@ -96,14 +90,16 @@ func init() {
 	})
 	cobra.CheckErr(err)
 
-	rootCmd.AddCommand(deployment.RootCommand())
-	rootCmd.AddCommand(provider.RootCommand())
+	newProjectCmd.Flags().BoolVarP(&force, "force", "f", false, "force project creation, even in non-empty directories.")
+	rootCmd.AddCommand(newProjectCmd)
 	rootCmd.AddCommand(cmdstack.RootCommand())
 	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(configHelpTopic)
-	addAliases()
+	addAlias("stack update", "up")
+	addAlias("stack down", "down")
+	addAlias("stack list", "list")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -131,12 +127,6 @@ func initConfig() {
 
 func ensureConfigDefaults() {
 	needsWrite := false
-	aliases := viper.GetStringMap("aliases")
-	if _, ok := aliases["new"]; !ok {
-		needsWrite = true
-		aliases["new"] = "stack create"
-		viper.Set("aliases", aliases)
-	}
 
 	to := viper.GetDuration("build_timeout")
 	if to == 0 {
@@ -168,23 +158,23 @@ func ensureConfigDefaults() {
 	}
 }
 
-func addAliases() {
-	aliases := map[string]string{}
-	cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("aliases"), &aliases))
-	for n, aliasString := range aliases {
-		alias := &cobra.Command{
-			Use:   n,
-			Short: "alias for: " + aliasString,
-			Long:  "Custom alias command for " + aliasString,
-			Run: func(cmd *cobra.Command, args []string) {
-				newArgs := []string{os.Args[0]}
-				newArgs = append(newArgs, strings.Split(aliasString, " ")...)
-				newArgs = append(newArgs, args...)
-				os.Args = newArgs
-				cobra.CheckErr(rootCmd.Execute())
-			},
-			DisableFlagParsing: true, // the real command will parse the flags
-		}
-		rootCmd.AddCommand(alias)
+func addAlias(from, to string) {
+	cmd, _, err := rootCmd.Find(strings.Split(from, " "))
+	cobra.CheckErr(err)
+
+	alias := &cobra.Command{
+		Use:     to,
+		Short:   cmd.Short,
+		Long:    cmd.Long,
+		Example: cmd.Example,
+		Run: func(cmd *cobra.Command, args []string) {
+			newArgs := []string{os.Args[0]}
+			newArgs = append(newArgs, strings.Split(from, " ")...)
+			newArgs = append(newArgs, args...)
+			os.Args = newArgs
+			cobra.CheckErr(rootCmd.Execute())
+		},
+		DisableFlagParsing: true, // the real command will parse the flags
 	}
+	rootCmd.AddCommand(alias)
 }

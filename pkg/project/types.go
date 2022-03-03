@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package project
 
 import (
 	"encoding/json"
@@ -64,7 +64,7 @@ type Container struct {
 }
 
 type Compute interface {
-	ImageTagName(s *Stack, provider string) string
+	ImageTagName(s *Project, provider string) string
 	Unit() *ComputeUnit
 }
 
@@ -99,7 +99,7 @@ type Queue struct{}
 
 type Secret struct{}
 
-type Stack struct {
+type Project struct {
 	Dir         string                 `yaml:"-"`
 	Name        string                 `yaml:"name"`
 	Functions   map[string]Function    `yaml:"functions,omitempty"`
@@ -120,8 +120,8 @@ type Stack struct {
 	Secrets  map[string]Secret    `yaml:"secrets,omitempty"`
 }
 
-func New(name, dir string) *Stack {
-	return &Stack{
+func New(name, dir string) *Project {
+	return &Project{
 		Name:        name,
 		Dir:         dir,
 		Containers:  map[string]Container{},
@@ -138,7 +138,7 @@ func New(name, dir string) *Stack {
 	}
 }
 
-func (s *Stack) Computes() []Compute {
+func (s *Project) Computes() []Compute {
 	computes := []Compute{}
 	for _, c := range s.Functions {
 		copy := c
@@ -152,7 +152,7 @@ func (s *Stack) Computes() []Compute {
 }
 
 // Compute default policies for a stack
-func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
+func calculateDefaultPolicies(s *Project) []*v1.PolicyResource {
 	policies := make([]*v1.PolicyResource, 0)
 
 	principals := make([]*v1.Resource, 0)
@@ -261,7 +261,7 @@ func calculateDefaultPolicies(s *Stack) []*v1.PolicyResource {
 	return policies
 }
 
-func FromFile(name string) (*Stack, error) {
+func FromFile(name string) (*Project, error) {
 	yamlFile, err := ioutil.ReadFile(name)
 	if err != nil {
 		return nil, err
@@ -270,7 +270,7 @@ func FromFile(name string) (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
-	stack := &Stack{Dir: dir}
+	stack := &Project{Dir: dir}
 	err = yaml.Unmarshal(yamlFile, stack)
 	if err != nil {
 		return nil, err
@@ -303,7 +303,7 @@ func FromFile(name string) (*Stack, error) {
 	return stack, nil
 }
 
-func (s *Stack) ToFile(file string) error {
+func (s *Project) ToFile(file string) error {
 	b, err := yaml.Marshal(s)
 	if err != nil {
 		return err

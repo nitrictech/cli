@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package project
 
 import (
 	"fmt"
@@ -79,7 +79,7 @@ func defaultGlobsFromConfig() []string {
 	return globs
 }
 
-func FromOptions(glob []string) (*Stack, error) {
+func FromOptions(glob []string) (*Project, error) {
 	s, err := FromOptionsMinimal()
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func FromOptions(glob []string) (*Stack, error) {
 	return s, nil
 }
 
-func FromOptionsMinimal() (*Stack, error) {
+func FromOptionsMinimal() (*Project, error) {
 	ss, err := os.Stat(stackPath)
 	if err != nil {
 		return nil, err

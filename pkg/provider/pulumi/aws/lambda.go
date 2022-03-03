@@ -26,14 +26,14 @@ import (
 	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
 )
 
 type LambdaArgs struct {
 	Topics      map[string]*sns.Topic
 	DockerImage *docker.Image
-	Compute     stack.Compute
+	Compute     project.Compute
 }
 
 type Lambda struct {

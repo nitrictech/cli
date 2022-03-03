@@ -28,18 +28,18 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
 
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/aws"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/azure"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/gcp"
 	"github.com/nitrictech/cli/pkg/provider/types"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type pulumiDeployment struct {
-	s *stack.Stack
+	s *project.Project
 	t *target.Target
 	p common.PulumiProvider
 }
@@ -48,7 +48,7 @@ var (
 	_ types.Provider = &pulumiDeployment{}
 )
 
-func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
+func New(s *project.Project, t *target.Target) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 	err := pv.Run()
 	if err != nil {

@@ -32,14 +32,14 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type azureProvider struct {
-	s          *stack.Stack
+	s          *project.Project
 	t          *target.Target
 	tmpDir     string
 	org        string
@@ -55,7 +55,7 @@ var (
 	azureNativePluginVersion string
 )
 
-func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
+func New(s *project.Project, t *target.Target) common.PulumiProvider {
 	return &azureProvider{s: s, t: t}
 }
 

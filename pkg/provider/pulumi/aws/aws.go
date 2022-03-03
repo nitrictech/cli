@@ -39,15 +39,15 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type awsProvider struct {
-	s      *stack.Stack
+	s      *project.Project
 	t      *target.Target
 	tmpDir string
 
@@ -66,7 +66,7 @@ type awsProvider struct {
 //go:embed pulumi-aws-version.txt
 var awsPluginVersion string
 
-func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
+func New(s *project.Project, t *target.Target) common.PulumiProvider {
 	return &awsProvider{
 		s:           s,
 		t:           t,

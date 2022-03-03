@@ -19,14 +19,14 @@ package provider
 import (
 	"fmt"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi"
 	"github.com/nitrictech/cli/pkg/provider/types"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-func NewProvider(s *stack.Stack, t *target.Target) (types.Provider, error) {
+func NewProvider(s *project.Project, t *target.Target) (types.Provider, error) {
 	switch t.Provider {
 	case target.Aws, target.Azure, target.Digitalocean, target.Gcp:
 		return pulumi.New(s, t)

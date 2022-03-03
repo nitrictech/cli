@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package project
 
 import (
 	"reflect"
@@ -22,7 +22,7 @@ import (
 )
 
 func TestCompute(t *testing.T) {
-	s := &Stack{Dir: "../run", Name: "test"}
+	s := &Project{Dir: "../run", Name: "test"}
 	cu := ComputeUnit{
 		Name: "unit",
 	}

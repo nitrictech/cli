@@ -36,16 +36,18 @@ var stackName string
 
 var stackCmd = &cobra.Command{
 	Use:   "stack",
-	Short: "deploy your project to the cloud",
-	Long: `Stack command set.
+	Short: "Manage stacks",
+	Long: `Manage stacks.
+
+A stack is a named update target, and a single project may have many of them.
 
 The stack commands generally need 3 things:
 1. a target (either explicitly with "-t <targetname> or defined in the config)
-2. a stack name (either explicitly with -n <stack name> or use the default name of "dep")
+2. a name (either explicitly with -n <stack name> or use the default name of "s")
 3. a project definition, this automatically collected from the code in functions.
    A glob to the functions can be a supplied by:
   - Configuration - there are default globs for each supported language in the .nitiric-config.yaml
-  - Aruments to the stack actions.
+  - Arguments to the stack actions.
 	`,
 	Example: `nitric stack up
 nitric stack down
@@ -55,8 +57,8 @@ nitric stack list
 
 var stackUpdateCmd = &cobra.Command{
 	Use:   "update [handlerGlob]",
-	Short: "Create or Update a new application stack",
-	Long:  `Updates a Nitric application stack.`,
+	Short: "Deploy code to a cloud and/or update resource changes",
+	Long:  `Updates a Nitric stack.`,
 	Example: `# Configured default handlerGlob (project in the current directory).
 nitric stack up -t aws
 
@@ -121,8 +123,13 @@ nitric stack up -n prod -t aws`,
 
 var stackDeleteCmd = &cobra.Command{
 	Use:   "down",
-	Short: "Brings downs an application project",
-	Long:  `Brings downs a Nitric application project.`,
+	Short: "Destroy an existing stack and its resources from the cloud",
+	Long: `Destroy an existing stack and its resources
+
+This command deletes an entire existing stack by name.  After running to completion,
+all of this stack's resources and associated state will be gone.
+
+Warning: this command is generally irreversible and should be used with great care.`,
 	Example: `nitric project down
 nitric project down -s ../project/ -t prod
 nitric project down -n prod-aws -s ../project/ -t prod

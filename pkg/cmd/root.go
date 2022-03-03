@@ -47,7 +47,21 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "nitric",
 	Short: "helper CLI for nitric applications",
-	Long:  ``,
+	Long: `Nitric - The fastest way to build serverless apps
+
+To begin working with Nitric, run the 'nitric new' command:
+
+    $ nitric new
+
+This will prompt you to create a new project for your cloud and language of choice.
+
+The most common commands from there are:
+
+    - nitric run   : Run a nitric stack locally for development or testing
+    - nitric up    : Deploy code to a cloud and/or update resource changes
+    - nitric down  : Tear down your stack's resources entirely from the cloud
+
+For more information, please visit the project page: https://nitric.io/docs`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if output.VerboseLevel > 1 {
 			pterm.EnableDebugMessages()
@@ -59,24 +73,6 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
-}
-
-var configHelpTopic = &cobra.Command{
-	Use:   "configuration",
-	Short: "Configuration help",
-	Long: `nitric CLI can be configured (using yaml format) in the following locations:
-${HOME}/.nitric-config.yaml
-${HOME}/.config/nitric/.nitric-config.yaml
-
-An example of the format is:
-  targets:
-    aws:
-      region: eastus
-      provider: aws
-	azure:
-	  region: eastus
-	  provider: azure
-  `,
 }
 
 func init() {
@@ -96,7 +92,6 @@ func init() {
 	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(configHelpTopic)
 	addAlias("stack update", "up")
 	addAlias("stack down", "down")
 	addAlias("stack list", "list")

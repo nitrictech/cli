@@ -19,20 +19,14 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/nitrictech/cli/pkg/cmd/run"
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/target"
-	"github.com/nitrictech/cli/pkg/tasklet"
-	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const configFileName = ".nitric-config"
@@ -74,8 +68,6 @@ func Execute() {
 }
 
 func init() {
-	initConfig()
-
 	rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
@@ -92,58 +84,6 @@ func init() {
 	addAlias("stack update", "up")
 	addAlias("stack down", "down")
 	addAlias("stack list", "list")
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".nitric" (without extension).
-		viper.AddConfigPath(home)
-		viper.AddConfigPath(utils.NitricConfigDir())
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".nitric-config")
-	}
-
-	viper.AutomaticEnv()
-	_ = viper.ReadInConfig()
-
-	ensureConfigDefaults()
-}
-
-func ensureConfigDefaults() {
-	needsWrite := false
-
-	to := viper.GetDuration("build_timeout")
-	if to == 0 {
-		needsWrite = true
-		viper.Set("build_timeout", 5*time.Minute)
-	}
-
-	if target.EnsureDefaultConfig() {
-		needsWrite = true
-	}
-
-	if needsWrite {
-		tasklet.MustRun(tasklet.Runner{
-			StartMsg: "Updating configfile to include defaults",
-			Runner: func(_ output.Progress) error {
-				// ensure .config/nitric exists
-				err := os.MkdirAll(utils.NitricConfigDir(), os.ModePerm)
-				if err != nil {
-					return err
-				}
-
-				return viper.WriteConfigAs(filepath.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
-			},
-			StopMsg: "Configfile updated"}, tasklet.Opts{})
-	}
 }
 
 func addAlias(from, to string) {

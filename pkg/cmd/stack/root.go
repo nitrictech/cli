@@ -17,8 +17,11 @@
 package project
 
 import (
+	"fmt"
 	"log"
+	"path/filepath"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
@@ -28,7 +31,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider"
 	"github.com/nitrictech/cli/pkg/provider/types"
-	"github.com/nitrictech/cli/pkg/target"
+	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/tasklet"
 )
 
@@ -51,17 +54,51 @@ nitric stack list
 `,
 }
 
+var newStackCmd = &cobra.Command{
+	Use:   "new",
+	Short: "create a new nitric stack",
+	Long:  `Creates a new Nitric stack.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		name := ""
+		err := survey.AskOne(&survey.Input{
+			Message: "What do you want to call your new stack?",
+		}, &name)
+		cobra.CheckErr(err)
+
+		pName := ""
+		err = survey.AskOne(&survey.Select{
+			Message: "Which Cloud do you wish to deploy to?",
+			Default: stack.Aws,
+			Options: stack.Providers,
+		}, &pName)
+		cobra.CheckErr(err)
+
+		pc, err := project.ConfigFromFile()
+		cobra.CheckErr(err)
+
+		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName})
+		cobra.CheckErr(err)
+
+		sc, err := prov.Ask()
+		cobra.CheckErr(err)
+
+		err = sc.ToFile(filepath.Join(pc.Dir, fmt.Sprintf("nitric-%s.yaml", sc.Name)))
+		cobra.CheckErr(err)
+	},
+	Args: cobra.MaximumNArgs(2),
+}
+
 var stackUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Create or Update a new application stack",
 	Long:  `Updates a Nitric application stack.`,
 	Example: `# Configured default handlerGlob (stack in the current directory).
-nitric stack up -t aws
+nitric stack up -s aws
 
 # use a custom stack name
-nitric stack up -n prod -t aws`,
+nitric stack up -n prod -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
-		t, err := target.FromOptions()
+		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
 
 		config, err := project.ConfigFromFile()
@@ -82,13 +119,13 @@ nitric stack up -n prod -t aws`,
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		p, err := provider.NewProvider(proj, t)
+		p, err := provider.NewProvider(proj, s)
 		cobra.CheckErr(err)
 
 		buildImages := tasklet.Runner{
 			StartMsg: "Building Images",
 			Runner: func(_ output.Progress) error {
-				return build.Create(proj, t)
+				return build.Create(proj, s)
 			},
 			StopMsg: "Images built",
 		}
@@ -120,11 +157,11 @@ var stackDeleteCmd = &cobra.Command{
 	Short: "Brings downs an application stack",
 	Long:  `Brings downs a Nitric application stack.`,
 	Example: `nitric stack down
-nitric stack down -t prod
-nitric stack down -n prod-aws -t prod
+nitric stack down -s prod
+nitric stack down -n prod-aws -s prod
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		t, err := target.FromOptions()
+		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
 
 		config, err := project.ConfigFromFile()
@@ -133,7 +170,7 @@ nitric stack down -n prod-aws -t prod
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, t)
+		p, err := provider.NewProvider(proj, s)
 		cobra.CheckErr(err)
 
 		deploy := tasklet.Runner{
@@ -155,10 +192,10 @@ var stackListCmd = &cobra.Command{
 	Short: "list stacks for a project",
 	Long:  `Lists Nitric application stacks for a project.`,
 	Example: `nitric list
-nitric stack list -t prod
+nitric stack list -s prod
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		t, err := target.FromOptions()
+		s, err := stack.FromOptions()
 		cobra.CheckErr(err)
 
 		config, err := project.ConfigFromFile()
@@ -167,7 +204,7 @@ nitric stack list -t prod
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, t)
+		p, err := provider.NewProvider(proj, s)
 		cobra.CheckErr(err)
 
 		deps, err := p.List()
@@ -180,15 +217,17 @@ nitric stack list -t prod
 }
 
 func RootCommand() *cobra.Command {
+	stackCmd.AddCommand(newStackCmd)
+
 	stackCmd.AddCommand(stackUpdateCmd)
 	stackUpdateCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the project")
-	cobra.CheckErr(target.AddOptions(stackUpdateCmd, false))
+	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(stackDeleteCmd)
 	stackDeleteCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the project")
-	cobra.CheckErr(target.AddOptions(stackDeleteCmd, false))
+	cobra.CheckErr(stack.AddOptions(stackDeleteCmd, false))
 
 	stackCmd.AddCommand(stackListCmd)
-	cobra.CheckErr(target.AddOptions(stackListCmd, false))
+	cobra.CheckErr(stack.AddOptions(stackListCmd, false))
 	return stackCmd
 }

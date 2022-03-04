@@ -31,9 +31,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/oauth2"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
@@ -57,16 +57,16 @@ func (mocks) Call(args pulumi.MockCallArgs) (resource.PropertyMap, error) {
 }
 
 func TestGCP(t *testing.T) {
-	s := stack.New("atest", ".")
-	s.Topics = map[string]stack.Topic{"sales": {}}
-	s.Buckets = map[string]stack.Bucket{"money": {}}
-	s.Queues = map[string]stack.Queue{"checkout": {}}
-	s.Functions = map[string]stack.Function{
+	s := project.New(&project.Config{Name: "atest", Dir: "."})
+	s.Topics = map[string]project.Topic{"sales": {}}
+	s.Buckets = map[string]project.Bucket{"money": {}}
+	s.Queues = map[string]project.Queue{"checkout": {}}
+	s.Functions = map[string]project.Function{
 		"runnner": {
 			Handler: "functions/create/main.go",
-			ComputeUnit: stack.ComputeUnit{
+			ComputeUnit: project.ComputeUnit{
 				Name:     "runner",
-				Triggers: stack.Triggers{Topics: []string{"sales"}},
+				Triggers: project.Triggers{Topics: []string{"sales"}},
 			},
 		},
 	}
@@ -95,8 +95,8 @@ func TestGCP(t *testing.T) {
 
 	a := &gcpProvider{
 		s: s,
-		t: &target.Target{
-			Provider: target.Aws,
+		t: &stack.Config{
+			Provider: stack.Aws,
 			Region:   "mock",
 		},
 		token:              &oauth2.Token{AccessToken: "testing-token"},
@@ -192,13 +192,13 @@ func TestGCP(t *testing.T) {
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		t       *target.Target
+		t       *stack.Config
 		wantErr bool
 	}{
 		{
 			name: "valid",
-			t: &target.Target{
-				Provider: target.Gcp,
+			t: &stack.Config{
+				Provider: stack.Gcp,
 				Region:   "us-west4",
 				Extra: map[string]interface{}{
 					"project": "foo",
@@ -207,7 +207,7 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name:    "invalid",
-			t:       &target.Target{Provider: target.Gcp, Region: "pole-north-right-next-to-santa"},
+			t:       &stack.Config{Provider: stack.Gcp, Region: "pole-north-right-next-to-santa"},
 			wantErr: true,
 		},
 	}

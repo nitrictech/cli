@@ -26,6 +26,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
@@ -38,15 +39,15 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type gcpProvider struct {
-	s          *stack.Stack
-	t          *target.Target
+	t          *stack.Config
+	s          *project.Project
 	tmpDir     string
 	gcpProject string
 
@@ -65,7 +66,7 @@ type gcpProvider struct {
 //go:embed pulumi-gcp-version.txt
 var gcpPluginVersion string
 
-func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
+func New(s *project.Project, t *stack.Config) common.PulumiProvider {
 	return &gcpProvider{
 		s:                  s,
 		t:                  t,
@@ -100,6 +101,43 @@ func (g *gcpProvider) SupportedRegions() []string {
 		"asia-east1",
 		"australia-southeast1",
 	}
+}
+
+func (a *gcpProvider) Ask() (*stack.Config, error) {
+	answers := struct {
+		Region  string
+		Project string
+	}{}
+	qs := []*survey.Question{
+		{
+			Name: "region",
+			Prompt: &survey.Select{
+				Message: "select the region",
+				Options: a.SupportedRegions(),
+			},
+		},
+		{
+			Name: "project",
+			Prompt: &survey.Input{
+				Message: "Provide the gcp project to use",
+			},
+		},
+	}
+	sc := &stack.Config{
+		Name:     a.t.Name,
+		Provider: a.t.Provider,
+		Extra:    map[string]interface{}{},
+	}
+
+	err := survey.Ask(qs, &answers)
+	if err != nil {
+		return nil, err
+	}
+
+	sc.Region = answers.Region
+	sc.Extra["project"] = answers.Project
+
+	return sc, nil
 }
 
 func (g *gcpProvider) Validate() error {

@@ -33,7 +33,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/target"
+	"github.com/nitrictech/cli/pkg/stack"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
@@ -105,8 +105,8 @@ func TestAWS(t *testing.T) {
 
 	a := &awsProvider{
 		s: s,
-		t: &target.Target{
-			Provider: target.Aws,
+		t: &stack.Config{
+			Provider: stack.Aws,
 			Region:   "mock",
 		},
 		topics:      map[string]*sns.Topic{},
@@ -249,16 +249,16 @@ func TestAWS(t *testing.T) {
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		t       *target.Target
+		t       *stack.Config
 		wantErr bool
 	}{
 		{
 			name: "valid",
-			t:    &target.Target{Provider: target.Aws, Region: "us-west-1"},
+			t:    &stack.Config{Provider: stack.Aws, Region: "us-west-1"},
 		},
 		{
 			name:    "invalid",
-			t:       &target.Target{Provider: target.Aws, Region: "pole-north-right-next-to-santa"},
+			t:       &stack.Config{Provider: stack.Aws, Region: "pole-north-right-next-to-santa"},
 			wantErr: true,
 		},
 	}

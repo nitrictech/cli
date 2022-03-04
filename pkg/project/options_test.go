@@ -34,7 +34,7 @@ func TestFromConfig(t *testing.T) {
 		{
 			name: "glob - current dir",
 			proj: &Config{
-				Name:     "stack",
+				Name:     "project",
 				Dir:      ".",
 				Handlers: []string{"*.go"},
 			},
@@ -60,9 +60,9 @@ func TestFromConfig(t *testing.T) {
 				Dir:  "../../pkg",
 				Name: "pkg",
 				Functions: map[string]Function{
-					"project": {
-						Handler:     "project/options.go",
-						ComputeUnit: ComputeUnit{Name: "project"},
+					"stack": {
+						Handler:     "stack/options.go",
+						ComputeUnit: ComputeUnit{Name: "stack"},
 					},
 				},
 			},

@@ -26,7 +26,7 @@ import (
 	"github.com/nitrictech/cli/mocks/mock_containerengine"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/target"
+	"github.com/nitrictech/cli/pkg/stack"
 )
 
 func TestCreateBaseDev(t *testing.T) {
@@ -76,7 +76,7 @@ func TestCreate(t *testing.T) {
 		},
 	}
 
-	if err := Create(s, &target.Target{Provider: "aws", Region: "eastus"}); err != nil {
+	if err := Create(s, &stack.Config{Provider: "aws", Region: "eastus"}); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)
 	}
 }

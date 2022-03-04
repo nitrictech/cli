@@ -16,7 +16,10 @@
 
 package types
 
-import "github.com/nitrictech/cli/pkg/output"
+import (
+	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/stack"
+)
 
 type Deployment struct {
 	ApiEndpoints map[string]string `json:"apiEndpoints,omitempty"`
@@ -26,5 +29,6 @@ type Provider interface {
 	Apply(log output.Progress, deploymentName string) (*Deployment, error)
 	Delete(log output.Progress, deploymentName string) error
 	List() (interface{}, error)
+	Ask() (*stack.Config, error)
 	//Status()
 }

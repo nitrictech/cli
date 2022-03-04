@@ -14,9 +14,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package target
+package stack
 
-type Target struct {
+const (
+	Aws          = "aws"
+	Azure        = "azure"
+	Gcp          = "gcp"
+	Digitalocean = "digitalocean"
+)
+
+var Providers = []string{Aws, Azure, Gcp, Digitalocean}
+
+type Config struct {
+	Name     string                 `json:"name,omitempty"`
 	Provider string                 `json:"provider,omitempty"`
 	Region   string                 `json:"region,omitempty"`
 	Extra    map[string]interface{} `json:",inline,omitempty"`

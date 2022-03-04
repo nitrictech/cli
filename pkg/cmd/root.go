@@ -29,7 +29,6 @@ import (
 
 	"github.com/nitrictech/cli/pkg/cmd/run"
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
-	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/tasklet"
@@ -88,7 +87,6 @@ func init() {
 	newProjectCmd.Flags().BoolVarP(&force, "force", "f", false, "force project creation, even in non-empty directories.")
 	rootCmd.AddCommand(newProjectCmd)
 	rootCmd.AddCommand(cmdstack.RootCommand())
-	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
 	addAlias("stack update", "up")

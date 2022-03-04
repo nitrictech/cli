@@ -33,24 +33,18 @@ import (
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/tasklet"
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run [handlerGlob]",
+	Use:   "run",
 	Short: "run a nitric stack",
 	Long: `Run a nitric stack locally for development or testing
 `,
-	Example: `# Configured default handlerGlob (stack in the current directory).
-nitric run
-
-# use an explicit handlerGlob (stack in the current directory)
-nitric run "functions/*.ts"
-
-# use an explicit handlerGlob and explicit stack directory
-nitric run -s ../projectX/ "functions/*.ts"`,
+	Example: `nitric run`,
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
@@ -59,7 +53,10 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		// Divert default log output to pterm debug
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
 
-		s, err := stack.FromOptions(args)
+		proj, err := project.FromFile()
+		cobra.CheckErr(err)
+
+		s, err := stack.FromConfig(proj)
 		cobra.CheckErr(err)
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
@@ -182,10 +179,9 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		// Stop the membrane
 		cobra.CheckErr(ls.Stop())
 	},
-	Args: cobra.MinimumNArgs(0),
+	Args: cobra.ExactArgs(0),
 }
 
 func RootCommand() *cobra.Command {
-	stack.AddOptions(runCmd)
 	return runCmd
 }

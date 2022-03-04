@@ -31,6 +31,7 @@ import (
 )
 
 type LambdaArgs struct {
+	StackName   string
 	Topics      map[string]*sns.Topic
 	DockerImage *docker.Image
 	Compute     project.Compute
@@ -127,6 +128,11 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		PackageType: pulumi.String("Image"),
 		Role:        res.Role.Arn,
 		Tags:        common.Tags(ctx, name),
+		Environment: awslambda.FunctionEnvironmentArgs{
+			Variables: pulumi.StringMap{
+				"NITRIC_STACK": pulumi.String(args.StackName),
+			},
+		},
 	}, opts...)
 	if err != nil {
 		return nil, err

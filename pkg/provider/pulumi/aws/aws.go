@@ -302,6 +302,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			Topics:      a.topics,
 			DockerImage: image.DockerImage,
 			Compute:     c,
+			StackName:   ctx.Stack(),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "lambda container "+c.Unit().Name)

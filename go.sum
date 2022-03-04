@@ -1559,6 +1559,8 @@ github.com/pulumi/pulumi-azuread/sdk/v5 v5.17.0 h1:TvQznk5RoYJ8pay8YGGHiYu77tqNZ
 github.com/pulumi/pulumi-azuread/sdk/v5 v5.17.0/go.mod h1:dUUTqKMxqp3LvfdlaCzFlFsv8ONLAxk3JzOzGhVBbDM=
 github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0 h1:eba1cKq5LSjCF9f96gvMtjIbZdzwJfM0xG+/vzFDsF0=
 github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0/go.mod h1:KusFPDVt8YTZj58vpa7gJyQyXoPkrHOKyw5k06bT340=
+github.com/pulumi/pulumi-gcp/sdk/v6 v6.12.0 h1:ou7NYqo+w4hPeUEssUbMFb2niKx0KxTHagfbq2Y8OJM=
+github.com/pulumi/pulumi-gcp/sdk/v6 v6.12.0/go.mod h1:KTiOKAfnFOJF3wic/DhNs8izW7LF8WAkmGkQEPvh05g=
 github.com/pulumi/pulumi/sdk/v3 v3.0.0/go.mod h1:GBHyQ7awNQSRmiKp/p8kIKrGrMOZeA/k2czoM/GOqds=
 github.com/pulumi/pulumi/sdk/v3 v3.23.2/go.mod h1:WHOQB00iuHZyXhwrymxpKXhpOahSguJIpRjVokmM11w=
 github.com/pulumi/pulumi/sdk/v3 v3.24.1/go.mod h1:WHOQB00iuHZyXhwrymxpKXhpOahSguJIpRjVokmM11w=

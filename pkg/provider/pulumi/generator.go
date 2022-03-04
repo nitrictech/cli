@@ -31,6 +31,7 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/pulumi/aws"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/azure"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/gcp"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/target"
@@ -63,6 +64,8 @@ func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
 		prov = aws.New(s, t)
 	case target.Azure:
 		prov = azure.New(s, t)
+	case target.Gcp:
+		prov = gcp.New(s, t)
 	default:
 		return nil, utils.NewNotSupportedErr("pulumi provider " + t.Provider + " not suppored")
 	}
@@ -78,7 +81,7 @@ func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
 	}, nil
 }
 
-func (p *pulumiDeployment) load(name string) (*auto.Stack, error) {
+func (p *pulumiDeployment) load(log output.Progress, name string) (*auto.Stack, error) {
 	projectName := p.s.Name
 	stackName := p.s.Name + "-" + name
 	ctx := context.Background()
@@ -95,6 +98,7 @@ func (p *pulumiDeployment) load(name string) (*auto.Stack, error) {
 	}
 
 	for _, plug := range p.p.Plugins() {
+		log.Busyf("Installing Pulumi plugin %s:%s", plug.Name, plug.Version)
 		err = s.Workspace().InstallPlugin(ctx, plug.Name, plug.Version)
 		if err != nil {
 			return nil, errors.WithMessage(err, "InstallPlugin "+plug.String())
@@ -106,12 +110,13 @@ func (p *pulumiDeployment) load(name string) (*auto.Stack, error) {
 		return nil, errors.WithMessage(err, "Configure")
 	}
 
+	log.Busyf("Refreshing the Pulumi stack")
 	_, err = s.Refresh(ctx)
 	return &s, errors.WithMessage(err, "Refresh")
 }
 
 func (p *pulumiDeployment) Apply(log output.Progress, name string) (*types.Deployment, error) {
-	s, err := p.load(name)
+	s, err := p.load(log, name)
 	if err != nil {
 		return nil, errors.WithMessage(err, "loading pulumi stack")
 	}
@@ -152,7 +157,7 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 }
 
 func (a *pulumiDeployment) Delete(log output.Progress, name string) error {
-	s, err := a.load(name)
+	s, err := a.load(log, name)
 	if err != nil {
 		return err
 	}

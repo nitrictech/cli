@@ -31,7 +31,6 @@ import (
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/tasklet"
 	"github.com/nitrictech/cli/pkg/utils"
@@ -130,10 +129,6 @@ func ensureConfigDefaults() {
 	}
 
 	if target.EnsureDefaultConfig() {
-		needsWrite = true
-	}
-
-	if project.EnsureRuntimeDefaults() {
 		needsWrite = true
 	}
 

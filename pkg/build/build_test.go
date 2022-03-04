@@ -39,7 +39,7 @@ func TestCreateBaseDev(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	s := project.New("", dir)
+	s := project.New(&project.Config{Name: "", Dir: dir})
 	s.Functions = map[string]project.Function{"foo": {Handler: "functions/list.ts"}}
 
 	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{})

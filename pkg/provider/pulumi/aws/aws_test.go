@@ -59,7 +59,7 @@ func (mocks) Call(args pulumi.MockCallArgs) (resource.PropertyMap, error) {
 }
 
 func TestAWS(t *testing.T) {
-	s := project.New("atest", ".")
+	s := project.New(&project.Config{Name: "atest", Dir: "."})
 	s.Topics = map[string]project.Topic{"sales": {}}
 	s.Buckets = map[string]project.Bucket{"money": {}}
 	s.Queues = map[string]project.Queue{"checkout": {}}

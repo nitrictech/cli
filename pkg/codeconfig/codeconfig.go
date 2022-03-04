@@ -356,7 +356,7 @@ func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
 }
 
 func (c *codeConfig) ToProject() (*project.Project, error) {
-	s := project.New(c.initialStack.Name, c.initialStack.Dir)
+	s := project.New(&project.Config{Name: c.initialStack.Name, Dir: c.initialStack.Dir})
 
 	err := mergo.Merge(s, c.initialStack)
 	if err != nil {

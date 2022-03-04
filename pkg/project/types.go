@@ -120,10 +120,10 @@ type Project struct {
 	Secrets  map[string]Secret    `yaml:"secrets,omitempty"`
 }
 
-func New(name, dir string) *Project {
+func New(config *Config) *Project {
 	return &Project{
-		Name:        name,
-		Dir:         dir,
+		Name:        config.Name,
+		Dir:         config.Dir,
 		Containers:  map[string]Container{},
 		Collections: map[string]Collection{},
 		Functions:   map[string]Function{},

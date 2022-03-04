@@ -100,6 +100,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 					"sqs:ListQueues",
 					"dynamodb:ListTables",
 					"s3:ListAllMyBuckets",
+					"tag:GetResources",
 				},
 				"Effect":   "Allow",
 				"Resource": "*",

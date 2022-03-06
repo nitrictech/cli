@@ -46,7 +46,7 @@ var (
 
 var newProjectCmd = &cobra.Command{
 	Use:   "new [projectName] [templateName]",
-	Short: "create a new nitric project",
+	Short: "Create a new project",
 	Long:  `Creates a new Nitric project from a template.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		answers := struct {

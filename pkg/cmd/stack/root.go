@@ -39,15 +39,10 @@ var stackName string
 
 var stackCmd = &cobra.Command{
 	Use:   "stack",
-	Short: "Manage stacks",
-	Long: `Manage stacks.
+	Short: "Manage stacks (project deployments)",
+	Long: `Manage stacks (project deployments).
 
-A stack is a named update target, and a single project may have many of them.
-
-The stack commands generally need 3 things:
-1. a target (either explicitly with "-t <targetname> or defined in the config)
-2. a stack name (either explicitly with -n <stack name> or use the default name of "dep")
-3. a project configuration (seed config from nitric.yaml and the remainder is automatically collected from the code in functions).`,
+A stack is a named update target, and a single project may have many of them.`,
 	Example: `nitric stack up
 nitric stack down
 nitric stack list
@@ -90,10 +85,9 @@ var newStackCmd = &cobra.Command{
 
 var stackUpdateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "Create or Update a new application stack",
-	Long:  `Updates a Nitric application stack.`,
-	Example: `# Configured default handlerGlob (stack in the current directory).
-nitric stack up -s aws
+	Short: "Create or update a deployed stack",
+	Long:  `Create or update a deployed stack`,
+	Example: `nitric stack up -s aws
 
 # use a custom stack name
 nitric stack up -n prod -s aws`,
@@ -154,11 +148,9 @@ nitric stack up -n prod -s aws`,
 
 var stackDeleteCmd = &cobra.Command{
 	Use:   "down",
-	Short: "Brings downs an application stack",
-	Long:  `Brings downs a Nitric application stack.`,
-	Example: `nitric stack down
-nitric stack down -s prod
-nitric stack down -n prod-aws -s prod
+	Short: "Undeploy a previously deployed stack, deleting resources",
+	Long:  `Undeploy a previously deployed stack, deleting resources`,
+	Example: `nitric stack down -s aws
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := stack.FromOptions()
@@ -189,10 +181,10 @@ nitric stack down -n prod-aws -s prod
 
 var stackListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "list stacks for a project",
-	Long:  `Lists Nitric application stacks for a project.`,
+	Short: "List all project stacks and their status",
+	Long:  `List all project stacks and their status`,
 	Example: `nitric list
-nitric stack list -s prod
+nitric stack list -s aws
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := stack.FromOptions()

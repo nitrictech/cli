@@ -41,19 +41,20 @@ var rootCmd = &cobra.Command{
 	Short: "helper CLI for nitric applications",
 	Long: `Nitric - The fastest way to build serverless apps
 
-To begin working with Nitric, run the 'nitric new' command:
+To start with nitric, run the 'nitric new' command:
 
     $ nitric new
 
-This will prompt you to create a new project for your cloud and language of choice.
+This will guide you through project creation, including selecting from available templates.
 
-The most common commands from there are:
+These are the most common commands:
 
-    - nitric run   : Run a nitric stack locally for development or testing
-    - nitric up    : Deploy code to a cloud and/or update resource changes
-    - nitric down  : Tear down your stack's resources entirely from the cloud
+    - nitric run       : Run your project locally for dev and testing
+    - nitric stack new : Configure a target for deployment
+    - nitric up        : Create or update a deployed stack
+    - nitric down.     : Pull down the deployed resources for a stack
 
-For more information, please visit the project page: https://nitric.io/docs`,
+For further details visit our docs https://nitric.io/docs`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if output.VerboseLevel > 1 {
 			pterm.EnableDebugMessages()

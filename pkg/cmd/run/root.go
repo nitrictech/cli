@@ -39,10 +39,9 @@ import (
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "run a nitric stack",
-	Long: `Run a nitric stack locally for development or testing
-`,
+	Use:     "run",
+	Short:   "Run your project locally for development and testing",
+	Long:    `Run your project locally for development and testing`,
 	Example: `nitric run`,
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)

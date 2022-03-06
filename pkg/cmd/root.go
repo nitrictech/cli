@@ -52,7 +52,7 @@ These are the most common commands:
     - nitric run       : Run your project locally for dev and testing
     - nitric stack new : Configure a target for deployment
     - nitric up        : Create or update a deployed stack
-    - nitric down.     : Pull down the deployed resources for a stack
+    - nitric down     : Pull down the deployed resources for a stack
 
 For further details visit our docs https://nitric.io/docs`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {

@@ -17,6 +17,7 @@
 package codeconfig
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -310,19 +311,25 @@ func (c *codeConfig) collectOne(handler string) error {
 	if output.VerboseLevel > 2 {
 		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
 	}
-	if output.VerboseLevel > 1 {
-		logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
-			ShowStdout: true,
-			ShowStderr: true,
-			Follow:     true,
-		})
-		if err != nil {
-			return err
-		}
-		go func() {
-			_, _ = stdcopy.StdCopy(log.Writer(), log.Writer(), logreader)
-		}()
+	logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	})
+	if err != nil {
+		return err
 	}
+
+	logWriter := log.Writer()
+	logRW := &bytes.Buffer{}
+	if output.VerboseLevel <= 1 {
+		// if we are running in non-verbose then store the container logs in a buffer in case
+		// there are errors.
+		logWriter = logRW
+	}
+	go func() {
+		_, _ = stdcopy.StdCopy(logWriter, logWriter, logreader)
+	}()
 
 	errs := utils.NewErrorList().WithSubject(handler)
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
@@ -331,6 +338,15 @@ func (c *codeConfig) collectOne(handler string) error {
 		msg := ""
 		if done.Error != nil {
 			msg = done.Error.Message
+		}
+		if logRW.Len() > 0 {
+			for {
+				line, err := logRW.ReadString('\n')
+				if err != nil {
+					break
+				}
+				msg += "\n" + line
+			}
 		}
 		if msg != "" || done.StatusCode != 0 {
 			errs.Add(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))

@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -45,9 +46,14 @@ var (
 )
 
 var newProjectCmd = &cobra.Command{
-	Use:   "new [projectName] [templateName]",
+	Use:   "new [projectName] [templateName] [handlerGlob]",
 	Short: "Create a new project",
 	Long:  `Creates a new Nitric project from a template.`,
+	Example: `# For an interactive command that will ask the required questions
+nitric new
+
+# For a non-interactive command use the arguments.
+nitric new hello-world "official/TypeScript - Starter" "functions/*.ts" `,
 	Run: func(cmd *cobra.Command, args []string) {
 		answers := struct {
 			ProjectName  string
@@ -80,31 +86,46 @@ var newProjectCmd = &cobra.Command{
 		}
 
 		qs := []*survey.Question{}
-		if len(args) > 0 && projectNameQu.Validate(args[0]) == nil {
-			answers.ProjectName = args[0]
+		if len(args) > 0 {
+			if err := projectNameQu.Validate(args[0]); err != nil {
+				pterm.Error.PrintOnError(err)
+				qs = append(qs, &projectNameQu)
+			} else {
+				answers.ProjectName = args[0]
+			}
 		} else {
 			qs = append(qs, &projectNameQu)
 		}
 
-		if len(args) > 1 && templateNameQu.Validate(args[1]) == nil {
-			answers.TemplateName = args[1]
+		if len(args) > 1 {
+			if err := templateNameQu.Validate(args[1]); err != nil {
+				pterm.Error.PrintOnError(err)
+				qs = append(qs, &templateNameQu)
+			} else {
+				answers.TemplateName = args[1]
+			}
 		} else {
 			qs = append(qs, &templateNameQu)
 			args = []string{} // reassign args to ensure validation works correctly.
 		}
-		qs = append(qs, &survey.Question{
-			Name: "handlers",
-			Prompt: &survey.Input{
-				Message: "Glob for the function handlers?",
-				Default: "functions/*.ts",
-				Suggest: func(toComplete string) []string {
-					return []string{
-						"functions/*.ts",
-						"functions/*.js",
-						"functions/*/*.go"}
+
+		if len(args) == 3 {
+			answers.Handlers = args[2]
+		} else {
+			qs = append(qs, &survey.Question{
+				Name: "handlers",
+				Prompt: &survey.Input{
+					Message: "Glob for the function handlers?",
+					Default: "functions/*.ts",
+					Suggest: func(toComplete string) []string {
+						return []string{
+							"functions/*.ts",
+							"functions/*.js",
+							"functions/*/*.go"}
+					},
 				},
-			},
-		})
+			})
+		}
 
 		if len(qs) > 0 {
 			err = survey.Ask(qs, &answers)
@@ -124,7 +145,7 @@ var newProjectCmd = &cobra.Command{
 		err = p.ToFile()
 		cobra.CheckErr(err)
 	},
-	Args: cobra.MaximumNArgs(2),
+	Args: cobra.MaximumNArgs(3),
 }
 
 func validateName(val interface{}) error {

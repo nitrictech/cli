@@ -17,11 +17,11 @@
 package project
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -61,18 +61,7 @@ func ConfigFromFile() (*Config, error) {
 	}
 	yamlFile, err := ioutil.ReadFile(filepath.Join(wd, "nitric.yaml"))
 	if err != nil {
-		// Temporary hack to make life better for devs.
-		// Just generate and write the config. The next step is to replace this with an error.
-		// see: https://github.com/nitrictech/cli/issues/145
-		// return errors.New("No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
-		p.Name = filepath.Base(absDir)
-		p.Handlers = []string{
-			"functions/*.ts",
-			"functions/*.js",
-			"functions/*/*.go",
-		}
-		err = p.ToFile()
-		return p, err
+		return nil, errors.WithMessage(err, "No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
 	}
 
 	err = yaml.Unmarshal(yamlFile, p)

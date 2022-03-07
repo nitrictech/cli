@@ -21,9 +21,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/pflagext"
@@ -32,8 +30,9 @@ import (
 
 var stack string
 
-func FromOptions() (*Config, error) {
-	return ConfigFromFile("nitric-" + stack + ".yaml")
+// Assume the project is in the currentDirectory
+func ConfigFromOptions() (*Config, error) {
+	return configFromFile("nitric-" + stack + ".yaml")
 }
 
 func (p *Config) ToFile(file string) error {
@@ -45,48 +44,16 @@ func (p *Config) ToFile(file string) error {
 	return ioutil.WriteFile(file, b, 0644)
 }
 
-// Assume the project is in the currentDirectory
-func ConfigFromFile(file string) (*Config, error) {
+func configFromFile(file string) (*Config, error) {
 	s := &Config{}
+
 	yamlFile, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("no nitric stack found (unable to find %s). If you haven't created a stack yet, run `nitric stack new` to get started", file)
 	}
 
 	err = yaml.Unmarshal(yamlFile, s)
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-func AllFromConfig() (map[string]Config, error) {
-	tsMap, err := utils.ToStringMapStringMapStringE(viper.Get("targets"))
-	if err != nil {
-		return nil, err
-	}
-
-	targets := map[string]Config{}
-	for name, tMap := range tsMap {
-		t := Config{}
-		err := mapstructure.Decode(tMap, &t)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(tMap) > 2 {
-			// Decode the "extra" map for provider specific values
-			delete(tMap, "provider")
-			delete(tMap, "region")
-			err := mapstructure.Decode(tMap, &t.Extra)
-			if err != nil {
-				return nil, err
-			}
-		}
-		targets[name] = t
-	}
-
-	return targets, nil
+	return s, err
 }
 
 func AddOptions(cmd *cobra.Command, providerOnly bool) error {

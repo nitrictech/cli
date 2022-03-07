@@ -35,8 +35,6 @@ import (
 	"github.com/nitrictech/cli/pkg/tasklet"
 )
 
-var stackName string
-
 var stackCmd = &cobra.Command{
 	Use:   "stack",
 	Short: "Manage stacks (project deployments)",
@@ -129,7 +127,7 @@ nitric stack up -n prod -s aws`,
 		deploy := tasklet.Runner{
 			StartMsg: "Deploying..",
 			Runner: func(progress output.Progress) error {
-				d, err = p.Apply(progress, stackName)
+				d, err = p.Apply(progress, s.Name)
 				return err
 			},
 			StopMsg: "Stack",
@@ -168,7 +166,7 @@ var stackDeleteCmd = &cobra.Command{
 		deploy := tasklet.Runner{
 			StartMsg: "Deleting..",
 			Runner: func(progress output.Progress) error {
-				return p.Delete(progress, stackName)
+				return p.Delete(progress, s.Name)
 			},
 			StopMsg: "Stack",
 		}
@@ -212,11 +210,9 @@ func RootCommand() *cobra.Command {
 	stackCmd.AddCommand(newStackCmd)
 
 	stackCmd.AddCommand(stackUpdateCmd)
-	stackUpdateCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the project")
 	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(stackDeleteCmd)
-	stackDeleteCmd.Flags().StringVarP(&stackName, "name", "n", "dep", "the name of the project")
 	cobra.CheckErr(stack.AddOptions(stackDeleteCmd, false))
 
 	stackCmd.AddCommand(stackListCmd)

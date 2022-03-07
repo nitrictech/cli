@@ -16,18 +16,27 @@
 
 package stack
 
-const (
-	Aws          = "aws"
-	Azure        = "azure"
-	Gcp          = "gcp"
-	Digitalocean = "digitalocean"
+import (
+	"reflect"
+	"testing"
 )
 
-var Providers = []string{Aws, Azure, Gcp, Digitalocean}
-
-type Config struct {
-	Name     string                 `yaml:"name,omitempty"`
-	Provider string                 `yaml:"provider,omitempty"`
-	Region   string                 `yaml:"region,omitempty"`
-	Extra    map[string]interface{} `yaml:",inline,omitempty"`
+func Test_configFromFile(t *testing.T) {
+	want := &Config{
+		Name:     "zed",
+		Provider: "Azure",
+		Region:   "eastus2",
+		Extra: map[string]interface{}{
+			"adminemail": "admin@example.com",
+			"org":        "example.com",
+		},
+	}
+	got, err := configFromFile("data/nitric-x.yaml")
+	if err != nil {
+		t.Errorf("configFromFile() error = %v", err)
+		return
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("configFromFile() = %v, want %v", got, want)
+	}
 }

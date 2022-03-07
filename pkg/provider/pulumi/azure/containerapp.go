@@ -135,15 +135,15 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		return nil, err
 	}
 
-	for _, c := range a.s.Computes() {
-		localImageName := c.ImageTagName(a.s, "")
+	for _, c := range a.proj.Computes() {
+		localImageName := c.ImageTagName(a.proj, "")
 		repositoryUrl := res.Registry.LoginServer.ApplyT(func(server string) string {
-			return server + "/" + c.ImageTagName(a.s, a.t.Provider)
+			return server + "/" + c.ImageTagName(a.proj, a.sc.Provider)
 		}).(pulumi.StringOutput)
 
 		image, err := common.NewImage(ctx, c.Unit().Name+"Image", &common.ImageArgs{
 			LocalImageName:  localImageName,
-			SourceImageName: c.ImageTagName(a.s, a.t.Provider),
+			SourceImageName: c.ImageTagName(a.proj, a.sc.Provider),
 			RepositoryUrl:   repositoryUrl,
 			Username:        res.Registry.AdminUsername,
 			Password:        res.Registry.AdminPassword,

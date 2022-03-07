@@ -40,8 +40,8 @@ import (
 )
 
 type azureProvider struct {
-	s          *project.Project
-	t          *stack.Config
+	proj       *project.Project
+	sc         *stack.Config
 	tmpDir     string
 	org        string
 	adminEmail string
@@ -57,7 +57,7 @@ var (
 )
 
 func New(s *project.Project, t *stack.Config) common.PulumiProvider {
-	return &azureProvider{s: s, t: t}
+	return &azureProvider{proj: s, sc: t}
 }
 
 func (a *azureProvider) Plugins() []common.Plugin {
@@ -105,8 +105,8 @@ func (a *azureProvider) Ask() (*stack.Config, error) {
 		},
 	}
 	sc := &stack.Config{
-		Name:     a.t.Name,
-		Provider: a.t.Provider,
+		Name:     a.sc.Name,
+		Provider: a.sc.Provider,
 		Extra:    map[string]interface{}{},
 	}
 
@@ -131,34 +131,34 @@ func (a *azureProvider) SupportedRegions() []string {
 func (a *azureProvider) Validate() error {
 	errList := utils.NewErrorList()
 
-	if a.t.Region == "" {
-		errList.Add(fmt.Errorf("target %s requires \"region\"", a.t.Provider))
-	} else if !sliceutil.Contains(a.SupportedRegions(), a.t.Region) {
-		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.t.Region, a.t.Provider)))
+	if a.sc.Region == "" {
+		errList.Add(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
+	} else if !sliceutil.Contains(a.SupportedRegions(), a.sc.Region) {
+		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
 	}
 
-	if _, ok := a.t.Extra["org"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"org\"", a.t.Provider))
+	if _, ok := a.sc.Extra["org"]; !ok {
+		errList.Add(fmt.Errorf("target %s requires \"org\"", a.sc.Provider))
 	} else {
-		a.org = a.t.Extra["org"].(string)
+		a.org = a.sc.Extra["org"].(string)
 	}
 
-	if _, ok := a.t.Extra["adminemail"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"adminemail\"", a.t.Provider))
+	if _, ok := a.sc.Extra["adminemail"]; !ok {
+		errList.Add(fmt.Errorf("target %s requires \"adminemail\"", a.sc.Provider))
 	} else {
-		a.adminEmail = a.t.Extra["adminemail"].(string)
+		a.adminEmail = a.sc.Extra["adminemail"].(string)
 	}
 
 	return errList.Aggregate()
 }
 
 func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	if a.t.Region != "" {
-		err := autoStack.SetConfig(ctx, "azure:location", auto.ConfigValue{Value: a.t.Region})
+	if a.sc.Region != "" {
+		err := autoStack.SetConfig(ctx, "azure:location", auto.ConfigValue{Value: a.sc.Region})
 		if err != nil {
 			return err
 		}
-		err = autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.t.Region})
+		err = autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.sc.Region})
 		if err != nil {
 			return err
 		}
@@ -168,7 +168,7 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 	if err != nil {
 		return err
 	}
-	a.t.Region = region.Value
+	a.sc.Region = region.Value
 	return nil
 }
 
@@ -185,7 +185,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	rg, err := core.NewResourceGroup(ctx, resourceName(ctx, "", ResourceGroupRT), &core.ResourceGroupArgs{
-		Location: pulumi.String(a.t.Region),
+		Location: pulumi.String(a.sc.Region),
 		Tags:     common.Tags(ctx, ctx.Stack()),
 	})
 	if err != nil {
@@ -215,7 +215,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	}
 	contAppsArgs.KVaultName = kv.Name
 
-	if len(a.s.Buckets) > 0 || len(a.s.Queues) > 0 {
+	if len(a.proj.Buckets) > 0 || len(a.proj.Queues) > 0 {
 		sr, err := a.newStorageResources(ctx, "storage", &StorageArgs{ResourceGroupName: rg.Name})
 		if err != nil {
 			return errors.WithMessage(err, "storage create")
@@ -224,7 +224,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		contAppsArgs.StorageAccountQueueEndpoint = sr.Account.PrimaryQueueEndpoint
 	}
 
-	for k := range a.s.Topics {
+	for k := range a.proj.Topics {
 		contAppsArgs.Topics[k], err = eventgrid.NewTopic(ctx, resourceName(ctx, k, EventGridRT), &eventgrid.TopicArgs{
 			ResourceGroupName: rg.Name,
 			Location:          rg.Location,
@@ -235,7 +235,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	if len(a.s.Collections) > 0 {
+	if len(a.proj.Collections) > 0 {
 		mc, err := a.newMongoCollections(ctx, "mongodb", &MongoCollectionsArgs{
 			ResourceGroupName: rg.Name,
 		})
@@ -247,7 +247,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	var apps *ContainerApps
-	if len(a.s.Functions) > 0 || len(a.s.Containers) > 0 {
+	if len(a.proj.Functions) > 0 || len(a.proj.Containers) > 0 {
 		apps, err = a.newContainerApps(ctx, "containerApps", contAppsArgs)
 		if err != nil {
 			return errors.WithMessage(err, "containerApps")
@@ -265,11 +265,11 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	// TODO: Add schedule support
 	// NOTE: Currently CRONTAB support is required, we either need to revisit the design of
 	// our scheduled expressions or implement a workaround or request a feature.
-	if len(a.s.Schedules) > 0 {
+	if len(a.proj.Schedules) > 0 {
 		_ = ctx.Log.Warn("Schedules are not currently supported for Azure deployments", &pulumi.LogArgs{})
 	}
 
-	for k, v := range a.s.ApiDocs {
+	for k, v := range a.proj.ApiDocs {
 		_, err = newAzureApiManagement(ctx, k, &AzureApiManagementArgs{
 			ResourceGroupName: rg.Name,
 			OrgName:           pulumi.String(a.org),

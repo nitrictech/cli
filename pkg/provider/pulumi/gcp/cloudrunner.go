@@ -91,7 +91,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 	maxScale := common.IntValueOrDefault(args.Compute.Unit().MaxScale, 10)
 	minScale := common.IntValueOrDefault(args.Compute.Unit().MinScale, 0)
 	res.Service, err = cloudrun.NewService(ctx, name, &cloudrun.ServiceArgs{
-		Location: pulumi.String(g.t.Region),
+		Location: pulumi.String(g.sc.Region),
 		Project:  pulumi.String(args.ProjectId),
 		Template: cloudrun.ServiceTemplateArgs{
 			Metadata: cloudrun.ServiceTemplateMetadataArgs{

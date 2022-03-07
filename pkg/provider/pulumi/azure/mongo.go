@@ -48,7 +48,7 @@ func (a *azureProvider) newMongoCollections(ctx *pulumi.Context, name string, ar
 	primaryGeo := cosmosdb.AccountGeoLocationArgs{
 		FailoverPriority: pulumi.Int(0),
 		ZoneRedundant:    pulumi.Bool(false),
-		Location:         pulumi.String(a.t.Region),
+		Location:         pulumi.String(a.sc.Region),
 	}
 	secondaryGeo := cosmosdb.AccountGeoLocationArgs{
 		FailoverPriority: pulumi.Int(1),
@@ -63,7 +63,7 @@ func (a *azureProvider) newMongoCollections(ctx *pulumi.Context, name string, ar
 		ResourceGroupName:  args.ResourceGroupName,
 		Kind:               pulumi.String("MongoDB"),
 		MongoServerVersion: pulumi.String("4.0"),
-		Location:           pulumi.String(a.t.Region),
+		Location:           pulumi.String(a.sc.Region),
 		OfferType:          pulumi.String("Standard"),
 		ConsistencyPolicy: cosmosdb.AccountConsistencyPolicyArgs{
 			ConsistencyLevel: pulumi.String("Eventual"),
@@ -82,7 +82,7 @@ func (a *azureProvider) newMongoCollections(ctx *pulumi.Context, name string, ar
 		return nil, errors.WithMessage(err, "mongo db")
 	}
 
-	for k := range a.s.Collections {
+	for k := range a.proj.Collections {
 		res.Collections[k], err = cosmosdb.NewMongoCollection(ctx, resourceName(ctx, k, MongoCollectionRT), &cosmosdb.MongoCollectionArgs{
 			ResourceGroupName: args.ResourceGroupName,
 			AccountName:       res.Account.Name,

@@ -61,7 +61,7 @@ func (a *azureProvider) newStorageResources(ctx *pulumi.Context, name string, ar
 		return nil, errors.WithMessage(err, "account create")
 	}
 
-	for bName := range a.s.Buckets {
+	for bName := range a.proj.Buckets {
 		res.Containers[bName], err = storage.NewContainer(ctx, resourceName(ctx, bName, StorageContainerRT), &storage.ContainerArgs{
 			StorageAccountName: res.Account.Name,
 		}, pulumi.Parent(res))
@@ -70,7 +70,7 @@ func (a *azureProvider) newStorageResources(ctx *pulumi.Context, name string, ar
 		}
 	}
 
-	for qName := range a.s.Queues {
+	for qName := range a.proj.Queues {
 		res.Queues[qName], err = storage.NewQueue(ctx, resourceName(ctx, qName, StorageQueueRT), &storage.QueueArgs{
 			StorageAccountName: res.Account.Name,
 		}, pulumi.Parent(res))

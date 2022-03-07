@@ -52,16 +52,16 @@ type CodeConfig interface {
 
 type codeConfig struct {
 	// A stack can be composed of one or more applications
-	functions    map[string]*FunctionDependencies
-	initialStack *project.Project
-	lock         sync.RWMutex
+	functions      map[string]*FunctionDependencies
+	initialProject *project.Project
+	lock           sync.RWMutex
 }
 
-func New(s *project.Project) (CodeConfig, error) {
+func New(p *project.Project) (CodeConfig, error) {
 	return &codeConfig{
-		initialStack: s,
-		functions:    map[string]*FunctionDependencies{},
-		lock:         sync.RWMutex{},
+		initialProject: p,
+		functions:      map[string]*FunctionDependencies{},
+		lock:           sync.RWMutex{},
 	}, nil
 }
 
@@ -89,13 +89,13 @@ func (c *codeConfig) Collect() error {
 	wg := sync.WaitGroup{}
 	errList := utils.NewErrorList()
 
-	for _, f := range c.initialStack.Functions {
+	for _, f := range c.initialProject.Functions {
 		wg.Add(1)
 
 		// run files in parallel
 		go func(fn project.Function) {
 			defer wg.Done()
-			rel, err := fn.RelativeHandlerPath(c.initialStack)
+			rel, err := fn.RelativeHandlerPath(c.initialProject)
 			if err != nil {
 				errList.Add(err)
 				return
@@ -267,7 +267,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		return errors.WithMessage(err, "error discovering container engine")
 	}
 
-	opts, err := rt.LaunchOptsForFunctionCollect(c.initialStack.Dir)
+	opts, err := rt.LaunchOptsForFunctionCollect(c.initialProject.Dir)
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,8 @@ func (c *codeConfig) collectOne(handler string) error {
 		WorkingDir: opts.TargetWD,
 	}
 
-	cID, err := ce.ContainerCreate(cc, hostConfig, nil, rt.ContainerName())
+	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")
+	cID, err := ce.ContainerCreate(cc, hostConfig, nil, cn)
 	if err != nil {
 		return err
 	}
@@ -356,9 +357,9 @@ func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
 }
 
 func (c *codeConfig) ToProject() (*project.Project, error) {
-	s := project.New(&project.Config{Name: c.initialStack.Name, Dir: c.initialStack.Dir})
+	s := project.New(&project.Config{Name: c.initialProject.Name, Dir: c.initialProject.Dir})
 
-	err := mergo.Merge(s, c.initialStack)
+	err := mergo.Merge(s, c.initialProject)
 	if err != nil {
 		return nil, err
 	}

@@ -86,9 +86,9 @@ func (p *pulumiDeployment) Ask() (*stack.Config, error) {
 	return p.p.Ask()
 }
 
-func (p *pulumiDeployment) load(log output.Progress, name string) (*auto.Stack, error) {
+func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	projectName := p.s.Name
-	stackName := p.s.Name + "-" + name
+	stackName := p.s.Name + "-" + p.t.Name
 	ctx := context.Background()
 
 	s, err := auto.UpsertStackInlineSource(ctx, stackName, projectName, p.p.Deploy,
@@ -120,8 +120,8 @@ func (p *pulumiDeployment) load(log output.Progress, name string) (*auto.Stack, 
 	return &s, errors.WithMessage(err, "Refresh")
 }
 
-func (p *pulumiDeployment) Apply(log output.Progress, name string) (*types.Deployment, error) {
-	s, err := p.load(log, name)
+func (p *pulumiDeployment) Up(log output.Progress) (*types.Deployment, error) {
+	s, err := p.load(log)
 	if err != nil {
 		return nil, errors.WithMessage(err, "loading pulumi stack")
 	}
@@ -161,8 +161,8 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 	return ws.ListStacks(context.Background())
 }
 
-func (a *pulumiDeployment) Delete(log output.Progress, name string) error {
-	s, err := a.load(log, name)
+func (a *pulumiDeployment) Down(log output.Progress) error {
+	s, err := a.load(log)
 	if err != nil {
 		return err
 	}

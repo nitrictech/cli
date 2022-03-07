@@ -90,7 +90,7 @@ var stackUpdateCmd = &cobra.Command{
 # use a custom stack name
 nitric stack up -n prod -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
-		s, err := stack.FromOptions()
+		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
 
 		config, err := project.ConfigFromFile()
@@ -127,7 +127,7 @@ nitric stack up -n prod -s aws`,
 		deploy := tasklet.Runner{
 			StartMsg: "Deploying..",
 			Runner: func(progress output.Progress) error {
-				d, err = p.Apply(progress, s.Name)
+				d, err = p.Up(progress)
 				return err
 			},
 			StopMsg: "Stack",
@@ -151,7 +151,7 @@ var stackDeleteCmd = &cobra.Command{
 	Example: `nitric stack down -s aws
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		s, err := stack.FromOptions()
+		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
 
 		config, err := project.ConfigFromFile()
@@ -166,7 +166,7 @@ var stackDeleteCmd = &cobra.Command{
 		deploy := tasklet.Runner{
 			StartMsg: "Deleting..",
 			Runner: func(progress output.Progress) error {
-				return p.Delete(progress, s.Name)
+				return p.Down(progress)
 			},
 			StopMsg: "Stack",
 		}
@@ -185,7 +185,7 @@ var stackListCmd = &cobra.Command{
 nitric stack list -s aws
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		s, err := stack.FromOptions()
+		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
 
 		config, err := project.ConfigFromFile()

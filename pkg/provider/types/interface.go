@@ -26,8 +26,8 @@ type Deployment struct {
 }
 
 type Provider interface {
-	Apply(log output.Progress, deploymentName string) (*Deployment, error)
-	Delete(log output.Progress, deploymentName string) error
+	Up(log output.Progress) (*Deployment, error)
+	Down(log output.Progress) error
 	List() (interface{}, error)
 	Ask() (*stack.Config, error)
 	//Status()

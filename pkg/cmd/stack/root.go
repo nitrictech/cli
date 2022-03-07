@@ -19,6 +19,7 @@ package project
 import (
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -33,6 +34,10 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/tasklet"
+)
+
+var (
+	confirmDown bool
 )
 
 var stackCmd = &cobra.Command{
@@ -149,8 +154,24 @@ var stackDeleteCmd = &cobra.Command{
 	Short: "Undeploy a previously deployed stack, deleting resources",
 	Long:  `Undeploy a previously deployed stack, deleting resources`,
 	Example: `nitric stack down -s aws
-`,
+
+# To not be prompted, use -y
+nitric stack down -e aws -y`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if !confirmDown {
+			confirm := ""
+			err := survey.AskOne(&survey.Select{
+				Message: "Warning - This operation will destroy your stack, all deployed resources will be removed. Are you sure you want to proceed?",
+				Default: "No",
+				Options: []string{"Yes", "No"},
+			}, &confirm)
+			cobra.CheckErr(err)
+			if confirm != "Yes" {
+				pterm.Info.Println("Cancelling command")
+				os.Exit(0)
+			}
+		}
+
 		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
 
@@ -182,6 +203,7 @@ var stackListCmd = &cobra.Command{
 	Short: "List all project stacks and their status",
 	Long:  `List all project stacks and their status`,
 	Example: `nitric list
+
 nitric stack list -s aws
 `,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -213,6 +235,7 @@ func RootCommand() *cobra.Command {
 	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(stackDeleteCmd)
+	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
 	cobra.CheckErr(stack.AddOptions(stackDeleteCmd, false))
 
 	stackCmd.AddCommand(stackListCmd)

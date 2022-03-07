@@ -18,133 +18,89 @@ package stack
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/ioutil"
 	"strings"
 
-	"github.com/pterm/pterm"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/pflagext"
-	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-var (
-	stackPath string
-)
+var stack string
 
-func EnsureRuntimeDefaults() bool {
-	defaults := map[string]map[string]interface{}{
-		"ts": {
-			"functionglob": "functions/*.ts",
-		},
-		"js": {
-			"functionglob": "functions/*.js",
-		},
-		"go": {
-			"functionglob": "functions/*/*.go",
-		},
-	}
-	written := false
-	runtime, err := utils.ToStringMapStringMapStringE(viper.Get("runtime"))
-	if err != nil {
-		fmt.Println("ERROR: runtime configuration in the wrong format")
-		return false
-	}
-
-	for rtName, rt := range defaults {
-		if _, ok := runtime[rtName]; !ok {
-			runtime[rtName] = rt
-			written = true
-		}
-	}
-	if written {
-		viper.Set("runtime", runtime)
-	}
-	return written
+func FromOptions() (*Config, error) {
+	return ConfigFromFile("nitric-" + stack + ".yaml")
 }
 
-func defaultGlobsFromConfig() []string {
-	globs := []string{}
-	runtime, err := utils.ToStringMapStringMapStringE(viper.Get("runtime"))
+func (p *Config) ToFile(file string) error {
+	b, err := yaml.Marshal(p)
 	if err != nil {
-		return globs
-	}
-	for _, rt := range runtime {
-		globs = append(globs, rt["functionglob"].(string))
+		return err
 	}
 
-	return globs
+	return ioutil.WriteFile(file, b, 0644)
 }
 
-func FromOptions(glob []string) (*Stack, error) {
-	s, err := FromOptionsMinimal()
+// Assume the project is in the currentDirectory
+func ConfigFromFile(file string) (*Config, error) {
+	s := &Config{}
+	yamlFile, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, fmt.Errorf("no nitric stack found (unable to find %s). If you haven't created a stack yet, run `nitric stack new` to get started", file)
+	}
+
+	err = yaml.Unmarshal(yamlFile, s)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func AllFromConfig() (map[string]Config, error) {
+	tsMap, err := utils.ToStringMapStringMapStringE(viper.Get("targets"))
 	if err != nil {
 		return nil, err
 	}
 
-	if len(glob) == 0 {
-		glob = defaultGlobsFromConfig()
-	}
+	targets := map[string]Config{}
+	for name, tMap := range tsMap {
+		t := Config{}
+		err := mapstructure.Decode(tMap, &t)
+		if err != nil {
+			return nil, err
+		}
 
-	for _, g := range glob {
-		maybeFile := filepath.Join(s.Dir, g)
-		if _, err := os.Stat(maybeFile); err != nil {
-			fs, err := utils.GlobInDir(stackPath, g)
+		if len(tMap) > 2 {
+			// Decode the "extra" map for provider specific values
+			delete(tMap, "provider")
+			delete(tMap, "region")
+			err := mapstructure.Decode(tMap, &t.Extra)
 			if err != nil {
 				return nil, err
 			}
-			for _, f := range fs {
-				fn := FunctionFromHandler(f, s.Dir)
-				s.Functions[fn.Name] = fn
-			}
-		} else {
-			fn := FunctionFromHandler(g, s.Dir)
-			s.Functions[fn.Name] = fn
 		}
+		targets[name] = t
 	}
 
-	if len(s.Functions) == 0 {
-		return nil, fmt.Errorf("no functions were found with the glob '%s', try a new pattern", strings.Join(glob, ","))
-	}
-
-	return s, nil
+	return targets, nil
 }
 
-func FromOptionsMinimal() (*Stack, error) {
-	ss, err := os.Stat(stackPath)
+func AddOptions(cmd *cobra.Command, providerOnly bool) error {
+	stackFiles, err := utils.GlobInDir(".", "nitric-*.yaml")
 	if err != nil {
-		return nil, err
+		return err
+	}
+	stacks := []string{}
+	for _, sf := range stackFiles {
+		stacks = append(stacks, strings.TrimSuffix(strings.TrimPrefix(sf, "nitric-"), ".yaml"))
 	}
 
-	sDir := stackPath
-	if !ss.IsDir() {
-		sDir = filepath.Dir(stackPath)
-	}
-
-	// get the abs dir in case user provides "."
-	absDir, err := filepath.Abs(sDir)
-	if err != nil {
-		return nil, err
-	}
-	s := New(filepath.Base(absDir), sDir)
-
-	return s, nil
-}
-
-func FunctionFromHandler(h, stackDir string) Function {
-	pterm.Debug.Println("Using function from " + h)
-	rt, _ := runtime.NewRunTimeFromHandler(h)
-	return Function{
-		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
-		Handler:     h,
-	}
-}
-
-func AddOptions(cmd *cobra.Command) {
-	wd, err := os.Getwd()
-	cobra.CheckErr(err)
-	cmd.Flags().VarP(pflagext.NewPathVar(&stackPath, pflagext.AllowFileAndDir, wd), "stack", "s", "path to the stack")
+	cmd.Flags().VarP(pflagext.NewStringEnumVar(&stack, stacks, ""), "stack", "s", "use this to refer to a stack configuration nitric-<stackname>.yaml")
+	return cmd.RegisterFlagCompletionFunc("stack", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return stacks, cobra.ShellCompDirectiveDefault
+	})
 }

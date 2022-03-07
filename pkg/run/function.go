@@ -24,8 +24,8 @@ import (
 	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
-	"github.com/nitrictech/cli/pkg/stack"
 )
 
 type Function struct {
@@ -109,7 +109,7 @@ func newFunction(opts FunctionOpts) (*Function, error) {
 	}, nil
 }
 
-func FunctionsFromHandlers(s *stack.Stack) ([]*Function, error) {
+func FunctionsFromHandlers(s *project.Project) ([]*Function, error) {
 	funcs := make([]*Function, 0, len(s.Functions))
 	ce, err := containerengine.Discover()
 	if err != nil {

@@ -25,7 +25,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/spf13/viper"
 )
 
 var DiscoveredEngine ContainerEngine
@@ -79,7 +78,7 @@ func Discover() (ContainerEngine, error) {
 }
 
 func buildTimeout() time.Duration {
-	return viper.GetDuration("build_timeout")
+	return 15 * time.Minute
 }
 
 func Cli(cc *container.Config, hc *container.HostConfig) string {

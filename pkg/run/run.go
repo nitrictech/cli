@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/membrane"
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
@@ -49,13 +49,13 @@ type LocalServicesStatus struct {
 }
 
 type localServices struct {
-	s      *stack.Stack
+	s      *project.Project
 	mio    *MinioServer
 	mem    *membrane.Membrane
 	status *LocalServicesStatus
 }
 
-func NewLocalServices(s *stack.Stack) LocalServices {
+func NewLocalServices(s *project.Project) LocalServices {
 	return &localServices{
 		s: s,
 		status: &LocalServicesStatus{

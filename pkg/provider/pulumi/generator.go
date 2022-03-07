@@ -28,19 +28,19 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
 
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/aws"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/azure"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/gcp"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type pulumiDeployment struct {
-	s *stack.Stack
-	t *target.Target
+	s *project.Project
+	t *stack.Config
 	p common.PulumiProvider
 }
 
@@ -48,7 +48,7 @@ var (
 	_ types.Provider = &pulumiDeployment{}
 )
 
-func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
+func New(s *project.Project, t *stack.Config) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 	err := pv.Run()
 	if err != nil {
@@ -60,25 +60,30 @@ func New(s *stack.Stack, t *target.Target) (types.Provider, error) {
 
 	var prov common.PulumiProvider
 	switch t.Provider {
-	case target.Aws:
+	case stack.Aws:
 		prov = aws.New(s, t)
-	case target.Azure:
+	case stack.Azure:
 		prov = azure.New(s, t)
-	case target.Gcp:
+	case stack.Gcp:
 		prov = gcp.New(s, t)
 	default:
 		return nil, utils.NewNotSupportedErr("pulumi provider " + t.Provider + " not suppored")
 	}
 
+	/*TODO check
 	if err := prov.Validate(); err != nil {
 		return nil, err
 	}
-
+	*/
 	return &pulumiDeployment{
 		s: s,
 		t: t,
 		p: prov,
 	}, nil
+}
+
+func (p *pulumiDeployment) Ask() (*stack.Config, error) {
+	return p.p.Ask()
 }
 
 func (p *pulumiDeployment) load(log output.Progress, name string) (*auto.Stack, error) {

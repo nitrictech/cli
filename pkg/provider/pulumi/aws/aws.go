@@ -27,6 +27,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
@@ -39,16 +40,16 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type awsProvider struct {
-	s      *stack.Stack
-	t      *target.Target
+	s      *project.Project
+	t      *stack.Config
 	tmpDir string
 
 	// created resources (mostly here for testing)
@@ -66,7 +67,7 @@ type awsProvider struct {
 //go:embed pulumi-aws-version.txt
 var awsPluginVersion string
 
-func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
+func New(s *project.Project, t *stack.Config) common.PulumiProvider {
 	return &awsProvider{
 		s:           s,
 		t:           t,
@@ -79,6 +80,15 @@ func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
 		funcs:       map[string]*Lambda{},
 		schedules:   map[string]*Schedule{},
 	}
+}
+
+func (a *awsProvider) Ask() (*stack.Config, error) {
+	sc := &stack.Config{Name: a.t.Name, Provider: a.t.Provider}
+	err := survey.AskOne(&survey.Select{
+		Message: "select the region",
+		Options: a.SupportedRegions(),
+	}, &sc.Region)
+	return sc, err
 }
 
 func (a *awsProvider) Plugins() []common.Plugin {

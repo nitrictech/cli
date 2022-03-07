@@ -14,24 +14,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package project
 
 import (
-	"fmt"
+	"reflect"
+	"testing"
 )
 
-var _ Compute = &Container{}
-
-func (c *Container) Unit() *ComputeUnit {
-	return &c.ComputeUnit
-}
-
-// ImageTagName returns the default image tag for a source image built from this function
-// provider the provider name (e.g. aws), used to uniquely identify builds for specific providers
-func (c *Container) ImageTagName(s *Stack, provider string) string {
-	providerString := ""
-	if provider != "" {
-		providerString = "-" + provider
+func TestCompute(t *testing.T) {
+	s := &Project{Dir: "../run", Name: "test"}
+	cu := ComputeUnit{
+		Name: "unit",
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, c.Name, providerString)
+
+	for _, c := range []Compute{&Container{ComputeUnit: cu}, &Function{ComputeUnit: cu}} {
+		gotImageName := c.ImageTagName(s, "aws")
+		if gotImageName != "test-unit-aws" {
+			t.Error("imageTagName", gotImageName)
+		}
+
+		if !reflect.DeepEqual(c.Unit(), &cu) {
+			t.Error("unit", c.Unit())
+		}
+	}
 }

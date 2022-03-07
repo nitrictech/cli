@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/core"
@@ -32,15 +33,15 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type azureProvider struct {
-	s          *stack.Stack
-	t          *target.Target
+	s          *project.Project
+	t          *stack.Config
 	tmpDir     string
 	org        string
 	adminEmail string
@@ -55,7 +56,7 @@ var (
 	azureNativePluginVersion string
 )
 
-func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
+func New(s *project.Project, t *stack.Config) common.PulumiProvider {
 	return &azureProvider{s: s, t: t}
 }
 
@@ -74,6 +75,51 @@ func (a *azureProvider) Plugins() []common.Plugin {
 			Version: strings.TrimSpace(azureADPluginVersion),
 		},
 	}
+}
+
+func (a *azureProvider) Ask() (*stack.Config, error) {
+	answers := struct {
+		Region     string
+		Org        string
+		AdminEmail string
+	}{}
+	qs := []*survey.Question{
+		{
+			Name: "region",
+			Prompt: &survey.Select{
+				Message: "select the region",
+				Options: a.SupportedRegions(),
+			},
+		},
+		{
+			Name: "org",
+			Prompt: &survey.Input{
+				Message: "Provide the organisation to associate with the API",
+			},
+		},
+		{
+			Name: "adminEmail",
+			Prompt: &survey.Input{
+				Message: "Provide the adminEmail to associate with the API",
+			},
+		},
+	}
+	sc := &stack.Config{
+		Name:     a.t.Name,
+		Provider: a.t.Provider,
+		Extra:    map[string]interface{}{},
+	}
+
+	err := survey.Ask(qs, &answers)
+	if err != nil {
+		return nil, err
+	}
+
+	sc.Region = answers.Region
+	sc.Extra["adminemail"] = answers.AdminEmail
+	sc.Extra["org"] = answers.Org
+
+	return sc, nil
 }
 
 func (a *azureProvider) SupportedRegions() []string {

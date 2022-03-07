@@ -24,8 +24,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/nitrictech/cli/pkg/target"
-	"github.com/nitrictech/cli/pkg/templates"
+	"github.com/nitrictech/cli/pkg/stack"
 )
 
 func Test_printStruct(t *testing.T) {
@@ -36,20 +35,12 @@ func Test_printStruct(t *testing.T) {
 	}{
 		{
 			name:   "json tags",
-			object: target.Target{Provider: "azure", Region: "somewhere"},
+			object: stack.Config{Name: "prod", Provider: "azure", Region: "somewhere"},
 			expect: `+----------+-----------+
+| NAME     | prod      |
 | PROVIDER | azure     |
 | REGION   | somewhere |
 +----------+-----------+
-`,
-		},
-		{
-			name:   "yaml tags",
-			object: templates.TemplateInfo{Name: "simple", Path: "/here"},
-			expect: `+------+--------+
-| NAME | simple |
-| PATH | /here  |
-+------+--------+
 `,
 		},
 	}
@@ -67,21 +58,21 @@ func Test_printStruct(t *testing.T) {
 func Test_printList(t *testing.T) {
 	tests := []struct {
 		name   string
-		object []target.Target
+		object []stack.Config
 		expect string
 	}{
 		{
 			name: "json tags",
-			object: []target.Target{
-				{Provider: "azure", Region: "somewhere"},
-				{Provider: "local"},
+			object: []stack.Config{
+				{Name: "a", Provider: "azure", Region: "somewhere"},
+				{Name: "b", Provider: "aws", Region: "xyz"},
 			},
-			expect: `+----------+-----------+
-| PROVIDER | REGION    |
-+----------+-----------+
-| azure    | somewhere |
-| local    |           |
-+----------+-----------+
+			expect: `+------+----------+-----------+
+| NAME | PROVIDER | REGION    |
++------+----------+-----------+
+| b    | aws      | xyz       |
+| a    | azure    | somewhere |
++------+----------+-----------+
 `,
 		},
 	}
@@ -107,16 +98,16 @@ func Test_printMap(t *testing.T) {
 	}{
 		{
 			name: "json tags",
-			object: map[string]target.Target{
-				"t1":    {Provider: "azure", Region: "somewhere"},
-				"local": {Provider: "local"},
+			object: map[string]stack.Config{
+				"t1": {Provider: "azure", Region: "somewhere"},
+				"t3": {Provider: "aws", Name: "foo"},
 			},
-			wantOut: `+-------+----------+-----------+
-| KEY   | PROVIDER | REGION    |
-+-------+----------+-----------+
-| local | local    |           |
-| t1    | azure    | somewhere |
-+-------+----------+-----------+
+			wantOut: `+-----+------+----------+-----------+
+| KEY | NAME | PROVIDER | REGION    |
++-----+------+----------+-----------+
+| t1  |      | azure    | somewhere |
+| t3  | foo  | aws      |           |
++-----+------+----------+-----------+
 `,
 		},
 	}

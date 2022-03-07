@@ -23,9 +23,9 @@ import (
 	"strings"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 )
 
 func dynamicDockerfile(dir, name string) (*os.File, error) {
@@ -33,7 +33,7 @@ func dynamicDockerfile(dir, name string) (*os.File, error) {
 	return os.CreateTemp(dir, "nitric.dynamic.Dockerfile.*")
 }
 
-func Create(s *stack.Stack, t *target.Target) error {
+func Create(s *project.Project, t *stack.Config) error {
 	cr, err := containerengine.Discover()
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 }
 
 // CreateBaseDev builds images for code-as-config
-func CreateBaseDev(s *stack.Stack) error {
+func CreateBaseDev(s *project.Project) error {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func CreateBaseDev(s *stack.Stack) error {
 	return nil
 }
 
-func List(s *stack.Stack) ([]containerengine.Image, error) {
+func List(s *project.Project) ([]containerengine.Image, error) {
 	cr, err := containerengine.Discover()
 	if err != nil {
 		return nil, err

@@ -24,15 +24,15 @@ import (
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type CloudRunnerArgs struct {
 	Location  pulumi.StringInput
 	ProjectId string
-	Compute   stack.Compute
+	Compute   project.Compute
 	Image     *common.Image
 
 	Topics map[string]*pubsub.Topic

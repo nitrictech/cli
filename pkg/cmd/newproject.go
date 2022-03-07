@@ -19,7 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -27,16 +27,16 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/templates"
 )
 
 var (
-	force       bool
-	nameRegex   = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
-	stackNameQu = survey.Question{
-		Name:     "stackName",
-		Prompt:   &survey.Input{Message: "What is the name of the stack?"},
+	force         bool
+	nameRegex     = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
+	projectNameQu = survey.Question{
+		Name:     "projectName",
+		Prompt:   &survey.Input{Message: "What is the name of the project?"},
 		Validate: validateName,
 	}
 	templateNameQu = survey.Question{
@@ -46,12 +46,13 @@ var (
 
 var newProjectCmd = &cobra.Command{
 	Use:   "new [projectName] [templateName]",
-	Short: "create a new nitric project",
+	Short: "Create a new project",
 	Long:  `Creates a new Nitric project from a template.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		answers := struct {
 			ProjectName  string
 			TemplateName string
+			Handlers     string
 		}{}
 
 		downloadr := templates.NewDownloader()
@@ -79,10 +80,10 @@ var newProjectCmd = &cobra.Command{
 		}
 
 		qs := []*survey.Question{}
-		if len(args) > 0 && stackNameQu.Validate(args[0]) == nil {
+		if len(args) > 0 && projectNameQu.Validate(args[0]) == nil {
 			answers.ProjectName = args[0]
 		} else {
-			qs = append(qs, &stackNameQu)
+			qs = append(qs, &projectNameQu)
 		}
 
 		if len(args) > 1 && templateNameQu.Validate(args[1]) == nil {
@@ -91,15 +92,36 @@ var newProjectCmd = &cobra.Command{
 			qs = append(qs, &templateNameQu)
 			args = []string{} // reassign args to ensure validation works correctly.
 		}
+		qs = append(qs, &survey.Question{
+			Name: "handlers",
+			Prompt: &survey.Input{
+				Message: "Glob for the function handlers?",
+				Default: "functions/*.ts",
+				Suggest: func(toComplete string) []string {
+					return []string{
+						"functions/*.ts",
+						"functions/*.js",
+						"functions/*/*.go"}
+				},
+			},
+		})
 
 		if len(qs) > 0 {
 			err = survey.Ask(qs, &answers)
 			cobra.CheckErr(err)
 		}
 
-		err = downloadr.DownloadDirectoryContents(answers.TemplateName, "./"+answers.ProjectName, force)
+		cd, err := filepath.Abs(".")
 		cobra.CheckErr(err)
-		err = setStackName(answers.ProjectName)
+		p := project.Config{
+			Dir:      path.Join(cd, answers.ProjectName),
+			Name:     answers.ProjectName,
+			Handlers: []string{answers.Handlers},
+		}
+
+		err = downloadr.DownloadDirectoryContents(answers.TemplateName, p.Dir, force)
+		cobra.CheckErr(err)
+		err = p.ToFile()
 		cobra.CheckErr(err)
 	},
 	Args: cobra.MaximumNArgs(2),
@@ -108,28 +130,13 @@ var newProjectCmd = &cobra.Command{
 func validateName(val interface{}) error {
 	name, ok := val.(string)
 	if !ok {
-		return errors.New("stack name must be a string")
+		return errors.New("project name must be a string")
 	}
 	if name == "" {
-		return errors.New("stack name can not be empty")
+		return errors.New("project name can not be empty")
 	}
 	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") || !nameRegex.MatchString(name) {
-		return errors.New("invalid stack name, only letters, numbers and dashes are supported")
+		return errors.New("invalid project name, only letters, numbers and dashes are supported")
 	}
 	return nil
-}
-
-func setStackName(name string) error {
-	stackFilePath := filepath.Join("./", name, "nitric.yaml")
-	// Skip non nitric.yaml template renaming (config as code)
-	if _, err := os.Stat(stackFilePath); errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
-	s, err := stack.FromFile(stackFilePath)
-	if err != nil {
-		return err
-	}
-	s.Name = name
-	return s.ToFile(stackFilePath)
 }

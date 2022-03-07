@@ -21,6 +21,8 @@ import (
 
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	"github.com/nitrictech/cli/pkg/stack"
 )
 
 type Plugin struct {
@@ -38,6 +40,7 @@ type PulumiProvider interface {
 	Configure(context.Context, *auto.Stack) error
 	Deploy(*pulumi.Context) error
 	CleanUp()
+	Ask() (*stack.Config, error)
 }
 
 func Tags(ctx *pulumi.Context, name string) pulumi.StringMap {

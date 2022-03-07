@@ -14,10 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package target
+package project
 
-type Target struct {
-	Provider string                 `json:"provider,omitempty"`
-	Region   string                 `json:"region,omitempty"`
-	Extra    map[string]interface{} `json:",inline,omitempty"`
+import (
+	_ "embed"
+	"testing"
+)
+
+func TestFunctionVersionString(t *testing.T) {
+	tests := []struct {
+		name        string
+		funcVersion string
+		want        string
+	}{
+		{
+			name: "from embed",
+			want: "v0.14.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &Function{}
+			if got := f.VersionString(nil); got != tt.want {
+				t.Errorf("Function.VersionString() = '%s', want '%s'", got, tt.want)
+			}
+		})
+	}
 }

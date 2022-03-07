@@ -19,22 +19,14 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/nitrictech/cli/pkg/cmd/run"
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
-	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
-	"github.com/nitrictech/cli/pkg/tasklet"
-	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const configFileName = ".nitric-config"
@@ -47,7 +39,22 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "nitric",
 	Short: "helper CLI for nitric applications",
-	Long:  ``,
+	Long: `Nitric - The fastest way to build serverless apps
+
+To start with nitric, run the 'nitric new' command:
+
+    $ nitric new
+
+This will guide you through project creation, including selecting from available templates.
+
+These are the most common commands:
+
+    - nitric run       : Run your project locally for dev and testing
+    - nitric stack new : Configure a target for deployment
+    - nitric up        : Create or update a deployed stack
+    - nitric down     : Pull down the deployed resources for a stack
+
+For further details visit our docs https://nitric.io/docs`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if output.VerboseLevel > 1 {
 			pterm.EnableDebugMessages()
@@ -61,27 +68,7 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-var configHelpTopic = &cobra.Command{
-	Use:   "configuration",
-	Short: "Configuration help",
-	Long: `nitric CLI can be configured (using yaml format) in the following locations:
-${HOME}/.nitric-config.yaml
-${HOME}/.config/nitric/.nitric-config.yaml
-
-An example of the format is:
-  targets:
-    aws:
-      region: eastus
-      provider: aws
-	azure:
-	  region: eastus
-	  provider: azure
-  `,
-}
-
 func init() {
-	initConfig()
-
 	rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
@@ -93,69 +80,11 @@ func init() {
 	newProjectCmd.Flags().BoolVarP(&force, "force", "f", false, "force project creation, even in non-empty directories.")
 	rootCmd.AddCommand(newProjectCmd)
 	rootCmd.AddCommand(cmdstack.RootCommand())
-	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(configHelpTopic)
 	addAlias("stack update", "up")
 	addAlias("stack down", "down")
 	addAlias("stack list", "list")
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".nitric" (without extension).
-		viper.AddConfigPath(home)
-		viper.AddConfigPath(utils.NitricConfigDir())
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".nitric-config")
-	}
-
-	viper.AutomaticEnv()
-	_ = viper.ReadInConfig()
-
-	ensureConfigDefaults()
-}
-
-func ensureConfigDefaults() {
-	needsWrite := false
-
-	to := viper.GetDuration("build_timeout")
-	if to == 0 {
-		needsWrite = true
-		viper.Set("build_timeout", 5*time.Minute)
-	}
-
-	if target.EnsureDefaultConfig() {
-		needsWrite = true
-	}
-
-	if stack.EnsureRuntimeDefaults() {
-		needsWrite = true
-	}
-
-	if needsWrite {
-		tasklet.MustRun(tasklet.Runner{
-			StartMsg: "Updating configfile to include defaults",
-			Runner: func(_ output.Progress) error {
-				// ensure .config/nitric exists
-				err := os.MkdirAll(utils.NitricConfigDir(), os.ModePerm)
-				if err != nil {
-					return err
-				}
-
-				return viper.WriteConfigAs(filepath.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
-			},
-			StopMsg: "Configfile updated"}, tasklet.Opts{})
-	}
 }
 
 func addAlias(from, to string) {

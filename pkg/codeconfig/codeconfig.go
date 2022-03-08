@@ -348,7 +348,7 @@ func (c *codeConfig) collectOne(handler string) error {
 				msg += "\n" + line
 			}
 		}
-		if msg != "" || done.StatusCode != 0 {
+		if done.StatusCode != 0 {
 			errs.Add(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
 		}
 	case cErr := <-cErrChan:

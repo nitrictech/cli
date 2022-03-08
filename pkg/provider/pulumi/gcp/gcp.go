@@ -18,8 +18,10 @@ package gcp
 
 import (
 	"context"
+	"crypto/md5"
 	_ "embed"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -31,8 +33,11 @@ import (
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudscheduler"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/firestore"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -43,6 +48,7 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type gcpProvider struct {
@@ -86,6 +92,21 @@ func (g *gcpProvider) Plugins() []common.Plugin {
 			Version: strings.TrimSpace(gcpPluginVersion),
 		},
 	}
+}
+
+func md5Hash(b []byte) string {
+	hasher := md5.New()
+	hasher.Write(b)
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func policyResourceName(policy *v1.PolicyResource) (string, error) {
+	policyDoc, err := json.Marshal(policy)
+	if err != nil {
+		return "", err
+	}
+
+	return md5Hash(policyDoc), nil
 }
 
 func (g *gcpProvider) SupportedRegions() []string {
@@ -275,6 +296,8 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	principalMap := make(PrincipalMap, len(g.proj.Computes()))
+
 	for _, c := range g.proj.Computes() {
 		if _, ok := g.images[c.Unit().Name]; !ok {
 			g.images[c.Unit().Name], err = common.NewImage(ctx, c.Unit().Name+"Image", &common.ImageArgs{
@@ -290,17 +313,27 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 				return errors.WithMessage(err, "function image tag "+c.Unit().Name)
 			}
 		}
+		// Create a service account for this cloud run instance
+		sa, err := serviceaccount.NewAccount(ctx, c.Unit().Name+"-acct", &serviceaccount.AccountArgs{
+			AccountId: pulumi.String(utils.StringTrunc(c.Unit().Name, 30-5) + "-acct"),
+		})
+		if err != nil {
+			return errors.WithMessage(err, "function serviceaccount "+c.Unit().Name)
+		}
 
 		g.cloudRunners[c.Unit().Name], err = g.newCloudRunner(ctx, c.Unit().Name, &CloudRunnerArgs{
-			Location:  pulumi.String(g.sc.Region),
-			ProjectId: g.projectId,
-			Topics:    g.topics,
-			Compute:   c,
-			Image:     g.images[c.Unit().Name],
+			Location:       pulumi.String(g.sc.Region),
+			ProjectId:      g.projectId,
+			Topics:         g.topics,
+			Compute:        c,
+			Image:          g.images[c.Unit().Name],
+			ServiceAccount: sa,
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
 		}
+
+		principalMap[v1.ResourceType_Function][c.Unit().Name] = sa
 	}
 
 	for k, doc := range g.proj.ApiDocs {
@@ -314,6 +347,29 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			ProjectId:   pulumi.String(g.projectId),
 		}, defaultResourceOptions)
 		if err != nil {
+			return err
+		}
+	}
+
+	for _, p := range g.proj.Policies {
+		if len(p.Actions) == 0 {
+			_ = ctx.Log.Debug("policy has no actions "+fmt.Sprint(p), &pulumi.LogArgs{Ephemeral: true})
+		}
+		policyName, err := policyResourceName(p)
+		if err != nil {
+			return err
+		}
+		if _, err := newPolicy(ctx, policyName, &PolicyArgs{
+			Policy: p,
+			Resources: &StackResources{
+				Topics:      g.topics,
+				Queues:      g.queueTopics,
+				Buckets:     g.buckets,
+				Collections: map[string]*firestore.Document{},
+				Secrets:     map[string]*secretmanager.Secret{},
+			},
+			Principals: principalMap,
+		}); err != nil {
 			return err
 		}
 	}

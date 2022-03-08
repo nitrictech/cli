@@ -19,7 +19,6 @@ package gcp
 import (
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -30,12 +29,12 @@ import (
 )
 
 type CloudRunnerArgs struct {
-	Location  pulumi.StringInput
-	ProjectId string
-	Compute   project.Compute
-	Image     *common.Image
-
-	Topics map[string]*pubsub.Topic
+	Location       pulumi.StringInput
+	ProjectId      string
+	Compute        project.Compute
+	Image          *common.Image
+	ServiceAccount *serviceaccount.Account
+	Topics         map[string]*pubsub.Topic
 }
 
 type CloudRunner struct {
@@ -54,37 +53,28 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 	if err != nil {
 		return nil, err
 	}
+	// // Give project editor permissions
+	// // FIXME: Trim this down
+	// _, err = projects.NewIAMMember(ctx, name+"-editor", &projects.IAMMemberArgs{
+	// 	Role: pulumi.String("roles/editor"),
+	// 	// Get the cloudrun service account email
+	// 	Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
+	// 	Project: pulumi.String(args.ProjectId),
+	// }, append(opts, pulumi.Parent(res))...)
+	// if err != nil {
+	// 	return nil, errors.WithMessage(err, "iam member "+name)
+	// }
 
-	// Create a service account for this cloud run instance
-	sa, err := serviceaccount.NewAccount(ctx, name+"-acct", &serviceaccount.AccountArgs{
-		AccountId: pulumi.String(utils.StringTrunc(name, 30-5) + "-acct"),
-	}, append(opts, pulumi.Parent(res))...)
-	if err != nil {
-		return nil, errors.WithMessage(err, "function serviceaccount "+name)
-	}
-
-	// Give project editor permissions
-	// FIXME: Trim this down
-	_, err = projects.NewIAMMember(ctx, name+"-editor", &projects.IAMMemberArgs{
-		Role: pulumi.String("roles/editor"),
-		// Get the cloudrun service account email
-		Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
-		Project: pulumi.String(args.ProjectId),
-	}, append(opts, pulumi.Parent(res))...)
-	if err != nil {
-		return nil, errors.WithMessage(err, "iam member "+name)
-	}
-
-	// Give secret accessor permissions
-	_, err = projects.NewIAMMember(ctx, name+"-secret-access", &projects.IAMMemberArgs{
-		Role: pulumi.String("roles/secretmanager.secretAccessor"),
-		// Get the cloudrun service account email
-		Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
-		Project: pulumi.String(args.ProjectId),
-	}, append(opts, pulumi.Parent(res))...)
-	if err != nil {
-		return nil, errors.WithMessage(err, "iam member "+name)
-	}
+	// // Give secret accessor permissions
+	// _, err = projects.NewIAMMember(ctx, name+"-secret-access", &projects.IAMMemberArgs{
+	// 	Role: pulumi.String("roles/secretmanager.secretAccessor"),
+	// 	// Get the cloudrun service account email
+	// 	Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
+	// 	Project: pulumi.String(args.ProjectId),
+	// }, append(opts, pulumi.Parent(res))...)
+	// if err != nil {
+	// 	return nil, errors.WithMessage(err, "iam member "+name)
+	// }
 
 	// Deploy the func
 	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
@@ -101,7 +91,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				},
 			},
 			Spec: cloudrun.ServiceTemplateSpecArgs{
-				ServiceAccountName: sa.Email,
+				ServiceAccountName: args.ServiceAccount.Email,
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
 						Image: args.Image.DockerImage.ImageName, // TODO check

@@ -101,7 +101,7 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 
 		_ = ctx.Log.Info("creating subscriptions for "+app.Name, &pulumi.LogArgs{})
 		for subName, sub := range app.Subscriptions {
-			pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, app.Name+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
+			_, err = pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, app.Name+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
 				Scope: sub.ID(),
 				WebhookEndpoint: pulumiEventgrid.EventSubscriptionWebhookEndpointArgs{
 					Url: hostUrl,
@@ -113,6 +113,9 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 					EventTimeToLive:     pulumi.Int(5),
 				},
 			})
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

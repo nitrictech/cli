@@ -17,8 +17,6 @@
 package azure
 
 import (
-	"fmt"
-
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/pkg/errors"
 	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20201201"
@@ -92,14 +90,7 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 		return nil, err
 	}
 
-	endPoint := res.Api.ServiceUrl.ApplyT(func(ep *string) (string, error) {
-		if ep == nil {
-			return "", fmt.Errorf("api %s returned nil serviceUrl", res.Name)
-		}
-		return *ep, nil
-	}).(pulumi.StringInput)
-
-	ctx.Export("api:"+name, endPoint)
+	ctx.Export("api:"+name, res.Api.ServiceUrl)
 
 	for _, pathItem := range args.OpenAPISpec.Paths {
 		for _, op := range pathItem.Operations() {

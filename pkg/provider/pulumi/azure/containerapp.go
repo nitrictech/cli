@@ -17,12 +17,15 @@
 package azure
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/containerregistry"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/operationalinsights"
 	web "github.com/pulumi/pulumi-azure-native/sdk/go/azure/web/v20210301"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/authorization"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/containerservice"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/eventgrid"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/operationalinsights"
+
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -47,7 +50,7 @@ type ContainerApps struct {
 	pulumi.ResourceState
 
 	Name     string
-	Registry *containerservice.Registry
+	Registry *containerregistry.Registry
 	Apps     map[string]*ContainerApp
 }
 
@@ -98,25 +101,35 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		})
 	}
 
-	res.Registry, err = containerservice.NewRegistry(ctx, resourceName(ctx, name, RegistryRT), &containerservice.RegistryArgs{
+	res.Registry, err = containerregistry.NewRegistry(ctx, resourceName(ctx, name, RegistryRT), &containerregistry.RegistryArgs{
 		ResourceGroupName: args.ResourceGroupName,
 		Location:          args.Location,
-		AdminEnabled:      pulumi.BoolPtr(true),
-		Sku:               pulumi.String("Basic"),
+		AdminUserEnabled:  pulumi.BoolPtr(true),
+		Sku: containerregistry.SkuArgs{
+			Name: pulumi.String("Basic"),
+		},
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
 	}
 
-	aw, err := operationalinsights.NewAnalyticsWorkspace(ctx, resourceName(ctx, name, AnalyticsWorkspaceRT), &operationalinsights.AnalyticsWorkspaceArgs{
+	aw, err := operationalinsights.NewWorkspace(ctx, resourceName(ctx, name, AnalyticsWorkspaceRT), &operationalinsights.WorkspaceArgs{
 		Location:          args.Location,
 		ResourceGroupName: args.ResourceGroupName,
-		Sku:               pulumi.String("PerGB2018"),
-		RetentionInDays:   pulumi.Int(30),
+		Sku: &operationalinsights.WorkspaceSkuArgs{
+			Name: pulumi.String("PerGB2018"),
+		},
+		// Sku:               pulumi.String("PerGB2018"),
+		RetentionInDays: pulumi.Int(30),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
 	}
+
+	sharedKeys := operationalinsights.GetSharedKeysOutput(ctx, operationalinsights.GetSharedKeysOutputArgs{
+		ResourceGroupName: args.ResourceGroupName,
+		WorkspaceName:     aw.Name,
+	})
 
 	kube, err := web.NewKubeEnvironment(ctx, resourceName(ctx, name, KubeRT), &web.KubeEnvironmentArgs{
 		Location:          args.Location,
@@ -125,15 +138,37 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		AppLogsConfiguration: web.AppLogsConfigurationArgs{
 			Destination: pulumi.String("log-analytics"),
 			LogAnalyticsConfiguration: web.LogAnalyticsConfigurationArgs{
-				SharedKey:  aw.PrimarySharedKey,
-				CustomerId: aw.WorkspaceId,
+				SharedKey:  sharedKeys.PrimarySharedKey(),
+				CustomerId: aw.CustomerId,
 			},
 		},
 		Tags: common.Tags(ctx, ctx.Stack()+"Kube"),
 	}, pulumi.Parent(res))
+
 	if err != nil {
 		return nil, err
 	}
+
+	creds := pulumi.All(args.ResourceGroupName, res.Registry.Name).ApplyT(func(args []interface{}) (*containerregistry.ListRegistryCredentialsResult, error) {
+		rgName := args[0].(string)
+		regName := args[1].(string)
+		return containerregistry.ListRegistryCredentials(ctx, &containerregistry.ListRegistryCredentialsArgs{
+			ResourceGroupName: rgName,
+			RegistryName:      regName,
+		})
+	})
+
+	adminUser := creds.ApplyT(func(arg interface{}) *string {
+		cred := arg.(*containerregistry.ListRegistryCredentialsResult)
+		return cred.Username
+	}).(pulumi.StringPtrOutput)
+	adminPass := creds.ApplyT(func(arg interface{}) (*string, error) {
+		cred := arg.(*containerregistry.ListRegistryCredentialsResult)
+		if len(cred.Passwords) == 0 || cred.Passwords[0].Value == nil {
+			return nil, fmt.Errorf("cannot retrieve container registry credentials")
+		}
+		return cred.Passwords[0].Value, nil
+	}).(pulumi.StringPtrOutput)
 
 	for _, c := range a.proj.Computes() {
 		localImageName := c.ImageTagName(a.proj, "")
@@ -145,8 +180,8 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			LocalImageName:  localImageName,
 			SourceImageName: c.ImageTagName(a.proj, a.sc.Provider),
 			RepositoryUrl:   repositoryUrl,
-			Username:        res.Registry.AdminUsername,
-			Password:        res.Registry.AdminPassword,
+			Username:        adminUser.Elem(),
+			Password:        adminPass.Elem(),
 			Server:          res.Registry.LoginServer,
 			TempDir:         a.tmpDir}, pulumi.Parent(res))
 		if err != nil {
@@ -158,6 +193,8 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			Location:          args.Location,
 			SubscriptionID:    args.SubscriptionID,
 			Registry:          res.Registry,
+			RegistryUser:      adminUser,
+			RegistryPass:      adminPass,
 			KubeEnv:           kube,
 			ImageUri:          image.DockerImage.ImageName,
 			Env:               env,
@@ -176,7 +213,9 @@ type ContainerAppArgs struct {
 	ResourceGroupName pulumi.StringInput
 	Location          pulumi.StringInput
 	SubscriptionID    pulumi.StringInput
-	Registry          *containerservice.Registry
+	Registry          *containerregistry.Registry
+	RegistryUser      pulumi.StringPtrInput
+	RegistryPass      pulumi.StringPtrInput
 	KubeEnv           *web.KubeEnvironment
 	ImageUri          pulumi.StringInput
 	Env               web.EnvironmentVarArray
@@ -218,15 +257,16 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		return nil, err
 	}
 
-	scope := pulumi.Sprintf("%s/resourceGroups/%s", args.SubscriptionID, args.ResourceGroupName)
+	scope := pulumi.Sprintf("subscriptions/%s/resourceGroups/%s", args.SubscriptionID, args.ResourceGroupName)
 
 	// Assign roles to the new SP
 	for defName, id := range RoleDefinitions {
 		_ = ctx.Log.Info("Assignment "+resourceName(ctx, name+defName, AssignmentRT)+" roleDef "+id, &pulumi.LogArgs{Ephemeral: true})
 
-		_, err = authorization.NewAssignment(ctx, resourceName(ctx, name+defName, AssignmentRT), &authorization.AssignmentArgs{
+		_, err = authorization.NewRoleAssignment(ctx, resourceName(ctx, name+defName, AssignmentRT), &authorization.RoleAssignmentArgs{
 			PrincipalId:      res.Sp.ServicePrincipalId,
-			RoleDefinitionId: pulumi.Sprintf("%s/providers/Microsoft.Authorization/roleDefinitions/%s", args.SubscriptionID, id),
+			PrincipalType:    pulumi.StringPtr("ServicePrincipal"),
+			RoleDefinitionId: pulumi.Sprintf("/subscriptions/%s/providers/Microsoft.Authorization/roleDefinitions/%s", args.SubscriptionID, id),
 			Scope:            scope,
 		}, pulumi.Parent(res))
 		if err != nil {
@@ -271,14 +311,14 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 			Registries: web.RegistryCredentialsArray{
 				web.RegistryCredentialsArgs{
 					Server:            args.Registry.LoginServer,
-					Username:          args.Registry.AdminUsername,
+					Username:          args.RegistryUser,
 					PasswordSecretRef: pulumi.String("pwd"),
 				},
 			},
 			Secrets: web.SecretArray{
 				web.SecretArgs{
 					Name:  pulumi.String("pwd"),
-					Value: args.Registry.AdminPassword,
+					Value: args.RegistryPass,
 				},
 				web.SecretArgs{
 					Name:  pulumi.String("client-id"),

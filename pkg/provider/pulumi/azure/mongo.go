@@ -17,83 +17,98 @@
 package azure
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/cosmosdb"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/documentdb"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
 type MongoCollectionsArgs struct {
-	ResourceGroupName pulumi.StringInput
+	ResourceGroup *resources.ResourceGroup
 }
 
 type MongoCollections struct {
 	pulumi.ResourceState
 
-	Name        string
-	Account     *cosmosdb.Account
-	MongoDB     *cosmosdb.MongoDatabase
-	Collections map[string]*cosmosdb.MongoCollection
+	Name             string
+	Account          *documentdb.DatabaseAccount
+	MongoDB          *documentdb.MongoDBResourceMongoDBDatabase
+	ConnectionString pulumi.StringOutput
+	Collections      map[string]*documentdb.MongoDBResourceMongoDBCollection
 }
 
 func (a *azureProvider) newMongoCollections(ctx *pulumi.Context, name string, args *MongoCollectionsArgs, opts ...pulumi.ResourceOption) (*MongoCollections, error) {
 	res := &MongoCollections{
 		Name:        name,
-		Collections: map[string]*cosmosdb.MongoCollection{},
+		Collections: map[string]*documentdb.MongoDBResourceMongoDBCollection{},
 	}
 	err := ctx.RegisterComponentResource("nitric:collections:CosmosMongo", name, res, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	primaryGeo := cosmosdb.AccountGeoLocationArgs{
+	primaryGeo := documentdb.LocationArgs{
 		FailoverPriority: pulumi.Int(0),
-		ZoneRedundant:    pulumi.Bool(false),
-		Location:         pulumi.String(a.sc.Region),
+		IsZoneRedundant:  pulumi.Bool(false),
+		LocationName:     args.ResourceGroup.Location,
 	}
-	secondaryGeo := cosmosdb.AccountGeoLocationArgs{
+	secondaryGeo := documentdb.LocationArgs{
 		FailoverPriority: pulumi.Int(1),
-		ZoneRedundant:    pulumi.Bool(false),
-		Location:         pulumi.String("canadacentral"),
+		IsZoneRedundant:  pulumi.Bool(false),
+		LocationName:     pulumi.String("canadacentral"),
 	}
-	if primaryGeo.Location == secondaryGeo.Location {
-		secondaryGeo.Location = pulumi.String("northeurope")
+	if primaryGeo.LocationName == secondaryGeo.LocationName {
+		secondaryGeo.LocationName = pulumi.String("northeurope")
 	}
 
-	res.Account, err = cosmosdb.NewAccount(ctx, resourceName(ctx, name, CosmosDBAccountRT), &cosmosdb.AccountArgs{
-		ResourceGroupName:  args.ResourceGroupName,
-		Kind:               pulumi.String("MongoDB"),
-		MongoServerVersion: pulumi.String("4.0"),
-		Location:           pulumi.String(a.sc.Region),
-		OfferType:          pulumi.String("Standard"),
-		ConsistencyPolicy: cosmosdb.AccountConsistencyPolicyArgs{
-			ConsistencyLevel: pulumi.String("Eventual"),
+	res.Account, err = documentdb.NewDatabaseAccount(ctx, resourceName(ctx, name, CosmosDBAccountRT), &documentdb.DatabaseAccountArgs{
+		ResourceGroupName: args.ResourceGroup.Name,
+		Kind:              pulumi.String("MongoDB"),
+
+		ApiProperties: &documentdb.ApiPropertiesArgs{
+			ServerVersion: pulumi.String("4.0"),
 		},
-		GeoLocations: cosmosdb.AccountGeoLocationArray{primaryGeo, secondaryGeo},
+		Location:                 args.ResourceGroup.Location,
+		DatabaseAccountOfferType: documentdb.DatabaseAccountOfferTypeStandard.ToDatabaseAccountOfferTypeOutput(),
+		Locations: documentdb.LocationArray{documentdb.LocationArgs{
+			FailoverPriority: pulumi.IntPtr(0),
+			IsZoneRedundant:  pulumi.BoolPtr(false),
+			LocationName:     args.ResourceGroup.Location,
+		}, documentdb.LocationArgs{
+			FailoverPriority: pulumi.IntPtr(1),
+			IsZoneRedundant:  pulumi.BoolPtr(false),
+			LocationName:     pulumi.String("eastus"),
+		}},
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, errors.WithMessage(err, "cosmosdb account")
 	}
 
-	res.MongoDB, err = cosmosdb.NewMongoDatabase(ctx, resourceName(ctx, name, MongoDBRT), &cosmosdb.MongoDatabaseArgs{
-		ResourceGroupName: args.ResourceGroupName,
+	res.MongoDB, err = documentdb.NewMongoDBResourceMongoDBDatabase(ctx, resourceName(ctx, name, MongoDBRT), &documentdb.MongoDBResourceMongoDBDatabaseArgs{
+		ResourceGroupName: args.ResourceGroup.Name,
 		AccountName:       res.Account.Name,
+		DatabaseName:      pulumi.String(name),
+		Location:          args.ResourceGroup.Location,
+		Resource: documentdb.MongoDBDatabaseResourceArgs{
+			Id: pulumi.String(name),
+		},
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, errors.WithMessage(err, "mongo db")
 	}
 
 	for k := range a.proj.Collections {
-		res.Collections[k], err = cosmosdb.NewMongoCollection(ctx, resourceName(ctx, k, MongoCollectionRT), &cosmosdb.MongoCollectionArgs{
-			ResourceGroupName: args.ResourceGroupName,
+		res.Collections[k], err = documentdb.NewMongoDBResourceMongoDBCollection(ctx, resourceName(ctx, k, MongoCollectionRT), &documentdb.MongoDBResourceMongoDBCollectionArgs{
+			ResourceGroupName: args.ResourceGroup.Name,
 			AccountName:       res.Account.Name,
 			DatabaseName:      res.MongoDB.Name,
-			Indices: cosmosdb.MongoCollectionIndexArray{
-				&cosmosdb.MongoCollectionIndexArgs{
-					Keys: pulumi.StringArray{
-						pulumi.String("_id"),
-					},
-					Unique: pulumi.Bool(true),
-				},
+			CollectionName:    pulumi.String(k),
+			Location:          res.MongoDB.Location,
+			Options:           &documentdb.CreateUpdateOptionsArgs{},
+			Resource: documentdb.MongoDBCollectionResourceArgs{
+				Id: pulumi.String(k),
 			},
 		}, pulumi.Parent(res))
 		if err != nil {
@@ -101,9 +116,30 @@ func (a *azureProvider) newMongoCollections(ctx *pulumi.Context, name string, ar
 		}
 	}
 
+	connectionString := pulumi.All(args.ResourceGroup.Name, res.Account.Name).ApplyT(func(args []interface{}) (string, error) {
+		rgName := args[0].(string)
+		acctName := args[1].(string)
+		connStr, err := documentdb.ListDatabaseAccountConnectionStrings(ctx, &documentdb.ListDatabaseAccountConnectionStringsArgs{
+			ResourceGroupName: rgName,
+			AccountName:       acctName,
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		if len(connStr.ConnectionStrings) == 0 {
+			return "", fmt.Errorf("no avaialable db connection strings")
+		}
+
+		return connStr.ConnectionStrings[0].ConnectionString, nil
+	}).(pulumi.StringOutput)
+
+	res.ConnectionString = connectionString
+
 	return res, ctx.RegisterResourceOutputs(res, pulumi.Map{
 		"name":              pulumi.String(res.Name),
 		"mongoDatabaseName": res.MongoDB.Name,
-		"connectionString":  res.Account.ConnectionStrings.Index(pulumi.Int(0)),
+		"connectionString":  connectionString,
 	})
 }

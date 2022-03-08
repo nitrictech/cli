@@ -14,21 +14,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package stack
 
 import (
-	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/stack"
+	"reflect"
+	"testing"
 )
 
-type Deployment struct {
-	ApiEndpoints map[string]string `json:"apiEndpoints,omitempty"`
-}
-
-type Provider interface {
-	Up(log output.Progress) (*Deployment, error)
-	Down(log output.Progress) error
-	List() (interface{}, error)
-	Ask() (*stack.Config, error)
-	//Status()
+func Test_configFromFile(t *testing.T) {
+	want := &Config{
+		Name:     "zed",
+		Provider: "Azure",
+		Region:   "eastus2",
+		Extra: map[string]interface{}{
+			"adminemail": "admin@example.com",
+			"org":        "example.com",
+		},
+	}
+	got, err := configFromFile("data/nitric-x.yaml")
+	if err != nil {
+		t.Errorf("configFromFile() error = %v", err)
+		return
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("configFromFile() = %v, want %v", got, want)
+	}
 }

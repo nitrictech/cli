@@ -104,8 +104,8 @@ func TestAWS(t *testing.T) {
 	stackName := s.Name + "-deploy"
 
 	a := &awsProvider{
-		s: s,
-		t: &stack.Config{
+		proj: s,
+		sc: &stack.Config{
 			Provider: stack.Aws,
 			Region:   "mock",
 		},

@@ -26,8 +26,8 @@ const (
 var Providers = []string{Aws, Azure, Gcp, Digitalocean}
 
 type Config struct {
-	Name     string                 `json:"name,omitempty"`
-	Provider string                 `json:"provider,omitempty"`
-	Region   string                 `json:"region,omitempty"`
-	Extra    map[string]interface{} `json:",inline,omitempty"`
+	Name     string                 `yaml:"name,omitempty"`
+	Provider string                 `yaml:"provider,omitempty"`
+	Region   string                 `yaml:"region,omitempty"`
+	Extra    map[string]interface{} `yaml:",inline,omitempty"`
 }

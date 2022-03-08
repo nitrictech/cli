@@ -94,8 +94,8 @@ func TestGCP(t *testing.T) {
 	stackName := s.Name + "-deploy"
 
 	a := &gcpProvider{
-		s: s,
-		t: &stack.Config{
+		proj: s,
+		sc: &stack.Config{
 			Provider: stack.Aws,
 			Region:   "mock",
 		},

@@ -39,16 +39,16 @@ import (
 )
 
 type pulumiDeployment struct {
-	s *project.Project
-	t *stack.Config
-	p common.PulumiProvider
+	proj *project.Project
+	sc   *stack.Config
+	prov common.PulumiProvider
 }
 
 var (
 	_ types.Provider = &pulumiDeployment{}
 )
 
-func New(s *project.Project, t *stack.Config) (types.Provider, error) {
+func New(p *project.Project, sc *stack.Config) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 	err := pv.Run()
 	if err != nil {
@@ -59,50 +59,48 @@ func New(s *project.Project, t *stack.Config) (types.Provider, error) {
 	}
 
 	var prov common.PulumiProvider
-	switch t.Provider {
+	switch sc.Provider {
 	case stack.Aws:
-		prov = aws.New(s, t)
+		prov = aws.New(p, sc)
 	case stack.Azure:
-		prov = azure.New(s, t)
+		prov = azure.New(p, sc)
 	case stack.Gcp:
-		prov = gcp.New(s, t)
+		prov = gcp.New(p, sc)
 	default:
-		return nil, utils.NewNotSupportedErr("pulumi provider " + t.Provider + " not suppored")
+		return nil, utils.NewNotSupportedErr("pulumi provider " + sc.Provider + " not suppored")
 	}
 
-	/*TODO check
-	if err := prov.Validate(); err != nil {
-		return nil, err
-	}
-	*/
 	return &pulumiDeployment{
-		s: s,
-		t: t,
-		p: prov,
+		proj: p,
+		sc:   sc,
+		prov: prov,
 	}, nil
 }
 
 func (p *pulumiDeployment) Ask() (*stack.Config, error) {
-	return p.p.Ask()
+	return p.prov.Ask()
 }
 
-func (p *pulumiDeployment) load(log output.Progress, name string) (*auto.Stack, error) {
-	projectName := p.s.Name
-	stackName := p.s.Name + "-" + name
+func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
+	if err := p.prov.Validate(); err != nil {
+		return nil, err
+	}
+
+	stackName := p.proj.Name + "-" + p.sc.Name
 	ctx := context.Background()
 
-	s, err := auto.UpsertStackInlineSource(ctx, stackName, projectName, p.p.Deploy,
+	s, err := auto.UpsertStackInlineSource(ctx, stackName, p.proj.Name, p.prov.Deploy,
 		auto.SecretsProvider("passphrase"),
 		auto.Project(workspace.Project{
-			Name:    tokens.PackageName(projectName),
+			Name:    tokens.PackageName(p.proj.Name),
 			Runtime: workspace.NewProjectRuntimeInfo("go", nil),
-			Main:    p.s.Dir,
+			Main:    p.proj.Dir,
 		}))
 	if err != nil {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
 	}
 
-	for _, plug := range p.p.Plugins() {
+	for _, plug := range p.prov.Plugins() {
 		log.Busyf("Installing Pulumi plugin %s:%s", plug.Name, plug.Version)
 		err = s.Workspace().InstallPlugin(ctx, plug.Name, plug.Version)
 		if err != nil {
@@ -110,7 +108,7 @@ func (p *pulumiDeployment) load(log output.Progress, name string) (*auto.Stack, 
 		}
 	}
 
-	err = p.p.Configure(ctx, &s)
+	err = p.prov.Configure(ctx, &s)
 	if err != nil {
 		return nil, errors.WithMessage(err, "Configure")
 	}
@@ -120,14 +118,14 @@ func (p *pulumiDeployment) load(log output.Progress, name string) (*auto.Stack, 
 	return &s, errors.WithMessage(err, "Refresh")
 }
 
-func (p *pulumiDeployment) Apply(log output.Progress, name string) (*types.Deployment, error) {
-	s, err := p.load(log, name)
+func (p *pulumiDeployment) Up(log output.Progress) (*types.Deployment, error) {
+	s, err := p.load(log)
 	if err != nil {
 		return nil, errors.WithMessage(err, "loading pulumi stack")
 	}
 
 	res, err := s.Up(context.Background(), updateLoggingOpts(log)...)
-	defer p.p.CleanUp()
+	defer p.prov.CleanUp()
 	if err != nil {
 		return nil, errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
 	}
@@ -145,14 +143,14 @@ func (p *pulumiDeployment) Apply(log output.Progress, name string) (*types.Deplo
 }
 
 func (p *pulumiDeployment) List() (interface{}, error) {
-	projectName := p.s.Name
+	projectName := p.proj.Name
 
 	ws, err := auto.NewLocalWorkspace(context.Background(),
 		auto.SecretsProvider("passphrase"),
 		auto.Project(workspace.Project{
 			Name:    tokens.PackageName(projectName),
 			Runtime: workspace.NewProjectRuntimeInfo("go", nil),
-			Main:    p.s.Dir,
+			Main:    p.proj.Dir,
 		}))
 	if err != nil {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
@@ -161,8 +159,8 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 	return ws.ListStacks(context.Background())
 }
 
-func (a *pulumiDeployment) Delete(log output.Progress, name string) error {
-	s, err := a.load(log, name)
+func (a *pulumiDeployment) Down(log output.Progress) error {
+	s, err := a.load(log)
 	if err != nil {
 		return err
 	}

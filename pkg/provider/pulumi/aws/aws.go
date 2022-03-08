@@ -48,8 +48,8 @@ import (
 )
 
 type awsProvider struct {
-	s      *project.Project
-	t      *stack.Config
+	proj   *project.Project
+	sc     *stack.Config
 	tmpDir string
 
 	// created resources (mostly here for testing)
@@ -69,8 +69,8 @@ var awsPluginVersion string
 
 func New(s *project.Project, t *stack.Config) common.PulumiProvider {
 	return &awsProvider{
-		s:           s,
-		t:           t,
+		proj:        s,
+		sc:          t,
 		topics:      map[string]*sns.Topic{},
 		buckets:     map[string]*s3.Bucket{},
 		queues:      map[string]*sqs.Queue{},
@@ -83,7 +83,7 @@ func New(s *project.Project, t *stack.Config) common.PulumiProvider {
 }
 
 func (a *awsProvider) Ask() (*stack.Config, error) {
-	sc := &stack.Config{Name: a.t.Name, Provider: a.t.Provider}
+	sc := &stack.Config{Name: a.sc.Name, Provider: a.sc.Provider}
 	err := survey.AskOne(&survey.Select{
 		Message: "select the region",
 		Options: a.SupportedRegions(),
@@ -120,20 +120,20 @@ func (a *awsProvider) SupportedRegions() []string {
 func (a *awsProvider) Validate() error {
 	found := false
 	for _, r := range a.SupportedRegions() {
-		if r == a.t.Region {
+		if r == a.sc.Region {
 			found = true
 			break
 		}
 	}
 	if !found {
-		return utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.t.Region, a.t.Provider))
+		return utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider))
 	}
 	return nil
 }
 
 func (a *awsProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	if a.t.Region != "" {
-		return autoStack.SetConfig(ctx, "aws:region", auto.ConfigValue{Value: a.t.Region})
+	if a.sc.Region != "" {
+		return autoStack.SetConfig(ctx, "aws:region", auto.ConfigValue{Value: a.sc.Region})
 	}
 
 	return nil
@@ -183,7 +183,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "resource group create")
 	}
 
-	for k := range a.s.Topics {
+	for k := range a.proj.Topics {
 		a.topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
 			// FIXME: Autonaming of topics disabled until improvements to
 			// nitric topic name discovery is made for SNS topics.
@@ -195,7 +195,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for k := range a.s.Buckets {
+	for k := range a.proj.Buckets {
 		a.buckets[k], err = s3.NewBucket(ctx, k, &s3.BucketArgs{
 			Tags: common.Tags(ctx, k),
 		})
@@ -204,7 +204,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for k := range a.s.Queues {
+	for k := range a.proj.Queues {
 		a.queues[k], err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
 			Tags: common.Tags(ctx, k),
 		})
@@ -213,7 +213,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for k := range a.s.Collections {
+	for k := range a.proj.Collections {
 		a.collections[k], err = dynamodb.NewTable(ctx, k, &dynamodb.TableArgs{
 			Attributes: dynamodb.TableAttributeArray{
 				&dynamodb.TableAttributeArgs{
@@ -236,7 +236,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	secrets := map[string]*secretsmanager.Secret{}
-	for k := range a.s.Secrets {
+	for k := range a.proj.Secrets {
 		secrets[k], err = secretsmanager.NewSecret(ctx, k, &secretsmanager.SecretArgs{
 			Name: pulumi.StringPtr(k),
 			Tags: common.Tags(ctx, k),
@@ -246,7 +246,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for k, s := range a.s.Schedules {
+	for k, s := range a.proj.Schedules {
 		if len(a.topics) > 0 && s.Target.Type == "topic" && s.Target.Name != "" {
 			topic, ok := a.topics[s.Target.Name]
 			if !ok {
@@ -271,8 +271,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	principalMap := make(map[v1.ResourceType]map[string]*iam.Role)
 	principalMap[v1.ResourceType_Function] = make(map[string]*iam.Role)
 
-	for _, c := range a.s.Computes() {
-		localImageName := c.ImageTagName(a.s, "")
+	for _, c := range a.proj.Computes() {
+		localImageName := c.ImageTagName(a.proj, "")
 
 		repo, err := ecr.NewRepository(ctx, localImageName, &ecr.RepositoryArgs{
 			Tags: common.Tags(ctx, localImageName),
@@ -285,7 +285,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		if !ok {
 			image, err = common.NewImage(ctx, c.Unit().Name, &common.ImageArgs{
 				LocalImageName:  localImageName,
-				SourceImageName: c.ImageTagName(a.s, a.t.Provider),
+				SourceImageName: c.ImageTagName(a.proj, a.sc.Provider),
 				RepositoryUrl:   repo.RepositoryUrl,
 				Server:          pulumi.String(authToken.ProxyEndpoint),
 				Username:        pulumi.String(authToken.UserName),
@@ -310,7 +310,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		principalMap[v1.ResourceType_Function][c.Unit().Name] = a.funcs[c.Unit().Name].Role
 	}
 
-	for k, v := range a.s.ApiDocs {
+	for k, v := range a.proj.ApiDocs {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
 			OpenAPISpec:     v,
 			LambdaFunctions: a.funcs})
@@ -319,7 +319,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for _, p := range a.s.Policies {
+	for _, p := range a.proj.Policies {
 		if len(p.Actions) == 0 {
 			// note Topic receiving does not require an action.
 			_ = ctx.Log.Debug("policy has no actions "+fmt.Sprint(p), &pulumi.LogArgs{Ephemeral: true})

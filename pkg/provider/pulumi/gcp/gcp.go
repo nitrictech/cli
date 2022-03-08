@@ -46,8 +46,8 @@ import (
 )
 
 type gcpProvider struct {
-	t          *stack.Config
-	s          *project.Project
+	sc         *stack.Config
+	proj       *project.Project
 	tmpDir     string
 	gcpProject string
 
@@ -68,8 +68,8 @@ var gcpPluginVersion string
 
 func New(s *project.Project, t *stack.Config) common.PulumiProvider {
 	return &gcpProvider{
-		s:                  s,
-		t:                  t,
+		proj:               s,
+		sc:                 t,
 		buckets:            map[string]*storage.Bucket{},
 		topics:             map[string]*pubsub.Topic{},
 		queueTopics:        map[string]*pubsub.Topic{},
@@ -124,8 +124,8 @@ func (a *gcpProvider) Ask() (*stack.Config, error) {
 		},
 	}
 	sc := &stack.Config{
-		Name:     a.t.Name,
-		Provider: a.t.Provider,
+		Name:     a.sc.Name,
+		Provider: a.sc.Provider,
 		Extra:    map[string]interface{}{},
 	}
 
@@ -143,23 +143,23 @@ func (a *gcpProvider) Ask() (*stack.Config, error) {
 func (g *gcpProvider) Validate() error {
 	errList := utils.NewErrorList()
 
-	if g.t.Region == "" {
-		errList.Add(fmt.Errorf("target %s requires \"region\"", g.t.Provider))
-	} else if !sliceutil.Contains(g.SupportedRegions(), g.t.Region) {
-		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.t.Region, g.t.Provider)))
+	if g.sc.Region == "" {
+		errList.Add(fmt.Errorf("target %s requires \"region\"", g.sc.Provider))
+	} else if !sliceutil.Contains(g.SupportedRegions(), g.sc.Region) {
+		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.sc.Region, g.sc.Provider)))
 	}
 
-	if _, ok := g.t.Extra["project"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires GCP \"project\"", g.t.Provider))
+	if _, ok := g.sc.Extra["project"]; !ok {
+		errList.Add(fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider))
 	} else {
-		g.gcpProject = g.t.Extra["project"].(string)
+		g.gcpProject = g.sc.Extra["project"].(string)
 	}
 
 	return errList.Aggregate()
 }
 
 func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	err := autoStack.SetConfig(ctx, "gcp:region", auto.ConfigValue{Value: g.t.Region})
+	err := autoStack.SetConfig(ctx, "gcp:region", auto.ConfigValue{Value: g.sc.Region})
 	if err != nil {
 		return err
 	}
@@ -209,9 +209,9 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 
 	defaultResourceOptions := pulumi.DependsOn([]pulumi.Resource{nitricProj})
 
-	for key := range g.s.Buckets {
+	for key := range g.proj.Buckets {
 		g.buckets[key], err = storage.NewBucket(ctx, key, &storage.BucketArgs{
-			Location: pulumi.String(g.t.Region),
+			Location: pulumi.String(g.sc.Region),
 			Project:  pulumi.String(g.projectId),
 			Labels:   common.Tags(ctx, key),
 		}, defaultResourceOptions)
@@ -220,7 +220,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for key := range g.s.Topics {
+	for key := range g.proj.Topics {
 		g.topics[key], err = pubsub.NewTopic(ctx, key, &pubsub.TopicArgs{
 			Name:   pulumi.String(key),
 			Labels: common.Tags(ctx, key),
@@ -230,7 +230,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for key := range g.s.Queues {
+	for key := range g.proj.Queues {
 		g.queueTopics[key], err = pubsub.NewTopic(ctx, key, &pubsub.TopicArgs{
 			Name:   pulumi.String(key),
 			Labels: common.Tags(ctx, key),
@@ -248,7 +248,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for k, sched := range g.s.Schedules {
+	for k, sched := range g.proj.Schedules {
 		if _, ok := g.topics[sched.Target.Name]; ok {
 			payload := ""
 			if len(sched.Event.Payload) > 0 {
@@ -275,12 +275,12 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for _, c := range g.s.Computes() {
+	for _, c := range g.proj.Computes() {
 		if _, ok := g.images[c.Unit().Name]; !ok {
 			g.images[c.Unit().Name], err = common.NewImage(ctx, c.Unit().Name+"Image", &common.ImageArgs{
-				LocalImageName:  c.ImageTagName(g.s, ""),
-				SourceImageName: c.ImageTagName(g.s, g.t.Provider),
-				RepositoryUrl:   pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.s, g.t.Provider)),
+				LocalImageName:  c.ImageTagName(g.proj, ""),
+				SourceImageName: c.ImageTagName(g.proj, g.sc.Provider),
+				RepositoryUrl:   pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
 				Username:        pulumi.String("oauth2accesstoken"),
 				Password:        pulumi.String(g.token.AccessToken),
 				Server:          pulumi.String("https://gcr.io"),
@@ -292,7 +292,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 
 		g.cloudRunners[c.Unit().Name], err = g.newCloudRunner(ctx, c.Unit().Name, &CloudRunnerArgs{
-			Location:  pulumi.String(g.t.Region),
+			Location:  pulumi.String(g.sc.Region),
 			ProjectId: g.projectId,
 			Topics:    g.topics,
 			Compute:   c,
@@ -303,7 +303,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	for k, doc := range g.s.ApiDocs {
+	for k, doc := range g.proj.ApiDocs {
 		v2doc, err := openapi2conv.FromV3(doc)
 		if err != nil {
 			return err

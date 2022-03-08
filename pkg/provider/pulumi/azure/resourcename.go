@@ -79,7 +79,7 @@ var (
 	EventGridRT = ResouceType{Abbreviation: "evgt", MaxLen: 24, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 
 	//Alphanumerics and hyphens.
-	EventSubscriptionRT = ResouceType{Abbreviation: "evt-sub", MaxLen: 24, AllowUpperCase: true, AllowHyphen: true, UseName: true}
+	EventSubscriptionRT = ResouceType{Abbreviation: "sub", MaxLen: 24, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 
 	// Alphanumerics and hyphens, Start with letter and end with alphanumeric.
 	ApiRT = ResouceType{Abbreviation: "api", MaxLen: 80, AllowHyphen: true, AllowUpperCase: true}

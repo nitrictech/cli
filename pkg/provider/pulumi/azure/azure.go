@@ -26,19 +26,17 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
-	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi/sdk/v3/go/auto"
-	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/keyvault"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
-
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/pkg/errors"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/keyvault"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
 type azureProvider struct {
@@ -191,10 +189,6 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		Tags:     common.Tags(ctx, ctx.Stack()),
 	})
 
-	// rg, err := core.NewResourceGroup(ctx, resourceName(ctx, "", ResourceGroupRT), &core.ResourceGroupArgs{
-	// 	Location: pulumi.String(a.t.Region),
-	// 	Tags:     common.Tags(ctx, ctx.Stack()),
-	// })
 	if err != nil {
 		return errors.WithMessage(err, "resource group create")
 	}

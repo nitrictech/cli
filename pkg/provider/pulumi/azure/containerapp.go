@@ -19,17 +19,15 @@ package azure
 import (
 	"fmt"
 
+	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/containerregistry"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/operationalinsights"
 	web "github.com/pulumi/pulumi-azure-native/sdk/go/azure/web/v20210301"
-
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-
-	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 )
 
 type ContainerAppsArgs struct {
@@ -119,7 +117,6 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		Sku: &operationalinsights.WorkspaceSkuArgs{
 			Name: pulumi.String("PerGB2018"),
 		},
-		// Sku:               pulumi.String("PerGB2018"),
 		RetentionInDays: pulumi.Int(30),
 	}, pulumi.Parent(res))
 	if err != nil {

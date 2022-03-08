@@ -42,8 +42,8 @@ var (
 
 var stackCmd = &cobra.Command{
 	Use:   "stack",
-	Short: "Manage stacks (project deployments)",
-	Long: `Manage stacks (project deployments).
+	Short: "Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)",
+	Long: `Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic).
 
 A stack is a named update target, and a single project may have many of them.`,
 	Example: `nitric stack up
@@ -54,7 +54,7 @@ nitric stack list
 
 var newStackCmd = &cobra.Command{
 	Use:   "new",
-	Short: "create a new nitric stack",
+	Short: "Create a new Nitric stack",
 	Long:  `Creates a new Nitric stack.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		name := ""
@@ -83,17 +83,15 @@ var newStackCmd = &cobra.Command{
 		err = sc.ToFile(filepath.Join(pc.Dir, fmt.Sprintf("nitric-%s.yaml", sc.Name)))
 		cobra.CheckErr(err)
 	},
-	Args: cobra.MaximumNArgs(2),
+	Args:        cobra.MaximumNArgs(2),
+	Annotations: map[string]string{"commonCommand": "yes"},
 }
 
 var stackUpdateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Create or update a deployed stack",
-	Long:  `Create or update a deployed stack`,
-	Example: `nitric stack up -s aws
-
-# use a custom stack name
-nitric stack up -n prod -s aws`,
+	Use:     "update [-s stack]",
+	Short:   "Create or update a deployed stack",
+	Long:    `Create or update a deployed stack`,
+	Example: `nitric stack update -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
@@ -150,7 +148,7 @@ nitric stack up -n prod -s aws`,
 }
 
 var stackDeleteCmd = &cobra.Command{
-	Use:   "down",
+	Use:   "down [-s stack]",
 	Short: "Undeploy a previously deployed stack, deleting resources",
 	Long:  `Undeploy a previously deployed stack, deleting resources`,
 	Example: `nitric stack down -s aws
@@ -199,10 +197,10 @@ nitric stack down -e aws -y`,
 }
 
 var stackListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   "list [-s stack]",
 	Short: "List all project stacks and their status",
 	Long:  `List all project stacks and their status`,
-	Example: `nitric list
+	Example: `nitric stack list
 
 nitric stack list -s aws
 `,

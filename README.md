@@ -23,7 +23,11 @@ The Nitric CLI performs 3 main tasks:
 ## Common Commands
 
 Common commands in the CLI that you’ll be using:
-…..
+
+- nitric down            : Undeploy a previously deployed stack, deleting resources
+- nitric run             : Run your project locally for development and testing
+- nitric stack new       : Create a new Nitric stack
+- nitric up              : Create or update a deployed stack
 
 ## Help with Commands
 
@@ -38,7 +42,18 @@ nitric new --help
 ## Complete Reference
 
 Documentation for all available commands:
-……
+
+- nitric new [projectName] [templateName] [handlerGlob] : Create a new project
+- nitric run             : Run your project locally for development and testing
+- nitric stack           : Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)
+- nitric stack down [-s stack] : Undeploy a previously deployed stack, deleting resources
+  (alias: nitric down)
+- nitric stack list [-s stack] : List all project stacks and their status
+  (alias: nitric list)
+- nitric stack new       : Create a new Nitric stack
+- nitric stack update [-s stack] : Create or update a deployed stack
+  (alias: nitric up)
+- nitric version         : Print the version number of this CLI
 
 ## Get in touch
 
@@ -51,3 +66,4 @@ Documentation for all available commands:
 ## Get Started
 
 Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.
+cs](https://nitric.io/docs) to see how to get started using Nitric.

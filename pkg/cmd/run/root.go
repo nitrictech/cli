@@ -39,10 +39,11 @@ import (
 )
 
 var runCmd = &cobra.Command{
-	Use:     "run",
-	Short:   "Run your project locally for development and testing",
-	Long:    `Run your project locally for development and testing`,
-	Example: `nitric run`,
+	Use:         "run",
+	Short:       "Run your project locally for development and testing",
+	Long:        `Run your project locally for development and testing`,
+	Example:     `nitric run`,
+	Annotations: map[string]string{"commonCommand": "yes"},
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)

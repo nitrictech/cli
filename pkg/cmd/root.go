@@ -81,6 +81,7 @@ func init() {
 	rootCmd.AddCommand(cmdstack.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(feedbackCmd)
 	addAlias("stack update", "up", true)
 	addAlias("stack down", "down", true)
 	addAlias("stack list", "list", false)

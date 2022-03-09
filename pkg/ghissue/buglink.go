@@ -43,7 +43,7 @@ type GHIssue struct {
 	StackTrace  string      `json:"stacktrace"`
 }
 
-var diag = Diagnostics{
+var Diag = Diagnostics{
 	OS:         runtime.GOOS,
 	Arch:       runtime.GOARCH,
 	GoVersion:  runtime.Version(),
@@ -52,7 +52,7 @@ var diag = Diagnostics{
 
 func BugLink(err interface{}) string {
 	issue := GHIssue{
-		Diagnostics: diag,
+		Diagnostics: Diag,
 		Error:       fmt.Sprint(err),
 		StackTrace:  string(debug.Stack()),
 		Command:     strings.Join(os.Args, " "),
@@ -61,11 +61,16 @@ func BugLink(err interface{}) string {
 	title := "Command '" + issue.Command + "' panicked: " + utils.StringTrunc(issue.Error, 50)
 	b, _ := yaml.Marshal(issue)
 
-	issueUrl, _ := url.Parse("https://github.com/nitrictech/cli/issues/new")
+	return IssueLink("cli", "bug", title, string(b))
+}
+
+func IssueLink(repo, kind, title, body string) string {
+	issueUrl, _ := url.Parse(fmt.Sprintf("https://github.com/nitrictech/%s/issues/new", repo))
 
 	q := issueUrl.Query()
 	q.Add("title", title)
-	q.Add("body", string(b))
+	q.Add("body", body)
+	q.Add("labels", kind)
 	issueUrl.RawQuery = q.Encode()
 
 	return issueUrl.String()

@@ -9,9 +9,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    env:
-      GOPATH: /home/runner/go
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
     - name: Checkout
       uses: actions/checkout@v2

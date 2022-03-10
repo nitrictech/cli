@@ -296,7 +296,8 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	principalMap := make(PrincipalMap, len(g.proj.Computes()))
+	principalMap := make(PrincipalMap)
+	principalMap[v1.ResourceType_Function] = make(map[string]*serviceaccount.Account)
 
 	for _, c := range g.proj.Computes() {
 		if _, ok := g.images[c.Unit().Name]; !ok {

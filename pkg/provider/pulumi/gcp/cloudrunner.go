@@ -77,7 +77,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 	// }
 
 	// Deploy the func
-	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
+	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 512)
 	maxScale := common.IntValueOrDefault(args.Compute.Unit().MaxScale, 10)
 	minScale := common.IntValueOrDefault(args.Compute.Unit().MinScale, 0)
 	res.Service, err = cloudrun.NewService(ctx, name, &cloudrun.ServiceArgs{

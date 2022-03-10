@@ -196,3 +196,17 @@ func (mr *MockContainerEngineMockRecorder) Type() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Type", reflect.TypeOf((*MockContainerEngine)(nil).Type))
 }
+
+// Version mocks base method.
+func (m *MockContainerEngine) Version() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Version")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Version indicates an expected call of Version.
+func (mr *MockContainerEngineMockRecorder) Version() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockContainerEngine)(nil).Version))
+}

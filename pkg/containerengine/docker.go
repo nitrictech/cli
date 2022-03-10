@@ -120,7 +120,7 @@ func imageNameFromBuildContext(dockerfile, srcPath, imageTag string) (string, er
 		imageName = strings.Split(imageTag, ":")[0]
 	}
 
-	return imageName + ":" + hex.EncodeToString(hash.Sum(nil)), nil
+	return strings.ToLower(imageName + ":" + hex.EncodeToString(hash.Sum(nil))), nil
 }
 
 func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string) error {
@@ -148,7 +148,7 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	opts := types.ImageBuildOptions{
 		SuppressOutput: false,
 		Dockerfile:     dockerfile,
-		Tags:           []string{imageTag, imageTagWithHash},
+		Tags:           []string{strings.ToLower(imageTag), imageTagWithHash},
 		Remove:         true,
 		ForceRemove:    true,
 		PullParent:     true,

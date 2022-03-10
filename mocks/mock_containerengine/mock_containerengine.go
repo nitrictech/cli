@@ -68,20 +68,6 @@ func (mr *MockContainerEngineMockRecorder) ContainerCreate(arg0, arg1, arg2, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerCreate", reflect.TypeOf((*MockContainerEngine)(nil).ContainerCreate), arg0, arg1, arg2, arg3)
 }
 
-// ContainerExec mocks base method.
-func (m *MockContainerEngine) ContainerExec(arg0 string, arg1 []string, arg2 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ContainerExec", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ContainerExec indicates an expected call of ContainerExec.
-func (mr *MockContainerEngineMockRecorder) ContainerExec(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerExec", reflect.TypeOf((*MockContainerEngine)(nil).ContainerExec), arg0, arg1, arg2)
-}
-
 // ContainerLogs mocks base method.
 func (m *MockContainerEngine) ContainerLogs(arg0 string, arg1 types.ContainerLogsOptions) (io.ReadCloser, error) {
 	m.ctrl.T.Helper()
@@ -110,35 +96,6 @@ func (m *MockContainerEngine) ContainerWait(arg0 string, arg1 container.WaitCond
 func (mr *MockContainerEngineMockRecorder) ContainerWait(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerWait", reflect.TypeOf((*MockContainerEngine)(nil).ContainerWait), arg0, arg1)
-}
-
-// ContainersListByLabel mocks base method.
-func (m *MockContainerEngine) ContainersListByLabel(arg0 map[string]string) ([]types.Container, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ContainersListByLabel", arg0)
-	ret0, _ := ret[0].([]types.Container)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ContainersListByLabel indicates an expected call of ContainersListByLabel.
-func (mr *MockContainerEngineMockRecorder) ContainersListByLabel(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainersListByLabel", reflect.TypeOf((*MockContainerEngine)(nil).ContainersListByLabel), arg0)
-}
-
-// CopyFromArchive mocks base method.
-func (m *MockContainerEngine) CopyFromArchive(arg0, arg1 string, arg2 io.Reader) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopyFromArchive", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CopyFromArchive indicates an expected call of CopyFromArchive.
-func (mr *MockContainerEngineMockRecorder) CopyFromArchive(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyFromArchive", reflect.TypeOf((*MockContainerEngine)(nil).CopyFromArchive), arg0, arg1, arg2)
 }
 
 // ImagePull mocks base method.
@@ -182,20 +139,6 @@ func (m *MockContainerEngine) Logger(arg0 string) containerengine.ContainerLogge
 func (mr *MockContainerEngineMockRecorder) Logger(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockContainerEngine)(nil).Logger), arg0)
-}
-
-// NetworkCreate mocks base method.
-func (m *MockContainerEngine) NetworkCreate(arg0 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NetworkCreate", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// NetworkCreate indicates an expected call of NetworkCreate.
-func (mr *MockContainerEngineMockRecorder) NetworkCreate(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkCreate", reflect.TypeOf((*MockContainerEngine)(nil).NetworkCreate), arg0)
 }
 
 // RemoveByLabel mocks base method.

@@ -18,8 +18,11 @@ package runtime
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/docker/docker/api/types/mount"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -144,25 +147,85 @@ ENTRYPOINT ["/usr/local/bin/membrane"]`,
 	}
 }
 
+func TestGeneralFuncs(t *testing.T) {
+	tests := []struct {
+		handler       string
+		containerName string
+		devImageName  string
+	}{
+		{
+			handler:       "functions/list.ts",
+			containerName: "list",
+			devImageName:  "nitric-ts-dev",
+		},
+		{
+			handler:       "pkg/list/main.go",
+			containerName: "list",
+			devImageName:  "nitric-go-dev",
+		},
+		{
+			handler:       "list.py",
+			containerName: "list",
+			devImageName:  "nitric-py-dev",
+		},
+		{
+			handler:       "functions/list.js",
+			containerName: "list",
+			devImageName:  "nitric-js-dev",
+		},
+		{
+			handler:       "testdata/test.java",
+			containerName: "testdata",
+			devImageName:  "nitric-java-dev",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.handler, func(t *testing.T) {
+			rt, err := NewRunTimeFromHandler(tt.handler)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if rt.ContainerName() != tt.containerName {
+				t.Errorf("ContainerName() %s != %s", rt.ContainerName(), tt.containerName)
+			}
+
+			if rt.DevImageName() != tt.devImageName {
+				t.Errorf("DevImageName() %s != %s", rt.DevImageName(), tt.devImageName)
+			}
+		})
+	}
+}
+
 func TestGenerateForCodeAsConfig(t *testing.T) {
 	tests := []struct {
-		name        string
 		handler     string
 		version     string
 		provider    string
 		wantFwriter string
 	}{
 		{
-			name:    "ts",
 			handler: "functions/list.ts",
 			wantFwriter: `FROM node:alpine
 RUN yarn global add typescript ts-node nodemon
 WORKDIR /app/
 ENTRYPOINT ["ts-node"]`,
 		},
+		{
+			handler: "functions/list.js",
+			wantFwriter: `FROM node:alpine
+RUN yarn global add nodemon
+WORKDIR /app/
+ENTRYPOINT ["node"]`,
+		},
+		{
+			handler: "pkg/list/main.go",
+			wantFwriter: `FROM golang:alpine
+RUN go get github.com/asalkeld/CompileDaemon@d4b10de`,
+		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.handler, func(t *testing.T) {
 			fwriter := &bytes.Buffer{}
 			rt, err := NewRunTimeFromHandler(tt.handler)
 			if err != nil {
@@ -174,6 +237,137 @@ ENTRYPOINT ["ts-node"]`,
 			}
 			if !cmp.Equal(fwriter.String(), tt.wantFwriter) {
 				t.Error(cmp.Diff(tt.wantFwriter, fwriter.String()))
+			}
+		})
+	}
+}
+
+func TestLaunchOptsForFunction(t *testing.T) {
+	tests := []struct {
+		handler string
+		runCtx  string
+		opts    LaunchOpts
+	}{
+		{
+			handler: "functions/list.ts",
+			runCtx:  ".",
+			opts: LaunchOpts{
+				TargetWD:   "/app",
+				Entrypoint: []string{"nodemon"},
+				Cmd:        []string{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "ts-node -T /app/functions/list.ts"},
+				Mounts:     []mount.Mount{{Type: "bind", Source: ".", Target: "/app"}},
+			},
+		},
+		{
+			handler: "functions/list.js",
+			runCtx:  ".",
+			opts: LaunchOpts{
+				TargetWD:   "/app",
+				Entrypoint: []string{"nodemon"},
+				Cmd:        []string{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "node /app/functions/list.js"},
+				Mounts:     []mount.Mount{{Type: "bind", Source: ".", Target: "/app"}},
+			},
+		},
+		{
+			handler: "main.go",
+			runCtx:  "../../",
+			opts: LaunchOpts{
+				TargetWD: "/go/src/github.com/nitrictech/cli",
+				Cmd: []string{
+					"/go/bin/CompileDaemon",
+					"-verbose",
+					"-exclude-dir=.git",
+					"-exclude-dir=.nitric",
+					"-directory=.", "-build=go build -o runtime ./main.go", "-command=./runtime"},
+				Mounts: []mount.Mount{
+					{
+						Type: "bind", Source: filepath.Join(os.Getenv("GOPATH"), "pkg"), Target: "/go/pkg",
+					},
+					{
+						Type: "bind", Source: "../../", Target: "/go/src/github.com/nitrictech/cli",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.handler, func(t *testing.T) {
+			rt, err := NewRunTimeFromHandler(tt.handler)
+			if err != nil {
+				t.Error(err)
+			}
+			lo, err := rt.LaunchOptsForFunction(tt.runCtx)
+			if err != nil {
+				t.Errorf("GenerateForCodeAsConfig() error = %v", err)
+				return
+			}
+			if !cmp.Equal(tt.opts, lo) {
+				t.Error(cmp.Diff(tt.opts, lo))
+			}
+		})
+	}
+}
+
+func TestLaunchOptsForFunctionCollect(t *testing.T) {
+	tests := []struct {
+		handler string
+		runCtx  string
+		opts    LaunchOpts
+	}{
+		{
+			handler: "functions/list.ts",
+			runCtx:  ".",
+			opts: LaunchOpts{
+				Image:      "nitric-ts-dev",
+				TargetWD:   "/app",
+				Entrypoint: []string{"ts-node"},
+				Cmd:        []string{"-T", "/app/functions/list.ts"},
+				Mounts:     []mount.Mount{{Type: "bind", Source: ".", Target: "/app"}},
+			},
+		},
+		{
+			handler: "functions/list.js",
+			runCtx:  ".",
+			opts: LaunchOpts{
+				Image:      "nitric-js-dev",
+				TargetWD:   "/app",
+				Entrypoint: []string{"node"},
+				Cmd:        []string{"/app/functions/list.js"},
+				Mounts:     []mount.Mount{{Type: "bind", Source: ".", Target: "/app"}},
+			},
+		},
+		{
+			handler: "main.go",
+			runCtx:  "../../",
+			opts: LaunchOpts{
+				Image:    "nitric-go-dev",
+				TargetWD: "/go/src/github.com/nitrictech/cli",
+				Cmd: []string{
+					"go", "run", "./main.go"},
+				Mounts: []mount.Mount{
+					{
+						Type: "bind", Source: filepath.Join(os.Getenv("GOPATH"), "pkg"), Target: "/go/pkg",
+					},
+					{
+						Type: "bind", Source: "../../", Target: "/go/src/github.com/nitrictech/cli",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.handler, func(t *testing.T) {
+			rt, err := NewRunTimeFromHandler(tt.handler)
+			if err != nil {
+				t.Error(err)
+			}
+			lo, err := rt.LaunchOptsForFunctionCollect(tt.runCtx)
+			if err != nil {
+				t.Errorf("LaunchOptsForFunctionCollect() error = %v", err)
+				return
+			}
+			if !cmp.Equal(tt.opts, lo) {
+				t.Error(cmp.Diff(tt.opts, lo))
 			}
 		})
 	}

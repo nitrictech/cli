@@ -47,15 +47,11 @@ type ContainerEngine interface {
 	Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error
 	ListImages(stackName, containerName string) ([]Image, error)
 	ImagePull(rawImage string) error
-	NetworkCreate(name string) error
 	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error
 	Stop(nameOrID string, timeout *time.Duration) error
 	ContainerWait(containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error)
-	CopyFromArchive(nameOrID string, path string, reader io.Reader) error
-	ContainersListByLabel(match map[string]string) ([]types.Container, error)
 	RemoveByLabel(labels map[string]string) error
-	ContainerExec(containerName string, cmd []string, workingDir string) error
 	ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error)
 	Logger(stackPath string) ContainerLogger
 }

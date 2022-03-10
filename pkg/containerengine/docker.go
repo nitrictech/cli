@@ -241,16 +241,6 @@ func (d *docker) ImagePull(rawImage string) error {
 	return print(resp)
 }
 
-func (d *docker) NetworkCreate(name string) error {
-	_, err := d.cli.NetworkInspect(context.Background(), name, types.NetworkInspectOptions{})
-	if err == nil {
-		// it already exists, no need to create.
-		return nil
-	}
-	_, err = d.cli.NetworkCreate(context.Background(), name, types.NetworkCreate{})
-	return err
-}
-
 func (d *docker) ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error) {
 	resp, err := d.cli.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, nil, name)
 	if err != nil {
@@ -265,22 +255,6 @@ func (d *docker) Start(nameOrID string) error {
 
 func (d *docker) Stop(nameOrID string, timeout *time.Duration) error {
 	return d.cli.ContainerStop(context.Background(), nameOrID, timeout)
-}
-
-func (d *docker) CopyFromArchive(nameOrID string, path string, reader io.Reader) error {
-	return d.cli.CopyToContainer(context.Background(), nameOrID, path, reader, types.CopyToContainerOptions{})
-}
-
-func (d *docker) ContainersListByLabel(match map[string]string) ([]types.Container, error) {
-	opts := types.ContainerListOptions{
-		All:     true,
-		Filters: filters.NewArgs(),
-	}
-	for k, v := range match {
-		opts.Filters.Add("label", fmt.Sprintf("%s=%s", k, v))
-	}
-
-	return d.cli.ContainerList(context.Background(), opts)
 }
 
 func (d *docker) RemoveByLabel(labels map[string]string) error {
@@ -311,35 +285,6 @@ func (d *docker) ContainerWait(containerID string, condition container.WaitCondi
 
 func (d *docker) ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error) {
 	return d.cli.ContainerLogs(context.Background(), containerID, opts)
-}
-
-func (d *docker) ContainerExec(containerName string, cmd []string, workingDir string) error {
-	ctx := context.Background()
-	rst, err := d.cli.ContainerExecCreate(ctx, containerName, types.ExecConfig{
-		WorkingDir: workingDir,
-		Cmd:        cmd,
-	})
-	if err != nil {
-		return err
-	}
-	err = d.cli.ContainerExecStart(ctx, rst.ID, types.ExecStartCheck{})
-	if err != nil {
-		return err
-	}
-
-	for {
-		res, err := d.cli.ContainerExecInspect(ctx, rst.ID)
-		if err != nil {
-			return err
-		}
-		if res.Running {
-			continue
-		}
-		if res.ExitCode == 0 {
-			return nil
-		}
-		return fmt.Errorf("%s %v exited with %d", containerName, cmd, res.ExitCode)
-	}
 }
 
 func (d *docker) Logger(stackPath string) ContainerLogger {

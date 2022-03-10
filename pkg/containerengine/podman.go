@@ -93,10 +93,6 @@ func (p *podman) ImagePull(rawImage string) error {
 	return p.docker.ImagePull(rawImage)
 }
 
-func (p *podman) NetworkCreate(name string) error {
-	return p.docker.NetworkCreate(name)
-}
-
 func (p *podman) ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error) {
 	return p.docker.ContainerCreate(config, hostConfig, networkingConfig, name)
 }
@@ -113,20 +109,8 @@ func (p *podman) ContainerWait(containerID string, condition container.WaitCondi
 	return p.docker.ContainerWait(containerID, condition)
 }
 
-func (p *podman) CopyFromArchive(nameOrID string, path string, reader io.Reader) error {
-	return p.docker.CopyFromArchive(nameOrID, path, reader)
-}
-
-func (p *podman) ContainersListByLabel(match map[string]string) ([]types.Container, error) {
-	return p.docker.ContainersListByLabel(match)
-}
-
 func (p *podman) RemoveByLabel(labels map[string]string) error {
 	return p.docker.RemoveByLabel(labels)
-}
-
-func (p *podman) ContainerExec(containerName string, cmd []string, workingDir string) error {
-	return p.docker.ContainerExec(containerName, cmd, workingDir)
 }
 
 func (p *podman) ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error) {

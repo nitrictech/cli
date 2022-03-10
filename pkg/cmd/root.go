@@ -26,6 +26,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/cmd/run"
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
+	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
 )
 
@@ -57,6 +58,13 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	defer func() {
+		if err := recover(); err != nil {
+			pterm.Error.Println("An unexpected error occurred, please create a github issue by clicking on the link below")
+			fmt.Println(ghissue.BugLink(err))
+		}
+	}()
+
 	cobra.CheckErr(rootCmd.Execute())
 }
 

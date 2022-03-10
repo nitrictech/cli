@@ -59,6 +59,10 @@ func (t *java) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 	return LaunchOpts{}, utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
 }
 
+func (t *java) BuildIgnore() []string {
+	return []string{}
+}
+
 func (t *java) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	buildCon, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   mavenOpenJDKImage,

@@ -41,6 +41,10 @@ func (t *python) ContainerName() string {
 	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
 }
 
+func (t *python) BuildIgnore() []string {
+	return []string{"__pycache__/", "*.py[cod]", "*$py.class"}
+}
+
 func (t *python) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	return utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
 }
@@ -56,7 +60,7 @@ func (t *python) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 func (t *python) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "python:3.7-slim",
-		Ignore: []string{"__pycache__/", "*.py[cod]", "*$py.class"},
+		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
 		return err

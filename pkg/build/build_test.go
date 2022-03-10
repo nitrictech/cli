@@ -42,7 +42,7 @@ func TestCreateBaseDev(t *testing.T) {
 	s := project.New(&project.Config{Name: "", Dir: dir})
 	s.Functions = map[string]project.Function{"foo": {Handler: "functions/list.ts"}}
 
-	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{})
+	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{}, []string{"node_modules/", ".nitric/", ".git/", ".idea/"})
 
 	containerengine.DiscoveredEngine = me
 
@@ -54,8 +54,8 @@ func TestCreateBaseDev(t *testing.T) {
 func TestCreate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	me := mock_containerengine.NewMockContainerEngine(ctrl)
-	me.EXPECT().Build(gomock.Any(), ".", "test-stack--aws", map[string]string{"PROVIDER": "aws"})
-	me.EXPECT().Build("Dockerfile.custom", ".", "test-stack--aws", map[string]string{"PROVIDER": "aws"})
+	me.EXPECT().Build(gomock.Any(), ".", "test-stack--aws", map[string]string{"PROVIDER": "aws"}, []string{"node_modules/", ".nitric/", ".git/", ".idea/"})
+	me.EXPECT().Build("Dockerfile.custom", ".", "test-stack--aws", map[string]string{"PROVIDER": "aws"}, []string{})
 
 	containerengine.DiscoveredEngine = me
 

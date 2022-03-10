@@ -81,8 +81,8 @@ func (p *podman) Type() string {
 	return "podman"
 }
 
-func (p *podman) Build(dockerfile, path, imageTag string, buildArgs map[string]string) error {
-	return p.docker.Build(dockerfile, path, imageTag, buildArgs)
+func (p *podman) Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error {
+	return p.docker.Build(dockerfile, path, imageTag, buildArgs, excludes)
 }
 
 func (p *podman) ListImages(stackName, containerName string) ([]Image, error) {

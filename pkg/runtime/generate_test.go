@@ -37,8 +37,7 @@ func TestGenerate(t *testing.T) {
 			version:  "latest",
 			provider: "azure",
 			wantFwriter: `FROM node:alpine
-RUN yarn global add typescript
-RUN yarn global add ts-node
+RUN yarn global add typescript ts-node
 COPY package.json *.lock *-lock.json /
 RUN yarn import || echo Lockfile already exists
 RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;

@@ -58,7 +58,7 @@ type PolicyArgs struct {
 
 var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_BucketFileList: {
-		"s3:GetBucketTagging",
+		"s3:ListObjectsV2",
 	},
 	v1.Action_BucketFileGet: {
 		"s3:GetObject",

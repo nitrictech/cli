@@ -19,6 +19,7 @@ package gcp
 import (
 	"fmt"
 
+	"github.com/ettle/strcase"
 	"github.com/google/uuid"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	"github.com/pkg/errors"
@@ -173,17 +174,18 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 		name := newCustomRoleName(principal.Name)
 
 		role, err := projects.NewIAMCustomRole(ctx, name, &projects.IAMCustomRoleArgs{
+			Title:       pulumi.String(name),
 			Permissions: actions,
-			RoleId:      pulumi.String(name),
+			RoleId:      pulumi.String(strcase.ToCamel(name)),
 		}, append(opts, pulumi.Parent(res))...)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = projects.NewIAMMember(ctx, "", &projects.IAMMemberArgs{
+		_, err = projects.NewIAMMember(ctx, name, &projects.IAMMemberArgs{
 			Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
 			Project: args.ProjectID,
-			Role:    role.ID(),
+			Role:    role.Name,
 		}, append(opts, pulumi.Parent(res))...)
 		if err != nil {
 			return nil, errors.WithMessage(err, "iam member "+principal.Name)

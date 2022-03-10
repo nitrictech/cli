@@ -34,7 +34,10 @@ type javascript struct {
 	handler string
 }
 
-var _ Runtime = &javascript{}
+var (
+	_                    Runtime = &javascript{}
+	javascriptIgnoreList         = []string{"node_modules/", ".nitric/", ".git/", ".idea/"}
+)
 
 func (t *javascript) DevImageName() string {
 	return fmt.Sprintf("nitric-%s-dev", t.rte)
@@ -44,29 +47,10 @@ func (t *javascript) ContainerName() string {
 	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
 }
 
-func (t *javascript) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
-	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
-		From:   "node:alpine",
-		Ignore: []string{"node_modules/", ".nitric/", ".git/", ".idea/"},
-	})
-	if err != nil {
-		return err
-	}
-
-	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "nodemon"}})
-	con.Config(dockerfile.ConfigOptions{
-		Entrypoint: []string{"node"},
-		WorkingDir: "/app/",
-	})
-
-	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
-	return err
-}
-
 func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",
-		Ignore: []string{"node_modules/", ".nitric/", ".git/", ".idea/"},
+		Ignore: javascriptIgnoreList,
 	})
 	if err != nil {
 		return err
@@ -82,12 +66,32 @@ func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 		"set", "-ex;",
 		"yarn", "install", "--production", "--frozen-lockfile", "--cache-folder", "/tmp/.cache;",
 		"rm", "-rf", "/tmp/.cache;"}})
+
 	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
 	if err != nil {
 		return err
 	}
 	con.Config(dockerfile.ConfigOptions{
 		Cmd: []string{"node", t.handler},
+	})
+
+	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+	return err
+}
+
+func (t *javascript) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
+	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+		From:   "node:alpine",
+		Ignore: javascriptIgnoreList,
+	})
+	if err != nil {
+		return err
+	}
+
+	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "nodemon"}})
+	con.Config(dockerfile.ConfigOptions{
+		Entrypoint: []string{"node"},
+		WorkingDir: "/app/",
 	})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
@@ -121,6 +125,7 @@ func (t *javascript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 	}
 
 	return LaunchOpts{
+		TargetWD: "/app",
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
@@ -128,7 +133,6 @@ func (t *javascript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 				Target: "/app",
 			},
 		},
-		TargetWD:   "/app",
 		Entrypoint: strslice.StrSlice{"nodemon"},
 		Cmd:        cmd,
 	}, nil

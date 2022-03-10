@@ -44,7 +44,7 @@ type ContainerLogger interface {
 
 type ContainerEngine interface {
 	Type() string
-	Build(dockerfile, path, imageTag string, buildArgs map[string]string) error
+	Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error
 	ListImages(stackName, containerName string) ([]Image, error)
 	ImagePull(rawImage string) error
 	NetworkCreate(name string) error

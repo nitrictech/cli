@@ -44,6 +44,10 @@ func (t *typescript) ContainerName() string {
 	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
 }
 
+func (t *typescript) BuildIgnore() []string {
+	return javascriptIgnoreList
+}
+
 func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",

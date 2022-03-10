@@ -96,14 +96,14 @@ func tarContextDir(relDockerfile, contextDir string, extraExcludes []string) (io
 	})
 }
 
-func imageNameFromBuildContext(dockerfile, srcPath, imageTag string) (string, error) {
+func imageNameFromBuildContext(dockerfile, srcPath, imageTag string, excludes []string) (string, error) {
 	var buildContext io.ReadCloser
 	var err error
 	if strings.Contains(dockerfile, "nitric.dynamic.") {
 		// don't include the dynamic dockerfile as the timestamp on the file will cause it to have a different hash.
-		buildContext, err = tarContextDir("", srcPath, []string{dockerfile})
+		buildContext, err = tarContextDir("", srcPath, append(excludes, dockerfile))
 	} else {
-		buildContext, err = tarContextDir(dockerfile, srcPath, []string{})
+		buildContext, err = tarContextDir(dockerfile, srcPath, excludes)
 	}
 	if err != nil {
 		return "", err
@@ -123,16 +123,16 @@ func imageNameFromBuildContext(dockerfile, srcPath, imageTag string) (string, er
 	return strings.ToLower(imageName + ":" + hex.EncodeToString(hash.Sum(nil))), nil
 }
 
-func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string) error {
+func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), buildTimeout())
 	defer cancel()
 
-	imageTagWithHash, err := imageNameFromBuildContext(dockerfile, srcPath, imageTag)
+	imageTagWithHash, err := imageNameFromBuildContext(dockerfile, srcPath, imageTag, excludes)
 	if err != nil {
 		return err
 	}
 
-	buildContext, err := tarContextDir(dockerfile, srcPath, []string{})
+	buildContext, err := tarContextDir(dockerfile, srcPath, excludes)
 	if err != nil {
 		return err
 	}

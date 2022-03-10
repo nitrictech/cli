@@ -56,7 +56,7 @@ func Create(s *project.Project, t *stack.Config) error {
 		fh.Close()
 
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err = cr.Build(filepath.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs)
+		err = cr.Build(filepath.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs, rt.BuildIgnore())
 		if err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func Create(s *project.Project, t *stack.Config) error {
 
 	for _, c := range s.Containers {
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err := cr.Build(filepath.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs)
+		err := cr.Build(filepath.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs, []string{})
 		if err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func CreateBaseDev(s *project.Project) error {
 			return err
 		}
 
-		if err := ce.Build(filepath.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}); err != nil {
+		if err := ce.Build(filepath.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}, rt.BuildIgnore()); err != nil {
 			return err
 		}
 		imagesToBuild[lang] = rt.DevImageName()

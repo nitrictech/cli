@@ -41,6 +41,10 @@ func (t *golang) DevImageName() string {
 	return fmt.Sprintf("nitric-%s-dev", t.rte)
 }
 
+func (t *golang) BuildIgnore() []string {
+	return []string{}
+}
+
 func (t *golang) ContainerName() string {
 	// get the abs dir in case user provides "."
 	absH, err := filepath.Abs(t.handler)

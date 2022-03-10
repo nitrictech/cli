@@ -16,11 +16,11 @@ export LDFLAGS="-X $(VERSION_URI).Version=${BUILD_VERSION} \
 
 .PHONY: build
 build: generate
-	CGO_ENABLED=0 go build -ldflags $(LDFLAGS)  -o bin/nitric ./pkg/cmd/
+	CGO_ENABLED=0 go build -ldflags $(LDFLAGS)  -o bin/nitric ./main.go
 
 .PHONY: build-windows
 build-windows: generate
-	go build -ldflags $(LDFLAGS) -o bin/nitric.exe ./pkg/cmd/
+	go build -ldflags $(LDFLAGS) -o bin/nitric.exe ./main.go
 
 .PHONY: generate
 generate:

@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -155,13 +156,23 @@ var runCmd = &cobra.Command{
 			// area.Clear()
 
 			stackState.UpdateFromWorkerEvent(we)
-			area.Update(
-				stackState.ApiTable(9001),
-				"\n\n",
-				stackState.TopicTable(9001),
-				"\n\n",
-				stackState.SchedulesTable(9001),
-			)
+
+			tables := []string{}
+			table, rows := stackState.ApiTable(9001)
+			if rows > 0 {
+				tables = append(tables, table)
+			}
+
+			table, rows = stackState.TopicTable(9001)
+			if rows > 0 {
+				tables = append(tables, table)
+			}
+
+			table, rows = stackState.SchedulesTable(9001)
+			if rows > 0 {
+				tables = append(tables, table)
+			}
+			area.Update(strings.Join(tables, "\n\n"))
 		})
 
 		select {

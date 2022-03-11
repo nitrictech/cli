@@ -277,6 +277,10 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 			Value: args.SubscriptionID,
 		},
 		web.EnvironmentVarArgs{
+			Name:  pulumi.String("AZURE_RESOURCE_GROUP"),
+			Value: args.ResourceGroupName,
+		},
+		web.EnvironmentVarArgs{
 			Name:      pulumi.String("AZURE_CLIENT_ID"),
 			SecretRef: pulumi.String("client-id"),
 		},

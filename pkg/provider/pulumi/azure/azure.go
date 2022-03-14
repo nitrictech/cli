@@ -26,10 +26,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
-	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
@@ -37,6 +33,11 @@ import (
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
+	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type azureProvider struct {

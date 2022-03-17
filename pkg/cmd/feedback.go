@@ -40,7 +40,11 @@ var feedbackCmd = &cobra.Command{
 			Body  string
 		}{}
 
-		diag, _ := yaml.Marshal(&ghissue.Diag)
+		d, err := ghissue.Gather()
+		cobra.CheckErr(err)
+
+		diag, err := yaml.Marshal(d)
+		cobra.CheckErr(err)
 
 		qs := []*survey.Question{
 			{
@@ -73,7 +77,7 @@ var feedbackCmd = &cobra.Command{
 				},
 			},
 		}
-		err := survey.Ask(qs, &answers)
+		err = survey.Ask(qs, &answers)
 		cobra.CheckErr(err)
 
 		pterm.Info.Println("Please create a github issue by clicking on the link below")

@@ -81,6 +81,10 @@ func (p *podman) Type() string {
 	return "podman"
 }
 
+func (p *podman) Version() string {
+	return p.docker.Version()
+}
+
 func (p *podman) Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error {
 	return p.docker.Build(dockerfile, path, imageTag, buildArgs, excludes)
 }

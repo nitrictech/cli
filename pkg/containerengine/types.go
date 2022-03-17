@@ -54,6 +54,7 @@ type ContainerEngine interface {
 	RemoveByLabel(labels map[string]string) error
 	ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error)
 	Logger(stackPath string) ContainerLogger
+	Version() string
 }
 
 func Discover() (ContainerEngine, error) {

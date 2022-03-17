@@ -26,14 +26,19 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type Diagnostics struct {
-	OS         string `json:"os"`
-	Arch       string `json:"arch"`
-	GoVersion  string `json:"goVersion"`
-	CliVersion string `json:"cliVersion"`
+	OS                      string `json:"os"`
+	Arch                    string `json:"arch"`
+	GoVersion               string `json:"goVersion"`
+	CliVersion              string `json:"cliVersion"`
+	FabricVersion           string `json:"fabricVersion"`
+	ContainerRuntime        string `json:"containerRuntime"`
+	ContainerRuntimeVersion string `json:"containerRuntimeVersion"`
 }
 
 type GHIssue struct {
@@ -43,16 +48,28 @@ type GHIssue struct {
 	StackTrace  string      `json:"stacktrace"`
 }
 
-var Diag = Diagnostics{
-	OS:         runtime.GOOS,
-	Arch:       runtime.GOARCH,
-	GoVersion:  runtime.Version(),
-	CliVersion: utils.Version,
+var diag = Diagnostics{
+	OS:            runtime.GOOS,
+	Arch:          runtime.GOARCH,
+	GoVersion:     runtime.Version(),
+	CliVersion:    utils.Version,
+	FabricVersion: project.DefaultMembraneVersion,
+}
+
+func Gather() (*Diagnostics, error) {
+	ce, err := containerengine.Discover()
+	if err != nil {
+		return &diag, err
+	}
+	diag.ContainerRuntime = ce.Type()
+	diag.ContainerRuntimeVersion = ce.Version()
+	return &diag, nil
 }
 
 func BugLink(err interface{}) string {
+	d, _ := Gather()
 	issue := GHIssue{
-		Diagnostics: Diag,
+		Diagnostics: *d,
 		Error:       fmt.Sprint(err),
 		StackTrace:  string(debug.Stack()),
 		Command:     strings.Join(os.Args, " "),

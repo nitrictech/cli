@@ -38,6 +38,7 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/utils"
@@ -294,4 +295,10 @@ func (d *docker) Logger(stackPath string) ContainerLogger {
 	logPath, _ := utils.NewNitricLogFile(stackPath)
 	d.logger = newSyslog(logPath)
 	return d.logger
+}
+
+func (d *docker) Version() string {
+	sv, _ := d.cli.ServerVersion(context.Background())
+	b, _ := yaml.Marshal(sv)
+	return string(b)
 }

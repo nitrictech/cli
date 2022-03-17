@@ -67,10 +67,10 @@ var (
 	StorageAccountRT = ResouceType{Abbreviation: "st", MaxLen: 24}
 	// 	Lowercase letters, numbers, and hyphens.
 	// Start with lowercase letter or number. Can't use consecutive hyphens.
-	StorageContainerRT = ResouceType{Abbreviation: "cont", MaxLen: 63, AllowHyphen: true, UseName: true}
+	StorageContainerRT = ResouceType{MaxLen: 63, AllowHyphen: true, UseName: true}
 	// Lowercase letters, numbers, and hyphens.
 	// Can't start or end with hyphen. Can't use consecutive hyphens.
-	StorageQueueRT = ResouceType{Abbreviation: "qu", MaxLen: 63, AllowHyphen: true, UseName: true}
+	StorageQueueRT = ResouceType{MaxLen: 63, AllowHyphen: true, UseName: true}
 
 	//Alphanumerics and hyphens. Start with letter. End with letter or digit. Can't contain consecutive hyphens.
 	KeyVaultRT = ResouceType{Abbreviation: "kv", MaxLen: 14, AllowUpperCase: true}
@@ -99,6 +99,18 @@ func cleanPart(p string, rt ResouceType) string {
 	return r
 }
 
+func ignoreEmpty(strs []string) []string {
+	newStrs := []string{}
+
+	for _, s := range strs {
+		if s != "" {
+			newStrs = append(newStrs, s)
+		}
+	}
+
+	return newStrs
+}
+
 func resourceName(ctx *pulumi.Context, name string, rt ResouceType) string {
 	var parts []string
 
@@ -121,6 +133,8 @@ func resourceName(ctx *pulumi.Context, name string, rt ResouceType) string {
 			rt.Abbreviation,
 		}
 	}
+
+	parts = ignoreEmpty(parts)
 
 	// first char must be a letter
 	parts[0] = strings.TrimLeft(parts[0], "0123456789-")

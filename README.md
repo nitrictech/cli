@@ -43,6 +43,7 @@ nitric new --help
 
 Documentation for all available commands:
 
+- nitric feedback        : Provide feedback on your experience with nitric
 - nitric new [projectName] [templateName] [handlerGlob] : Create a new project
 - nitric run             : Run your project locally for development and testing
 - nitric stack           : Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)

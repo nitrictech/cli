@@ -476,6 +476,8 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 		fun.ComputeUnit.Triggers = project.Triggers{
 			Topics: topicTriggers,
 		}
+		// set the functions worker count
+		fun.WorkerCount = f.WorkerCount()
 		s.Functions[f.name] = fun
 	}
 

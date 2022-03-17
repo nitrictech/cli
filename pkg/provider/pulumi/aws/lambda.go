@@ -132,6 +132,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		Environment: awslambda.FunctionEnvironmentArgs{
 			Variables: pulumi.StringMap{
 				"NITRIC_STACK": pulumi.String(args.StackName),
+				"MIN_WORKERS":  pulumi.String(fmt.Sprint(args.Compute.Workers())),
 			},
 		},
 	}, opts...)

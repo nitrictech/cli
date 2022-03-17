@@ -35,3 +35,8 @@ func (c *Container) ImageTagName(s *Project, provider string) string {
 	}
 	return fmt.Sprintf("%s-%s%s", s.Name, c.Name, providerString)
 }
+
+func (c *Container) Workers() int {
+	// Default to expecting a minimum of 1 worker for containers
+	return 1
+}

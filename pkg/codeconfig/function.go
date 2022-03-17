@@ -134,6 +134,18 @@ func (a *FunctionDependencies) AddSubscriptionHandler(sw *pb.SubscriptionWorker)
 	return nil
 }
 
+func (a *FunctionDependencies) WorkerCount() int {
+	workerCount := 0
+
+	for _, v := range a.apis {
+		workerCount = workerCount + len(v.workers)
+	}
+
+	workerCount = workerCount + len(a.subscriptions) + len(a.schedules)
+
+	return workerCount
+}
+
 // AddScheduleHandler - registers a handler in the function that runs on a schedule
 func (a *FunctionDependencies) AddScheduleHandler(sw *pb.ScheduleWorker) error {
 	a.lock.Lock()

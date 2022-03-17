@@ -221,7 +221,7 @@ ENTRYPOINT ["node"]`,
 		{
 			handler: "pkg/list/main.go",
 			wantFwriter: `FROM golang:alpine
-RUN go get github.com/asalkeld/CompileDaemon@d4b10de`,
+RUN go install github.com/asalkeld/CompileDaemon@d4b10de`,
 		},
 	}
 	for _, tt := range tests {

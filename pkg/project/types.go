@@ -54,6 +54,9 @@ type Function struct {
 	Handler string `yaml:"handler"`
 
 	ComputeUnit `yaml:",inline"`
+
+	// The number of workers this function contains
+	WorkerCount int
 }
 
 type Container struct {
@@ -66,6 +69,7 @@ type Container struct {
 type Compute interface {
 	ImageTagName(s *Project, provider string) string
 	Unit() *ComputeUnit
+	Workers() int
 }
 
 // A subset of a NitricEvent

@@ -17,6 +17,8 @@
 package azure
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	web "github.com/pulumi/pulumi-azure-native/sdk/go/azure/web/v20210301"
 	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/authorization"
@@ -235,6 +237,10 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 	}
 
 	env := web.EnvironmentVarArray{
+		web.EnvironmentVarArgs{
+			Name:  pulumi.String("MIN_WORKERS"),
+			Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
+		},
 		web.EnvironmentVarArgs{
 			Name:  pulumi.String("AZURE_SUBSCRIPTION_ID"),
 			Value: args.SubscriptionID,

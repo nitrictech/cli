@@ -56,3 +56,7 @@ func (f *Function) ImageTagName(s *Project, provider string) string {
 	}
 	return fmt.Sprintf("%s-%s%s", s.Name, f.Name, providerString)
 }
+
+func (c *Function) Workers() int {
+	return c.WorkerCount
+}

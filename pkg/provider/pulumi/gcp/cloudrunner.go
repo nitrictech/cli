@@ -17,6 +17,8 @@
 package gcp
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/projects"
@@ -104,6 +106,12 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				ServiceAccountName: sa.Email,
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
+						Envs: cloudrun.ServiceTemplateSpecContainerEnvArray{
+							cloudrun.ServiceTemplateSpecContainerEnvArgs{
+								Name:  pulumi.String("MIN_WORKERS"),
+								Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
+							},
+						},
 						Image: args.Image.DockerImage.ImageName, // TODO check
 						Ports: cloudrun.ServiceTemplateSpecContainerPortArray{
 							cloudrun.ServiceTemplateSpecContainerPortArgs{

@@ -27,9 +27,10 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/core"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/eventgrid"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/keyvault"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/keyvault"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
@@ -179,15 +180,16 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
-	current, err := core.LookupSubscription(ctx, nil, nil)
+	clientConfig, err := authorization.GetClientConfig(ctx)
 	if err != nil {
 		return err
 	}
 
-	rg, err := core.NewResourceGroup(ctx, resourceName(ctx, "", ResourceGroupRT), &core.ResourceGroupArgs{
+	rg, err := resources.NewResourceGroup(ctx, resourceName(ctx, "", ResourceGroupRT), &resources.ResourceGroupArgs{
 		Location: pulumi.String(a.sc.Region),
 		Tags:     common.Tags(ctx, ctx.Stack()),
 	})
+
 	if err != nil {
 		return errors.WithMessage(err, "resource group create")
 	}
@@ -195,21 +197,28 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	contAppsArgs := &ContainerAppsArgs{
 		ResourceGroupName: rg.Name,
 		Location:          rg.Location,
-		SubscriptionID:    pulumi.String(current.Id),
+		SubscriptionID:    pulumi.String(clientConfig.SubscriptionId),
 		Topics:            map[string]*eventgrid.Topic{},
 	}
 
 	// Create a stack level keyvault if secrets are enabled
 	// At the moment secrets have no config level setting
 	kvName := resourceName(ctx, "", KeyVaultRT)
-	kv, err := keyvault.NewKeyVault(ctx, kvName, &keyvault.KeyVaultArgs{
-		Location:                rg.Location,
-		ResourceGroupName:       rg.Name,
-		SkuName:                 pulumi.String("standard"),
-		TenantId:                pulumi.String(current.TenantId),
-		EnableRbacAuthorization: pulumi.Bool(true),
-		Tags:                    common.Tags(ctx, kvName),
+	kv, err := keyvault.NewVault(ctx, kvName, &keyvault.VaultArgs{
+		Location:          rg.Location,
+		ResourceGroupName: rg.Name,
+		Properties: &keyvault.VaultPropertiesArgs{
+			EnableSoftDelete:        pulumi.Bool(false),
+			EnableRbacAuthorization: pulumi.Bool(true),
+			Sku: &keyvault.SkuArgs{
+				Family: pulumi.String("A"),
+				Name:   keyvault.SkuNameStandard,
+			},
+			TenantId: pulumi.String(clientConfig.TenantId),
+		},
+		Tags: common.Tags(ctx, kvName),
 	})
+
 	if err != nil {
 		return err
 	}
@@ -220,8 +229,8 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "storage create")
 		}
-		contAppsArgs.StorageAccountBlobEndpoint = sr.Account.PrimaryBlobEndpoint
-		contAppsArgs.StorageAccountQueueEndpoint = sr.Account.PrimaryQueueEndpoint
+		contAppsArgs.StorageAccountBlobEndpoint = sr.Account.PrimaryEndpoints.Blob()
+		contAppsArgs.StorageAccountQueueEndpoint = sr.Account.PrimaryEndpoints.Queue()
 	}
 
 	for k := range a.proj.Topics {
@@ -237,13 +246,13 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 
 	if len(a.proj.Collections) > 0 {
 		mc, err := a.newMongoCollections(ctx, "mongodb", &MongoCollectionsArgs{
-			ResourceGroupName: rg.Name,
+			ResourceGroup: rg,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "mongodb collections")
 		}
 		contAppsArgs.MongoDatabaseName = mc.MongoDB.Name
-		contAppsArgs.MongoDatabaseConnectionString = mc.Account.ConnectionStrings.Index(pulumi.Int(0))
+		contAppsArgs.MongoDatabaseConnectionString = mc.ConnectionString
 	}
 
 	var apps *ContainerApps

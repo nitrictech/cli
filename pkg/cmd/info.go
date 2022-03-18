@@ -14,36 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package target
+package cmd
 
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/target"
 )
 
-var targetCmd = &cobra.Command{
-	Use:   "target",
-	Short: "work with target objects",
-	Long: `Choose an action to perform on a target, e.g.
-	nitric target list
-`,
-}
-
-var targetListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List configured targets",
-	Long:  `Lists configured taregts.`,
+var infoCmd = &cobra.Command{
+	Use:   "info",
+	Short: "Gather information about Nitric and the environoment",
+	Long:  `Gather information about Nitric and the environoment.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		targets, err := target.AllFromConfig()
+		d, err := ghissue.Gather()
 		cobra.CheckErr(err)
-		output.Print(targets)
+		output.Print(d)
 	},
-	Args: cobra.MaximumNArgs(0),
-}
-
-func RootCommand() *cobra.Command {
-	targetCmd.AddCommand(targetListCmd)
-	return targetCmd
 }

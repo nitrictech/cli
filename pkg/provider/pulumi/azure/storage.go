@@ -18,7 +18,7 @@ package azure
 
 import (
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/storage"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
@@ -32,16 +32,16 @@ type Storage struct {
 	pulumi.ResourceState
 
 	Name       string
-	Account    *storage.Account
+	Account    *storage.StorageAccount
 	Queues     map[string]*storage.Queue
-	Containers map[string]*storage.Container
+	Containers map[string]*storage.BlobContainer
 }
 
 func (a *azureProvider) newStorageResources(ctx *pulumi.Context, name string, args *StorageArgs, opts ...pulumi.ResourceOption) (*Storage, error) {
 	res := &Storage{
 		Name:       name,
 		Queues:     map[string]*storage.Queue{},
-		Containers: map[string]*storage.Container{},
+		Containers: map[string]*storage.BlobContainer{},
 	}
 	err := ctx.RegisterComponentResource("nitric:storage:AzureStorage", name, res, opts...)
 	if err != nil {
@@ -49,30 +49,33 @@ func (a *azureProvider) newStorageResources(ctx *pulumi.Context, name string, ar
 	}
 
 	accName := resourceName(ctx, name, StorageAccountRT)
-	res.Account, err = storage.NewAccount(ctx, accName, &storage.AccountArgs{
-		AccessTier:             pulumi.String("Hot"),
-		ResourceGroupName:      args.ResourceGroupName,
-		AccountKind:            pulumi.String("StorageV2"),
-		AccountTier:            pulumi.String("Standard"),
-		AccountReplicationType: pulumi.String("LRS"),
-		Tags:                   common.Tags(ctx, accName),
+	res.Account, err = storage.NewStorageAccount(ctx, accName, &storage.StorageAccountArgs{
+		AccessTier:        storage.AccessTierHot,
+		ResourceGroupName: args.ResourceGroupName,
+		Kind:              pulumi.String("StorageV2"),
+		Sku: storage.SkuArgs{
+			Name: pulumi.String(storage.SkuName_Standard_LRS),
+		},
+		Tags: common.Tags(ctx, accName),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, errors.WithMessage(err, "account create")
 	}
 
-	for bName := range a.s.Buckets {
-		res.Containers[bName], err = storage.NewContainer(ctx, resourceName(ctx, bName, StorageContainerRT), &storage.ContainerArgs{
-			StorageAccountName: res.Account.Name,
+	for bName := range a.proj.Buckets {
+		res.Containers[bName], err = storage.NewBlobContainer(ctx, resourceName(ctx, bName, StorageContainerRT), &storage.BlobContainerArgs{
+			ResourceGroupName: args.ResourceGroupName,
+			AccountName:       res.Account.Name,
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, errors.WithMessage(err, "container create")
 		}
 	}
 
-	for qName := range a.s.Queues {
+	for qName := range a.proj.Queues {
 		res.Queues[qName], err = storage.NewQueue(ctx, resourceName(ctx, qName, StorageQueueRT), &storage.QueueArgs{
-			StorageAccountName: res.Account.Name,
+			ResourceGroupName: args.ResourceGroupName,
+			AccountName:       res.Account.Name,
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, errors.WithMessage(err, "queue create")

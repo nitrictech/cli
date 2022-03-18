@@ -41,6 +41,10 @@ func (t *golang) DevImageName() string {
 	return fmt.Sprintf("nitric-%s-dev", t.rte)
 }
 
+func (t *golang) BuildIgnore() []string {
+	return []string{}
+}
+
 func (t *golang) ContainerName() string {
 	// get the abs dir in case user provides "."
 	absH, err := filepath.Abs(t.handler)
@@ -113,7 +117,7 @@ func (t *golang) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	con.Run(dockerfile.RunOptions{Command: []string{"go", "get", "github.com/asalkeld/CompileDaemon@d4b10de"}})
+	con.Run(dockerfile.RunOptions{Command: []string{"go", "install", "github.com/asalkeld/CompileDaemon@d4b10de"}})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
 	return err

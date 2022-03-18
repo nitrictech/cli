@@ -16,6 +16,8 @@
 
 package main
 
+import "github.com/nitrictech/cli/pkg/cmd"
+
 func main() {
-	Execute()
+	cmd.Execute()
 }

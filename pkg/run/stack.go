@@ -92,7 +92,7 @@ func (r *RunStackState) UpdateFromWorkerEvent(evt WorkerEvent) {
 	}
 }
 
-func (r *RunStackState) ApiTable(port int) string {
+func (r *RunStackState) ApiTable(port int) (string, int) {
 	tableData := pterm.TableData{{"Api", "Endpoint"}}
 
 	for k := range r.apis {
@@ -102,11 +102,10 @@ func (r *RunStackState) ApiTable(port int) string {
 	}
 
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str
+	return str, len(r.apis)
 }
 
-func (r *RunStackState) TopicTable(port int) string {
+func (r *RunStackState) TopicTable(port int) (string, int) {
 	tableData := pterm.TableData{{"Topic", "Endpoint"}}
 
 	for k := range r.subs {
@@ -116,11 +115,10 @@ func (r *RunStackState) TopicTable(port int) string {
 	}
 
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str
+	return str, len(r.subs)
 }
 
-func (r *RunStackState) SchedulesTable(port int) string {
+func (r *RunStackState) SchedulesTable(port int) (string, int) {
 	tableData := pterm.TableData{{"Schedule", "Endpoint"}}
 
 	for k := range r.schedules {
@@ -131,8 +129,7 @@ func (r *RunStackState) SchedulesTable(port int) string {
 	}
 
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str
+	return str, len(r.schedules)
 }
 
 func NewStackState() *RunStackState {

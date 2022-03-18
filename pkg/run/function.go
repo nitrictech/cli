@@ -18,21 +18,23 @@ package run
 import (
 	"fmt"
 	goruntime "runtime"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
-	"github.com/nitrictech/cli/pkg/stack"
 )
 
 type Function struct {
-	handler string
-	runCtx  string
-	rt      runtime.Runtime
-	ce      containerengine.ContainerEngine
+	projectName string
+	handler     string
+	runCtx      string
+	rt          runtime.Runtime
+	ce          containerengine.ContainerEngine
 	// Container id populated after a call to Start
 	cid string
 }
@@ -74,7 +76,7 @@ func (f *Function) Start() error {
 
 	pterm.Debug.Print(containerengine.Cli(cc, hc))
 
-	cID, err := f.ce.ContainerCreate(cc, hc, nil, f.Name())
+	cID, err := f.ce.ContainerCreate(cc, hc, nil, strings.Join([]string{f.projectName, "run", f.Name()}, "-"))
 	if err != nil {
 		return err
 	}
@@ -90,6 +92,7 @@ func (f *Function) Stop() error {
 }
 
 type FunctionOpts struct {
+	ProjectName     string
 	Handler         string
 	RunCtx          string
 	ContainerEngine containerengine.ContainerEngine
@@ -102,30 +105,32 @@ func newFunction(opts FunctionOpts) (*Function, error) {
 	}
 
 	return &Function{
-		rt:      rt,
-		handler: opts.Handler,
-		runCtx:  opts.RunCtx,
-		ce:      opts.ContainerEngine,
+		rt:          rt,
+		projectName: opts.ProjectName,
+		handler:     opts.Handler,
+		runCtx:      opts.RunCtx,
+		ce:          opts.ContainerEngine,
 	}, nil
 }
 
-func FunctionsFromHandlers(s *stack.Stack) ([]*Function, error) {
-	funcs := make([]*Function, 0, len(s.Functions))
+func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
+	funcs := make([]*Function, 0, len(p.Functions))
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, f := range s.Functions {
-		relativeHandlerPath, err := f.RelativeHandlerPath(s)
+	for _, f := range p.Functions {
+		relativeHandlerPath, err := f.RelativeHandlerPath(p)
 		if err != nil {
 			return nil, err
 		}
 
 		if f, err := newFunction(FunctionOpts{
-			RunCtx:          s.Dir,
+			RunCtx:          p.Dir,
 			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,
+			ProjectName:     p.Name,
 		}); err != nil {
 			return nil, err
 		} else {

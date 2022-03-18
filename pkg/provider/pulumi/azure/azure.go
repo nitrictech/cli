@@ -24,23 +24,25 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/core"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/eventgrid"
-	"github.com/pulumi/pulumi-azure/sdk/v4/go/azure/keyvault"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/keyvault"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type azureProvider struct {
-	s          *stack.Stack
-	t          *target.Target
+	proj       *project.Project
+	sc         *stack.Config
 	tmpDir     string
 	org        string
 	adminEmail string
@@ -55,8 +57,8 @@ var (
 	azureNativePluginVersion string
 )
 
-func New(s *stack.Stack, t *target.Target) common.PulumiProvider {
-	return &azureProvider{s: s, t: t}
+func New(s *project.Project, t *stack.Config) common.PulumiProvider {
+	return &azureProvider{proj: s, sc: t}
 }
 
 func (a *azureProvider) Plugins() []common.Plugin {
@@ -76,6 +78,51 @@ func (a *azureProvider) Plugins() []common.Plugin {
 	}
 }
 
+func (a *azureProvider) Ask() (*stack.Config, error) {
+	answers := struct {
+		Region     string
+		Org        string
+		AdminEmail string
+	}{}
+	qs := []*survey.Question{
+		{
+			Name: "region",
+			Prompt: &survey.Select{
+				Message: "select the region",
+				Options: a.SupportedRegions(),
+			},
+		},
+		{
+			Name: "org",
+			Prompt: &survey.Input{
+				Message: "Provide the organisation to associate with the API",
+			},
+		},
+		{
+			Name: "adminEmail",
+			Prompt: &survey.Input{
+				Message: "Provide the adminEmail to associate with the API",
+			},
+		},
+	}
+	sc := &stack.Config{
+		Name:     a.sc.Name,
+		Provider: a.sc.Provider,
+		Extra:    map[string]interface{}{},
+	}
+
+	err := survey.Ask(qs, &answers)
+	if err != nil {
+		return nil, err
+	}
+
+	sc.Region = answers.Region
+	sc.Extra["adminemail"] = answers.AdminEmail
+	sc.Extra["org"] = answers.Org
+
+	return sc, nil
+}
+
 func (a *azureProvider) SupportedRegions() []string {
 	return []string{
 		"eastus2",
@@ -85,34 +132,34 @@ func (a *azureProvider) SupportedRegions() []string {
 func (a *azureProvider) Validate() error {
 	errList := utils.NewErrorList()
 
-	if a.t.Region == "" {
-		errList.Add(fmt.Errorf("target %s requires \"region\"", a.t.Provider))
-	} else if !sliceutil.Contains(a.SupportedRegions(), a.t.Region) {
-		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.t.Region, a.t.Provider)))
+	if a.sc.Region == "" {
+		errList.Add(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
+	} else if !sliceutil.Contains(a.SupportedRegions(), a.sc.Region) {
+		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
 	}
 
-	if _, ok := a.t.Extra["org"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"org\"", a.t.Provider))
+	if _, ok := a.sc.Extra["org"]; !ok {
+		errList.Add(fmt.Errorf("target %s requires \"org\"", a.sc.Provider))
 	} else {
-		a.org = a.t.Extra["org"].(string)
+		a.org = a.sc.Extra["org"].(string)
 	}
 
-	if _, ok := a.t.Extra["adminemail"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"adminemail\"", a.t.Provider))
+	if _, ok := a.sc.Extra["adminemail"]; !ok {
+		errList.Add(fmt.Errorf("target %s requires \"adminemail\"", a.sc.Provider))
 	} else {
-		a.adminEmail = a.t.Extra["adminemail"].(string)
+		a.adminEmail = a.sc.Extra["adminemail"].(string)
 	}
 
 	return errList.Aggregate()
 }
 
 func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	if a.t.Region != "" {
-		err := autoStack.SetConfig(ctx, "azure:location", auto.ConfigValue{Value: a.t.Region})
+	if a.sc.Region != "" {
+		err := autoStack.SetConfig(ctx, "azure:location", auto.ConfigValue{Value: a.sc.Region})
 		if err != nil {
 			return err
 		}
-		err = autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.t.Region})
+		err = autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.sc.Region})
 		if err != nil {
 			return err
 		}
@@ -122,7 +169,7 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 	if err != nil {
 		return err
 	}
-	a.t.Region = region.Value
+	a.sc.Region = region.Value
 	return nil
 }
 
@@ -133,15 +180,16 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
-	current, err := core.LookupSubscription(ctx, nil, nil)
+	clientConfig, err := authorization.GetClientConfig(ctx)
 	if err != nil {
 		return err
 	}
 
-	rg, err := core.NewResourceGroup(ctx, resourceName(ctx, "", ResourceGroupRT), &core.ResourceGroupArgs{
-		Location: pulumi.String(a.t.Region),
+	rg, err := resources.NewResourceGroup(ctx, resourceName(ctx, "", ResourceGroupRT), &resources.ResourceGroupArgs{
+		Location: pulumi.String(a.sc.Region),
 		Tags:     common.Tags(ctx, ctx.Stack()),
 	})
+
 	if err != nil {
 		return errors.WithMessage(err, "resource group create")
 	}
@@ -149,36 +197,43 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	contAppsArgs := &ContainerAppsArgs{
 		ResourceGroupName: rg.Name,
 		Location:          rg.Location,
-		SubscriptionID:    pulumi.String(current.Id),
+		SubscriptionID:    pulumi.String(clientConfig.SubscriptionId),
 		Topics:            map[string]*eventgrid.Topic{},
 	}
 
 	// Create a stack level keyvault if secrets are enabled
 	// At the moment secrets have no config level setting
 	kvName := resourceName(ctx, "", KeyVaultRT)
-	kv, err := keyvault.NewKeyVault(ctx, kvName, &keyvault.KeyVaultArgs{
-		Location:                rg.Location,
-		ResourceGroupName:       rg.Name,
-		SkuName:                 pulumi.String("standard"),
-		TenantId:                pulumi.String(current.TenantId),
-		EnableRbacAuthorization: pulumi.Bool(true),
-		Tags:                    common.Tags(ctx, kvName),
+	kv, err := keyvault.NewVault(ctx, kvName, &keyvault.VaultArgs{
+		Location:          rg.Location,
+		ResourceGroupName: rg.Name,
+		Properties: &keyvault.VaultPropertiesArgs{
+			EnableSoftDelete:        pulumi.Bool(false),
+			EnableRbacAuthorization: pulumi.Bool(true),
+			Sku: &keyvault.SkuArgs{
+				Family: pulumi.String("A"),
+				Name:   keyvault.SkuNameStandard,
+			},
+			TenantId: pulumi.String(clientConfig.TenantId),
+		},
+		Tags: common.Tags(ctx, kvName),
 	})
+
 	if err != nil {
 		return err
 	}
 	contAppsArgs.KVaultName = kv.Name
 
-	if len(a.s.Buckets) > 0 || len(a.s.Queues) > 0 {
+	if len(a.proj.Buckets) > 0 || len(a.proj.Queues) > 0 {
 		sr, err := a.newStorageResources(ctx, "storage", &StorageArgs{ResourceGroupName: rg.Name})
 		if err != nil {
 			return errors.WithMessage(err, "storage create")
 		}
-		contAppsArgs.StorageAccountBlobEndpoint = sr.Account.PrimaryBlobEndpoint
-		contAppsArgs.StorageAccountQueueEndpoint = sr.Account.PrimaryQueueEndpoint
+		contAppsArgs.StorageAccountBlobEndpoint = sr.Account.PrimaryEndpoints.Blob()
+		contAppsArgs.StorageAccountQueueEndpoint = sr.Account.PrimaryEndpoints.Queue()
 	}
 
-	for k := range a.s.Topics {
+	for k := range a.proj.Topics {
 		contAppsArgs.Topics[k], err = eventgrid.NewTopic(ctx, resourceName(ctx, k, EventGridRT), &eventgrid.TopicArgs{
 			ResourceGroupName: rg.Name,
 			Location:          rg.Location,
@@ -189,19 +244,19 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	if len(a.s.Collections) > 0 {
+	if len(a.proj.Collections) > 0 {
 		mc, err := a.newMongoCollections(ctx, "mongodb", &MongoCollectionsArgs{
-			ResourceGroupName: rg.Name,
+			ResourceGroup: rg,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "mongodb collections")
 		}
 		contAppsArgs.MongoDatabaseName = mc.MongoDB.Name
-		contAppsArgs.MongoDatabaseConnectionString = mc.Account.ConnectionStrings.Index(pulumi.Int(0))
+		contAppsArgs.MongoDatabaseConnectionString = mc.ConnectionString
 	}
 
 	var apps *ContainerApps
-	if len(a.s.Functions) > 0 || len(a.s.Containers) > 0 {
+	if len(a.proj.Functions) > 0 || len(a.proj.Containers) > 0 {
 		apps, err = a.newContainerApps(ctx, "containerApps", contAppsArgs)
 		if err != nil {
 			return errors.WithMessage(err, "containerApps")
@@ -219,11 +274,11 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	// TODO: Add schedule support
 	// NOTE: Currently CRONTAB support is required, we either need to revisit the design of
 	// our scheduled expressions or implement a workaround or request a feature.
-	if len(a.s.Schedules) > 0 {
+	if len(a.proj.Schedules) > 0 {
 		_ = ctx.Log.Warn("Schedules are not currently supported for Azure deployments", &pulumi.LogArgs{})
 	}
 
-	for k, v := range a.s.ApiDocs {
+	for k, v := range a.proj.ApiDocs {
 		_, err = newAzureApiManagement(ctx, k, &AzureApiManagementArgs{
 			ResourceGroupName: rg.Name,
 			OrgName:           pulumi.String(a.org),

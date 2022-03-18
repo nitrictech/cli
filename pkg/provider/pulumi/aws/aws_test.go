@@ -31,9 +31,9 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
@@ -59,24 +59,24 @@ func (mocks) Call(args pulumi.MockCallArgs) (resource.PropertyMap, error) {
 }
 
 func TestAWS(t *testing.T) {
-	s := stack.New("atest", ".")
-	s.Topics = map[string]stack.Topic{"sales": {}}
-	s.Buckets = map[string]stack.Bucket{"money": {}}
-	s.Queues = map[string]stack.Queue{"checkout": {}}
-	s.Collections = map[string]stack.Collection{"customer": {}}
-	s.Schedules = map[string]stack.Schedule{
+	s := project.New(&project.Config{Name: "atest", Dir: "."})
+	s.Topics = map[string]project.Topic{"sales": {}}
+	s.Buckets = map[string]project.Bucket{"money": {}}
+	s.Queues = map[string]project.Queue{"checkout": {}}
+	s.Collections = map[string]project.Collection{"customer": {}}
+	s.Schedules = map[string]project.Schedule{
 		"daily": {
 			Expression: "@daily",
-			Target:     stack.ScheduleTarget{Type: "topic", Name: "sales"},
-			Event:      stack.ScheduleEvent{PayloadType: "?"},
+			Target:     project.ScheduleTarget{Type: "topic", Name: "sales"},
+			Event:      project.ScheduleEvent{PayloadType: "?"},
 		},
 	}
-	s.Functions = map[string]stack.Function{
+	s.Functions = map[string]project.Function{
 		"runnner": {
 			Handler: "functions/create/main.go",
-			ComputeUnit: stack.ComputeUnit{
+			ComputeUnit: project.ComputeUnit{
 				Name:     "runner",
-				Triggers: stack.Triggers{Topics: []string{"sales"}},
+				Triggers: project.Triggers{Topics: []string{"sales"}},
 			},
 		},
 	}
@@ -104,9 +104,9 @@ func TestAWS(t *testing.T) {
 	stackName := s.Name + "-deploy"
 
 	a := &awsProvider{
-		s: s,
-		t: &target.Target{
-			Provider: target.Aws,
+		proj: s,
+		sc: &stack.Config{
+			Provider: stack.Aws,
 			Region:   "mock",
 		},
 		topics:      map[string]*sns.Topic{},
@@ -249,16 +249,16 @@ func TestAWS(t *testing.T) {
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		t       *target.Target
+		t       *stack.Config
 		wantErr bool
 	}{
 		{
 			name: "valid",
-			t:    &target.Target{Provider: target.Aws, Region: "us-west-1"},
+			t:    &stack.Config{Provider: stack.Aws, Region: "us-west-1"},
 		},
 		{
 			name:    "invalid",
-			t:       &target.Target{Provider: target.Aws, Region: "pole-north-right-next-to-santa"},
+			t:       &stack.Config{Provider: stack.Aws, Region: "pole-north-right-next-to-santa"},
 			wantErr: true,
 		},
 	}

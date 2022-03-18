@@ -31,6 +31,7 @@ import (
 type Runtime interface {
 	DevImageName() string
 	ContainerName() string
+	BuildIgnore() []string
 	FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error
 	FunctionDockerfileForCodeAsConfig(w io.Writer) error // FunctionDockerfileForCodeAsConfig generates a base image for code-as-config
 	LaunchOptsForFunction(stackDir string) (LaunchOpts, error)

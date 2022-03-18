@@ -26,14 +26,15 @@ import (
 	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
 )
 
 type LambdaArgs struct {
+	StackName   string
 	Topics      map[string]*sns.Topic
 	DockerImage *docker.Image
-	Compute     stack.Compute
+	Compute     project.Compute
 }
 
 type Lambda struct {
@@ -99,6 +100,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 					"sqs:ListQueues",
 					"dynamodb:ListTables",
 					"s3:ListAllMyBuckets",
+					"tag:GetResources",
 				},
 				"Effect":   "Allow",
 				"Resource": "*",
@@ -127,6 +129,12 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		PackageType: pulumi.String("Image"),
 		Role:        res.Role.Arn,
 		Tags:        common.Tags(ctx, name),
+		Environment: awslambda.FunctionEnvironmentArgs{
+			Variables: pulumi.StringMap{
+				"NITRIC_STACK": pulumi.String(args.StackName),
+				"MIN_WORKERS":  pulumi.String(fmt.Sprint(args.Compute.Workers())),
+			},
+		},
 	}, opts...)
 	if err != nil {
 		return nil, err

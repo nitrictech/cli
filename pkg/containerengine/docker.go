@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -37,8 +38,9 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
+	"gopkg.in/yaml.v2"
 
+	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
@@ -95,14 +97,14 @@ func tarContextDir(relDockerfile, contextDir string, extraExcludes []string) (io
 	})
 }
 
-func imageNameFromBuildContext(dockerfile, srcPath, imageTag string) (string, error) {
+func imageNameFromBuildContext(dockerfile, srcPath, imageTag string, excludes []string) (string, error) {
 	var buildContext io.ReadCloser
 	var err error
 	if strings.Contains(dockerfile, "nitric.dynamic.") {
 		// don't include the dynamic dockerfile as the timestamp on the file will cause it to have a different hash.
-		buildContext, err = tarContextDir("", srcPath, []string{dockerfile})
+		buildContext, err = tarContextDir("", srcPath, append(excludes, dockerfile))
 	} else {
-		buildContext, err = tarContextDir(dockerfile, srcPath, []string{})
+		buildContext, err = tarContextDir(dockerfile, srcPath, excludes)
 	}
 	if err != nil {
 		return "", err
@@ -119,19 +121,19 @@ func imageNameFromBuildContext(dockerfile, srcPath, imageTag string) (string, er
 		imageName = strings.Split(imageTag, ":")[0]
 	}
 
-	return imageName + ":" + hex.EncodeToString(hash.Sum(nil)), nil
+	return strings.ToLower(imageName + ":" + hex.EncodeToString(hash.Sum(nil))), nil
 }
 
-func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string) error {
+func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), buildTimeout())
 	defer cancel()
 
-	imageTagWithHash, err := imageNameFromBuildContext(dockerfile, srcPath, imageTag)
+	imageTagWithHash, err := imageNameFromBuildContext(dockerfile, srcPath, imageTag, excludes)
 	if err != nil {
 		return err
 	}
 
-	buildContext, err := tarContextDir(dockerfile, srcPath, []string{})
+	buildContext, err := tarContextDir(dockerfile, srcPath, excludes)
 	if err != nil {
 		return err
 	}
@@ -147,7 +149,7 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	opts := types.ImageBuildOptions{
 		SuppressOutput: false,
 		Dockerfile:     dockerfile,
-		Tags:           []string{imageTag, imageTagWithHash},
+		Tags:           []string{strings.ToLower(imageTag), imageTagWithHash},
 		Remove:         true,
 		ForceRemove:    true,
 		PullParent:     true,
@@ -186,8 +188,14 @@ func print(rd io.Reader) error {
 		if err != nil {
 			return err
 		}
-		if len(line.Stream) > 0 {
-			pterm.Debug.Print(line.Stream)
+		if len(strings.TrimSpace(line.Stream)) > 0 {
+			if strings.Contains(line.Stream, "--->") {
+				if output.VerboseLevel >= 3 {
+					log.Default().Print(line.Stream)
+				}
+			} else {
+				log.Default().Print(line.Stream)
+			}
 		}
 	}
 
@@ -234,16 +242,6 @@ func (d *docker) ImagePull(rawImage string) error {
 	return print(resp)
 }
 
-func (d *docker) NetworkCreate(name string) error {
-	_, err := d.cli.NetworkInspect(context.Background(), name, types.NetworkInspectOptions{})
-	if err == nil {
-		// it already exists, no need to create.
-		return nil
-	}
-	_, err = d.cli.NetworkCreate(context.Background(), name, types.NetworkCreate{})
-	return err
-}
-
 func (d *docker) ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error) {
 	resp, err := d.cli.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, nil, name)
 	if err != nil {
@@ -258,22 +256,6 @@ func (d *docker) Start(nameOrID string) error {
 
 func (d *docker) Stop(nameOrID string, timeout *time.Duration) error {
 	return d.cli.ContainerStop(context.Background(), nameOrID, timeout)
-}
-
-func (d *docker) CopyFromArchive(nameOrID string, path string, reader io.Reader) error {
-	return d.cli.CopyToContainer(context.Background(), nameOrID, path, reader, types.CopyToContainerOptions{})
-}
-
-func (d *docker) ContainersListByLabel(match map[string]string) ([]types.Container, error) {
-	opts := types.ContainerListOptions{
-		All:     true,
-		Filters: filters.NewArgs(),
-	}
-	for k, v := range match {
-		opts.Filters.Add("label", fmt.Sprintf("%s=%s", k, v))
-	}
-
-	return d.cli.ContainerList(context.Background(), opts)
 }
 
 func (d *docker) RemoveByLabel(labels map[string]string) error {
@@ -306,35 +288,6 @@ func (d *docker) ContainerLogs(containerID string, opts types.ContainerLogsOptio
 	return d.cli.ContainerLogs(context.Background(), containerID, opts)
 }
 
-func (d *docker) ContainerExec(containerName string, cmd []string, workingDir string) error {
-	ctx := context.Background()
-	rst, err := d.cli.ContainerExecCreate(ctx, containerName, types.ExecConfig{
-		WorkingDir: workingDir,
-		Cmd:        cmd,
-	})
-	if err != nil {
-		return err
-	}
-	err = d.cli.ContainerExecStart(ctx, rst.ID, types.ExecStartCheck{})
-	if err != nil {
-		return err
-	}
-
-	for {
-		res, err := d.cli.ContainerExecInspect(ctx, rst.ID)
-		if err != nil {
-			return err
-		}
-		if res.Running {
-			continue
-		}
-		if res.ExitCode == 0 {
-			return nil
-		}
-		return fmt.Errorf("%s %v exited with %d", containerName, cmd, res.ExitCode)
-	}
-}
-
 func (d *docker) Logger(stackPath string) ContainerLogger {
 	if d.logger != nil {
 		return d.logger
@@ -342,4 +295,10 @@ func (d *docker) Logger(stackPath string) ContainerLogger {
 	logPath, _ := utils.NewNitricLogFile(stackPath)
 	d.logger = newSyslog(logPath)
 	return d.logger
+}
+
+func (d *docker) Version() string {
+	sv, _ := d.cli.ServerVersion(context.Background())
+	b, _ := yaml.Marshal(sv)
+	return string(b)
 }

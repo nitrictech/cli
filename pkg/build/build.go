@@ -23,9 +23,9 @@ import (
 	"strings"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
 )
 
 func dynamicDockerfile(dir, name string) (*os.File, error) {
@@ -33,7 +33,7 @@ func dynamicDockerfile(dir, name string) (*os.File, error) {
 	return os.CreateTemp(dir, "nitric.dynamic.Dockerfile.*")
 }
 
-func Create(s *stack.Stack, t *target.Target) error {
+func Create(s *project.Project, t *stack.Config) error {
 	cr, err := containerengine.Discover()
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 		fh.Close()
 
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err = cr.Build(filepath.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs)
+		err = cr.Build(filepath.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs, rt.BuildIgnore())
 		if err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 
 	for _, c := range s.Containers {
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
-		err := cr.Build(filepath.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs)
+		err := cr.Build(filepath.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs, []string{})
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func Create(s *stack.Stack, t *target.Target) error {
 }
 
 // CreateBaseDev builds images for code-as-config
-func CreateBaseDev(s *stack.Stack) error {
+func CreateBaseDev(s *project.Project) error {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func CreateBaseDev(s *stack.Stack) error {
 			return err
 		}
 
-		if err := ce.Build(filepath.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}); err != nil {
+		if err := ce.Build(filepath.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}, rt.BuildIgnore()); err != nil {
 			return err
 		}
 		imagesToBuild[lang] = rt.DevImageName()
@@ -113,7 +113,7 @@ func CreateBaseDev(s *stack.Stack) error {
 	return nil
 }
 
-func List(s *stack.Stack) ([]containerengine.Image, error) {
+func List(s *project.Project) ([]containerengine.Image, error) {
 	cr, err := containerengine.Discover()
 	if err != nil {
 		return nil, err

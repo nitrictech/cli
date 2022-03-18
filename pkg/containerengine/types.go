@@ -25,7 +25,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/spf13/viper"
 )
 
 var DiscoveredEngine ContainerEngine
@@ -45,20 +44,17 @@ type ContainerLogger interface {
 
 type ContainerEngine interface {
 	Type() string
-	Build(dockerfile, path, imageTag string, buildArgs map[string]string) error
+	Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error
 	ListImages(stackName, containerName string) ([]Image, error)
 	ImagePull(rawImage string) error
-	NetworkCreate(name string) error
 	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error
 	Stop(nameOrID string, timeout *time.Duration) error
 	ContainerWait(containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error)
-	CopyFromArchive(nameOrID string, path string, reader io.Reader) error
-	ContainersListByLabel(match map[string]string) ([]types.Container, error)
 	RemoveByLabel(labels map[string]string) error
-	ContainerExec(containerName string, cmd []string, workingDir string) error
 	ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error)
 	Logger(stackPath string) ContainerLogger
+	Version() string
 }
 
 func Discover() (ContainerEngine, error) {
@@ -79,7 +75,7 @@ func Discover() (ContainerEngine, error) {
 }
 
 func buildTimeout() time.Duration {
-	return viper.GetDuration("build_timeout")
+	return 15 * time.Minute
 }
 
 func Cli(cc *container.Config, hc *container.HostConfig) string {

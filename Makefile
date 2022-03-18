@@ -1,10 +1,19 @@
 ifeq (/,${HOME})
-GOLANGCI_LINT_CACHE=/tmp/golangci-lint-cache/
+    GOLANGCI_LINT_CACHE=/tmp/golangci-lint-cache/
 else
-GOLANGCI_LINT_CACHE=${HOME}/.cache/golangci-lint
+    GOLANGCI_LINT_CACHE=${HOME}/.cache/golangci-lint
 endif
 GOLANGCI_LINT ?= GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) go run github.com/golangci/golangci-lint/cmd/golangci-lint
 
+ifeq ($(OS), Windows_NT)
+    OS=Windows
+    BUILD_ENV=
+    EXECUTABLE_EXT=.exe
+else
+    OS=$(shell uname -s)
+    BUILD_ENV=CGO_ENABLED=0
+    EXECUTABLE_EXT=
+endif
 
 # See pkg/cmd/version.go for details
 SOURCE_GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
@@ -16,22 +25,19 @@ export LDFLAGS="-X $(VERSION_URI).Version=${BUILD_VERSION} \
 
 .PHONY: build
 build: generate
-	CGO_ENABLED=0 go build -ldflags $(LDFLAGS)  -o bin/nitric ./pkg/cmd/
-
-.PHONY: build-windows
-build-windows: generate
-	go build -ldflags $(LDFLAGS) -o bin/nitric.exe ./pkg/cmd/
+	$(BUILD_ENV) go build -ldflags $(LDFLAGS) -o bin/nitric$(EXECUTABLE_EXT) ./main.go
 
 .PHONY: generate
 generate:
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/utils GetterClient > mocks/mock_utils/mock_getter.go
-	@go run ./hack/modversion "github.com/nitrictech/nitric" > pkg/stack/membraneversion.txt
+	@go run ./hack/modversion "github.com/nitrictech/nitric" > pkg/project/membraneversion.txt
+	@go run ./hack/modversion "github.com/pulumi/pulumi-gcp/" > pkg/provider/pulumi/gcp/pulumi-gcp-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-azuread/" > pkg/provider/pulumi/azure/pulumi-azuread-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-azure/" > pkg/provider/pulumi/azure/pulumi-azure-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-azure-native/" > pkg/provider/pulumi/azure/pulumi-azure-native-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-aws/" > pkg/provider/pulumi/aws/pulumi-aws-version.txt
-
+	@go run ./hack/readmegen/ README.md
 
 .PHONY: fmt
 fmt:

@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -33,24 +34,17 @@ import (
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/tasklet"
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run [handlerGlob]",
-	Short: "run a nitric stack",
-	Long: `Run a nitric stack locally for development or testing
-`,
-	Example: `# Configured default handlerGlob (stack in the current directory).
-nitric run
-
-# use an explicit handlerGlob (stack in the current directory)
-nitric run "functions/*.ts"
-
-# use an explicit handlerGlob and explicit stack directory
-nitric run -s ../projectX/ "functions/*.ts"`,
+	Use:         "run",
+	Short:       "Run your project locally for development and testing",
+	Long:        `Run your project locally for development and testing`,
+	Example:     `nitric run`,
+	Annotations: map[string]string{"commonCommand": "yes"},
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
@@ -59,7 +53,10 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		// Divert default log output to pterm debug
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
 
-		s, err := stack.FromOptions(args)
+		config, err := project.ConfigFromFile()
+		cobra.CheckErr(err)
+
+		s, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
@@ -70,6 +67,12 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			StopMsg: "Configuration gathered",
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
+
+		ls := run.NewLocalServices(s)
+		if ls.Running() {
+			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")
+			os.Exit(2)
+		}
 
 		ce, err := containerengine.Discover()
 		cobra.CheckErr(err)
@@ -86,9 +89,7 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
-		ls := run.NewLocalServices(s)
 		memerr := make(chan error)
-
 		pool := run.NewRunProcessPool()
 
 		startLocalServices := tasklet.Runner{
@@ -155,13 +156,23 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 			// area.Clear()
 
 			stackState.UpdateFromWorkerEvent(we)
-			area.Update(
-				stackState.ApiTable(9001),
-				"\n\n",
-				stackState.TopicTable(9001),
-				"\n\n",
-				stackState.SchedulesTable(9001),
-			)
+
+			tables := []string{}
+			table, rows := stackState.ApiTable(9001)
+			if rows > 0 {
+				tables = append(tables, table)
+			}
+
+			table, rows = stackState.TopicTable(9001)
+			if rows > 0 {
+				tables = append(tables, table)
+			}
+
+			table, rows = stackState.SchedulesTable(9001)
+			if rows > 0 {
+				tables = append(tables, table)
+			}
+			area.Update(strings.Join(tables, "\n\n"))
 		})
 
 		select {
@@ -182,10 +193,9 @@ nitric run -s ../projectX/ "functions/*.ts"`,
 		// Stop the membrane
 		cobra.CheckErr(ls.Stop())
 	},
-	Args: cobra.MinimumNArgs(0),
+	Args: cobra.ExactArgs(0),
 }
 
 func RootCommand() *cobra.Command {
-	stack.AddOptions(runCmd)
 	return runCmd
 }

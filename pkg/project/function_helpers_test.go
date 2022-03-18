@@ -14,33 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package project
 
 import (
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
+	_ "embed"
+	"testing"
 )
 
-var providerCmd = &cobra.Command{
-	Use:   "provider",
-	Short: "Work with a provider",
-	Long: `List available providers, e.g.
-	nitric provider list
-`,
-}
-
-var providerListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list providers",
-	Long:  `Lists Nitric providers.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		notice := color.New(color.Bold, color.FgGreen).PrintlnFunc()
-		notice("Don't forget this... %v")
-	},
-	Args: cobra.MaximumNArgs(0),
-}
-
-func RootCommand() *cobra.Command {
-	providerCmd.AddCommand(providerListCmd)
-	return providerCmd
+func TestFunctionVersionString(t *testing.T) {
+	tests := []struct {
+		name        string
+		funcVersion string
+		want        string
+	}{
+		{
+			name: "from embed",
+			want: "v0.15.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &Function{}
+			if got := f.VersionString(nil); got != tt.want {
+				t.Errorf("Function.VersionString() = '%s', want '%s'", got, tt.want)
+			}
+		})
+	}
 }

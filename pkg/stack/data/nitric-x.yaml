@@ -1,0 +1,5 @@
+name: zed
+provider: Azure
+region: eastus2
+adminemail: admin@example.com
+org: example.com

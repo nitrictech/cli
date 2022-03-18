@@ -14,43 +14,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cmd
 
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
-	"github.com/nitrictech/cli/pkg/cmd/deployment"
-	"github.com/nitrictech/cli/pkg/cmd/provider"
 	"github.com/nitrictech/cli/pkg/cmd/run"
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
-	cmdTarget "github.com/nitrictech/cli/pkg/cmd/target"
+	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/target"
-	"github.com/nitrictech/cli/pkg/tasklet"
-	"github.com/nitrictech/cli/pkg/utils"
 )
 
-const configFileName = ".nitric-config"
+const usageTemplate = `Nitric - The fastest way to build serverless apps
 
-var (
-	cfgFile string
-)
+To start with nitric, run the 'nitric new' command:
+
+    $ nitric new
+
+This will guide you through project creation, including selecting from available templates.
+%s
+For further details visit our docs https://nitric.io/docs`
+
+func usageString() string {
+	return fmt.Sprintf(usageTemplate, strings.Join(CommonCommandsUsage(), "\n"))
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "nitric",
-	Short: "helper CLI for nitric applications",
-	Long:  ``,
+	Short: "CLI for Nitric applications",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if output.VerboseLevel > 1 {
 			pterm.EnableDebugMessages()
@@ -61,130 +58,112 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	defer func() {
+		if err := recover(); err != nil {
+			pterm.Error.Println("An unexpected error occurred, please create a github issue by clicking on the link below")
+			fmt.Println(ghissue.BugLink(err))
+		}
+	}()
+
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-var configHelpTopic = &cobra.Command{
-	Use:   "configuration",
-	Short: "Configuration help",
-	Long: `nitric CLI can be configured (using yaml format) in the following locations:
-${HOME}/.nitric-config.yaml
-${HOME}/.config/nitric/.nitric-config.yaml
-
-An example of the format is:
-  aliases:
-    new: stack create
-
-  targets:
-    aws:
-      region: eastus
-      provider: aws
-	azure:
-	  region: eastus
-	  provider: azure
-  `,
-}
-
 func init() {
-	initConfig()
-
 	rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/%s.yaml)", configFileName))
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
 	err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
 	})
 	cobra.CheckErr(err)
 
-	rootCmd.AddCommand(deployment.RootCommand())
-	rootCmd.AddCommand(provider.RootCommand())
+	newProjectCmd.Flags().BoolVarP(&force, "force", "f", false, "force project creation, even in non-empty directories.")
+	rootCmd.AddCommand(newProjectCmd)
 	rootCmd.AddCommand(cmdstack.RootCommand())
-	rootCmd.AddCommand(cmdTarget.RootCommand())
 	rootCmd.AddCommand(run.RootCommand())
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(configHelpTopic)
-	addAliases()
+	rootCmd.AddCommand(feedbackCmd)
+	rootCmd.AddCommand(infoCmd)
+	addAlias("stack update", "up", true)
+	addAlias("stack down", "down", true)
+	addAlias("stack list", "list", false)
+	rootCmd.Long = usageString()
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+func addAlias(from, to string, commonCommand bool) {
+	cmd, _, err := rootCmd.Find(strings.Split(from, " "))
+	cobra.CheckErr(err)
 
-		// Search config in home directory with name ".nitric" (without extension).
-		viper.AddConfigPath(home)
-		viper.AddConfigPath(utils.NitricConfigDir())
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".nitric-config")
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
 	}
-
-	viper.AutomaticEnv()
-	_ = viper.ReadInConfig()
-
-	ensureConfigDefaults()
+	cmd.Annotations["alias:to"] = to
+	alias := &cobra.Command{
+		Annotations: map[string]string{"alias:from": from},
+		Use:         to,
+		Short:       cmd.Short,
+		Long:        cmd.Long,
+		Example:     cmd.Example,
+		Run: func(cmd *cobra.Command, args []string) {
+			newArgs := []string{os.Args[0]}
+			newArgs = append(newArgs, strings.Split(from, " ")...)
+			newArgs = append(newArgs, args...)
+			os.Args = newArgs
+			cobra.CheckErr(rootCmd.Execute())
+		},
+		DisableFlagParsing: true, // the real command will parse the flags
+	}
+	if commonCommand {
+		alias.Annotations["commonCommand"] = "yes"
+	}
+	rootCmd.AddCommand(alias)
 }
 
-func ensureConfigDefaults() {
-	needsWrite := false
-	aliases := viper.GetStringMap("aliases")
-	if _, ok := aliases["new"]; !ok {
-		needsWrite = true
-		aliases["new"] = "stack create"
-		viper.Set("aliases", aliases)
-	}
-
-	to := viper.GetDuration("build_timeout")
-	if to == 0 {
-		needsWrite = true
-		viper.Set("build_timeout", 5*time.Minute)
-	}
-
-	if target.EnsureDefaultConfig() {
-		needsWrite = true
-	}
-
-	if stack.EnsureRuntimeDefaults() {
-		needsWrite = true
-	}
-
-	if needsWrite {
-		tasklet.MustRun(tasklet.Runner{
-			StartMsg: "Updating configfile to include defaults",
-			Runner: func(_ output.Progress) error {
-				// ensure .config/nitric exists
-				err := os.MkdirAll(utils.NitricConfigDir(), os.ModePerm)
-				if err != nil {
-					return err
-				}
-
-				return viper.WriteConfigAs(filepath.Join(utils.NitricConfigDir(), ".nitric-config.yaml"))
-			},
-			StopMsg: "Configfile updated"}, tasklet.Opts{})
-	}
+func CommonCommandsUsage() []string {
+	cmdH := []string{
+		"",
+		"Common commands in the CLI that you’ll be using:",
+		""}
+	cmdH = append(cmdH, cmdUsage([]string{}, rootCmd, true)...)
+	return append(cmdH, "")
 }
 
-func addAliases() {
-	aliases := map[string]string{}
-	cobra.CheckErr(mapstructure.Decode(viper.GetStringMap("aliases"), &aliases))
-	for n, aliasString := range aliases {
-		alias := &cobra.Command{
-			Use:   n,
-			Short: "alias for: " + aliasString,
-			Long:  "Custom alias command for " + aliasString,
-			Run: func(cmd *cobra.Command, args []string) {
-				newArgs := []string{os.Args[0]}
-				newArgs = append(newArgs, strings.Split(aliasString, " ")...)
-				newArgs = append(newArgs, args...)
-				os.Args = newArgs
-				cobra.CheckErr(rootCmd.Execute())
-			},
-			DisableFlagParsing: true, // the real command will parse the flags
+func AllCommandsUsage() []string {
+	cmdH := []string{
+		"",
+		"Documentation for all available commands:",
+		""}
+	cmdH = append(cmdH, cmdUsage([]string{}, rootCmd, false)...)
+	return append(cmdH, "")
+}
+
+// cmdUsage returns the command usage for commonOnly commands or all.
+// if all commands, then the aliases are group with the full command.
+func cmdUsage(prefix []string, c *cobra.Command, commonOnly bool) []string {
+	cmdH := []string{}
+	args := append(prefix, c.Use)
+	use := strings.Join(args, " ")
+
+	add := true
+	if _, ok := c.Annotations["commonCommand"]; commonOnly && !ok {
+		add = false
+	}
+	if _, ok := c.Annotations["alias:from"]; !commonOnly && ok {
+		add = false
+	}
+	if !c.HasParent() {
+		add = false
+	}
+
+	if add {
+		cmdH = append(cmdH, fmt.Sprintf("- %-22s : %s", use, c.Short))
+		if _, ok := c.Annotations["alias:to"]; ok {
+			use = "nitric " + c.Annotations["alias:to"]
+			cmdH = append(cmdH, fmt.Sprintf("  (alias: %s)", use))
 		}
-		rootCmd.AddCommand(alias)
 	}
+
+	for _, sc := range c.Commands() {
+		cmdH = append(cmdH, cmdUsage(append(prefix, c.Use), sc, commonOnly)...)
+	}
+	return cmdH
 }

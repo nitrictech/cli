@@ -17,6 +17,7 @@
 package codeconfig
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -38,8 +39,8 @@ import (
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/cron"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
@@ -47,25 +48,25 @@ import (
 // CodeConfig - represents a collection of related functions and their shared dependencies.
 type CodeConfig interface {
 	Collect() error
-	ToStack() (*stack.Stack, error)
+	ToProject() (*project.Project, error)
 }
 
 type codeConfig struct {
 	// A stack can be composed of one or more applications
-	functions    map[string]*FunctionDependencies
-	initialStack *stack.Stack
-	lock         sync.RWMutex
+	functions      map[string]*FunctionDependencies
+	initialProject *project.Project
+	lock           sync.RWMutex
 }
 
-func New(s *stack.Stack) (CodeConfig, error) {
+func New(p *project.Project) (CodeConfig, error) {
 	return &codeConfig{
-		initialStack: s,
-		functions:    map[string]*FunctionDependencies{},
-		lock:         sync.RWMutex{},
+		initialProject: p,
+		functions:      map[string]*FunctionDependencies{},
+		lock:           sync.RWMutex{},
 	}, nil
 }
 
-func Populate(initial *stack.Stack) (*stack.Stack, error) {
+func Populate(initial *project.Project) (*project.Project, error) {
 	cc, err := New(initial)
 	if err != nil {
 		return nil, err
@@ -81,21 +82,21 @@ func Populate(initial *stack.Stack) (*stack.Stack, error) {
 		return nil, err
 	}
 
-	return cc.ToStack()
+	return cc.ToProject()
 }
 
-// Collect - Collects information about all functions for a nitric stack
+// Collect - Collects information about all functions for a nitric project
 func (c *codeConfig) Collect() error {
 	wg := sync.WaitGroup{}
 	errList := utils.NewErrorList()
 
-	for _, f := range c.initialStack.Functions {
+	for _, f := range c.initialProject.Functions {
 		wg.Add(1)
 
 		// run files in parallel
-		go func(fn stack.Function) {
+		go func(fn project.Function) {
 			defer wg.Done()
-			rel, err := fn.RelativeHandlerPath(c.initialStack)
+			rel, err := fn.RelativeHandlerPath(c.initialProject)
 			if err != nil {
 				errList.Add(err)
 				return
@@ -267,7 +268,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		return errors.WithMessage(err, "error discovering container engine")
 	}
 
-	opts, err := rt.LaunchOptsForFunctionCollect(c.initialStack.Dir)
+	opts, err := rt.LaunchOptsForFunctionCollect(c.initialProject.Dir)
 	if err != nil {
 		return err
 	}
@@ -297,7 +298,8 @@ func (c *codeConfig) collectOne(handler string) error {
 		WorkingDir: opts.TargetWD,
 	}
 
-	cID, err := ce.ContainerCreate(cc, hostConfig, nil, rt.ContainerName())
+	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")
+	cID, err := ce.ContainerCreate(cc, hostConfig, nil, cn)
 	if err != nil {
 		return err
 	}
@@ -310,19 +312,25 @@ func (c *codeConfig) collectOne(handler string) error {
 	if output.VerboseLevel > 2 {
 		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
 	}
-	if output.VerboseLevel > 1 {
-		logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
-			ShowStdout: true,
-			ShowStderr: true,
-			Follow:     true,
-		})
-		if err != nil {
-			return err
-		}
-		go func() {
-			_, _ = stdcopy.StdCopy(log.Writer(), log.Writer(), logreader)
-		}()
+	logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	})
+	if err != nil {
+		return err
 	}
+
+	logWriter := log.Writer()
+	logRW := &bytes.Buffer{}
+	if output.VerboseLevel <= 1 {
+		// if we are running in non-verbose then store the container logs in a buffer in case
+		// there are errors.
+		logWriter = logRW
+	}
+	go func() {
+		_, _ = stdcopy.StdCopy(logWriter, logWriter, logreader)
+	}()
 
 	errs := utils.NewErrorList().WithSubject(handler)
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
@@ -332,7 +340,16 @@ func (c *codeConfig) collectOne(handler string) error {
 		if done.Error != nil {
 			msg = done.Error.Message
 		}
-		if msg != "" || done.StatusCode != 0 {
+		if logRW.Len() > 0 {
+			for {
+				line, err := logRW.ReadString('\n')
+				if err != nil {
+					break
+				}
+				msg += "\n" + line
+			}
+		}
+		if done.StatusCode != 0 {
 			errs.Add(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
 		}
 	case cErr := <-cErrChan:
@@ -355,10 +372,10 @@ func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
 	c.functions[handler] = fun
 }
 
-func (c *codeConfig) ToStack() (*stack.Stack, error) {
-	s := stack.New(c.initialStack.Name, c.initialStack.Dir)
+func (c *codeConfig) ToProject() (*project.Project, error) {
+	s := project.New(&project.Config{Name: c.initialProject.Name, Dir: c.initialProject.Dir})
 
-	err := mergo.Merge(s, c.initialStack)
+	err := mergo.Merge(s, c.initialProject)
 	if err != nil {
 		return nil, err
 	}
@@ -376,16 +393,16 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			s.ApiDocs[k] = spec
 		}
 		for k := range f.buckets {
-			s.Buckets[k] = stack.Bucket{}
+			s.Buckets[k] = project.Bucket{}
 		}
 		for k := range f.collections {
-			s.Collections[k] = stack.Collection{}
+			s.Collections[k] = project.Collection{}
 		}
 		for k := range f.queues {
-			s.Queues[k] = stack.Queue{}
+			s.Queues[k] = project.Queue{}
 		}
 		for k := range f.secrets {
-			s.Secrets[k] = stack.Secret{}
+			s.Secrets[k] = project.Secret{}
 		}
 
 		// Add policies
@@ -395,7 +412,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 			// Create a new topic target
 			// replace spaced with hyphens
 			topicName := strings.ToLower(strings.ReplaceAll(k, " ", "-"))
-			s.Topics[topicName] = stack.Topic{}
+			s.Topics[topicName] = project.Topic{}
 
 			topicTriggers = append(topicTriggers, topicName)
 
@@ -416,13 +433,13 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 				continue
 			}
 
-			newS := stack.Schedule{
+			newS := project.Schedule{
 				Expression: exp,
-				Target: stack.ScheduleTarget{
+				Target: project.ScheduleTarget{
 					Type: "topic",
 					Name: topicName,
 				},
-				Event: stack.ScheduleEvent{
+				Event: project.ScheduleEvent{
 					PayloadType: "io.nitric.schedule",
 					Payload: map[string]interface{}{
 						"schedule": k,
@@ -441,7 +458,7 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 		}
 
 		for k := range f.topics {
-			s.Topics[k] = stack.Topic{}
+			s.Topics[k] = project.Topic{}
 		}
 
 		for k := range f.subscriptions {
@@ -454,11 +471,13 @@ func (c *codeConfig) ToStack() (*stack.Stack, error) {
 
 		fun, ok := s.Functions[f.name]
 		if !ok {
-			fun = stack.FunctionFromHandler(handler, s.Dir)
+			fun = project.FunctionFromHandler(handler, s.Dir)
 		}
-		fun.ComputeUnit.Triggers = stack.Triggers{
+		fun.ComputeUnit.Triggers = project.Triggers{
 			Topics: topicTriggers,
 		}
+		// set the functions worker count
+		fun.WorkerCount = f.WorkerCount()
 		s.Functions[f.name] = fun
 	}
 

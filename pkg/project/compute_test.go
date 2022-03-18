@@ -14,10 +14,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package target
+package project
 
-type Target struct {
-	Provider string                 `json:"provider,omitempty"`
-	Region   string                 `json:"region,omitempty"`
-	Extra    map[string]interface{} `json:",inline,omitempty"`
+import (
+	"reflect"
+	"testing"
+)
+
+func TestCompute(t *testing.T) {
+	s := &Project{Dir: "../run", Name: "test"}
+	cu := ComputeUnit{
+		Name: "unit",
+	}
+
+	for _, c := range []Compute{&Container{ComputeUnit: cu}, &Function{ComputeUnit: cu}} {
+		gotImageName := c.ImageTagName(s, "aws")
+		if gotImageName != "test-unit-aws" {
+			t.Error("imageTagName", gotImageName)
+		}
+
+		if !reflect.DeepEqual(c.Unit(), &cu) {
+			t.Error("unit", c.Unit())
+		}
+	}
 }

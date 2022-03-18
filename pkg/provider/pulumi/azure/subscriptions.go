@@ -50,7 +50,7 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 			continue
 		}
 
-		app.App.LatestRevisionFqdn.ApplyT(func(fqdn string) (string, error) {
+		hostUrl := app.App.LatestRevisionFqdn.ApplyT(func(fqdn string) (string, error) {
 			_ = ctx.Log.Info("waiting for "+app.Name+" to start before creating subscriptions", &pulumi.LogArgs{Ephemeral: true})
 
 			// Get the full URL of the deployed container
@@ -96,26 +96,27 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 				}
 			}
 
-			_ = ctx.Log.Info("creating subscriptions for "+app.Name, &pulumi.LogArgs{})
-			for subName, sub := range app.Subscriptions {
-				_, err = pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, app.Name+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
-					Scope: sub.ID(),
-					WebhookEndpoint: pulumiEventgrid.EventSubscriptionWebhookEndpointArgs{
-						Url: pulumi.String(hostUrl),
-						// TODO: Reduce event chattiness here and handle internally in the Azure AppService HTTP Gateway?
-						MaxEventsPerBatch: pulumi.Int(1),
-					},
-					RetryPolicy: pulumiEventgrid.EventSubscriptionRetryPolicyArgs{
-						MaxDeliveryAttempts: pulumi.Int(30),
-						EventTimeToLive:     pulumi.Int(5),
-					},
-				})
-				if err != nil {
-					return "", err
-				}
+			return hostUrl, nil
+		}).(pulumi.StringOutput)
+
+		_ = ctx.Log.Info("creating subscriptions for "+app.Name, &pulumi.LogArgs{})
+		for subName, sub := range app.Subscriptions {
+			_, err = pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, app.Name+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
+				Scope: sub.ID(),
+				WebhookEndpoint: pulumiEventgrid.EventSubscriptionWebhookEndpointArgs{
+					Url: hostUrl,
+					// TODO: Reduce event chattiness here and handle internally in the Azure AppService HTTP Gateway?
+					MaxEventsPerBatch: pulumi.Int(1),
+				},
+				RetryPolicy: pulumiEventgrid.EventSubscriptionRetryPolicyArgs{
+					MaxDeliveryAttempts: pulumi.Int(30),
+					EventTimeToLive:     pulumi.Int(5),
+				},
+			})
+			if err != nil {
+				return nil, err
 			}
-			return fqdn, nil
-		})
+		}
 	}
 
 	return res, nil

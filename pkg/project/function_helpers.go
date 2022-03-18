@@ -14,24 +14,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package project
 
 import (
+	_ "embed"
 	"fmt"
+	"path/filepath"
 )
 
-var _ Compute = &Container{}
+//go:embed membraneversion.txt
+var DefaultMembraneVersion string
 
-func (c *Container) Unit() *ComputeUnit {
-	return &c.ComputeUnit
+var _ Compute = &Function{}
+
+func (f *Function) Unit() *ComputeUnit {
+	return &f.ComputeUnit
+}
+
+func (f *Function) VersionString(s *Project) string {
+	return DefaultMembraneVersion
+}
+
+func (f *Function) RelativeHandlerPath(s *Project) (string, error) {
+	relativeHandlerPath := f.Handler
+	if filepath.IsAbs(f.Handler) {
+		var err error
+		relativeHandlerPath, err = filepath.Rel(s.Dir, f.Handler)
+		if err != nil {
+			return "", err
+		}
+	}
+	return relativeHandlerPath, nil
 }
 
 // ImageTagName returns the default image tag for a source image built from this function
 // provider the provider name (e.g. aws), used to uniquely identify builds for specific providers
-func (c *Container) ImageTagName(s *Stack, provider string) string {
+func (f *Function) ImageTagName(s *Project, provider string) string {
 	providerString := ""
 	if provider != "" {
 		providerString = "-" + provider
 	}
-	return fmt.Sprintf("%s-%s%s", s.Name, c.Name, providerString)
+	return fmt.Sprintf("%s-%s%s", s.Name, f.Name, providerString)
+}
+
+func (c *Function) Workers() int {
+	return c.WorkerCount
 }

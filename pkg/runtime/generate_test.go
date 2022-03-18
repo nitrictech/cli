@@ -70,6 +70,7 @@ RUN chmod +x-rw /usr/local/bin/membrane
 ENTRYPOINT ["/usr/local/bin/membrane"]
 COPY --from=build /bin/main /bin/main
 RUN chmod +x-rw /bin/main
+RUN apk add --no-cache tzdata
 WORKDIR /
 EXPOSE 9001
 CMD ["/bin/main"]`,

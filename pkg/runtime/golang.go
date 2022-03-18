@@ -99,6 +99,8 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 		return err
 	}
 	con.Run(dockerfile.RunOptions{Command: []string{"chmod", "+x-rw", "/bin/main"}})
+	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "tzdata"}})
+
 	con.Config(dockerfile.ConfigOptions{
 		Ports:      []int32{9001},
 		WorkingDir: "/",

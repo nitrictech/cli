@@ -12,7 +12,6 @@ builds:
       - CGO_ENABLED=0
     id: nitric
     binary: nitric
-    main: ./pkg/cmd/
     goos:
       - linux
       - windows

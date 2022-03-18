@@ -21,7 +21,6 @@ import (
 
 	"github.com/ettle/strcase"
 	"github.com/google/uuid"
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/firestore"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/projects"
@@ -30,6 +29,8 @@ import (
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type Policy struct {

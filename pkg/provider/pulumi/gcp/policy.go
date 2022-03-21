@@ -98,7 +98,6 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_CollectionDocumentDelete: {
 		"appengine.applications.get",
 		"datastore.databases.get",
-		// "datastore.databases.getMetadata",
 		"datastore.indexes.get",
 		"datastore.namespaces.get",
 		"datastore.entities.delete",
@@ -106,7 +105,6 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_CollectionDocumentRead: {
 		"appengine.applications.get",
 		"datastore.databases.get",
-		// "datastore.databases.getMetadata",
 		"datastore.entities.get",
 		"datastore.indexes.get",
 		"datastore.namespaces.get",
@@ -114,7 +112,6 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	},
 	v1.Action_CollectionDocumentWrite: {
 		"appengine.applications.get",
-		// "datastore.databases.list",
 		"datastore.indexes.list",
 		"datastore.namespaces.list",
 		"datastore.entities.create",
@@ -123,7 +120,6 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_CollectionQuery: {
 		"appengine.applications.get",
 		"datastore.databases.get",
-		// "datastore.databases.getMetadata",
 		"datastore.entities.get",
 		"datastore.entities.list",
 		"datastore.indexes.get",
@@ -131,12 +127,8 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	},
 	v1.Action_CollectionList: {
 		"appengine.applications.get",
-		// "resourcemanager.projects.get",
-		// "resourcemanager.projects.list",
 	},
 	v1.Action_SecretAccess: {
-		// "resourcemanager.projects.get",
-		// "resourcemanager.projects.list",
 		"secretmanager.locations.*",
 		"secretmanager.secrets.get",
 		"secretmanager.secrets.getIamPolicy",
@@ -145,8 +137,6 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 		"secretmanager.versions.list",
 	},
 	v1.Action_SecretPut: {
-		// "resourcemanager.projects.get",
-		// "resourcemanager.projects.list",
 		"secretmanager.versions.add",
 	},
 }

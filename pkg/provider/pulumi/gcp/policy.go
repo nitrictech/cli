@@ -54,7 +54,7 @@ type PolicyArgs struct {
 	// Resources in the stack that may act as actors
 	Principals PrincipalMap
 
-	ProjectID pulumi.StringOutput
+	ProjectID pulumi.StringInput
 }
 
 var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{

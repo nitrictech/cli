@@ -377,7 +377,8 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			return err
 		}
 		if _, err := newPolicy(ctx, policyName, &PolicyArgs{
-			Policy: p,
+			Policy:    p,
+			ProjectID: pulumi.String(g.projectId),
 			Resources: &StackResources{
 				Topics:  g.topics,
 				Queues:  g.queueTopics,

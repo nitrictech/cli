@@ -33,7 +33,6 @@ import (
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudscheduler"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/firestore"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
@@ -66,6 +65,7 @@ type gcpProvider struct {
 	queueTopics        map[string]*pubsub.Topic
 	queueSubscriptions map[string]*pubsub.Subscription
 	images             map[string]*common.Image
+	secrets            map[string]*secretmanager.Secret
 	cloudRunners       map[string]*CloudRunner
 }
 
@@ -296,6 +296,22 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	for name := range g.proj.Secrets {
+		secId := pulumi.Sprintf("%s-%s", g.sc.Name, name)
+		g.secrets[name], err = secretmanager.NewSecret(ctx, name, &secretmanager.SecretArgs{
+			Replication: secretmanager.SecretReplicationArgs{
+				Automatic: pulumi.Bool(true),
+			},
+			Project:  pulumi.String(g.projectId),
+			SecretId: secId,
+			Labels:   common.Tags(ctx, name),
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
 	principalMap := make(PrincipalMap)
 	principalMap[v1.ResourceType_Function] = make(map[string]*serviceaccount.Account)
 
@@ -363,11 +379,10 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		if _, err := newPolicy(ctx, policyName, &PolicyArgs{
 			Policy: p,
 			Resources: &StackResources{
-				Topics:      g.topics,
-				Queues:      g.queueTopics,
-				Buckets:     g.buckets,
-				Collections: map[string]*firestore.Document{},
-				Secrets:     map[string]*secretmanager.Secret{},
+				Topics:  g.topics,
+				Queues:  g.queueTopics,
+				Buckets: g.buckets,
+				Secrets: g.secrets,
 			},
 			Principals: principalMap,
 		}); err != nil {

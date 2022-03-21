@@ -21,8 +21,6 @@ import (
 
 	"github.com/ettle/strcase"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/firestore"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
@@ -41,11 +39,10 @@ type Policy struct {
 }
 
 type StackResources struct {
-	Topics      map[string]*pubsub.Topic
-	Queues      map[string]*pubsub.Topic
-	Buckets     map[string]*storage.Bucket
-	Collections map[string]*firestore.Document
-	Secrets     map[string]*secretmanager.Secret
+	Topics  map[string]*pubsub.Topic
+	Queues  map[string]*pubsub.Topic
+	Buckets map[string]*storage.Bucket
+	Secrets map[string]*secretmanager.Secret
 }
 
 type PrincipalMap = map[v1.ResourceType]map[string]*serviceaccount.Account
@@ -84,7 +81,7 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 		"pubsub.topics.publish",
 	},
 	v1.Action_TopicList: {
-		"pubusb.topics.list",
+		"pubsub.topics.list",
 	},
 	v1.Action_QueueSend: {
 		"pubsub.topics.publish",
@@ -98,49 +95,92 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_QueueList: {
 		"pubsub.topics.list",
 	},
+	v1.Action_CollectionDocumentDelete: {
+		"appengine.applications.get",
+		"datastore.databases.get",
+		// "datastore.databases.getMetadata",
+		"datastore.indexes.get",
+		"datastore.namespaces.get",
+		"datastore.entities.delete",
+	},
 	v1.Action_CollectionDocumentRead: {
 		"appengine.applications.get",
 		"datastore.databases.get",
-		"datastore.databases.getMetadata",
+		// "datastore.databases.getMetadata",
 		"datastore.entities.get",
 		"datastore.indexes.get",
 		"datastore.namespaces.get",
+		"datastore.entities.list",
 	},
 	v1.Action_CollectionDocumentWrite: {
 		"appengine.applications.get",
-		"datastore.databases.list",
-		"datastore.entities.list",
+		// "datastore.databases.list",
 		"datastore.indexes.list",
 		"datastore.namespaces.list",
+		"datastore.entities.create",
+		"datastore.entities.update",
 	},
 	v1.Action_CollectionQuery: {
 		"appengine.applications.get",
 		"datastore.databases.get",
-		"datastore.databases.getMetadata",
+		// "datastore.databases.getMetadata",
 		"datastore.entities.get",
+		"datastore.entities.list",
 		"datastore.indexes.get",
 		"datastore.namespaces.get",
 	},
 	v1.Action_CollectionList: {
 		"appengine.applications.get",
-		"resourcemanager.projects.get",
-		"resourcemanager.projects.list",
+		// "resourcemanager.projects.get",
+		// "resourcemanager.projects.list",
 	},
 	v1.Action_SecretAccess: {
-		"resourcemanager.projects.get",
-		"resourcemanager.projects.list",
+		// "resourcemanager.projects.get",
+		// "resourcemanager.projects.list",
 		"secretmanager.locations.*",
-		"secretmnager.secrets.get",
+		"secretmanager.secrets.get",
 		"secretmanager.secrets.getIamPolicy",
 		"secretmanager.version.get",
 		"secretmanager.secrets.list",
-		"secretmnager.versions.list",
+		"secretmanager.versions.list",
 	},
 	v1.Action_SecretPut: {
-		"resourcemanager.projects.get",
-		"resourcemanager.projects.list",
+		// "resourcemanager.projects.get",
+		// "resourcemanager.projects.list",
 		"secretmanager.versions.add",
 	},
+}
+
+var collectionActions []string = nil
+
+func getCollectionActions() []string {
+	if collectionActions == nil {
+		collectionActions = make([]string, 0)
+		collectionActions = append(collectionActions, gcpActionsMap[v1.Action_CollectionDocumentRead]...)
+		collectionActions = append(collectionActions, gcpActionsMap[v1.Action_CollectionDocumentWrite]...)
+		collectionActions = append(collectionActions, gcpActionsMap[v1.Action_CollectionDocumentDelete]...)
+	}
+
+	return collectionActions
+}
+
+func filterCollectionActions(actions pulumi.StringArray) pulumi.StringArrayOutput {
+	arr, _ := actions.ToStringArrayOutput().ApplyT(func(actions []string) []string {
+		filteredActions := []string{}
+
+		for _, a := range actions {
+			for _, ca := range getCollectionActions() {
+				if a == ca {
+					filteredActions = append(filteredActions, a)
+					break
+				}
+			}
+		}
+
+		return filteredActions
+	}).(pulumi.StringArrayOutput)
+
+	return arr
 }
 
 func actionsToGcpActions(actions []v1.Action) pulumi.StringArray {
@@ -170,26 +210,80 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 
 	actions := actionsToGcpActions(args.Policy.Actions)
 
+	rolePolicy, err := projects.NewIAMCustomRole(ctx, name, &projects.IAMCustomRoleArgs{
+		Title:       pulumi.String(name),
+		Permissions: actions,
+		RoleId:      pulumi.String(strcase.ToCamel(name)),
+	}, pulumi.Parent(res))
+
+	if err != nil {
+		return nil, err
+	}
+
 	for _, principal := range args.Policy.Principals {
 		sa := args.Principals[v1.ResourceType_Function][principal.Name]
 		name := newCustomRoleName(principal.Name)
 
-		role, err := projects.NewIAMCustomRole(ctx, name, &projects.IAMCustomRoleArgs{
-			Title:       pulumi.String(name),
-			Permissions: actions,
-			RoleId:      pulumi.String(strcase.ToCamel(name)),
-		}, append(opts, pulumi.Parent(res))...)
-		if err != nil {
-			return nil, err
-		}
+		for _, resource := range args.Policy.Resources {
+			memberName := fmt.Sprintf("%s-%s", principal.Name, resource.Name)
+			memberId := pulumi.Sprintf("serviceAccount:%s", sa.Email)
 
-		_, err = projects.NewIAMMember(ctx, name, &projects.IAMMemberArgs{
-			Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
-			Project: args.ProjectID,
-			Role:    role.Name,
-		}, append(opts, pulumi.Parent(res))...)
-		if err != nil {
-			return nil, errors.WithMessage(err, "iam member "+principal.Name)
+			switch resource.Type {
+			case v1.ResourceType_Bucket:
+				b := args.Resources.Buckets[resource.Name]
+
+				storage.NewBucketIAMMember(ctx, memberName, &storage.BucketIAMMemberArgs{
+					Bucket: b.Name,
+					Member: memberId,
+					Role:   rolePolicy.Name,
+				}, pulumi.Parent(res))
+
+			case v1.ResourceType_Collection:
+				collActions := filterCollectionActions(actions)
+
+				collRole, err := projects.NewIAMCustomRole(ctx, name, &projects.IAMCustomRoleArgs{
+					Title:       pulumi.String(name),
+					Permissions: collActions,
+					RoleId:      pulumi.String(strcase.ToCamel(name)),
+				}, pulumi.Parent(res))
+
+				if err != nil {
+					return nil, err
+				}
+
+				projects.NewIAMMember(ctx, memberName, &projects.IAMMemberArgs{
+					Member:  memberId,
+					Project: args.ProjectID,
+					Role:    collRole.Name,
+				}, pulumi.Parent(res))
+
+			case v1.ResourceType_Queue:
+				q := args.Resources.Queues[resource.Name]
+
+				pubsub.NewTopicIAMMember(ctx, memberName, &pubsub.TopicIAMMemberArgs{
+					Topic:  q.Name,
+					Member: memberId,
+					Role:   rolePolicy.Name,
+				}, pulumi.Parent(res))
+
+			case v1.ResourceType_Topic:
+				t := args.Resources.Topics[resource.Name]
+
+				pubsub.NewTopicIAMMember(ctx, memberName, &pubsub.TopicIAMMemberArgs{
+					Topic:  t.Name,
+					Member: memberId,
+					Role:   rolePolicy.Name,
+				}, pulumi.Parent(res))
+
+			case v1.ResourceType_Secret:
+				s := args.Resources.Secrets[resource.Name]
+
+				secretmanager.NewSecretIamMember(ctx, memberName, &secretmanager.SecretIamMemberArgs{
+					SecretId: s.SecretId,
+					Member:   memberId,
+					Role:     rolePolicy.Name,
+				}, pulumi.Parent(res))
+			}
 		}
 	}
 

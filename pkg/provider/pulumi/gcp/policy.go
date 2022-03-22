@@ -222,11 +222,15 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 			case v1.ResourceType_Bucket:
 				b := args.Resources.Buckets[resource.Name]
 
-				storage.NewBucketIAMMember(ctx, memberName, &storage.BucketIAMMemberArgs{
+				_, err = storage.NewBucketIAMMember(ctx, memberName, &storage.BucketIAMMemberArgs{
 					Bucket: b.Name,
 					Member: memberId,
 					Role:   rolePolicy.Name,
 				}, pulumi.Parent(res))
+
+				if err != nil {
+					return nil, err
+				}
 
 			case v1.ResourceType_Collection:
 				collActions := filterCollectionActions(actions)
@@ -241,38 +245,54 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 					return nil, err
 				}
 
-				projects.NewIAMMember(ctx, memberName, &projects.IAMMemberArgs{
+				_, err = projects.NewIAMMember(ctx, memberName, &projects.IAMMemberArgs{
 					Member:  memberId,
 					Project: args.ProjectID,
 					Role:    collRole.Name,
 				}, pulumi.Parent(res))
 
+				if err != nil {
+					return nil, err
+				}
+
 			case v1.ResourceType_Queue:
 				q := args.Resources.Queues[resource.Name]
 
-				pubsub.NewTopicIAMMember(ctx, memberName, &pubsub.TopicIAMMemberArgs{
+				_, err = pubsub.NewTopicIAMMember(ctx, memberName, &pubsub.TopicIAMMemberArgs{
 					Topic:  q.Name,
 					Member: memberId,
 					Role:   rolePolicy.Name,
 				}, pulumi.Parent(res))
 
+				if err != nil {
+					return nil, err
+				}
+
 			case v1.ResourceType_Topic:
 				t := args.Resources.Topics[resource.Name]
 
-				pubsub.NewTopicIAMMember(ctx, memberName, &pubsub.TopicIAMMemberArgs{
+				_, err = pubsub.NewTopicIAMMember(ctx, memberName, &pubsub.TopicIAMMemberArgs{
 					Topic:  t.Name,
 					Member: memberId,
 					Role:   rolePolicy.Name,
 				}, pulumi.Parent(res))
 
+				if err != nil {
+					return nil, err
+				}
+
 			case v1.ResourceType_Secret:
 				s := args.Resources.Secrets[resource.Name]
 
-				secretmanager.NewSecretIamMember(ctx, memberName, &secretmanager.SecretIamMemberArgs{
+				_, err = secretmanager.NewSecretIamMember(ctx, memberName, &secretmanager.SecretIamMemberArgs{
 					SecretId: s.SecretId,
 					Member:   memberId,
 					Role:     rolePolicy.Name,
 				}, pulumi.Parent(res))
+
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

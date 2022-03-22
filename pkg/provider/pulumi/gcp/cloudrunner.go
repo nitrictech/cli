@@ -55,28 +55,6 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 	if err != nil {
 		return nil, err
 	}
-	// // Give project editor permissions
-	// // FIXME: Trim this down
-	// _, err = projects.NewIAMMember(ctx, name+"-editor", &projects.IAMMemberArgs{
-	// 	Role: pulumi.String("roles/editor"),
-	// 	// Get the cloudrun service account email
-	// 	Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
-	// 	Project: pulumi.String(args.ProjectId),
-	// }, append(opts, pulumi.Parent(res))...)
-	// if err != nil {
-	// 	return nil, errors.WithMessage(err, "iam member "+name)
-	// }
-
-	// // Give secret accessor permissions
-	// _, err = projects.NewIAMMember(ctx, name+"-secret-access", &projects.IAMMemberArgs{
-	// 	Role: pulumi.String("roles/secretmanager.secretAccessor"),
-	// 	// Get the cloudrun service account email
-	// 	Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
-	// 	Project: pulumi.String(args.ProjectId),
-	// }, append(opts, pulumi.Parent(res))...)
-	// if err != nil {
-	// 	return nil, errors.WithMessage(err, "iam member "+name)
-	// }
 
 	// Deploy the func
 	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 512)

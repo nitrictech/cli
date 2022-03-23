@@ -29,11 +29,13 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/ettle/strcase"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudscheduler"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
@@ -315,6 +317,20 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	principalMap := make(PrincipalMap)
 	principalMap[v1.ResourceType_Function] = make(map[string]*serviceaccount.Account)
 
+	// setup a basic IAM role for general access and resource discovery
+	baseComputeRole, err := projects.NewIAMCustomRole(ctx, "base-role", &projects.IAMCustomRoleArgs{
+		Title: pulumi.String(g.sc.Name + "-functions-base-role"),
+		Permissions: pulumi.ToStringArray([]string{
+			"storage.buckets.list",
+			"storage.buckets.get",
+		}),
+		RoleId: pulumi.String(strcase.ToCamel(g.sc.Name + "-functions-base-role")),
+	})
+
+	if err != nil {
+		return errors.WithMessage(err, "base customRole")
+	}
+
 	for _, c := range g.proj.Computes() {
 		if _, ok := g.images[c.Unit().Name]; !ok {
 			g.images[c.Unit().Name], err = common.NewImage(ctx, c.Unit().Name+"Image", &common.ImageArgs{
@@ -334,9 +350,17 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		sa, err := serviceaccount.NewAccount(ctx, c.Unit().Name+"-acct", &serviceaccount.AccountArgs{
 			AccountId: pulumi.String(utils.StringTrunc(c.Unit().Name, 30-5) + "-acct"),
 		})
+
 		if err != nil {
 			return errors.WithMessage(err, "function serviceaccount "+c.Unit().Name)
 		}
+
+		// apply basic project level permissions for nitric resource discovery
+		projects.NewIAMMember(ctx, "", &projects.IAMMemberArgs{
+			Project: pulumi.String(g.projectId),
+			Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
+			Role:    baseComputeRole.Name,
+		})
 
 		g.cloudRunners[c.Unit().Name], err = g.newCloudRunner(ctx, c.Unit().Name, &CloudRunnerArgs{
 			Location:       pulumi.String(g.sc.Region),

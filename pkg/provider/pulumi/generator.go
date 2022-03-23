@@ -156,7 +156,19 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
 	}
 
-	return ws.ListStacks(context.Background())
+	sl, err := ws.ListStacks(context.Background())
+	if err != nil {
+		return nil, errors.WithMessage(err, "ListStacks")
+	}
+
+	stackName := p.proj.Name + "-" + p.sc.Name
+	result := []auto.StackSummary{}
+	for _, st := range sl {
+		if strings.HasPrefix(st.Name, stackName) {
+			result = append(result, st)
+		}
+	}
+	return result, nil
 }
 
 func (a *pulumiDeployment) Down(log output.Progress) error {

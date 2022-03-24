@@ -44,6 +44,16 @@ type pulumiDeployment struct {
 	prov common.PulumiProvider
 }
 
+type stackSummary struct {
+	Name             string `json:"name"`
+	Deployed          bool   `json:"deployed"`
+	LastUpdate       string `json:"lastUpdate,omitempty"`
+	UpdateInProgress bool   `json:"updateInProgress"`
+	ResourceCount    *int   `json:"resourceCount,omitempty"`
+	URL              string `json:"url,omitempty"`
+}
+
+
 var (
 	_ types.Provider = &pulumiDeployment{}
 )
@@ -162,10 +172,18 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 	}
 
 	stackName := p.proj.Name + "-" + p.sc.Name
-	result := []auto.StackSummary{}
+	result := []stackSummary{}
 	for _, st := range sl {
 		if strings.HasPrefix(st.Name, stackName) {
-			result = append(result, st)
+			var stackListOutput = stackSummary{
+				Name: st.Name,
+				Deployed: *st.ResourceCount > 0,
+				LastUpdate: st.LastUpdate,
+				UpdateInProgress: st.UpdateInProgress,
+				ResourceCount: st.ResourceCount,
+				URL: st.URL,
+			}
+			result = append(result, stackListOutput)
 		}
 	}
 	return result, nil

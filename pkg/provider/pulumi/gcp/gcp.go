@@ -323,6 +323,9 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		Permissions: pulumi.ToStringArray([]string{
 			"storage.buckets.list",
 			"storage.buckets.get",
+			// permission for blob signing
+			// this is safe as only permissions this account has are delegated
+			"iam.serviceAccounts.signBlob",
 		}),
 		RoleId: pulumi.String(strcase.ToCamel(g.sc.Name + "-functions-base-role")),
 	})

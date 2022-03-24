@@ -62,7 +62,6 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	},
 	v1.Action_BucketFileGet: {
 		"storage.objects.get",
-		"iam.serviceAccounts.signBlob",
 	},
 	v1.Action_BucketFilePut: {
 		"orgpolicy.policy.get",
@@ -70,7 +69,6 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 		"storage.multipartUploads.create",
 		"storage.multipartUploads.listParts",
 		"storage.objects.create",
-		"iam.serviceAccounts.signBlob",
 	},
 	v1.Action_BucketFileDelete: {
 		"storage.objects.delete",

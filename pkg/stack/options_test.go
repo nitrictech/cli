@@ -31,6 +31,7 @@ func Test_configFromFile(t *testing.T) {
 			"org":        "example.com",
 		},
 	}
+
 	got, err := configFromFile("data/nitric-x.yaml")
 	if err != nil {
 		t.Errorf("configFromFile() error = %v", err)

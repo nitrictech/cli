@@ -44,12 +44,13 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
+	random "github.com/pulumi/pulumi-random/sdk/v4/go/random"
+
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
-	random "github.com/pulumi/pulumi-random/sdk/v4/go/random"
 )
 
 type gcpProvider struct {

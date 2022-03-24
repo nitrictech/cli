@@ -15,14 +15,12 @@ require (
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/envoyproxy/protoc-gen-validate v0.6.7 // indirect
-	github.com/ettle/strcase v0.1.1
 	github.com/fasthttp/router v1.4.6
 	github.com/getkin/kin-openapi v0.90.0
 	github.com/go-openapi/strfmt v0.21.1 // indirect
 	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.45.0
 	github.com/google/go-cmp v0.5.7
-	github.com/google/uuid v1.3.0
 	github.com/hashicorp/consul/sdk v0.9.0
 	github.com/hashicorp/go-getter v1.5.11
 	github.com/imdario/mergo v0.3.12
@@ -34,7 +32,7 @@ require (
 	github.com/moby/buildkit v0.9.3 // indirect
 	github.com/moby/moby v20.10.12+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.7.0.20211212231606-62c668408f91
-	github.com/nitrictech/nitric v0.15.1-rc.7
+	github.com/nitrictech/nitric v0.15.1-rc.8
 	github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.37
@@ -44,7 +42,7 @@ require (
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.17.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.12.0
-	github.com/pulumi/pulumi-random/sdk/v4 v4.4.2 // indirect
+	github.com/pulumi/pulumi-random/sdk/v4 v4.4.2
 	github.com/pulumi/pulumi/sdk/v3 v3.25.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savsgio/gotils v0.0.0-20220201163454-d252f0a44d5b // indirect

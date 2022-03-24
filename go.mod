@@ -60,8 +60,3 @@ require (
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
-
-replace (
-	github.com/opencontainers/image-spec => github.com/opencontainers/image-spec v1.0.2-0.20211123152302-43a7dee1ec31
-	github.com/rootless-containers/rootlesskit => github.com/rootless-containers/rootlesskit v0.14.6
-)

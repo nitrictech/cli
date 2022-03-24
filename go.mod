@@ -44,6 +44,7 @@ require (
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.17.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.12.0
+	github.com/pulumi/pulumi-random/sdk/v4 v4.4.2 // indirect
 	github.com/pulumi/pulumi/sdk/v3 v3.25.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savsgio/gotils v0.0.0-20220201163454-d252f0a44d5b // indirect

@@ -19,13 +19,12 @@ package gcp
 import (
 	"fmt"
 
-	"github.com/ettle/strcase"
-	"github.com/google/uuid"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/storage"
+	random "github.com/pulumi/pulumi-random/sdk/v4/go/random"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
@@ -185,12 +184,6 @@ func actionsToGcpActions(actions []v1.Action) pulumi.StringArray {
 	return gcpActions
 }
 
-// Custom roles soft delete, so must have more randomization for each name, or there will be conflict on each deploy
-func newCustomRoleName(princName string) string {
-	id := uuid.New()
-	return fmt.Sprintf("%s-%s", princName, id.String())
-}
-
 func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulumi.ResourceOption) (*Policy, error) {
 	res := &Policy{Name: name, RolePolicies: make([]*projects.IAMMember, 0)}
 	err := ctx.RegisterComponentResource("nitric:func:GCPPolicy", name, res, opts...)
@@ -199,11 +192,21 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 	}
 
 	actions := actionsToGcpActions(args.Policy.Actions)
+	baseRoleId, err := random.NewRandomString(ctx, fmt.Sprintf("role-%s-id", name), &random.RandomStringArgs{
+		Special: pulumi.Bool(false),
+		Length:  pulumi.Int(8),
+		Keepers: pulumi.ToMap(map[string]interface{}{
+			"policy-name": name,
+		}),
+	}, pulumi.Parent(res))
+	if err != nil {
+		return nil, err
+	}
 
 	rolePolicy, err := projects.NewIAMCustomRole(ctx, name, &projects.IAMCustomRoleArgs{
 		Title:       pulumi.String(name),
 		Permissions: actions,
-		RoleId:      pulumi.String(strcase.ToCamel(name)),
+		RoleId:      baseRoleId.ID(),
 	}, pulumi.Parent(res))
 
 	if err != nil {
@@ -212,7 +215,6 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 
 	for _, principal := range args.Policy.Principals {
 		sa := args.Principals[v1.ResourceType_Function][principal.Name]
-		name := newCustomRoleName(principal.Name)
 
 		for _, resource := range args.Policy.Resources {
 			memberName := fmt.Sprintf("%s-%s", principal.Name, resource.Name)
@@ -235,10 +237,21 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 			case v1.ResourceType_Collection:
 				collActions := filterCollectionActions(actions)
 
-				collRole, err := projects.NewIAMCustomRole(ctx, name, &projects.IAMCustomRoleArgs{
+				collectionRoleId, err := random.NewRandomString(ctx, fmt.Sprintf("role-%s-collection-id", name), &random.RandomStringArgs{
+					Special: pulumi.BoolPtr(false),
+					Length:  pulumi.Int(8),
+					Keepers: pulumi.ToMap(map[string]interface{}{
+						"policy-name": name,
+					}),
+				}, pulumi.Parent(res))
+				if err != nil {
+					return nil, err
+				}
+
+				collRole, err := projects.NewIAMCustomRole(ctx, memberName+"-role", &projects.IAMCustomRoleArgs{
 					Title:       pulumi.String(name),
 					Permissions: collActions,
-					RoleId:      pulumi.String(strcase.ToCamel(name)),
+					RoleId:      collectionRoleId.ID(),
 				}, pulumi.Parent(res))
 
 				if err != nil {

@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/ettle/strcase"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/pkg/errors"
@@ -50,6 +49,7 @@ import (
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	random "github.com/pulumi/pulumi-random/sdk/v4/go/random"
 )
 
 type gcpProvider struct {
@@ -317,6 +317,18 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	principalMap := make(PrincipalMap)
 	principalMap[v1.ResourceType_Function] = make(map[string]*serviceaccount.Account)
 
+	baseCustomRoleId, err := random.NewRandomString(ctx, fmt.Sprintf("%s-base-role", g.sc.Name), &random.RandomStringArgs{
+		Special: pulumi.Bool(false),
+		Length:  pulumi.Int(8),
+		Keepers: pulumi.ToMap(map[string]interface{}{
+			"stack-name": g.sc.Name,
+		}),
+	})
+
+	if err != nil {
+		return errors.WithMessage(err, "base customRole id")
+	}
+
 	// setup a basic IAM role for general access and resource discovery
 	baseComputeRole, err := projects.NewIAMCustomRole(ctx, "base-role", &projects.IAMCustomRoleArgs{
 		Title: pulumi.String(g.sc.Name + "-functions-base-role"),
@@ -327,7 +339,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			// this is safe as only permissions this account has are delegated
 			"iam.serviceAccounts.signBlob",
 		}),
-		RoleId: pulumi.String(strcase.ToCamel(g.sc.Name + "-functions-base-role")),
+		RoleId: baseCustomRoleId.ID(),
 	})
 
 	if err != nil {
@@ -359,11 +371,15 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 
 		// apply basic project level permissions for nitric resource discovery
-		projects.NewIAMMember(ctx, "", &projects.IAMMemberArgs{
+		_, err = projects.NewIAMMember(ctx, c.Unit().Name+"-project-member", &projects.IAMMemberArgs{
 			Project: pulumi.String(g.projectId),
 			Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
 			Role:    baseComputeRole.Name,
 		})
+
+		if err != nil {
+			return errors.WithMessage(err, "function project membership "+c.Unit().Name)
+		}
 
 		g.cloudRunners[c.Unit().Name], err = g.newCloudRunner(ctx, c.Unit().Name, &CloudRunnerArgs{
 			Location:       pulumi.String(g.sc.Region),
@@ -395,15 +411,23 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	uniquePolicies := map[string]*v1.PolicyResource{}
 	for _, p := range g.proj.Policies {
 		if len(p.Actions) == 0 {
 			_ = ctx.Log.Debug("policy has no actions "+fmt.Sprint(p), &pulumi.LogArgs{Ephemeral: true})
+			continue
 		}
+
 		policyName, err := policyResourceName(p)
 		if err != nil {
 			return err
 		}
-		if _, err := newPolicy(ctx, policyName, &PolicyArgs{
+
+		uniquePolicies[policyName] = p
+	}
+
+	for name, p := range uniquePolicies {
+		if _, err := newPolicy(ctx, name, &PolicyArgs{
 			Policy:    p,
 			ProjectID: pulumi.String(g.projectId),
 			Resources: &StackResources{

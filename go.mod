@@ -32,7 +32,7 @@ require (
 	github.com/moby/buildkit v0.9.3 // indirect
 	github.com/moby/moby v20.10.12+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.7.0.20211212231606-62c668408f91
-	github.com/nitrictech/nitric v0.15.1-rc.7
+	github.com/nitrictech/nitric v0.15.1-rc.8
 	github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.37
@@ -42,6 +42,7 @@ require (
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.17.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.12.0
+	github.com/pulumi/pulumi-random/sdk/v4 v4.4.2
 	github.com/pulumi/pulumi/sdk/v3 v3.25.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savsgio/gotils v0.0.0-20220201163454-d252f0a44d5b // indirect

@@ -25,8 +25,8 @@ import (
 
 var infoCmd = &cobra.Command{
 	Use:   "info",
-	Short: "Gather information about Nitric and the environoment",
-	Long:  `Gather information about Nitric and the environoment.`,
+	Short: "Gather information about Nitric and the environment",
+	Long:  `Gather information about Nitric and the environment.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		d, err := ghissue.Gather()
 		cobra.CheckErr(err)

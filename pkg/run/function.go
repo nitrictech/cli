@@ -43,7 +43,7 @@ func (f *Function) Name() string {
 	return f.rt.ContainerName()
 }
 
-func (f *Function) Start() error {
+func (f *Function) Start(envMap map[string]string) error {
 	launchOpts, err := f.rt.LaunchOptsForFunction(f.runCtx)
 	if err != nil {
 		return err
@@ -61,14 +61,19 @@ func (f *Function) Start() error {
 		hc.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
+	env := []string{
+		fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", 50051),
+		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", 50051),
+		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
+	}
+	for k, v := range envMap {
+		env = append(env, k+"="+v)
+	}
+
 	cc := &container.Config{
 		Image: f.rt.DevImageName(), // Select an image to use based on the handler
 		// Set the address to the bound port
-		Env: []string{
-			fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", 50051),
-			fmt.Sprintf("NITRIC_SERVICE_PORT=%d", 50051),
-			fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
-		},
+		Env:        env,
 		Entrypoint: launchOpts.Entrypoint,
 		Cmd:        launchOpts.Cmd,
 		WorkingDir: launchOpts.TargetWD,

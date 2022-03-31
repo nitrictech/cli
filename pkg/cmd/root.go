@@ -155,7 +155,7 @@ func cmdUsage(prefix []string, c *cobra.Command, commonOnly bool) []string {
 	}
 
 	if add {
-		cmdH = append(cmdH, fmt.Sprintf("- %-22s : %s", use, c.Short))
+		cmdH = append(cmdH, fmt.Sprintf("- %s : %s", use, c.Short))
 		if _, ok := c.Annotations["alias:to"]; ok {
 			use = "nitric " + c.Annotations["alias:to"]
 			cmdH = append(cmdH, fmt.Sprintf("  (alias: %s)", use))

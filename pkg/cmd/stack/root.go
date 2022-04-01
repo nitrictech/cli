@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/joho/godotenv"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
@@ -34,10 +35,12 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/tasklet"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 var (
 	confirmDown bool
+	envFile     string
 )
 
 var stackCmd = &cobra.Command{
@@ -74,7 +77,7 @@ var newStackCmd = &cobra.Command{
 		pc, err := project.ConfigFromFile()
 		cobra.CheckErr(err)
 
-		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName})
+		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName}, map[string]string{})
 		cobra.CheckErr(err)
 
 		sc, err := prov.Ask()
@@ -114,7 +117,10 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		p, err := provider.NewProvider(proj, s)
+		envMap, err := godotenv.Read(utils.FilesExisting(".env", ".env.production", envFile)...)
+		cobra.CheckErr(err)
+
+		p, err := provider.NewProvider(proj, s, envMap)
 		cobra.CheckErr(err)
 
 		buildImages := tasklet.Runner{
@@ -179,7 +185,7 @@ nitric stack down -e aws -y`,
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s)
+		p, err := provider.NewProvider(proj, s, map[string]string{})
 		cobra.CheckErr(err)
 
 		deploy := tasklet.Runner{
@@ -214,7 +220,7 @@ nitric stack list -s aws
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s)
+		p, err := provider.NewProvider(proj, s, map[string]string{})
 		cobra.CheckErr(err)
 
 		deps, err := p.List()
@@ -231,6 +237,7 @@ func RootCommand() *cobra.Command {
 
 	stackCmd.AddCommand(stackUpdateCmd)
 	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
+	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 
 	stackCmd.AddCommand(stackDeleteCmd)
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")

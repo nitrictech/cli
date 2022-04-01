@@ -35,6 +35,7 @@ type LambdaArgs struct {
 	Topics      map[string]*sns.Topic
 	DockerImage *docker.Image
 	Compute     project.Compute
+	EnvMap      map[string]string
 }
 
 type Lambda struct {
@@ -121,6 +122,14 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
+	envVars := pulumi.StringMap{
+		"NITRIC_STACK": pulumi.String(args.StackName),
+		"MIN_WORKERS":  pulumi.String(fmt.Sprint(args.Compute.Workers())),
+	}
+	for k, v := range args.EnvMap {
+		envVars[k] = pulumi.String(v)
+	}
+
 	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
 	res.Function, err = awslambda.NewFunction(ctx, name, &awslambda.FunctionArgs{
 		ImageUri:    args.DockerImage.ImageName,
@@ -129,12 +138,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		PackageType: pulumi.String("Image"),
 		Role:        res.Role.Arn,
 		Tags:        common.Tags(ctx, name),
-		Environment: awslambda.FunctionEnvironmentArgs{
-			Variables: pulumi.StringMap{
-				"NITRIC_STACK": pulumi.String(args.StackName),
-				"MIN_WORKERS":  pulumi.String(fmt.Sprint(args.Compute.Workers())),
-			},
-		},
+		Environment: awslambda.FunctionEnvironmentArgs{Variables: envVars},
 	}, opts...)
 	if err != nil {
 		return nil, err

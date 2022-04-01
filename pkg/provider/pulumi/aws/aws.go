@@ -50,6 +50,7 @@ import (
 type awsProvider struct {
 	proj   *project.Project
 	sc     *stack.Config
+	envMap map[string]string
 	tmpDir string
 
 	// created resources (mostly here for testing)
@@ -67,10 +68,11 @@ type awsProvider struct {
 //go:embed pulumi-aws-version.txt
 var awsPluginVersion string
 
-func New(s *project.Project, t *stack.Config) common.PulumiProvider {
+func New(s *project.Project, t *stack.Config, envMap map[string]string) common.PulumiProvider {
 	return &awsProvider{
 		proj:        s,
 		sc:          t,
+		envMap:      envMap,
 		topics:      map[string]*sns.Topic{},
 		buckets:     map[string]*s3.Bucket{},
 		queues:      map[string]*sqs.Queue{},
@@ -303,6 +305,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			DockerImage: image.DockerImage,
 			Compute:     c,
 			StackName:   ctx.Stack(),
+			EnvMap:      a.envMap,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "lambda container "+c.Unit().Name)

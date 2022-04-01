@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -37,7 +38,10 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/tasklet"
+	"github.com/nitrictech/cli/pkg/utils"
 )
+
+var envFile string
 
 var runCmd = &cobra.Command{
 	Use:         "run",
@@ -56,19 +60,23 @@ var runCmd = &cobra.Command{
 		config, err := project.ConfigFromFile()
 		cobra.CheckErr(err)
 
-		s, err := project.FromConfig(config)
+		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
+
+		envMap, err := godotenv.Read(utils.FilesExisting(".env", ".env.development", envFile)...)
+		cobra.CheckErr(err)
+
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
 			Runner: func(_ output.Progress) error {
-				s, err = codeconfig.Populate(s)
+				proj, err = codeconfig.Populate(proj)
 				return err
 			},
 			StopMsg: "Configuration gathered",
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		ls := run.NewLocalServices(s)
+		ls := run.NewLocalServices(proj)
 		if ls.Running() {
 			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")
 			os.Exit(2)
@@ -77,13 +85,13 @@ var runCmd = &cobra.Command{
 		ce, err := containerengine.Discover()
 		cobra.CheckErr(err)
 
-		logger := ce.Logger(s.Dir)
+		logger := ce.Logger(proj.Dir)
 		cobra.CheckErr(logger.Start())
 
 		createBaseImage := tasklet.Runner{
 			StartMsg: "Creating Dev Image",
 			Runner: func(_ output.Progress) error {
-				return build.CreateBaseDev(s)
+				return build.CreateBaseDev(proj)
 			},
 			StopMsg: "Created Dev Image!",
 		}
@@ -127,12 +135,12 @@ var runCmd = &cobra.Command{
 		startFunctions := tasklet.Runner{
 			StartMsg: "Starting Functions",
 			Runner: func(_ output.Progress) error {
-				functions, err = run.FunctionsFromHandlers(s)
+				functions, err = run.FunctionsFromHandlers(proj)
 				if err != nil {
 					return err
 				}
 				for _, f := range functions {
-					err = f.Start()
+					err = f.Start(envMap)
 					if err != nil {
 						return err
 					}
@@ -197,5 +205,6 @@ var runCmd = &cobra.Command{
 }
 
 func RootCommand() *cobra.Command {
+	runCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	return runCmd
 }

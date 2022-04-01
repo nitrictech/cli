@@ -35,6 +35,7 @@ type CloudRunnerArgs struct {
 	ProjectId      string
 	Compute        project.Compute
 	Image          *common.Image
+	EnvMap         map[string]string
 	ServiceAccount *serviceaccount.Account
 	Topics         map[string]*pubsub.Topic
 }
@@ -56,6 +57,19 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 		return nil, err
 	}
 
+	env := cloudrun.ServiceTemplateSpecContainerEnvArray{
+		cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String("MIN_WORKERS"),
+			Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
+		},
+	}
+	for k, v := range args.EnvMap {
+		env = append(env, cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String(k),
+			Value: pulumi.String(v),
+		})
+	}
+
 	// Deploy the func
 	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 512)
 	maxScale := common.IntValueOrDefault(args.Compute.Unit().MaxScale, 10)
@@ -74,12 +88,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				ServiceAccountName: args.ServiceAccount.Email,
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
-						Envs: cloudrun.ServiceTemplateSpecContainerEnvArray{
-							cloudrun.ServiceTemplateSpecContainerEnvArgs{
-								Name:  pulumi.String("MIN_WORKERS"),
-								Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
-							},
-						},
+						Envs:  env,
 						Image: args.Image.DockerImage.ImageName, // TODO check
 						Ports: cloudrun.ServiceTemplateSpecContainerPortArray{
 							cloudrun.ServiceTemplateSpecContainerPortArgs{

@@ -57,7 +57,7 @@ var (
 	_ types.Provider = &pulumiDeployment{}
 )
 
-func New(p *project.Project, sc *stack.Config) (types.Provider, error) {
+func New(p *project.Project, sc *stack.Config, envMap map[string]string) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 	err := pv.Run()
 	if err != nil {
@@ -70,11 +70,11 @@ func New(p *project.Project, sc *stack.Config) (types.Provider, error) {
 	var prov common.PulumiProvider
 	switch sc.Provider {
 	case stack.Aws:
-		prov = aws.New(p, sc)
+		prov = aws.New(p, sc, envMap)
 	case stack.Azure:
-		prov = azure.New(p, sc)
+		prov = azure.New(p, sc, envMap)
 	case stack.Gcp:
-		prov = gcp.New(p, sc)
+		prov = gcp.New(p, sc, envMap)
 	default:
 		return nil, utils.NewNotSupportedErr("pulumi provider " + sc.Provider + " not suppored")
 	}

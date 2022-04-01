@@ -25,6 +25,7 @@ require (
 	github.com/hashicorp/go-getter v1.5.11
 	github.com/imdario/mergo v0.3.12
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
+	github.com/joho/godotenv v1.3.0
 	github.com/klauspost/compress v1.15.1 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect

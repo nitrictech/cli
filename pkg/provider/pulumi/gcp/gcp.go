@@ -56,6 +56,7 @@ import (
 type gcpProvider struct {
 	sc         *stack.Config
 	proj       *project.Project
+	envMap     map[string]string
 	tmpDir     string
 	gcpProject string
 
@@ -75,10 +76,11 @@ type gcpProvider struct {
 //go:embed pulumi-gcp-version.txt
 var gcpPluginVersion string
 
-func New(s *project.Project, t *stack.Config) common.PulumiProvider {
+func New(s *project.Project, t *stack.Config, envMap map[string]string) common.PulumiProvider {
 	return &gcpProvider{
 		proj:               s,
 		sc:                 t,
+		envMap:             envMap,
 		buckets:            map[string]*storage.Bucket{},
 		topics:             map[string]*pubsub.Topic{},
 		queueTopics:        map[string]*pubsub.Topic{},
@@ -389,6 +391,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			Compute:        c,
 			Image:          g.images[c.Unit().Name],
 			ServiceAccount: sa,
+			EnvMap:         g.envMap,
 		}, defaultResourceOptions)
 		if err != nil {
 			return err

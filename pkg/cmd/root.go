@@ -52,6 +52,12 @@ var rootCmd = &cobra.Command{
 		if output.VerboseLevel > 1 {
 			pterm.EnableDebugMessages()
 		}
+		if output.VerboseLevel == 0 {
+			pterm.Info.Debugger = true
+		}
+		if output.CI {
+			pterm.DisableStyling()
+		}
 	},
 }
 
@@ -70,6 +76,7 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
+	rootCmd.PersistentFlags().BoolVar(&output.CI, "ci", false, "CI output mode, disable all output styling")
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
 	err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault

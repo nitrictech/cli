@@ -24,6 +24,7 @@ import (
 
 var (
 	VerboseLevel int
+	CI           bool
 )
 
 type Progress interface {

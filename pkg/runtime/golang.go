@@ -82,7 +82,11 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 		return err
 	}
 
-	buildCon.Run(dockerfile.RunOptions{Command: []string{"CGO_ENABLED=0", "GOOS=linux", "go", "build", "-o", "/bin/main", t.handler}})
+	buildCon.Run(dockerfile.RunOptions{
+		Command: []string{
+			"go", "build", "-o", "/bin/main", filepath.Dir(t.handler) + "/...",
+		},
+	})
 
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "alpine",
@@ -130,10 +134,11 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 	if err != nil {
 		return LaunchOpts{}, err
 	}
+
 	return LaunchOpts{
 		Image:    t.DevImageName(),
 		TargetWD: filepath.Join("/go/src", module),
-		Cmd:      strslice.StrSlice{"go", "run", "./" + filepath.ToSlash(t.handler)},
+		Cmd:      strslice.StrSlice{"go", "run", "./" + filepath.ToSlash(filepath.Dir(t.handler)) + "/..."},
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
@@ -171,7 +176,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 			"-exclude-dir=.git",
 			"-exclude-dir=.nitric",
 			"-directory=.",
-			fmt.Sprintf("-build=go build -o %s ./%s", t.ContainerName(), relHandler),
+			fmt.Sprintf("-build=go build -o %s ./%s/...", t.ContainerName(), filepath.Dir(relHandler)),
 			"-command=./" + t.ContainerName(),
 		},
 		Mounts: []mount.Mount{

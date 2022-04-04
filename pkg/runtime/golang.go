@@ -59,7 +59,7 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 	buildCon, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "golang:alpine",
 		As:     "build",
-		Ignore: []string{},
+		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
 		return err
@@ -82,7 +82,11 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 		return err
 	}
 
-	buildCon.Run(dockerfile.RunOptions{Command: []string{"CGO_ENABLED=0", "GOOS=linux", "go", "build", "-o", "/bin/main", t.handler}})
+	buildCon.Run(dockerfile.RunOptions{
+		Command: []string{
+			"go", "build", "-o", "/bin/main", filepath.Dir(t.handler) + "/...",
+		},
+	})
 
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "alpine",
@@ -114,11 +118,12 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 func (t *golang) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "golang:alpine",
-		Ignore: []string{},
+		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
 		return err
 	}
+	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "git"}})
 	con.Run(dockerfile.RunOptions{Command: []string{"go", "install", "github.com/asalkeld/CompileDaemon@d4b10de"}})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
@@ -130,10 +135,11 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 	if err != nil {
 		return LaunchOpts{}, err
 	}
+
 	return LaunchOpts{
 		Image:    t.DevImageName(),
 		TargetWD: filepath.Join("/go/src", module),
-		Cmd:      strslice.StrSlice{"go", "run", "./" + filepath.ToSlash(t.handler)},
+		Cmd:      strslice.StrSlice{"go", "run", "./" + filepath.ToSlash(filepath.Dir(t.handler)) + "/..."},
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
@@ -171,7 +177,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 			"-exclude-dir=.git",
 			"-exclude-dir=.nitric",
 			"-directory=.",
-			fmt.Sprintf("-build=go build -o %s ./%s", t.ContainerName(), relHandler),
+			fmt.Sprintf("-build=go build -o %s ./%s/...", t.ContainerName(), filepath.Dir(relHandler)),
 			"-command=./" + t.ContainerName(),
 		},
 		Mounts: []mount.Mount{

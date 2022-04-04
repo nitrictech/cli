@@ -117,8 +117,12 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		envMap, err := godotenv.Read(utils.FilesExisting(".env", ".env.production", envFile)...)
-		cobra.CheckErr(err)
+		envFiles := utils.FilesExisting(".env", ".env.production", envFile)
+		envMap := map[string]string{}
+		if len(envFiles) > 0 {
+			envMap, err = godotenv.Read(envFiles...)
+			cobra.CheckErr(err)
+		}
 
 		p, err := provider.NewProvider(proj, s, envMap)
 		cobra.CheckErr(err)

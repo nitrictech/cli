@@ -63,8 +63,12 @@ var runCmd = &cobra.Command{
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		envMap, err := godotenv.Read(utils.FilesExisting(".env", ".env.development", envFile)...)
-		cobra.CheckErr(err)
+		envFiles := utils.FilesExisting(".env", ".env.development", envFile)
+		envMap := map[string]string{}
+		if len(envFiles) > 0 {
+			envMap, err = godotenv.Read(envFiles...)
+			cobra.CheckErr(err)
+		}
 
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",

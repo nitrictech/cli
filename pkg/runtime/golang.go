@@ -59,7 +59,7 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 	buildCon, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "golang:alpine",
 		As:     "build",
-		Ignore: []string{},
+		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
 		return err
@@ -118,11 +118,12 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 func (t *golang) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
 		From:   "golang:alpine",
-		Ignore: []string{},
+		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
 		return err
 	}
+	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "git"}})
 	con.Run(dockerfile.RunOptions{Command: []string{"go", "install", "github.com/asalkeld/CompileDaemon@d4b10de"}})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))

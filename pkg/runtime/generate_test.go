@@ -63,7 +63,7 @@ WORKDIR /app/
 COPY go.mod *.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/main pkg/handler/list.go
+RUN go build -o /bin/main pkg/handler/...
 FROM alpine
 ADD https://github.com/nitrictech/nitric/releases/download/v1.2.3/membrane-aws /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane
@@ -222,6 +222,7 @@ ENTRYPOINT ["node"]`,
 		{
 			handler: "pkg/list/main.go",
 			wantFwriter: `FROM golang:alpine
+RUN apk add --no-cache git
 RUN go install github.com/asalkeld/CompileDaemon@d4b10de`,
 		},
 	}

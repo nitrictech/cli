@@ -471,7 +471,11 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 
 		fun, ok := s.Functions[f.name]
 		if !ok {
-			fun = project.FunctionFromHandler(handler, s.Dir)
+			fun, err = project.FunctionFromHandler(handler, s.Dir)
+			if err != nil {
+				errs.Add(fmt.Errorf("can not create function from %s %w", handler, err))
+				continue
+			}
 		}
 		fun.ComputeUnit.Triggers = project.Triggers{
 			Topics: topicTriggers,

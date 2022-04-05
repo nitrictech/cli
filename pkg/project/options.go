@@ -43,11 +43,17 @@ func FromConfig(p *Config) (*Project, error) {
 				return nil, err
 			}
 			for _, f := range fs {
-				fn := FunctionFromHandler(f, s.Dir)
+				fn, err := FunctionFromHandler(f, s.Dir)
+				if err != nil {
+					return nil, err
+				}
 				s.Functions[fn.Name] = fn
 			}
 		} else {
-			fn := FunctionFromHandler(g, s.Dir)
+			fn, err := FunctionFromHandler(g, s.Dir)
+			if err != nil {
+				return nil, err
+			}
 			s.Functions[fn.Name] = fn
 		}
 	}
@@ -59,11 +65,14 @@ func FromConfig(p *Config) (*Project, error) {
 	return s, nil
 }
 
-func FunctionFromHandler(h, stackDir string) Function {
+func FunctionFromHandler(h, stackDir string) (Function, error) {
 	pterm.Debug.Println("Using function from " + h)
-	rt, _ := runtime.NewRunTimeFromHandler(h)
+	rt, err := runtime.NewRunTimeFromHandler(h)
+	if err != nil {
+		return Function{}, err
+	}
 	return Function{
 		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
 		Handler:     h,
-	}
+	}, nil
 }

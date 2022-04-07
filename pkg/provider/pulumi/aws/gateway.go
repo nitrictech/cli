@@ -85,6 +85,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 			p.Patch = awsOperation(p.Patch, naps)
 			p.Put = awsOperation(p.Put, naps)
 			p.Delete = awsOperation(p.Delete, naps)
+			p.Options = awsOperation(p.Options, naps)
 			args.OpenAPISpec.Paths[k] = p
 		}
 

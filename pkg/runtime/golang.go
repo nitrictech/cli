@@ -138,7 +138,7 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 
 	return LaunchOpts{
 		Image:    t.DevImageName(),
-		TargetWD: filepath.Join("/go/src", module),
+		TargetWD: filepath.ToSlash(filepath.Join("/go/src", module)),
 		Cmd:      strslice.StrSlice{"go", "run", "./" + filepath.ToSlash(filepath.Dir(t.handler)) + "/..."},
 		Mounts: []mount.Mount{
 			{
@@ -149,7 +149,7 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 			{
 				Type:   "bind",
 				Source: runCtx,
-				Target: filepath.Join("/go/src", module),
+				Target: filepath.ToSlash(filepath.Join("/go/src", module)),
 			},
 		},
 	}, nil
@@ -160,7 +160,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 	if err != nil {
 		return LaunchOpts{}, err
 	}
-	containerRunCtx := filepath.Join("/go/src", module)
+	containerRunCtx := filepath.ToSlash(filepath.Join("/go/src", module))
 	relHandler := t.handler
 	if strings.HasPrefix(t.handler, runCtx) {
 		relHandler, err = filepath.Rel(runCtx, t.handler)
@@ -177,7 +177,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 			"-exclude-dir=.git",
 			"-exclude-dir=.nitric",
 			"-directory=.",
-			fmt.Sprintf("-build=go build -o %s ./%s/...", t.ContainerName(), filepath.Dir(relHandler)),
+			fmt.Sprintf("-build=go build -o %s ./%s/...", t.ContainerName(), filepath.ToSlash(filepath.Dir(relHandler))),
 			"-command=./" + t.ContainerName(),
 		},
 		Mounts: []mount.Mount{

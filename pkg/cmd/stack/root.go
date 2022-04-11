@@ -107,22 +107,22 @@ var stackUpdateCmd = &cobra.Command{
 
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
 
-		codeAsConfig := tasklet.Runner{
-			StartMsg: "Gathering configuration from code..",
-			Runner: func(_ output.Progress) error {
-				proj, err = codeconfig.Populate(proj)
-				return err
-			},
-			StopMsg: "Configuration gathered",
-		}
-		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
-
 		envFiles := utils.FilesExisting(".env", ".env.production", envFile)
 		envMap := map[string]string{}
 		if len(envFiles) > 0 {
 			envMap, err = godotenv.Read(envFiles...)
 			cobra.CheckErr(err)
 		}
+
+		codeAsConfig := tasklet.Runner{
+			StartMsg: "Gathering configuration from code..",
+			Runner: func(_ output.Progress) error {
+				proj, err = codeconfig.Populate(proj, envMap)
+				return err
+			},
+			StopMsg: "Configuration gathered",
+		}
+		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
 		p, err := provider.NewProvider(proj, s, envMap)
 		cobra.CheckErr(err)

@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	osruntime "runtime"
 	"strings"
 
 	"github.com/docker/docker/api/types/mount"
@@ -177,6 +178,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 			"-exclude-dir=.git",
 			"-exclude-dir=.nitric",
 			"-directory=.",
+			fmt.Sprintf("-polling=%t", osruntime.GOOS == "windows"),
 			fmt.Sprintf("-build=go build -o %s ./%s/...", t.ContainerName(), filepath.ToSlash(filepath.Dir(relHandler))),
 			"-command=./" + t.ContainerName(),
 		},

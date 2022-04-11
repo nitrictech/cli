@@ -73,7 +73,7 @@ var runCmd = &cobra.Command{
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
 			Runner: func(_ output.Progress) error {
-				proj, err = codeconfig.Populate(proj)
+				proj, err = codeconfig.Populate(proj, envMap)
 				return err
 			},
 			StopMsg: "Configuration gathered",

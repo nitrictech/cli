@@ -55,19 +55,21 @@ type codeConfig struct {
 	// A stack can be composed of one or more applications
 	functions      map[string]*FunctionDependencies
 	initialProject *project.Project
+	envMap         map[string]string
 	lock           sync.RWMutex
 }
 
-func New(p *project.Project) (CodeConfig, error) {
+func New(p *project.Project, envMap map[string]string) (CodeConfig, error) {
 	return &codeConfig{
 		initialProject: p,
 		functions:      map[string]*FunctionDependencies{},
 		lock:           sync.RWMutex{},
+		envMap:         envMap,
 	}, nil
 }
 
-func Populate(initial *project.Project) (*project.Project, error) {
-	cc, err := New(initial)
+func Populate(initial *project.Project, envMap map[string]string) (*project.Project, error) {
+	cc, err := New(initial, envMap)
 	if err != nil {
 		return nil, err
 	}
@@ -283,19 +285,24 @@ func (c *codeConfig) collectOne(handler string) error {
 		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
+	env := []string{
+		fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port),
+		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
+		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
+		"NITRIC_ENVIRONMENT=build", // this is to tell the sdk that we are running in the build and not proper runtime.
+	}
+	for k, v := range c.envMap {
+		env = append(env, k+"="+v)
+	}
+
 	cc := &container.Config{
 		AttachStdout: true,
 		AttachStderr: true,
 		Image:        opts.Image,
-		Env: []string{
-			fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port),
-			fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
-			fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
-			"NITRIC_ENVIRONMENT=build", // this is to tell the sdk that we are running in the build and not proper runtime.
-		},
-		Cmd:        opts.Cmd,
-		Entrypoint: opts.Entrypoint,
-		WorkingDir: opts.TargetWD,
+		Env:          env,
+		Cmd:          opts.Cmd,
+		Entrypoint:   opts.Entrypoint,
+		WorkingDir:   opts.TargetWD,
 	}
 
 	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")

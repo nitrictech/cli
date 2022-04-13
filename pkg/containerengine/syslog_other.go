@@ -87,7 +87,7 @@ func (s *localSyslog) Start() error {
 		return err
 	}
 
-	err = os.MkdirAll(path.Dir(s.logPath), 0777)
+	err = os.MkdirAll(path.Dir(s.logPath), os.ModePerm)
 	if err != nil {
 		return err
 	}

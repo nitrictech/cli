@@ -64,7 +64,7 @@ WORKDIR /app/
 COPY go.mod *.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o /bin/main pkg/handler/...
+RUN go build -o /bin/main ./pkg/handler/...
 FROM alpine
 ADD https://github.com/nitrictech/nitric/releases/download/v1.2.3/membrane-aws /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane

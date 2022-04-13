@@ -84,7 +84,7 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 
 	buildCon.Run(dockerfile.RunOptions{
 		Command: []string{
-			"go", "build", "-o", "/bin/main", filepath.Dir(t.handler) + "/...",
+			"go", "build", "-o", "/bin/main", "./" + filepath.Dir(t.handler) + "/...",
 		},
 	})
 

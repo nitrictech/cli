@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/go-connections/nat"
 
 	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
 )
@@ -62,6 +63,7 @@ type LaunchOpts struct {
 	Entrypoint []string
 	Cmd        []string
 	Mounts     []mount.Mount
+	PortBindings nat.PortMap
 }
 
 func NewRunTimeFromHandler(handler string) (Runtime, error) {

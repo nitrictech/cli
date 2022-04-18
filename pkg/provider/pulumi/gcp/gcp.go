@@ -39,12 +39,11 @@ import (
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/storage"
+	"github.com/pulumi/pulumi-random/sdk/v4/go/random"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-
-	random "github.com/pulumi/pulumi-random/sdk/v4/go/random"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
@@ -76,6 +75,9 @@ type gcpProvider struct {
 //go:embed pulumi-gcp-version.txt
 var gcpPluginVersion string
 
+//go:embed pulumi-random-version.txt
+var randomPluginVersion string
+
 func New(s *project.Project, t *stack.Config, envMap map[string]string) common.PulumiProvider {
 	return &gcpProvider{
 		proj:               s,
@@ -95,6 +97,10 @@ func (g *gcpProvider) Plugins() []common.Plugin {
 		{
 			Name:    "gcp",
 			Version: strings.TrimSpace(gcpPluginVersion),
+		},
+		{
+			Name:    "random",
+			Version: strings.TrimSpace(randomPluginVersion),
 		},
 	}
 }

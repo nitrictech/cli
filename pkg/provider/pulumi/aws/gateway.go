@@ -69,7 +69,6 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 	doc := pulumi.All(nameArnPairs...).ApplyT(func(pairs []interface{}) (string, error) {
 		naps := make(map[string]string)
-
 		for _, p := range pairs {
 			if pair, ok := p.(nameArnPair); ok {
 				naps[pair.name] = pair.invokeArn
@@ -90,7 +89,6 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		}
 
 		b, err := args.OpenAPISpec.MarshalJSON()
-
 		if err != nil {
 			return "", err
 		}

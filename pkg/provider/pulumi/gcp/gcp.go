@@ -181,10 +181,10 @@ func (g *gcpProvider) Validate() error {
 		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.sc.Region, g.sc.Provider)))
 	}
 
-	if _, ok := g.sc.Extra["project"]; !ok {
+	if proj, ok := g.sc.Extra["project"]; !ok || proj == nil {
 		errList.Add(fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider))
 	} else {
-		g.gcpProject = g.sc.Extra["project"].(string)
+		g.gcpProject = proj.(string)
 	}
 
 	return errList.Aggregate()

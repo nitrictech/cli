@@ -339,6 +339,10 @@ func (c *codeConfig) collectOne(handler string) error {
 		WorkingDir:   opts.TargetWD,
 	}
 
+	if output.VerboseLevel > 2 {
+		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
+	}
+
 	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")
 	cID, err := ce.ContainerCreate(cc, hostConfig, &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{},
@@ -352,9 +356,6 @@ func (c *codeConfig) collectOne(handler string) error {
 		return err
 	}
 
-	if output.VerboseLevel > 2 {
-		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
-	}
 	logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,

@@ -93,8 +93,8 @@ func (p *podman) ListImages(stackName, containerName string) ([]Image, error) {
 	return p.docker.ListImages(stackName, containerName)
 }
 
-func (p *podman) ImagePull(rawImage string) error {
-	return p.docker.ImagePull(rawImage)
+func (p *podman) ImagePull(rawImage string, opts types.ImagePullOptions) error {
+	return p.docker.ImagePull(rawImage, opts)
 }
 
 func (p *podman) ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error) {

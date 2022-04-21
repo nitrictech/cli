@@ -178,6 +178,10 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 	return nil
 }
 
+func (a *azureProvider) TryPullImages() error {
+	return nil
+}
+
 func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")

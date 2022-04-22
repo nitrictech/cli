@@ -188,7 +188,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 			"-exclude-dir=.nitric",
 			"-directory=.",
 			fmt.Sprintf("-polling=%t", osruntime.GOOS == "windows"),
-			fmt.Sprintf("-build=go build -o %s ./%s/...", t.ContainerName(), filepath.ToSlash(filepath.Dir(relHandler))),
+			fmt.Sprintf("-build=go build -buildvcs=false -o %s ./%s/...", t.ContainerName(), filepath.ToSlash(filepath.Dir(relHandler))),
 			"-command=./" + t.ContainerName(),
 		},
 		Mounts: []mount.Mount{

@@ -67,6 +67,11 @@ func AddOptions(cmd *cobra.Command, providerOnly bool) error {
 	}
 
 	cmd.Flags().VarP(pflagext.NewStringEnumVar(&stack, stacks, ""), "stack", "s", "use this to refer to a stack configuration nitric-<stackname>.yaml")
+
+	if err = cobra.MarkFlagRequired(cmd.Flags(), "stack"); err != nil {
+		return err
+	}
+
 	return cmd.RegisterFlagCompletionFunc("stack", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return stacks, cobra.ShellCompDirectiveDefault
 	})

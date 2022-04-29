@@ -114,3 +114,15 @@ func NewNitricLogFile(stackPath string) (string, error) {
 	tf.Close()
 	return tf.Name(), nil
 }
+
+func GoPath() (string, error) {
+	goPath := strings.TrimSpace(os.Getenv("GOPATH"))
+	if goPath == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		goPath = filepath.Join(homeDir, "go")
+	}
+	return goPath, nil
+}

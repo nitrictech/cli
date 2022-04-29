@@ -18,12 +18,12 @@ package runtime
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/docker/docker/api/types/mount"
 	"github.com/google/go-cmp/cmp"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 func TestGenerate(t *testing.T) {
@@ -245,6 +245,11 @@ RUN go install github.com/asalkeld/CompileDaemon@d4b10de`,
 }
 
 func TestLaunchOptsForFunction(t *testing.T) {
+	goPath, err := utils.GoPath()
+	if err != nil {
+		panic(err)
+	}
+
 	tests := []struct {
 		handler string
 		runCtx  string
@@ -283,7 +288,7 @@ func TestLaunchOptsForFunction(t *testing.T) {
 					"-directory=.", "-polling=false", "-build=go build -o runtime ././...", "-command=./runtime"},
 				Mounts: []mount.Mount{
 					{
-						Type: "bind", Source: filepath.Join(os.Getenv("GOPATH"), "pkg"), Target: "/go/pkg",
+						Type: "bind", Source: filepath.Join(goPath, "pkg"), Target: "/go/pkg",
 					},
 					{
 						Type: "bind", Source: "../../", Target: "/go/src/github.com/nitrictech/cli",
@@ -311,6 +316,11 @@ func TestLaunchOptsForFunction(t *testing.T) {
 }
 
 func TestLaunchOptsForFunctionCollect(t *testing.T) {
+	goPath, err := utils.GoPath()
+	if err != nil {
+		panic(err)
+	}
+
 	tests := []struct {
 		handler string
 		runCtx  string
@@ -348,7 +358,7 @@ func TestLaunchOptsForFunctionCollect(t *testing.T) {
 					"go", "run", "././..."},
 				Mounts: []mount.Mount{
 					{
-						Type: "bind", Source: filepath.Join(os.Getenv("GOPATH"), "pkg"), Target: "/go/pkg",
+						Type: "bind", Source: filepath.Join(goPath, "pkg"), Target: "/go/pkg",
 					},
 					{
 						Type: "bind", Source: "../../", Target: "/go/src/github.com/nitrictech/cli",

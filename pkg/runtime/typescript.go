@@ -49,37 +49,67 @@ func (t *typescript) BuildIgnore() []string {
 }
 
 func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
-	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+	css := dockerfile.NewStateStore()
+
+	// Start build stage
+	buildstage, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",
+		As:     "build",
 		Ignore: javascriptIgnoreList,
 	})
 	if err != nil {
 		return err
 	}
 
-	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "typescript", "ts-node"}})
-
-	err = con.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
-	if err != nil {
-		return err
-	}
-	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "import", "||", "echo", "Lockfile already exists"}})
-	con.Run(dockerfile.RunOptions{Command: []string{
+	buildstage.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "typescript"}})
+	buildstage.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
+	buildstage.Run(dockerfile.RunOptions{Command: []string{"yarn", "import", "||", "echo", "Lockfile already exists"}})
+	buildstage.Run(dockerfile.RunOptions{Command: []string{
 		"set", "-ex;",
 		"yarn", "install", "--production", "--frozen-lockfile", "--cache-folder", "/tmp/.cache;",
 		"rm", "-rf", "/tmp/.cache;"}})
-
-	withMembrane(con, version, provider)
-
-	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
+	err = buildstage.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
 	if err != nil {
 		return err
 	}
-	con.Config(dockerfile.ConfigOptions{
-		Cmd: []string{"ts-node", "-T", filepath.ToSlash(t.handler)},
+
+	buildstage.Run(dockerfile.RunOptions{Command: []string{"tsc", "--esModuleInterop", "--outDir", "lib/", filepath.ToSlash(t.handler)}})
+	newHandler := strings.Replace(t.handler, ".ts", ".js", 1)
+
+	// start final stage
+	con, err := css.NewContainer(dockerfile.NewContainerOpts{
+		From:   "node:alpine",
+		As:     "final",
+		Ignore: javascriptIgnoreList,
 	})
 
-	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+	if err != nil {
+		return err
+	}
+
+	if err := con.Copy(dockerfile.CopyOptions{From: buildstage.Name(), Src: "package.json", Dest: "package.json"}); err != nil {
+		return err
+	}
+	if err := con.Copy(dockerfile.CopyOptions{From: buildstage.Name(), Src: "node_modules/", Dest: "node_modules/"}); err != nil {
+		return err
+	}
+	if err := con.Copy(dockerfile.CopyOptions{From: buildstage.Name(), Src: "lib/", Dest: "/"}); err != nil {
+		return err
+	}
+
+	withMembrane(con, version, provider)
+
+	con.Config(dockerfile.ConfigOptions{
+		Cmd: []string{"node", filepath.ToSlash(newHandler)},
+	})
+
+	lines, err := css.Compile(con.Name(), nil)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write([]byte(strings.Join(lines, "\n")))
 	return err
 }
 

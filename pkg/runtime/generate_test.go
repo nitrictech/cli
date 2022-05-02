@@ -40,12 +40,12 @@ func TestGenerate(t *testing.T) {
 			version:  "latest",
 			provider: "azure",
 			wantFwriter: `FROM node:alpine as layer-build
-RUN yarn global add typescript
+RUN yarn global add typescript @vercel/ncc
 COPY package.json *.lock *-lock.json /
 RUN yarn import || echo Lockfile already exists
 RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
 COPY . .
-RUN tsc --esModuleInterop --outDir lib/ functions/list.ts
+RUN ncc build functions/list.ts -m --v8-cache -o lib/
 FROM node:alpine as layer-final
 COPY --from=layer-build package.json package.json
 COPY --from=layer-build node_modules/ node_modules/
@@ -53,7 +53,7 @@ COPY --from=layer-build lib/ /
 ADD https://github.com/nitrictech/nitric/releases/latest/download/membrane-azure /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane
 ENTRYPOINT ["/usr/local/bin/membrane"]
-CMD ["node", "functions/list.js"]`,
+CMD ["node", "index.js"]`,
 		},
 		{
 			name:     "go",

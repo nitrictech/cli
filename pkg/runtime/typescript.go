@@ -61,8 +61,10 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 		return err
 	}
 
-	buildstage.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "typescript"}})
-	buildstage.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
+	buildstage.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "typescript", "@vercel/ncc"}})
+	if err := buildstage.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"}); err != nil {
+		return err
+	}
 	buildstage.Run(dockerfile.RunOptions{Command: []string{"yarn", "import", "||", "echo", "Lockfile already exists"}})
 	buildstage.Run(dockerfile.RunOptions{Command: []string{
 		"set", "-ex;",
@@ -73,8 +75,7 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 		return err
 	}
 
-	buildstage.Run(dockerfile.RunOptions{Command: []string{"tsc", "--esModuleInterop", "--outDir", "lib/", filepath.ToSlash(t.handler)}})
-	newHandler := strings.Replace(t.handler, ".ts", ".js", 1)
+	buildstage.Run(dockerfile.RunOptions{Command: []string{"ncc", "build", filepath.ToSlash(t.handler), "-m", "--v8-cache", "-o", "lib/"}})
 
 	// start final stage
 	con, err := css.NewContainer(dockerfile.NewContainerOpts{
@@ -100,7 +101,7 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	withMembrane(con, version, provider)
 
 	con.Config(dockerfile.ConfigOptions{
-		Cmd: []string{"node", filepath.ToSlash(newHandler)},
+		Cmd: []string{"node", "index.js"},
 	})
 
 	lines, err := css.Compile(con.Name(), nil)

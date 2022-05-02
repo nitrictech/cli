@@ -147,7 +147,11 @@ func printList(object interface{}, out io.Writer) {
 			row := table.Row{}
 			for fi := 0; fi < v.Index(i).NumField(); fi++ {
 				if len(row) < len(names) {
-					row = append(row, v.Index(i).Field(fi))
+					if v.Index(i).Field(fi).Kind() == reflect.Ptr {
+						row = append(row, v.Index(i).Field(fi).Elem())
+					} else {
+						row = append(row, v.Index(i).Field(fi))
+					}
 				}
 			}
 			rows = append(rows, row)

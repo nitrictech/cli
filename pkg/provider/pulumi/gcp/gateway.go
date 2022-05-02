@@ -113,6 +113,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 			p.Patch = gcpOperation(p.Patch, naps)
 			p.Put = gcpOperation(p.Put, naps)
 			p.Delete = gcpOperation(p.Delete, naps)
+			p.Options = gcpOperation(p.Options, naps)
 			args.OpenAPISpec.Paths[k] = p
 		}
 

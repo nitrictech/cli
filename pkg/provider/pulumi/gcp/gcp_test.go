@@ -214,7 +214,7 @@ func TestValidate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := New(nil, tt.t)
+			a := New(nil, tt.t, map[string]string{})
 			if err := a.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("gcpProvider.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}

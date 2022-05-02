@@ -35,6 +35,7 @@ type ContainerAppsArgs struct {
 	ResourceGroupName pulumi.StringInput
 	Location          pulumi.StringInput
 	SubscriptionID    pulumi.StringInput
+	EnvMap            map[string]string
 
 	Topics map[string]*eventgrid.Topic
 
@@ -97,6 +98,13 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		env = append(env, web.EnvironmentVarArgs{
 			Name:  pulumi.String("KVAULT_NAME"),
 			Value: args.KVaultName,
+		})
+	}
+
+	for k, v := range args.EnvMap {
+		env = append(env, web.EnvironmentVarArgs{
+			Name:  pulumi.String(k),
+			Value: pulumi.String(v),
 		})
 	}
 

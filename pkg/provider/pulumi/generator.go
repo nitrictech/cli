@@ -44,11 +44,20 @@ type pulumiDeployment struct {
 	prov common.PulumiProvider
 }
 
+type stackSummary struct {
+	Name             string `json:"name"`
+	Deployed         bool   `json:"deployed"`
+	LastUpdate       string `json:"lastUpdate,omitempty"`
+	UpdateInProgress bool   `json:"updateInProgress"`
+	ResourceCount    *int   `json:"resourceCount,omitempty"`
+	URL              string `json:"url,omitempty"`
+}
+
 var (
 	_ types.Provider = &pulumiDeployment{}
 )
 
-func New(p *project.Project, sc *stack.Config) (types.Provider, error) {
+func New(p *project.Project, sc *stack.Config, envMap map[string]string) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 	err := pv.Run()
 	if err != nil {
@@ -61,11 +70,11 @@ func New(p *project.Project, sc *stack.Config) (types.Provider, error) {
 	var prov common.PulumiProvider
 	switch sc.Provider {
 	case stack.Aws:
-		prov = aws.New(p, sc)
+		prov = aws.New(p, sc, envMap)
 	case stack.Azure:
-		prov = azure.New(p, sc)
+		prov = azure.New(p, sc, envMap)
 	case stack.Gcp:
-		prov = gcp.New(p, sc)
+		prov = gcp.New(p, sc, envMap)
 	default:
 		return nil, utils.NewNotSupportedErr("pulumi provider " + sc.Provider + " not suppored")
 	}
@@ -156,7 +165,27 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
 	}
 
-	return ws.ListStacks(context.Background())
+	sl, err := ws.ListStacks(context.Background())
+	if err != nil {
+		return nil, errors.WithMessage(err, "ListStacks")
+	}
+
+	stackName := p.proj.Name + "-" + p.sc.Name
+	result := []stackSummary{}
+	for _, st := range sl {
+		if strings.HasPrefix(st.Name, stackName) {
+			var stackListOutput = stackSummary{
+				Name:             st.Name,
+				Deployed:         *st.ResourceCount > 0,
+				LastUpdate:       st.LastUpdate,
+				UpdateInProgress: st.UpdateInProgress,
+				ResourceCount:    st.ResourceCount,
+				URL:              st.URL,
+			}
+			result = append(result, stackListOutput)
+		}
+	}
+	return result, nil
 }
 
 func (a *pulumiDeployment) Down(log output.Progress) error {

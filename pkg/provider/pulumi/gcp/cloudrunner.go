@@ -21,7 +21,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -32,12 +31,13 @@ import (
 )
 
 type CloudRunnerArgs struct {
-	Location  pulumi.StringInput
-	ProjectId string
-	Compute   project.Compute
-	Image     *common.Image
-
-	Topics map[string]*pubsub.Topic
+	Location       pulumi.StringInput
+	ProjectId      string
+	Compute        project.Compute
+	Image          *common.Image
+	EnvMap         map[string]string
+	ServiceAccount *serviceaccount.Account
+	Topics         map[string]*pubsub.Topic
 }
 
 type CloudRunner struct {
@@ -57,39 +57,21 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 		return nil, err
 	}
 
-	// Create a service account for this cloud run instance
-	sa, err := serviceaccount.NewAccount(ctx, name+"-acct", &serviceaccount.AccountArgs{
-		AccountId: pulumi.String(utils.StringTrunc(name, 30-5) + "-acct"),
-	}, append(opts, pulumi.Parent(res))...)
-	if err != nil {
-		return nil, errors.WithMessage(err, "function serviceaccount "+name)
+	env := cloudrun.ServiceTemplateSpecContainerEnvArray{
+		cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String("MIN_WORKERS"),
+			Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
+		},
 	}
-
-	// Give project editor permissions
-	// FIXME: Trim this down
-	_, err = projects.NewIAMMember(ctx, name+"-editor", &projects.IAMMemberArgs{
-		Role: pulumi.String("roles/editor"),
-		// Get the cloudrun service account email
-		Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
-		Project: pulumi.String(args.ProjectId),
-	}, append(opts, pulumi.Parent(res))...)
-	if err != nil {
-		return nil, errors.WithMessage(err, "iam member "+name)
-	}
-
-	// Give secret accessor permissions
-	_, err = projects.NewIAMMember(ctx, name+"-secret-access", &projects.IAMMemberArgs{
-		Role: pulumi.String("roles/secretmanager.secretAccessor"),
-		// Get the cloudrun service account email
-		Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
-		Project: pulumi.String(args.ProjectId),
-	}, append(opts, pulumi.Parent(res))...)
-	if err != nil {
-		return nil, errors.WithMessage(err, "iam member "+name)
+	for k, v := range args.EnvMap {
+		env = append(env, cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String(k),
+			Value: pulumi.String(v),
+		})
 	}
 
 	// Deploy the func
-	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
+	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 512)
 	maxScale := common.IntValueOrDefault(args.Compute.Unit().MaxScale, 10)
 	minScale := common.IntValueOrDefault(args.Compute.Unit().MinScale, 0)
 	res.Service, err = cloudrun.NewService(ctx, name, &cloudrun.ServiceArgs{
@@ -103,15 +85,10 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				},
 			},
 			Spec: cloudrun.ServiceTemplateSpecArgs{
-				ServiceAccountName: sa.Email,
+				ServiceAccountName: args.ServiceAccount.Email,
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
-						Envs: cloudrun.ServiceTemplateSpecContainerEnvArray{
-							cloudrun.ServiceTemplateSpecContainerEnvArgs{
-								Name:  pulumi.String("MIN_WORKERS"),
-								Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
-							},
-						},
+						Envs:  env,
 						Image: args.Image.DockerImage.ImageName, // TODO check
 						Ports: cloudrun.ServiceTemplateSpecContainerPortArray{
 							cloudrun.ServiceTemplateSpecContainerPortArgs{

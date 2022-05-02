@@ -63,7 +63,7 @@ WORKDIR /app/
 COPY go.mod *.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/main pkg/handler/list.go
+RUN go build -o /bin/main pkg/handler/...
 FROM alpine
 ADD https://github.com/nitrictech/nitric/releases/download/v1.2.3/membrane-aws /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane
@@ -222,6 +222,7 @@ ENTRYPOINT ["node"]`,
 		{
 			handler: "pkg/list/main.go",
 			wantFwriter: `FROM golang:alpine
+RUN apk add --no-cache git
 RUN go install github.com/asalkeld/CompileDaemon@d4b10de`,
 		},
 	}
@@ -279,7 +280,7 @@ func TestLaunchOptsForFunction(t *testing.T) {
 					"-verbose",
 					"-exclude-dir=.git",
 					"-exclude-dir=.nitric",
-					"-directory=.", "-build=go build -o runtime ./main.go", "-command=./runtime"},
+					"-directory=.", "-polling=false", "-build=go build -o runtime ././...", "-command=./runtime"},
 				Mounts: []mount.Mount{
 					{
 						Type: "bind", Source: filepath.Join(os.Getenv("GOPATH"), "pkg"), Target: "/go/pkg",
@@ -344,7 +345,7 @@ func TestLaunchOptsForFunctionCollect(t *testing.T) {
 				Image:    "nitric-go-dev",
 				TargetWD: "/go/src/github.com/nitrictech/cli",
 				Cmd: []string{
-					"go", "run", "./main.go"},
+					"go", "run", "././..."},
 				Mounts: []mount.Mount{
 					{
 						Type: "bind", Source: filepath.Join(os.Getenv("GOPATH"), "pkg"), Target: "/go/pkg",

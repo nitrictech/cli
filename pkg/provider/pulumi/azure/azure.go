@@ -43,6 +43,7 @@ import (
 type azureProvider struct {
 	proj       *project.Project
 	sc         *stack.Config
+	envMap     map[string]string
 	tmpDir     string
 	org        string
 	adminEmail string
@@ -57,8 +58,12 @@ var (
 	azureNativePluginVersion string
 )
 
-func New(s *project.Project, t *stack.Config) common.PulumiProvider {
-	return &azureProvider{proj: s, sc: t}
+func New(s *project.Project, t *stack.Config, envMap map[string]string) common.PulumiProvider {
+	return &azureProvider{
+		proj:   s,
+		sc:     t,
+		envMap: envMap,
+	}
 }
 
 func (a *azureProvider) Plugins() []common.Plugin {
@@ -199,6 +204,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		Location:          rg.Location,
 		SubscriptionID:    pulumi.String(clientConfig.SubscriptionId),
 		Topics:            map[string]*eventgrid.Topic{},
+		EnvMap:            a.envMap,
 	}
 
 	// Create a stack level keyvault if secrets are enabled

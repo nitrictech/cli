@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -82,6 +83,9 @@ func withMembrane(con dockerfile.ContainerState, version, provider string) {
 	fetchFrom := fmt.Sprintf("https://github.com/nitrictech/nitric/releases/download/%s/%s", version, membraneName)
 	if version == "latest" {
 		fetchFrom = fmt.Sprintf("https://github.com/nitrictech/nitric/releases/%s/download/%s", version, membraneName)
+	}
+	if os.Getenv("LOCAL_MEMBRANE") != "" {
+		fetchFrom = os.Getenv("LOCAL_MEMBRANE") + "/" + membraneName
 	}
 	con.Add(dockerfile.AddOptions{Src: fetchFrom, Dest: "/usr/local/bin/membrane"})
 	con.Run(dockerfile.RunOptions{Command: []string{"chmod", "+x-rw", "/usr/local/bin/membrane"}})

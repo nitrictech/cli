@@ -338,12 +338,12 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 				}
 				payload = base64.StdEncoding.EncodeToString(eventJSON)
 			}
-
 			_, err = cloudscheduler.NewJob(ctx, k, &cloudscheduler.JobArgs{
 				TimeZone: pulumi.String("UTC"),
 				PubsubTarget: cloudscheduler.JobPubsubTargetArgs{
-					TopicName: pulumi.Sprintf("projects/%s/topics/%s", g.projectId, g.topics[sched.Target.Name].Name),
-					Data:      pulumi.String(payload),
+					Attributes: pulumi.ToStringMap(map[string]string{"x-nitric-topic": sched.Target.Name}),
+					TopicName:  pulumi.Sprintf("projects/%s/topics/%s", g.projectId, g.topics[sched.Target.Name].Name),
+					Data:       pulumi.String(payload),
 				},
 				Schedule: pulumi.String(strings.ReplaceAll(sched.Expression, "'", "")),
 			}, defaultResourceOptions)

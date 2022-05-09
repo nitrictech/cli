@@ -17,6 +17,7 @@
 package utils
 
 import (
+	"go/build"
 	"log"
 	"os"
 	"os/user"
@@ -113,4 +114,12 @@ func NewNitricLogFile(stackPath string) (string, error) {
 	}
 	tf.Close()
 	return tf.Name(), nil
+}
+
+func GoPath() (string, error) {
+	goPath := os.Getenv("GOPATH")
+	if goPath == "" {
+		goPath = build.Default.GOPATH
+	}
+	return goPath, nil
 }

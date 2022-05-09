@@ -19,7 +19,6 @@ package runtime
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	osruntime "runtime"
 	"strings"
@@ -137,6 +136,11 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 		return LaunchOpts{}, err
 	}
 
+	goPath, err := utils.GoPath()
+	if err != nil {
+		return LaunchOpts{}, err
+	}
+
 	return LaunchOpts{
 		Image:    t.DevImageName(),
 		TargetWD: filepath.ToSlash(filepath.Join("/go/src", module)),
@@ -144,7 +148,7 @@ func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error)
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
-				Source: filepath.Join(os.Getenv("GOPATH"), "pkg"),
+				Source: filepath.Join(goPath, "pkg"),
 				Target: "/go/pkg",
 			},
 			{
@@ -170,6 +174,11 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 		}
 	}
 
+	goPath, err := utils.GoPath()
+	if err != nil {
+		return LaunchOpts{}, err
+	}
+
 	opts := LaunchOpts{
 		TargetWD: containerRunCtx,
 		Cmd: strslice.StrSlice{
@@ -185,7 +194,7 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 		Mounts: []mount.Mount{
 			{
 				Type:   "bind",
-				Source: filepath.Join(os.Getenv("GOPATH"), "pkg"),
+				Source: filepath.Join(goPath, "pkg"),
 				Target: "/go/pkg",
 			},
 			{

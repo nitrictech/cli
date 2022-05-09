@@ -248,7 +248,7 @@ RUN go install github.com/asalkeld/CompileDaemon@d4b10de`,
 func TestLaunchOptsForFunction(t *testing.T) {
 	goPath, err := utils.GoPath()
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
 
 	tests := []struct {
@@ -319,7 +319,7 @@ func TestLaunchOptsForFunction(t *testing.T) {
 func TestLaunchOptsForFunctionCollect(t *testing.T) {
 	goPath, err := utils.GoPath()
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
 
 	tests := []struct {

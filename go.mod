@@ -32,7 +32,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/moby/buildkit v0.9.3 // indirect
 	github.com/moby/moby v20.10.12+incompatible
-	github.com/nitrictech/boxygen v0.0.1-rc.7.0.20211212231606-62c668408f91
+	github.com/nitrictech/boxygen v0.0.1-rc.9
 	github.com/nitrictech/nitric v0.15.1-rc.8
 	github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf // indirect
 	github.com/pkg/errors v0.9.1

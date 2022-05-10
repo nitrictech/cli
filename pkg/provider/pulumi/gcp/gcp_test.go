@@ -225,6 +225,7 @@ func TestValidate(t *testing.T) {
 func Test_gcpProvider_Plugins(t *testing.T) {
 	want := []common.Plugin{
 		{Name: "gcp", Version: "v6.12.0"},
+		{Name: "random", Version: "v4.4.2"},
 	}
 	got := (&gcpProvider{}).Plugins()
 	if !reflect.DeepEqual(got, want) {

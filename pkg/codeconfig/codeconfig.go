@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"regexp"
 	osruntime "runtime"
 	"strings"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/imdario/mergo"
 	"github.com/moby/moby/pkg/stdcopy"
@@ -178,7 +180,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				return nil, fmt.Errorf("found conflicting operations")
 			}
 
-			doc.AddOperation(normalizedPath, m, &openapi3.Operation{
+			pathItem.SetOperation(m, &openapi3.Operation{
 				OperationID: strings.ToLower(alphanumeric.ReplaceAllString(normalizedPath+m, "")),
 				Responses:   openapi3.NewResponses(),
 				ExtensionProps: openapi3.ExtensionProps{
@@ -193,6 +195,13 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 		}
 	}
 
+	if output.VerboseLevel > 3 {
+		b, err := doc.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("discovered api doc", string(b))
+	}
 	return doc, nil
 }
 
@@ -205,6 +214,7 @@ func ensureOneTrailingSlash(p string) string {
 
 func splitPath(workerPath string) (string, openapi3.Parameters) {
 	normalizedPath := ""
+
 	params := make(openapi3.Parameters, 0)
 	for _, p := range strings.Split(workerPath, "/") {
 		if strings.HasPrefix(p, ":") {
@@ -227,9 +237,40 @@ func splitPath(workerPath string) (string, openapi3.Parameters) {
 		}
 	}
 	// trim off trailing slash
-	normalizedPath = strings.TrimSuffix(normalizedPath, "/")
-
+	if normalizedPath != "/" {
+		normalizedPath = strings.TrimSuffix(normalizedPath, "/")
+	}
 	return normalizedPath, params
+}
+
+func useHostInterface(hc *container.HostConfig, iface string, port int) ([]string, error) {
+	dockerInternalAddr, err := utils.GetInterfaceIpv4Addr(iface)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("dockerInternalAddr ", dockerInternalAddr)
+
+	hc.NetworkMode = "host"
+
+	return []string{
+		fmt.Sprintf("SERVICE_ADDRESS=%s:%d", dockerInternalAddr, port),
+		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
+		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", dockerInternalAddr),
+	}, nil
+}
+
+func useDockerInternal(hc *container.HostConfig, port int) []string {
+	if osruntime.GOOS == "linux" {
+		// setup host.docker.internal to route to host gateway
+		// to access rpc server hosted by local CLI run
+		hc.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
+	}
+
+	return []string{
+		fmt.Sprintf("SERVICE_ADDRESS=%s:%d", "host.docker.internal", port),
+		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
+		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
+	}
 }
 
 // collectOne - Collects information about a function for a nitric stack
@@ -279,18 +320,20 @@ func (c *codeConfig) collectOne(handler string) error {
 		AutoRemove: true,
 		Mounts:     opts.Mounts,
 	}
-	if osruntime.GOOS == "linux" {
-		// setup host.docker.internal to route to host gateway
-		// to access rpc server hosted by local CLI run
-		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
+
+	var env []string
+	if os.Getenv("HOST_DOCKER_INTERNAL_IFACE") != "" {
+		env, err = useHostInterface(hostConfig, os.Getenv("HOST_DOCKER_INTERNAL_IFACE"), port)
+	} else {
+		env = useDockerInternal(hostConfig, port)
+	}
+	if err != nil {
+		return err
 	}
 
-	env := []string{
-		fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port),
-		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
-		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
-		"NITRIC_ENVIRONMENT=build", // this is to tell the sdk that we are running in the build and not proper runtime.
-	}
+	// this is to tell the sdk that we are running in the build and not proper runtime.
+	env = append(env, "NITRIC_ENVIRONMENT=build")
+
 	for k, v := range c.envMap {
 		env = append(env, k+"="+v)
 	}
@@ -305,8 +348,14 @@ func (c *codeConfig) collectOne(handler string) error {
 		WorkingDir:   opts.TargetWD,
 	}
 
+	if output.VerboseLevel > 2 {
+		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
+	}
+
 	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")
-	cID, err := ce.ContainerCreate(cc, hostConfig, nil, cn)
+	cID, err := ce.ContainerCreate(cc, hostConfig, &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{},
+	}, cn)
 	if err != nil {
 		return err
 	}
@@ -316,9 +365,6 @@ func (c *codeConfig) collectOne(handler string) error {
 		return err
 	}
 
-	if output.VerboseLevel > 2 {
-		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
-	}
 	logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,

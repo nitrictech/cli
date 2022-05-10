@@ -46,7 +46,7 @@ type ContainerEngine interface {
 	Type() string
 	Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error
 	ListImages(stackName, containerName string) ([]Image, error)
-	ImagePull(rawImage string) error
+	ImagePull(rawImage string, opts types.ImagePullOptions) error
 	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error
 	Stop(nameOrID string, timeout *time.Duration) error

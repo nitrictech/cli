@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -79,7 +80,7 @@ func (m *MinioServer) Start() error {
 	port := uint16(ports[0])
 	consolePort := uint16(ports[1])
 
-	err = m.ce.ImagePull(minioImage)
+	err = m.ce.ImagePull(minioImage, types.ImagePullOptions{})
 	if err != nil {
 		return err
 	}

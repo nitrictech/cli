@@ -31,6 +31,31 @@ func Test_splitPath(t *testing.T) {
 		want1      openapi3.Parameters
 	}{
 		{
+			name:       "root",
+			workerPath: "/",
+			want:       "/",
+			want1:      openapi3.Parameters{},
+		},
+		{
+			name:       "root with param",
+			workerPath: "/:thing",
+			want:       "/{thing}",
+			want1: openapi3.Parameters{
+				&openapi3.ParameterRef{
+					Value: &openapi3.Parameter{
+						In:       "path",
+						Name:     "thing",
+						Required: true,
+						Schema: &openapi3.SchemaRef{
+							Value: &openapi3.Schema{
+								Type: "string",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:       "simple",
 			workerPath: "/orders",
 			want:       "/orders",

@@ -41,6 +41,7 @@ type PulumiProvider interface {
 	Deploy(*pulumi.Context) error
 	CleanUp()
 	Ask() (*stack.Config, error)
+	TryPullImages() error
 }
 
 func Tags(ctx *pulumi.Context, name string) pulumi.StringMap {

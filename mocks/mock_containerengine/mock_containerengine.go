@@ -99,17 +99,17 @@ func (mr *MockContainerEngineMockRecorder) ContainerWait(arg0, arg1 interface{})
 }
 
 // ImagePull mocks base method.
-func (m *MockContainerEngine) ImagePull(arg0 string) error {
+func (m *MockContainerEngine) ImagePull(arg0 string, arg1 types.ImagePullOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ImagePull", arg0)
+	ret := m.ctrl.Call(m, "ImagePull", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ImagePull indicates an expected call of ImagePull.
-func (mr *MockContainerEngineMockRecorder) ImagePull(arg0 interface{}) *gomock.Call {
+func (mr *MockContainerEngineMockRecorder) ImagePull(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePull", reflect.TypeOf((*MockContainerEngine)(nil).ImagePull), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePull", reflect.TypeOf((*MockContainerEngine)(nil).ImagePull), arg0, arg1)
 }
 
 // ListImages mocks base method.

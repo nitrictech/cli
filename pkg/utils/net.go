@@ -14,22 +14,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package utils
 
 import (
-	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/stack"
+	"fmt"
+	"net"
 )
 
-type Deployment struct {
-	ApiEndpoints map[string]string `json:"apiEndpoints,omitempty"`
-}
+func GetInterfaceIpv4Addr(interfaceName string) (string, error) {
+	ief, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return "", err
+	}
 
-type Provider interface {
-	Up(log output.Progress) (*Deployment, error)
-	Down(log output.Progress) error
-	List() (interface{}, error)
-	Ask() (*stack.Config, error)
-	TryPullImages() error
-	//Status()
+	addrs, err := ief.Addrs()
+	if err != nil {
+		return "", err
+	}
+
+	var ipv4Addr net.IP
+	for _, addr := range addrs {
+		if ipv4Addr = addr.(*net.IPNet).IP.To4(); ipv4Addr != nil {
+			break
+		}
+	}
+
+	if ipv4Addr == nil {
+		return "", fmt.Errorf("interface %s don't have an ipv4 address", interfaceName)
+	}
+
+	return ipv4Addr.String(), nil
 }

@@ -29,14 +29,14 @@ func NewErrorList() *ErrorList {
 }
 
 func (e *ErrorList) WithSubject(subject string) *ErrorList {
-	e.subject = subject
+	e.Subject = subject
 	return e
 }
 
 // ErrorList is for when one error is not the cause of others.
 type ErrorList struct {
 	lock    sync.Locker
-	subject string
+	Subject string
 	errs    []error
 }
 
@@ -49,13 +49,20 @@ func (e *ErrorList) Add(err error) {
 	e.errs = append(e.errs, err)
 }
 
+func (e *ErrorList) Errors() []error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
+	return e.errs
+}
+
 func (e *ErrorList) Error() string {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	msgs := []string{}
 	for _, m := range e.errs {
-		if e.subject != "" {
-			msgs = append(msgs, e.subject+": "+m.Error())
+		if e.Subject != "" {
+			msgs = append(msgs, e.Subject+": "+m.Error())
 		} else {
 			msgs = append(msgs, m.Error())
 		}

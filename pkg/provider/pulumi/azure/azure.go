@@ -290,11 +290,12 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k, v := range a.proj.ApiDocs {
 		_, err = newAzureApiManagement(ctx, k, &AzureApiManagementArgs{
-			ResourceGroupName: rg.Name,
-			OrgName:           pulumi.String(a.org),
-			AdminEmail:        pulumi.String(a.adminEmail),
-			OpenAPISpec:       v,
-			Apps:              apps.Apps,
+			ResourceGroupName:   rg.Name,
+			OrgName:             pulumi.String(a.org),
+			AdminEmail:          pulumi.String(a.adminEmail),
+			OpenAPISpec:         v,
+			Apps:                apps.Apps,
+			SecurityDefinitions: a.proj.SecurityDefinitions[k],
 		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)

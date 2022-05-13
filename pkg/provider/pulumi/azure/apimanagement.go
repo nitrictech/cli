@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	"github.com/pkg/errors"
 	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20201201"
 
@@ -143,7 +144,7 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 					if secName, ok := sec.(string); ok {
 						sd := args.SecurityDefinitions[secName]
 
-						_, err := apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID+"-sec", ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
+						apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID+"-sec", ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
 							ResourceGroupName: args.ResourceGroupName,
 							ApiId:             apiId,
 							ServiceName:       res.Service.Name,
@@ -152,9 +153,6 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 							Format:            pulumi.String("xml"),
 							Value:             pulumi.Sprintf(oidcTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")),
 						})
-						if err != nil {
-							return nil, err
-						}
 					}
 				}
 

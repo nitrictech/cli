@@ -17,7 +17,10 @@
 package azure
 
 import (
+	"strings"
+
 	"github.com/getkin/kin-openapi/openapi3"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	"github.com/pkg/errors"
 	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20201201"
 
@@ -26,11 +29,12 @@ import (
 )
 
 type AzureApiManagementArgs struct {
-	ResourceGroupName pulumi.StringInput
-	OrgName           pulumi.StringInput
-	AdminEmail        pulumi.StringInput
-	OpenAPISpec       *openapi3.T
-	Apps              map[string]*ContainerApp
+	ResourceGroupName   pulumi.StringInput
+	OrgName             pulumi.StringInput
+	AdminEmail          pulumi.StringInput
+	OpenAPISpec         *openapi3.T
+	Apps                map[string]*ContainerApp
+	SecurityDefinitions map[string]*v1.ApiSecurityDefinition
 }
 
 type AzureApiManagement struct {
@@ -42,6 +46,15 @@ type AzureApiManagement struct {
 }
 
 const policyTemplate = `<policies><inbound><base /><set-backend-service base-url="https://%s" /></inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
+
+const oidcTemplate = `<policies><inbound><base /><validate-jwt header-name=”Authorization” failed-validation-httpcode=”401″ failed-validation-error-message=”Unauthorized. Access token is missing or invalid.”>  
+<openid-config url=”%s/.well-known/openid-configuration” />  
+   <required-claims>  
+	  <claim name=”aud” match="any" separator=",">  
+		 <value>%s</value>  
+	  </claim>  
+   </required-claims>  
+</validate-jwt> </inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
 
 func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManagementArgs, opts ...pulumi.ResourceOption) (*AzureApiManagement, error) {
 	res := &AzureApiManagement{Name: name}
@@ -124,6 +137,24 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 					Format:            pulumi.String("xml"),
 					Value:             pulumi.Sprintf(policyTemplate, app.App.LatestRevisionFqdn),
 				})
+
+				// Add an api operation policy if we have a security definition available
+				if sec, ok := op.Extensions["x-nitric-security"]; ok {
+					if secName, ok := sec.(string); ok {
+						sd := args.SecurityDefinitions[secName]
+
+						apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID+"-sec", ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
+							ResourceGroupName: args.ResourceGroupName,
+							ApiId:             apiId,
+							ServiceName:       res.Service.Name,
+							OperationId:       pulumi.String(op.OperationID),
+							PolicyId:          pulumi.String("policy"),
+							Format:            pulumi.String("xml"),
+							Value:             pulumi.Sprintf(oidcTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")),
+						})
+					}
+				}
+
 				if err != nil {
 					return nil, errors.WithMessage(err, "NewApiOperationPolicy "+op.OperationID)
 				}

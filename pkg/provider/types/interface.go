@@ -31,5 +31,6 @@ type Provider interface {
 	List() (interface{}, error)
 	Ask() (*stack.Config, error)
 	TryPullImages() error
+	SupportedRegions() []string
 	//Status()
 }

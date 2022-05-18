@@ -42,6 +42,7 @@ type PulumiProvider interface {
 	CleanUp()
 	Ask() (*stack.Config, error)
 	TryPullImages() error
+	SupportedRegions() []string
 }
 
 func Tags(ctx *pulumi.Context, name string) pulumi.StringMap {

@@ -94,6 +94,10 @@ func (p *pulumiDeployment) TryPullImages() error {
 	return p.prov.TryPullImages()
 }
 
+func (p *pulumiDeployment) SupportedRegions() []string {
+	return p.prov.SupportedRegions()
+}
+
 func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	if err := p.prov.Validate(); err != nil {
 		return nil, err

@@ -31,6 +31,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/hashicorp/go-multierror"
 	"github.com/imdario/mergo"
 	"github.com/moby/moby/pkg/stdcopy"
 	"github.com/pkg/errors"
@@ -89,34 +90,29 @@ func Populate(initial *project.Project, envMap map[string]string) (*project.Proj
 	return cc.ToProject()
 }
 
-// Collect - Collects information about all functions for a nitric project
-func (c *codeConfig) Collect() error {
-	wg := sync.WaitGroup{}
-	errList := utils.NewErrorList()
+type funcRunner struct {
+	f *project.Function
+	c *codeConfig
+}
 
-	for _, f := range c.initialProject.Functions {
-		wg.Add(1)
-
-		// run files in parallel
-		go func(fn project.Function) {
-			defer wg.Done()
-			rel, err := fn.RelativeHandlerPath(c.initialProject)
-			if err != nil {
-				errList.Add(err)
-				return
-			}
-
-			err = c.collectOne(rel)
-			if err != nil {
-				errList.Add(err)
-				return
-			}
-		}(f)
+func (fr funcRunner) collect() error {
+	rel, err := fr.f.RelativeHandlerPath(fr.c.initialProject)
+	if err != nil {
+		return err
 	}
 
-	wg.Wait()
+	return fr.c.collectOne(rel)
+}
 
-	return errList.Aggregate()
+// Collect - Collects information about all functions for a nitric project
+func (c *codeConfig) Collect() error {
+	g := &multierror.Group{}
+
+	for _, f := range c.initialProject.Functions {
+		g.Go(funcRunner{f: &f, c: c}.collect)
+	}
+
+	return g.Wait().ErrorOrNil()
 }
 
 type apiHandler struct {
@@ -385,7 +381,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		_, _ = stdcopy.StdCopy(logWriter, logWriter, logreader)
 	}()
 
-	errs := utils.NewErrorList().WithSubject(handler)
+	var errs error
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
 	select {
 	case done := <-waitChan:
@@ -403,19 +399,22 @@ func (c *codeConfig) collectOne(handler string) error {
 			}
 		}
 		if done.StatusCode != 0 {
-			errs.Add(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
+			errs = multierror.Append(errs, fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
 		}
 	case cErr := <-cErrChan:
-		errs.Add(cErr)
+		errs = multierror.Append(errs, cErr)
 	}
 
 	// When the container exits stop the server
 	grpcSrv.Stop()
-	errs.Add(<-errChan)
+	cErr := <-errChan
+	if cErr != nil {
+		errs = multierror.Append(errs, cErr)
+	}
 
 	// Add the function
 	c.addFunction(fun, handler)
-	return errs.Aggregate()
+	return multierror.Prefix(errs, handler)
 }
 
 func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
@@ -433,7 +432,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 		return nil, err
 	}
 
-	errs := utils.NewErrorList()
+	var errs error
 	for handler, f := range c.functions {
 		topicTriggers := make([]string, 0, len(f.subscriptions)+len(f.schedules))
 
@@ -476,13 +475,13 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 				e, err := cron.RateToCron(v.GetRate().Rate)
 
 				if err != nil {
-					errs.Add(fmt.Errorf("schedule expresson %s is invalid; %w", v.GetRate().Rate, err))
+					errs = multierror.Append(errs, fmt.Errorf("schedule expresson %s is invalid; %w", v.GetRate().Rate, err))
 					continue
 				}
 
 				exp = e
 			} else {
-				errs.Add(fmt.Errorf("schedule %s is invalid", v.String()))
+				errs = multierror.Append(errs, fmt.Errorf("schedule %s is invalid", v.String()))
 				continue
 			}
 
@@ -501,7 +500,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 			}
 			if current, ok := s.Schedules[k]; ok {
 				if err := mergo.Merge(&current, &newS); err != nil {
-					errs.Add(err)
+					errs = multierror.Append(errs, err)
 				} else {
 					s.Schedules[k] = current
 				}
@@ -516,7 +515,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 
 		for k := range f.subscriptions {
 			if _, ok := f.topics[k]; !ok {
-				errs.Add(fmt.Errorf("subscription to topic %s defined, but topic does not exist", k))
+				errs = multierror.Append(errs, fmt.Errorf("subscription to topic %s defined, but topic does not exist", k))
 			} else {
 				topicTriggers = append(topicTriggers, k)
 			}
@@ -526,7 +525,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 		if !ok {
 			fun, err = project.FunctionFromHandler(handler, s.Dir)
 			if err != nil {
-				errs.Add(fmt.Errorf("can not create function from %s %w", handler, err))
+				errs = multierror.Append(errs, fmt.Errorf("can not create function from %s %w", handler, err))
 				continue
 			}
 		}
@@ -538,5 +537,5 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 		s.Functions[f.name] = fun
 	}
 
-	return s, errs.Aggregate()
+	return s, errs
 }

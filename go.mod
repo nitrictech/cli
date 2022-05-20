@@ -23,6 +23,7 @@ require (
 	github.com/google/go-cmp v0.5.7
 	github.com/hashicorp/consul/sdk v0.9.0
 	github.com/hashicorp/go-getter v1.5.11
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/imdario/mergo v0.3.12
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/joho/godotenv v1.3.0

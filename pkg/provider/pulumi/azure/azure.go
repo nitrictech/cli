@@ -26,6 +26,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
@@ -135,27 +136,27 @@ func (a *azureProvider) SupportedRegions() []string {
 }
 
 func (a *azureProvider) Validate() error {
-	errList := utils.NewErrorList()
+	var errList error
 
 	if a.sc.Region == "" {
-		errList.Add(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
+		errList = multierror.Append(errList, fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
 	} else if !sliceutil.Contains(a.SupportedRegions(), a.sc.Region) {
-		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
+		errList = multierror.Append(errList, utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
 	}
 
 	if _, ok := a.sc.Extra["org"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"org\"", a.sc.Provider))
+		errList = multierror.Append(errList, fmt.Errorf("target %s requires \"org\"", a.sc.Provider))
 	} else {
 		a.org = a.sc.Extra["org"].(string)
 	}
 
 	if _, ok := a.sc.Extra["adminemail"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"adminemail\"", a.sc.Provider))
+		errList = multierror.Append(errList, fmt.Errorf("target %s requires \"adminemail\"", a.sc.Provider))
 	} else {
 		a.adminEmail = a.sc.Extra["adminemail"].(string)
 	}
 
-	return errList.Aggregate()
+	return errList
 }
 
 func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {

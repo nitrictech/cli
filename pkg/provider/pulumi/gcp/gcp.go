@@ -32,6 +32,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudscheduler"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
@@ -175,21 +176,21 @@ func (a *gcpProvider) Ask() (*stack.Config, error) {
 }
 
 func (g *gcpProvider) Validate() error {
-	errList := utils.NewErrorList()
+	var errList error
 
 	if g.sc.Region == "" {
-		errList.Add(fmt.Errorf("target %s requires \"region\"", g.sc.Provider))
+		errList = multierror.Append(errList, fmt.Errorf("target %s requires \"region\"", g.sc.Provider))
 	} else if !sliceutil.Contains(g.SupportedRegions(), g.sc.Region) {
-		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.sc.Region, g.sc.Provider)))
+		errList = multierror.Append(errList, utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.sc.Region, g.sc.Provider)))
 	}
 
 	if proj, ok := g.sc.Extra["project"]; !ok || proj == nil {
-		errList.Add(fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider))
+		errList = multierror.Append(errList, fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider))
 	} else {
 		g.gcpProject = proj.(string)
 	}
 
-	return errList.Aggregate()
+	return errList
 }
 
 func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {

@@ -19,63 +19,7 @@ package utils
 import (
 	"errors"
 	"strings"
-	"sync"
 )
-
-func NewErrorList() *ErrorList {
-	return &ErrorList{
-		lock: &sync.RWMutex{},
-	}
-}
-
-func (e *ErrorList) WithSubject(subject string) *ErrorList {
-	e.Subject = subject
-	return e
-}
-
-// ErrorList is for when one error is not the cause of others.
-type ErrorList struct {
-	lock    sync.Locker
-	Subject string
-	errs    []error
-}
-
-func (e *ErrorList) Add(err error) {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-	if err == nil {
-		return
-	}
-	e.errs = append(e.errs, err)
-}
-
-func (e *ErrorList) Errors() []error {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-
-	return e.errs
-}
-
-func (e *ErrorList) Error() string {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-	msgs := []string{}
-	for _, m := range e.errs {
-		if e.Subject != "" {
-			msgs = append(msgs, e.Subject+": "+m.Error())
-		} else {
-			msgs = append(msgs, m.Error())
-		}
-	}
-	return strings.Join(msgs, "\n")
-}
-
-func (e *ErrorList) Aggregate() error {
-	if len(e.errs) == 0 {
-		return nil
-	}
-	return e
-}
 
 // NotSupportedError indicates that a request operation cannot be performed,
 // because it is unsupported.

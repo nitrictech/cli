@@ -82,7 +82,7 @@ func getOpenIdConnectConfig(issuer string) (*openIdConfig, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("recieved non 200 status retrieving openid-configuration: %d", resp.StatusCode)
+		return nil, fmt.Errorf("received non 200 status retrieving openid-configuration: %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)

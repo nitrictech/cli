@@ -460,9 +460,10 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			return err
 		}
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
-			Functions:   g.cloudRunners,
-			OpenAPISpec: v2doc,
-			ProjectId:   pulumi.String(g.projectId),
+			Functions:           g.cloudRunners,
+			OpenAPISpec:         v2doc,
+			ProjectId:           pulumi.String(g.projectId),
+			SecurityDefinitions: g.proj.SecurityDefinitions[k],
 		}, defaultResourceOptions)
 		if err != nil {
 			return err

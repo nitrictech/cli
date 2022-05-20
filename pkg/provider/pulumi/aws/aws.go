@@ -320,8 +320,10 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k, v := range a.proj.ApiDocs {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
-			OpenAPISpec:     v,
-			LambdaFunctions: a.funcs})
+			OpenAPISpec:        v,
+			LambdaFunctions:    a.funcs,
+			SecurityDefintions: a.proj.SecurityDefinitions[k],
+		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)
 		}

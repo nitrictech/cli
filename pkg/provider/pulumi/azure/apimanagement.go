@@ -55,7 +55,11 @@ const oidcTemplate = `<policies><inbound><base /><validate-jwt header-name=”Au
 		 <value>%s</value>  
 	  </claim>  
    </required-claims>  
-</validate-jwt> </inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
+</validate-jwt><set-backend-service base-url="https://%s" /><authentication-managed-identity resource="%s"/></inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
+
+func removeEmptyScopes(spec *openapi3.T) *openapi3.T {
+	spec.Security.With
+}
 
 func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManagementArgs, opts ...pulumi.ResourceOption) (*AzureApiManagement, error) {
 	res := &AzureApiManagement{Name: name}
@@ -129,16 +133,6 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 
 				_ = ctx.Log.Info("op policy "+op.OperationID+" , name "+name, &pulumi.LogArgs{Ephemeral: true})
 
-				_, err = apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID, ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
-					ResourceGroupName: args.ResourceGroupName,
-					ApiId:             apiId,
-					ServiceName:       res.Service.Name,
-					OperationId:       pulumi.String(op.OperationID),
-					PolicyId:          pulumi.String("policy"),
-					Format:            pulumi.String("xml"),
-					Value:             pulumi.Sprintf(policyTemplate, app.App.LatestRevisionFqdn),
-				})
-
 				// Add an api operation policy if we have a security definition available
 				if sec, ok := op.Extensions["x-nitric-security"]; ok {
 					if secName, ok := sec.(string); ok {
@@ -151,9 +145,19 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 							OperationId:       pulumi.String(op.OperationID),
 							PolicyId:          pulumi.String("policy"),
 							Format:            pulumi.String("xml"),
-							Value:             pulumi.Sprintf(oidcTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")),
+							Value:             pulumi.Sprintf(oidcTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ","), app.App.LatestRevisionFqdn, app.Sp.ClientID),
 						})
 					}
+				} else {
+					_, err = apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID, ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
+						ResourceGroupName: args.ResourceGroupName,
+						ApiId:             apiId,
+						ServiceName:       res.Service.Name,
+						OperationId:       pulumi.String(op.OperationID),
+						PolicyId:          pulumi.String("policy"),
+						Format:            pulumi.String("xml"),
+						Value:             pulumi.Sprintf(policyTemplate, app.App.LatestRevisionFqdn),
+					})
 				}
 
 				if err != nil {

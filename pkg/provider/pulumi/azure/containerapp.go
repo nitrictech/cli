@@ -347,6 +347,14 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 				},
 			},
 		},
+		Identity: &app.ManagedServiceIdentityArgs{
+			Type: pulumi.String("SystemAssigned"),
+			// UserAssignedIdentities: res.Sp.ClientID.ApplyT(func(clientId string) pulumi.Map {
+			// 	uai := make(map[string]interface{})
+			// 	uai[clientId] = ""
+			// 	return pulumi.ToMap(uai)
+			// }).(pulumi.MapInput),
+		},
 		Tags: common.Tags(ctx, name),
 		Template: app.TemplateArgs{
 			Containers: app.ContainerArray{

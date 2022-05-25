@@ -279,7 +279,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		Apps:              apps.Apps,
 	})
 	if err != nil {
-		return errors.WithMessage(err, "subscripitons")
+		return errors.WithMessage(err, "subscriptions")
 	}
 
 	// TODO: Add schedule support

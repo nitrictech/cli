@@ -21,10 +21,10 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-type SevicePrincipleArgs struct {
+type ServicePrincipalArgs struct {
 }
 
-type SevicePrinciple struct {
+type ServicePrincipal struct {
 	pulumi.ResourceState
 
 	Name               string
@@ -34,8 +34,8 @@ type SevicePrinciple struct {
 	ClientSecret       pulumi.StringOutput
 }
 
-func newSevicePrinciple(ctx *pulumi.Context, name string, args *SevicePrincipleArgs, opts ...pulumi.ResourceOption) (*SevicePrinciple, error) {
-	res := &SevicePrinciple{Name: name}
+func newServicePrincipal(ctx *pulumi.Context, name string, args *ServicePrincipalArgs, opts ...pulumi.ResourceOption) (*ServicePrincipal, error) {
+	res := &ServicePrincipal{Name: name}
 	err := ctx.RegisterComponentResource("nitric:principal:AzureAD", name, res, opts...)
 	if err != nil {
 		return nil, err

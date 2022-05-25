@@ -126,11 +126,12 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 		"appengine.applications.get",
 	},
 	v1.Action_SecretAccess: {
-		"secretmanager.locations.*",
+		"secretmanager.locations.get",
+		"secretmanager.locations.list",
 		"secretmanager.secrets.get",
-		"secretmanager.secrets.getIamPolicy",
-		"secretmanager.version.get",
 		"secretmanager.secrets.list",
+		"secretmanager.secrets.getIamPolicy",
+		"secretmanager.versions.get",
 		"secretmanager.versions.list",
 	},
 	v1.Action_SecretPut: {

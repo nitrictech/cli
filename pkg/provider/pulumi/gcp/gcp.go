@@ -92,6 +92,7 @@ func New(s *project.Project, t *stack.Config, envMap map[string]string) common.P
 		queueSubscriptions: map[string]*pubsub.Subscription{},
 		images:             map[string]*common.Image{},
 		cloudRunners:       map[string]*CloudRunner{},
+		secrets:            map[string]*secretmanager.Secret{},
 	}
 }
 
@@ -237,6 +238,7 @@ func (g *gcpProvider) TryPullImages() error {
 			return errors.WithMessage(err, "imagePull")
 		}
 	}
+
 	return nil
 }
 

@@ -53,6 +53,8 @@ var (
 		"firestore.googleapis.com",
 		// Enable ApiGateway API
 		"apigateway.googleapis.com",
+		// Enable SecretManager API
+		"secretmanager.googleapis.com",
 	}
 )
 

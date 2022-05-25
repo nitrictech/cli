@@ -204,12 +204,18 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "resource group create")
 	}
 
+	managedUser, err := newServicePrincipal(ctx, "managed-user", &ServicePrincipalArgs{})
+	if err != nil {
+		return errors.WithMessage(err, "managed user create")
+	}
+
 	contAppsArgs := &ContainerAppsArgs{
 		ResourceGroupName: rg.Name,
 		Location:          rg.Location,
 		SubscriptionID:    pulumi.String(clientConfig.SubscriptionId),
 		Topics:            map[string]*eventgrid.Topic{},
 		EnvMap:            a.envMap,
+		ManagedUserID:     managedUser.ClientID,
 	}
 
 	// Create a stack level keyvault if secrets are enabled
@@ -297,6 +303,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 			OpenAPISpec:         v,
 			Apps:                apps.Apps,
 			SecurityDefinitions: a.proj.SecurityDefinitions[k],
+			ManagedUserID:       managedUser.ClientID,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)

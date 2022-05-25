@@ -44,6 +44,7 @@ type ContainerAppsArgs struct {
 	StorageAccountQueueEndpoint   pulumi.StringInput
 	MongoDatabaseName             pulumi.StringInput
 	MongoDatabaseConnectionString pulumi.StringInput
+	ManagedUserID                 pulumi.StringInput
 }
 
 type ContainerApps struct {
@@ -203,6 +204,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			Env:               env,
 			Topics:            args.Topics,
 			Compute:           c,
+			ManagedUserID:     args.ManagedUserID,
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, err
@@ -224,6 +226,18 @@ type ContainerAppArgs struct {
 	Env               app.EnvironmentVarArray
 	Compute           project.Compute
 	Topics            map[string]*eventgrid.Topic
+	ResourceGroupName pulumi.StringInput
+	Location          pulumi.StringInput
+	SubscriptionID    pulumi.StringInput
+	Registry          *containerregistry.Registry
+	RegistryUser      pulumi.StringPtrInput
+	RegistryPass      pulumi.StringPtrInput
+	ManagedEnv        *app.ManagedEnvironment
+	ImageUri          pulumi.StringInput
+	Env               app.EnvironmentVarArray
+	Compute           project.Compute
+	Topics            map[string]*eventgrid.Topic
+	ManagedUserID     pulumi.StringInput
 }
 
 type ContainerApp struct {
@@ -312,7 +326,9 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 
 	//memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
 	// we can't define memory without defining the cpu..
-	res.App, err = app.NewContainerApp(ctx, resourceName(ctx, name, ContainerAppRT), &app.ContainerAppArgs{
+	appName := resourceName(ctx, name, ContainerAppRT)
+
+	res.App, err = app.NewContainerApp(ctx, appName, &app.ContainerAppArgs{
 		ResourceGroupName:    args.ResourceGroupName,
 		Location:             args.Location,
 		ManagedEnvironmentId: args.ManagedEnv.ID(),
@@ -347,14 +363,6 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 				},
 			},
 		},
-		Identity: &app.ManagedServiceIdentityArgs{
-			Type: pulumi.String("SystemAssigned"),
-			// UserAssignedIdentities: res.Sp.ClientID.ApplyT(func(clientId string) pulumi.Map {
-			// 	uai := make(map[string]interface{})
-			// 	uai[clientId] = ""
-			// 	return pulumi.ToMap(uai)
-			// }).(pulumi.MapInput),
-		},
 		Tags: common.Tags(ctx, name),
 		Template: app.TemplateArgs{
 			Containers: app.ContainerArray{
@@ -369,6 +377,39 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 	if err != nil {
 		return nil, err
 	}
+
+	authName := fmt.Sprintf("%s-auth", appName)
+	audiences := make([]string, 0)
+
+	for _, sds := range a.proj.SecurityDefinitions {
+		for _, sd := range sds {
+			aud := sd.GetJwt().GetAudiences()
+			for _, a := range aud {
+				audiences = append(audiences, a)
+			}
+		}
+	}
+
+	app.NewContainerAppsAuthConfig(ctx, authName, &app.ContainerAppsAuthConfigArgs{
+		ContainerAppName: res.App.Name,
+		GlobalValidation: &app.GlobalValidationArgs{
+			UnauthenticatedClientAction: pulumi.String(app.UnauthenticatedClientActionReturn401),
+		},
+		IdentityProviders: &app.IdentityProvidersArgs{
+			AzureActiveDirectory: &app.AzureActiveDirectoryArgs{
+				State: pulumi.String("Enabled"),
+				Validation: &app.AzureActiveDirectoryValidationArgs{
+					AllowedAudiences: pulumi.ToStringArray(audiences),
+				},
+				Registration: &app.AzureActiveDirectoryRegistrationArgs{
+					ClientId: args.ManagedUserID,
+				},
+			},
+		},
+		Name:              pulumi.String("current"),
+		ResourceGroupName: args.ResourceGroupName,
+		State:             pulumi.String("Enabled"),
+	}, pulumi.Parent(res.App))
 
 	// Determine required subscriptions so they can be setup once the container starts
 	for _, t := range args.Compute.Unit().Triggers.Topics {

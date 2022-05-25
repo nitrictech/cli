@@ -17,6 +17,7 @@
 package azure
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -36,6 +37,7 @@ type AzureApiManagementArgs struct {
 	OpenAPISpec         *openapi3.T
 	Apps                map[string]*ContainerApp
 	SecurityDefinitions map[string]*v1.ApiSecurityDefinition
+	ManagedUserID       pulumi.StringInput
 }
 
 type AzureApiManagement struct {
@@ -46,19 +48,24 @@ type AzureApiManagement struct {
 	Service *apimanagement.ApiManagementService
 }
 
-const policyTemplate = `<policies><inbound><base /><set-backend-service base-url="https://%s" /></inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
+const policyTemplate = `<policies><inbound><base /><set-backend-service base-url="https://%s" /><authentication-managed-identity resource="%s"/>%s</inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
 
-const oidcTemplate = `<policies><inbound><base /><validate-jwt header-name=”Authorization” failed-validation-httpcode=”401″ failed-validation-error-message=”Unauthorized. Access token is missing or invalid.”>  
+const jwtTemplate = `<validate-jwt header-name=”Authorization” failed-validation-httpcode=”401″ failed-validation-error-message=”Unauthorized. Access token is missing or invalid.”>  
 <openid-config url=”%s/.well-known/openid-configuration” />  
    <required-claims>  
 	  <claim name=”aud” match="any" separator=",">  
 		 <value>%s</value>  
 	  </claim>  
    </required-claims>  
-</validate-jwt><set-backend-service base-url="https://%s" /><authentication-managed-identity resource="%s"/></inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
+</validate-jwt>
+`
 
-func removeEmptyScopes(spec *openapi3.T) *openapi3.T {
-	spec.Security.With
+func marshalOpenAPISpec(spec *openapi3.T) ([]byte, error) {
+	sec := spec.Security
+	spec.Security = openapi3.SecurityRequirements{}
+	b, err := spec.MarshalJSON()
+	spec.Security = sec
+	return b, err
 }
 
 func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManagementArgs, opts ...pulumi.ResourceOption) (*AzureApiManagement, error) {
@@ -85,7 +92,8 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 	if args.OpenAPISpec.Info != nil && args.OpenAPISpec.Info.Title != "" {
 		displayName = args.OpenAPISpec.Info.Title
 	}
-	b, err := args.OpenAPISpec.MarshalJSON()
+
+	b, err := marshalOpenAPISpec(args.OpenAPISpec)
 	if err != nil {
 		return nil, err
 	}
@@ -113,6 +121,29 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 	for _, pathItem := range args.OpenAPISpec.Paths {
 		for _, op := range pathItem.Operations() {
 			if v, ok := op.Extensions["x-nitric-target"]; ok {
+
+				jwtTemplates := make([]string, 10)
+
+				// []map[string][]string
+				fmt.Println("This is going to do the dereference")
+				for _, sec := range *op.Security {
+					for sn := range sec {
+						if sd, ok := args.SecurityDefinitions[sn]; ok {
+							jwtTemplates = append(jwtTemplates, fmt.Sprintf(jwtTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")))
+						}
+					}
+				}
+				// for sn := range sec {
+				// 	if sd, ok := args.SecurityDefinitions[sn]; ok {
+				// 		jwtTemplates = append(jwtTemplates, fmt.Sprintf(jwtTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")))
+				// 	}
+				// }
+
+				jwtTemplateString := strings.Join(jwtTemplates, "\n")
+				// if len(jwtTemplates) != 0 {
+				// 	jwtTemplateString = fmt.Sprintf("<anyOf>%s</anyOf>", jwtTemplateString)
+				// }
+
 				target := ""
 				targetMap, isMap := v.(map[string]string)
 				if !isMap {
@@ -133,32 +164,15 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 
 				_ = ctx.Log.Info("op policy "+op.OperationID+" , name "+name, &pulumi.LogArgs{Ephemeral: true})
 
-				// Add an api operation policy if we have a security definition available
-				if sec, ok := op.Extensions["x-nitric-security"]; ok {
-					if secName, ok := sec.(string); ok {
-						sd := args.SecurityDefinitions[secName]
-
-						apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID+"-sec", ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
-							ResourceGroupName: args.ResourceGroupName,
-							ApiId:             apiId,
-							ServiceName:       res.Service.Name,
-							OperationId:       pulumi.String(op.OperationID),
-							PolicyId:          pulumi.String("policy"),
-							Format:            pulumi.String("xml"),
-							Value:             pulumi.Sprintf(oidcTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ","), app.App.LatestRevisionFqdn, app.Sp.ClientID),
-						})
-					}
-				} else {
-					_, err = apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID, ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
-						ResourceGroupName: args.ResourceGroupName,
-						ApiId:             apiId,
-						ServiceName:       res.Service.Name,
-						OperationId:       pulumi.String(op.OperationID),
-						PolicyId:          pulumi.String("policy"),
-						Format:            pulumi.String("xml"),
-						Value:             pulumi.Sprintf(policyTemplate, app.App.LatestRevisionFqdn),
-					})
-				}
+				_, err = apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID, ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
+					ResourceGroupName: args.ResourceGroupName,
+					ApiId:             apiId,
+					ServiceName:       res.Service.Name,
+					OperationId:       pulumi.String(op.OperationID),
+					PolicyId:          pulumi.String("policy"),
+					Format:            pulumi.String("xml"),
+					Value:             pulumi.Sprintf(policyTemplate, app.App.LatestRevisionFqdn, args.ManagedUserID, jwtTemplateString),
+				}, pulumi.Parent(res.Api))
 
 				if err != nil {
 					return nil, errors.WithMessage(err, "NewApiOperationPolicy "+op.OperationID)

@@ -33,7 +33,7 @@ require (
 	github.com/moby/buildkit v0.9.3 // indirect
 	github.com/moby/moby v20.10.12+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.9
-	github.com/nitrictech/nitric v0.15.1-rc.8
+	github.com/nitrictech/nitric v0.17.0-rc.10
 	github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.37
@@ -47,6 +47,7 @@ require (
 	github.com/pulumi/pulumi/sdk/v3 v3.25.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savsgio/gotils v0.0.0-20220201163454-d252f0a44d5b // indirect
+	github.com/segmentio/encoding v0.3.5
 	github.com/spf13/afero v1.8.1 // indirect
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/objx v0.3.0 // indirect

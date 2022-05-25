@@ -29,7 +29,7 @@ func TestFunctionVersionString(t *testing.T) {
 	}{
 		{
 			name: "from embed",
-			want: "v0.15.1-rc.8",
+			want: "v0.17.0-rc.10",
 		},
 	}
 	for _, tt := range tests {

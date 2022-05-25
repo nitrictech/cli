@@ -27,8 +27,10 @@ import (
 )
 
 type Api struct {
-	workers []*pb.ApiWorker
-	lock    sync.RWMutex
+	securityDefinitions map[string]*pb.ApiSecurityDefinition
+	security            map[string][]string
+	workers             []*pb.ApiWorker
+	lock                sync.RWMutex
 }
 
 func (a *Api) String() string {
@@ -37,7 +39,9 @@ func (a *Api) String() string {
 
 func newApi() *Api {
 	return &Api{
-		workers: make([]*pb.ApiWorker, 0),
+		workers:             make([]*pb.ApiWorker, 0),
+		securityDefinitions: make(map[string]*pb.ApiSecurityDefinition),
+		security:            make(map[string][]string),
 	}
 }
 
@@ -79,6 +83,25 @@ func (a *Api) AddWorker(worker *pb.ApiWorker) error {
 	return nil
 }
 
+func (a *Api) AddSecurityDefinition(name string, sd *pb.ApiSecurityDefinition) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	a.securityDefinitions[name] = sd
+}
+
+func (a *Api) AddSecurity(name string, scopes []string) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	sc := []string{}
+	if scopes != nil {
+		sc = scopes
+	}
+
+	a.security[name] = sc
+}
+
 // FunctionDependencies - Stores information about a Nitric Function, and it's dependencies
 type FunctionDependencies struct {
 	name          string
@@ -106,6 +129,30 @@ func (a *FunctionDependencies) AddPolicy(p *pb.PolicyResource) {
 	}
 
 	a.policies = append(a.policies, p)
+}
+
+func (a *FunctionDependencies) AddApiSecurityDefinitions(name string, sds map[string]*pb.ApiSecurityDefinition) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	if a.apis[name] == nil {
+		a.apis[name] = newApi()
+	}
+
+	for n, sd := range sds {
+		a.apis[name].AddSecurityDefinition(n, sd)
+	}
+}
+
+func (a *FunctionDependencies) AddApiSecurity(name string, security map[string]*pb.ApiScopes) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	if a.apis[name] == nil {
+		a.apis[name] = newApi()
+	}
+
+	for n, scopes := range security {
+		a.apis[name].AddSecurity(n, scopes.Scopes)
+	}
 }
 
 func (a *FunctionDependencies) AddApiHandler(aw *pb.ApiWorker) error {

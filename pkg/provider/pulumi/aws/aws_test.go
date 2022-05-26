@@ -274,7 +274,7 @@ func TestValidate(t *testing.T) {
 
 func Test_awsProvider_Plugins(t *testing.T) {
 	want := []common.Plugin{
-		{Name: "aws", Version: "v4.37.5"},
+		{Name: "aws", Version: "v4.38.1"},
 	}
 	got := (&awsProvider{}).Plugins()
 	if !reflect.DeepEqual(got, want) {

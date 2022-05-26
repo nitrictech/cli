@@ -161,7 +161,6 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		Project:     args.ProjectId,
 		Api:         res.Api.ApiId,
 		DisplayName: pulumi.String(name + "-config"),
-		ApiConfigId: pulumi.String(name + "-config"),
 		OpenapiDocuments: apigateway.ApiConfigOpenapiDocumentArray{
 			apigateway.ApiConfigOpenapiDocumentArgs{
 				Document: apigateway.ApiConfigOpenapiDocumentDocumentArgs{

@@ -20,12 +20,12 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	"github.com/pkg/errors"
 	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20201201"
 
-	//"github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type AzureApiManagementArgs struct {
@@ -143,7 +143,7 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 					if secName, ok := sec.(string); ok {
 						sd := args.SecurityDefinitions[secName]
 
-						apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID+"-sec", ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
+						_, err := apimanagement.NewApiOperationPolicy(ctx, resourceName(ctx, name+"-"+op.OperationID+"-sec", ApiOperationPolicyRT), &apimanagement.ApiOperationPolicyArgs{
 							ResourceGroupName: args.ResourceGroupName,
 							ApiId:             apiId,
 							ServiceName:       res.Service.Name,
@@ -152,6 +152,9 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 							Format:            pulumi.String("xml"),
 							Value:             pulumi.Sprintf(oidcTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")),
 						})
+						if err != nil {
+							return nil, err
+						}
 					}
 				}
 

@@ -176,7 +176,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 				GoogleServiceAccount: invoker.Email,
 			},
 		},
-	}, opts...)
+	}, append(opts, pulumi.ReplaceOnChanges([]string{"*"}))...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "api config")
 	}

@@ -23,7 +23,7 @@ require (
 	github.com/google/go-cmp v0.5.7
 	github.com/hashicorp/consul/sdk v0.9.0
 	github.com/hashicorp/go-getter v1.5.11
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/imdario/mergo v0.3.12
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/joho/godotenv v1.3.0
@@ -38,14 +38,14 @@ require (
 	github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.37
-	github.com/pulumi/pulumi-aws/sdk/v4 v4.37.5
-	github.com/pulumi/pulumi-azure-native/sdk v1.60.0
-	github.com/pulumi/pulumi-azure/sdk/v4 v4.39.0
-	github.com/pulumi/pulumi-azuread/sdk/v5 v5.17.0
-	github.com/pulumi/pulumi-docker/sdk/v3 v3.1.0
-	github.com/pulumi/pulumi-gcp/sdk/v6 v6.12.0
-	github.com/pulumi/pulumi-random/sdk/v4 v4.4.2
-	github.com/pulumi/pulumi/sdk/v3 v3.25.0
+	github.com/pulumi/pulumi-aws/sdk/v4 v4.38.1
+	github.com/pulumi/pulumi-azure-native/sdk v1.64.1
+	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
+	github.com/pulumi/pulumi-azuread/sdk/v5 v5.22.0
+	github.com/pulumi/pulumi-docker/sdk/v3 v3.2.0
+	github.com/pulumi/pulumi-gcp/sdk/v6 v6.24.0
+	github.com/pulumi/pulumi-random/sdk/v4 v4.7.0
+	github.com/pulumi/pulumi/sdk/v3 v3.33.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savsgio/gotils v0.0.0-20220201163454-d252f0a44d5b // indirect
 	github.com/spf13/afero v1.8.1 // indirect

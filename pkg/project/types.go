@@ -104,17 +104,18 @@ type Queue struct{}
 type Secret struct{}
 
 type Project struct {
-	Dir         string                 `yaml:"-"`
-	Name        string                 `yaml:"name"`
-	Functions   map[string]Function    `yaml:"functions,omitempty"`
-	Collections map[string]Collection  `yaml:"collections,omitempty"`
-	Containers  map[string]Container   `yaml:"containers,omitempty"`
-	Buckets     map[string]Bucket      `yaml:"buckets,omitempty"`
-	Topics      map[string]Topic       `yaml:"topics,omitempty"`
-	Queues      map[string]Queue       `yaml:"queues,omitempty"`
-	Schedules   map[string]Schedule    `yaml:"schedules,omitempty"`
-	ApiDocs     map[string]*openapi3.T `yaml:"-"`
-	Apis        map[string]string      `yaml:"apis,omitempty"`
+	Dir                 string                                          `yaml:"-"`
+	Name                string                                          `yaml:"name"`
+	Functions           map[string]Function                             `yaml:"functions,omitempty"`
+	Collections         map[string]Collection                           `yaml:"collections,omitempty"`
+	Containers          map[string]Container                            `yaml:"containers,omitempty"`
+	Buckets             map[string]Bucket                               `yaml:"buckets,omitempty"`
+	Topics              map[string]Topic                                `yaml:"topics,omitempty"`
+	Queues              map[string]Queue                                `yaml:"queues,omitempty"`
+	Schedules           map[string]Schedule                             `yaml:"schedules,omitempty"`
+	ApiDocs             map[string]*openapi3.T                          `yaml:"-"`
+	SecurityDefinitions map[string]map[string]*v1.ApiSecurityDefinition `yaml:"-"`
+	Apis                map[string]string                               `yaml:"apis,omitempty"`
 	// TODO: Not currently supported by nitric.yaml configuration (but is technically definable using the proto model)
 	// We may want to decouple the definition from contracts at a later stage
 	// but re-using the contract here provides us a serializable entity with no
@@ -126,19 +127,20 @@ type Project struct {
 
 func New(config *Config) *Project {
 	return &Project{
-		Name:        config.Name,
-		Dir:         config.Dir,
-		Containers:  map[string]Container{},
-		Collections: map[string]Collection{},
-		Functions:   map[string]Function{},
-		Buckets:     map[string]Bucket{},
-		Topics:      map[string]Topic{},
-		Queues:      map[string]Queue{},
-		Schedules:   map[string]Schedule{},
-		Apis:        map[string]string{},
-		ApiDocs:     map[string]*openapi3.T{},
-		Policies:    make([]*v1.PolicyResource, 0),
-		Secrets:     map[string]Secret{},
+		Name:                config.Name,
+		Dir:                 config.Dir,
+		Containers:          map[string]Container{},
+		Collections:         map[string]Collection{},
+		Functions:           map[string]Function{},
+		Buckets:             map[string]Bucket{},
+		Topics:              map[string]Topic{},
+		Queues:              map[string]Queue{},
+		Schedules:           map[string]Schedule{},
+		Apis:                map[string]string{},
+		ApiDocs:             map[string]*openapi3.T{},
+		SecurityDefinitions: make(map[string]map[string]*v1.ApiSecurityDefinition),
+		Policies:            make([]*v1.PolicyResource, 0),
+		Secrets:             map[string]Secret{},
 	}
 }
 

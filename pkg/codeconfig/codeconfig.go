@@ -45,6 +45,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/utils"
+	pb "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
@@ -122,6 +123,22 @@ type apiHandler struct {
 
 var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 
+// Get the security definitions for an API in this stack
+func (c *codeConfig) securityDefinitions(api string) (map[string]*pb.ApiSecurityDefinition, error) {
+	sds := make(map[string]*pb.ApiSecurityDefinition)
+	for _, f := range c.functions {
+		// TODO: Ensure the function actually has API definitions
+		if f.apis != nil && f.apis[api] != nil && f.apis[api].securityDefinitions != nil {
+			for sn, sd := range f.apis[api].securityDefinitions {
+				// TODO: Check if this security definition has already been defined for conflicts
+				sds[sn] = sd
+			}
+		}
+	}
+
+	return sds, nil
+}
+
 // apiSpec produces an open api v3 spec for the requests API name
 func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 	doc := &openapi3.T{
@@ -148,6 +165,15 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 					target: rt.ContainerName(),
 					worker: w,
 				})
+			}
+
+			// Apply top level security rules to the API
+			if len(f.apis[api].security) > 0 {
+				for n, scopes := range f.apis[api].security {
+					doc.Security.With(openapi3.SecurityRequirement{
+						n: scopes,
+					})
+				}
 			}
 		}
 	}
@@ -176,17 +202,36 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				return nil, fmt.Errorf("found conflicting operations")
 			}
 
+			exts := map[string]interface{}{
+				"x-nitric-target": map[string]string{
+					"type": "function",
+					"name": w.target,
+				},
+			}
+
+			var sr *openapi3.SecurityRequirements = nil
+			if w.worker.Options != nil {
+				if w.worker.Options.SecurityDisabled {
+					sr = &openapi3.SecurityRequirements{}
+				} else if len(w.worker.Options.Security) > 0 {
+					sr = &openapi3.SecurityRequirements{}
+					if !w.worker.Options.SecurityDisabled {
+						for key, scopes := range w.worker.Options.Security {
+							sr.With(openapi3.SecurityRequirement{
+								key: scopes.Scopes,
+							})
+						}
+					}
+				}
+			}
+
 			pathItem.SetOperation(m, &openapi3.Operation{
 				OperationID: strings.ToLower(alphanumeric.ReplaceAllString(normalizedPath+m, "")),
 				Responses:   openapi3.NewResponses(),
 				ExtensionProps: openapi3.ExtensionProps{
-					Extensions: map[string]interface{}{
-						"x-nitric-target": map[string]string{
-							"type": "function",
-							"name": w.target,
-						},
-					},
+					Extensions: exts,
 				},
+				Security: sr,
 			})
 		}
 	}
@@ -443,6 +488,13 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 			}
 
 			s.ApiDocs[k] = spec
+
+			secDefs, err := c.securityDefinitions(k)
+			if err != nil {
+				return nil, fmt.Errorf("error with security definitions for api: %s; %w", k, err)
+			}
+
+			s.SecurityDefinitions[k] = secDefs
 		}
 		for k := range f.buckets {
 			s.Buckets[k] = project.Bucket{}

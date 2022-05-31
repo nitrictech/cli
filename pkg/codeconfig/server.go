@@ -81,6 +81,9 @@ func (s *Server) Declare(ctx context.Context, req *pb.ResourceDeclareRequest) (*
 		s.function.AddPolicy(req.GetPolicy())
 	case pb.ResourceType_Secret:
 		s.function.AddSecret(req.Resource.Name, req.GetSecret())
+	case pb.ResourceType_Api:
+		s.function.AddApiSecurityDefinitions(req.Resource.Name, req.GetApi().SecurityDefinitions)
+		s.function.AddApiSecurity(req.Resource.Name, req.GetApi().Security)
 	}
 
 	return &pb.ResourceDeclareResponse{}, nil

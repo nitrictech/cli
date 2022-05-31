@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/joho/godotenv"
@@ -96,6 +97,12 @@ var stackUpdateCmd = &cobra.Command{
 	Long:    `Create or update a deployed stack`,
 	Example: `nitric stack update -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		//FIXME: Remove this error once multi-architecture support is complete
+		if runtime.GOARCH != "amd64" {
+			cobra.CheckErr(fmt.Errorf("only x86_64 CPU architectures are supported for the `nitric up` command currently.\nSee https://github.com/nitrictech/nitric/issues/283 for updated status on multi-architecture support"))
+		}
+
 		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
 

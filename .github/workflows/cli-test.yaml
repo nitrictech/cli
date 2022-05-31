@@ -28,6 +28,7 @@ jobs:
       run: make test-coverage
     # Upload coverage report if main is set
     - name: Upload Coverage Report
+      if: matrix.os == 'ubuntu-latest' # only upload the report once
       uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos

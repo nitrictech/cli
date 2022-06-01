@@ -50,13 +50,13 @@ type AzureApiManagement struct {
 
 const policyTemplate = `<policies><inbound><base /><set-backend-service base-url="https://%s" /><authentication-managed-identity resource="%s"/>%s</inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
 
-const jwtTemplate = `<validate-jwt header-name=”Authorization” failed-validation-httpcode=”401″ failed-validation-error-message=”Unauthorized. Access token is missing or invalid.”>  
-<openid-config url=”%s/.well-known/openid-configuration” />  
-   <required-claims>  
-	  <claim name=”aud” match="any" separator=",">  
-		 <value>%s</value>  
-	  </claim>  
-   </required-claims>  
+const jwtTemplate = `<validate-jwt header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized. Access token is missing or invalid." require-expiration-time="false">  
+<openid-config url="%s.well-known/openid-configuration" />  
+<required-claims>  
+	<claim name="aud" match="any" separator=",">  
+		<value>"%s"</value>  
+	</claim>  
+</required-claims>  
 </validate-jwt>
 `
 
@@ -66,6 +66,20 @@ func marshalOpenAPISpec(spec *openapi3.T) ([]byte, error) {
 	b, err := spec.MarshalJSON()
 	spec.Security = sec
 	return b, err
+}
+
+func setSecurityRequirements(secReq *openapi3.SecurityRequirements, secDef map[string]*v1.ApiSecurityDefinition) []string {
+	jwtTemplates := make([]string, len(secDef))
+	for _, sec := range *secReq {
+		if sec != nil {
+			for sn := range sec {
+				if sd, ok := secDef[sn]; ok {
+					jwtTemplates = append(jwtTemplates, fmt.Sprintf(jwtTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")))
+				}
+			}
+		}
+	}
+	return jwtTemplates
 }
 
 func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManagementArgs, opts ...pulumi.ResourceOption) (*AzureApiManagement, error) {
@@ -118,31 +132,23 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 
 	ctx.Export("api:"+name, res.Api.ServiceUrl)
 
+	// Top level default
+	// Override path level op.Security
+
 	for _, pathItem := range args.OpenAPISpec.Paths {
 		for _, op := range pathItem.Operations() {
 			if v, ok := op.Extensions["x-nitric-target"]; ok {
+				var jwtTemplates []string
 
-				jwtTemplates := make([]string, 10)
-
-				// []map[string][]string
-				fmt.Println("This is going to do the dereference")
-				for _, sec := range *op.Security {
-					for sn := range sec {
-						if sd, ok := args.SecurityDefinitions[sn]; ok {
-							jwtTemplates = append(jwtTemplates, fmt.Sprintf(jwtTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")))
-						}
-					}
+				// Apply top level security
+				if args.OpenAPISpec.Security != nil {
+					jwtTemplates = setSecurityRequirements(&args.OpenAPISpec.Security, args.SecurityDefinitions)
 				}
-				// for sn := range sec {
-				// 	if sd, ok := args.SecurityDefinitions[sn]; ok {
-				// 		jwtTemplates = append(jwtTemplates, fmt.Sprintf(jwtTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")))
-				// 	}
-				// }
-
+				// Override with path security
+				if op.Security != nil {
+					jwtTemplates = setSecurityRequirements(op.Security, args.SecurityDefinitions)
+				}
 				jwtTemplateString := strings.Join(jwtTemplates, "\n")
-				// if len(jwtTemplates) != 0 {
-				// 	jwtTemplateString = fmt.Sprintf("<anyOf>%s</anyOf>", jwtTemplateString)
-				// }
 
 				target := ""
 				targetMap, isMap := v.(map[string]string)

@@ -23,13 +23,13 @@ require (
 	github.com/google/go-cmp v0.5.7
 	github.com/hashicorp/consul/sdk v0.9.0
 	github.com/hashicorp/go-getter v1.5.11
-	github.com/hashicorp/go-multierror v1.1.1
 	github.com/imdario/mergo v0.3.12
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/joho/godotenv v1.3.0
 	github.com/klauspost/compress v1.15.1 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
+	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/moby/buildkit v0.9.3 // indirect
 	github.com/moby/moby v20.10.12+incompatible

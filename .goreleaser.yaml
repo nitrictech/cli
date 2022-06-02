@@ -12,6 +12,8 @@ builds:
       - CGO_ENABLED=0
     id: nitric
     binary: nitric
+    ldflags:
+      - -s -w -X github.com/nitrictech/cli/pkg/utils.Version={{.Version}} -X github.com/nitrictech/cli/pkg/utils.Commit={{.Commit}} -X github.com/nitrictech/cli/pkg/utils.BuildTime={{.Date}}
     goos:
       - linux
       - windows

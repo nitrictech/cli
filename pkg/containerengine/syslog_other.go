@@ -28,7 +28,7 @@ import (
 	"path"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/missionMeteora/toolkit/errors"
 	"gopkg.in/mcuadros/go-syslog.v2"
 
 	"github.com/nitrictech/cli/pkg/utils"
@@ -46,18 +46,18 @@ func newSyslog(logPath string) ContainerLogger {
 }
 
 func (s *localSyslog) Stop() error {
-	var errList error
+	errList := &multierror.ErrorList{}
 
 	if err := s.server.Kill(); err != nil {
-		errList = multierror.Append(errList, err)
+		errList.Push(err)
 	}
 	s.server.Wait()
 
 	if err := s.file.Close(); err != nil {
-		errList = multierror.Append(errList, err)
+		errList.Push(err)
 	}
 
-	return errList
+	return errList.Err()
 }
 
 func (s *localSyslog) Config() *container.LogConfig {

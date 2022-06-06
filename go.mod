@@ -3,50 +3,52 @@ module github.com/nitrictech/cli
 go 1.18
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/Azure/azure-sdk-for-go v61.6.0+incompatible
+	github.com/AlecAivazis/survey/v2 v2.3.4
+	github.com/Azure/azure-sdk-for-go v65.0.0+incompatible
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/docker/cli v20.10.12+incompatible
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/cli v20.10.16+incompatible
+	github.com/docker/docker v20.10.16+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/fasthttp/router v1.4.6
-	github.com/getkin/kin-openapi v0.90.0
+	github.com/fasthttp/router v1.4.10
+	github.com/getkin/kin-openapi v0.96.0
 	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.46.1
-	github.com/google/go-cmp v0.5.7
+	github.com/google/go-cmp v0.5.8
 	github.com/hashicorp/consul/sdk v0.9.0
-	github.com/hashicorp/go-getter v1.5.11
-	github.com/hashicorp/go-version v1.4.0
-	github.com/imdario/mergo v0.3.12
+	github.com/hashicorp/go-getter v1.6.1
+	github.com/hashicorp/go-version v1.5.0
+	github.com/imdario/mergo v0.3.13
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
-	github.com/joho/godotenv v1.3.0
+	github.com/joho/godotenv v1.4.0
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
-	github.com/moby/moby v20.10.12+incompatible
+	github.com/moby/moby v20.10.16+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.9
-	github.com/nitrictech/nitric v0.17.0-rc.10
+	github.com/nitrictech/nitric v0.17.0-rc.11
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.37
+	github.com/pterm/pterm v0.12.41
 	github.com/pulumi/pulumi-aws/sdk/v4 v4.38.1
 	github.com/pulumi/pulumi-azure-native/sdk v1.64.1
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.22.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.2.0
-	github.com/pulumi/pulumi-gcp/sdk/v6 v6.24.0
+	github.com/pulumi/pulumi-gcp/sdk/v6 v6.25.0
 	github.com/pulumi/pulumi-random/sdk/v4 v4.7.0
-	github.com/pulumi/pulumi/sdk/v3 v3.33.1
+	github.com/pulumi/pulumi/sdk/v3 v3.33.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/segmentio/encoding v0.3.5
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
-	github.com/valyala/fasthttp v1.34.0
+	github.com/valyala/fasthttp v1.37.0
 	golang.org/x/exp v0.0.0-20220602145555-4a0574d9293f
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
-	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
-	google.golang.org/grpc v1.45.0
+	golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
+	google.golang.org/grpc v1.47.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+replace github.com/golangci/golangci-lint => github.com/golangci/golangci-lint v1.46.1
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect
@@ -110,7 +112,6 @@ require (
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/fzipp/gocyclo v0.5.1 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-critic/go-critic v0.6.3 // indirect
 	github.com/go-openapi/errors v0.19.8 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
@@ -157,6 +158,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/invopop/yaml v0.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jgautheron/goconst v1.5.1 // indirect
 	github.com/jingyugao/rowserrcheck v1.1.1 // indirect
@@ -230,10 +232,10 @@ require (
 	github.com/ryanrolds/sqlclosecheck v0.3.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94 // indirect
 	github.com/sanposhiho/wastedassign/v2 v2.0.6 // indirect
-	github.com/savsgio/gotils v0.0.0-20220201163454-d252f0a44d5b // indirect
+	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
 	github.com/securego/gosec/v2 v2.11.0 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
-	github.com/sergi/go-diff v1.1.0 // indirect
+	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/sivchari/containedctx v1.0.2 // indirect
@@ -278,7 +280,7 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/net v0.0.0-20220412020605-290c469a71a5 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
+	golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
@@ -293,7 +295,7 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.3.1 // indirect
 	mvdan.cc/gofumpt v0.3.1 // indirect
 	mvdan.cc/interfacer v0.0.0-20180901003855-c20040233aed // indirect

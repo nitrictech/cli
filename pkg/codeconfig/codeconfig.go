@@ -132,9 +132,11 @@ func (c *codeConfig) securityDefinitions(api string) (map[string]*pb.ApiSecurity
 	sds := make(map[string]*pb.ApiSecurityDefinition)
 	for _, f := range c.functions {
 		// TODO: Ensure the function actually has API definitions
-		for sn, sd := range f.apis[api].securityDefinitions {
-			// TODO: Check if this security definition has already been defined for conflicts
-			sds[sn] = sd
+		if f.apis != nil && f.apis[api] != nil && f.apis[api].securityDefinitions != nil {
+			for sn, sd := range f.apis[api].securityDefinitions {
+				// TODO: Check if this security definition has already been defined for conflicts
+				sds[sn] = sd
+			}
 		}
 	}
 

@@ -75,6 +75,9 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 		return err
 	}
 
+	tsconfig := `'{"compilerOptions":{"esModuleInterop":true,"target":"es2015","moduleResolution":"node"}}'`
+	buildstage.Run(dockerfile.RunOptions{Command: []string{"test", "-f", "tsconfig.json", "||", "echo", tsconfig, ">", "tsconfig.json"}})
+
 	buildstage.Run(dockerfile.RunOptions{Command: []string{"ncc", "build", filepath.ToSlash(t.handler), "-m", "--v8-cache", "-o", "lib/"}})
 
 	// start final stage

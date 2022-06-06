@@ -46,6 +46,7 @@ COPY package.json *.lock *-lock.json /
 RUN yarn import || echo Lockfile already exists
 RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
 COPY . .
+RUN test -f tsconfig.json || echo '{"compilerOptions":{"esModuleInterop":true,"target":"es2015","moduleResolution":"node"}}' > tsconfig.json
 RUN ncc build functions/list.ts -m --v8-cache -o lib/
 FROM node:alpine as layer-final
 COPY --from=layer-build package.json package.json

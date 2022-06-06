@@ -94,12 +94,12 @@ func (a *Api) AddSecurity(name string, scopes []string) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	sc := []string{}
 	if scopes != nil {
-		sc = scopes
+		a.security[name] = scopes
+	} else {
+		// default to empty scopes for a nil assignment
+		a.security[name] = []string{}
 	}
-
-	a.security[name] = sc
 }
 
 // FunctionDependencies - Stores information about a Nitric Function, and it's dependencies

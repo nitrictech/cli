@@ -19,25 +19,14 @@ package project
 import (
 	_ "embed"
 	"testing"
+
+	"github.com/hashicorp/go-version"
 )
 
 func TestFunctionVersionString(t *testing.T) {
-	tests := []struct {
-		name        string
-		funcVersion string
-		want        string
-	}{
-		{
-			name: "from embed",
-			want: "v0.17.0-rc.10",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := &Function{}
-			if got := f.VersionString(nil); got != tt.want {
-				t.Errorf("Function.VersionString() = '%s', want '%s'", got, tt.want)
-			}
-		})
+	f := &Function{}
+	_, err := version.NewVersion(f.VersionString(nil))
+	if err != nil {
+		t.Error(err)
 	}
 }

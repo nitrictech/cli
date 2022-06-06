@@ -1,8 +1,9 @@
+---
 name: Release Docker images
 on:
   push:
     branches:
-    - 'develop'
+      - 'develop'
 
 jobs:
   push_to_registry:
@@ -10,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Login to DockerHub
@@ -19,15 +20,15 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set env to rc
-          if: endsWith(github.ref, '/develop')
-          run: |
-            echo "NITRIC_LATEST=rc-latest" >> $GITHUB_ENV
-            echo "NITRIC_X64=rc-x64" >> $GITHUB_ENV
+        if: endsWith(github.ref, '/develop')
+        run: |
+          echo "NITRIC_LATEST=rc-latest" >> $GITHUB_ENV
+          echo "NITRIC_X64=rc-x64" >> $GITHUB_ENV
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: |
-            echo "NITRIC_LATEST=latest" >> $GITHUB_ENV
-            echo "NITRIC_X64=x64" >> $GITHUB_ENV
+          echo "NITRIC_LATEST=latest" >> $GITHUB_ENV
+          echo "NITRIC_X64=x64" >> $GITHUB_ENV
       - name: Push Nitric CLI to Dockerhub
         uses: docker/build-push-action@v3
         with:

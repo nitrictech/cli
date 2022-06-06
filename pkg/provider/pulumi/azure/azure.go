@@ -31,6 +31,7 @@ import (
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/keyvault"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -204,9 +205,14 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "resource group create")
 	}
 
-	managedUser, err := newServicePrincipal(ctx, "managed-user", &ServicePrincipalArgs{})
+	managedUser, err := managedidentity.NewUserAssignedIdentity(ctx, "managed-identity", &managedidentity.UserAssignedIdentityArgs{
+		Location:          pulumi.String(a.sc.Region),
+		ResourceGroupName: rg.Name,
+		ResourceName:      pulumi.String("managed-identity"),
+	})
+
 	if err != nil {
-		return errors.WithMessage(err, "managed user create")
+		return err
 	}
 
 	contAppsArgs := &ContainerAppsArgs{
@@ -215,7 +221,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		SubscriptionID:    pulumi.String(clientConfig.SubscriptionId),
 		Topics:            map[string]*eventgrid.Topic{},
 		EnvMap:            a.envMap,
-		ManagedUserID:     managedUser.ClientID,
+		ManagedUser:       managedUser,
 	}
 
 	// Create a stack level keyvault if secrets are enabled
@@ -303,7 +309,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 			OpenAPISpec:         v,
 			Apps:                apps.Apps,
 			SecurityDefinitions: a.proj.SecurityDefinitions[k],
-			ManagedUserID:       managedUser.ClientID,
+			ManagedUser:         managedUser,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)

@@ -24,6 +24,7 @@ import (
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/containerregistry"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/operationalinsights"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
@@ -44,7 +45,7 @@ type ContainerAppsArgs struct {
 	StorageAccountQueueEndpoint   pulumi.StringInput
 	MongoDatabaseName             pulumi.StringInput
 	MongoDatabaseConnectionString pulumi.StringInput
-	ManagedUserID                 pulumi.StringInput
+	ManagedUser                   *managedidentity.UserAssignedIdentity
 }
 
 type ContainerApps struct {
@@ -204,7 +205,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			Env:               env,
 			Topics:            args.Topics,
 			Compute:           c,
-			ManagedUserID:     args.ManagedUserID,
+			ManagedUserID:     args.ManagedUser.ClientId,
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, err
@@ -379,36 +380,29 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 	}
 
 	authName := fmt.Sprintf("%s-auth", appName)
-	audiences := make([]string, 0)
-
-	for _, sds := range a.proj.SecurityDefinitions {
-		for _, sd := range sds {
-			aud := sd.GetJwt().GetAudiences()
-			for _, a := range aud {
-				audiences = append(audiences, a)
-			}
-		}
-	}
 
 	app.NewContainerAppsAuthConfig(ctx, authName, &app.ContainerAppsAuthConfigArgs{
 		ContainerAppName: res.App.Name,
 		GlobalValidation: &app.GlobalValidationArgs{
-			UnauthenticatedClientAction: pulumi.String(app.UnauthenticatedClientActionReturn401),
+			UnauthenticatedClientAction: app.UnauthenticatedClientActionV2Return403,
 		},
 		IdentityProviders: &app.IdentityProvidersArgs{
 			AzureActiveDirectory: &app.AzureActiveDirectoryArgs{
-				State: pulumi.String("Enabled"),
+				Enabled: pulumi.Bool(true),
 				Validation: &app.AzureActiveDirectoryValidationArgs{
-					AllowedAudiences: pulumi.ToStringArray(audiences),
+					AllowedAudiences: pulumi.StringArray{args.ManagedUserID},
 				},
 				Registration: &app.AzureActiveDirectoryRegistrationArgs{
-					ClientId: args.ManagedUserID,
+					ClientId:     args.ManagedUserID,
+					OpenIdIssuer: pulumi.Sprintf("https://sts.windows.net/%s/v2.0", res.Sp.TenantID),
 				},
 			},
 		},
+		Platform: &app.AuthPlatformArgs{
+			Enabled: pulumi.Bool(true),
+		},
 		Name:              pulumi.String("current"),
 		ResourceGroupName: args.ResourceGroupName,
-		State:             pulumi.String("Enabled"),
 	}, pulumi.Parent(res.App))
 
 	// Determine required subscriptions so they can be setup once the container starts

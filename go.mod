@@ -37,7 +37,6 @@ require (
 	github.com/pulumi/pulumi/sdk/v3 v3.34.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/savsgio/gotils v0.0.0-20220201163454-d252f0a44d5b // indirect
-	github.com/segmentio/encoding v0.3.5
 	github.com/spf13/afero v1.8.1 // indirect
 	github.com/segmentio/encoding v0.3.5
 	github.com/spf13/cobra v1.4.0

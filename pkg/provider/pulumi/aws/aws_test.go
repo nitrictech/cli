@@ -18,10 +18,10 @@ package aws
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
@@ -273,11 +273,13 @@ func TestValidate(t *testing.T) {
 }
 
 func Test_awsProvider_Plugins(t *testing.T) {
-	want := []common.Plugin{
-		{Name: "aws", Version: "v4.38.1"},
-	}
 	got := (&awsProvider{}).Plugins()
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("awsProvider.Plugins() = %v, want %v", got, want)
+
+	if got[0].Name != "aws" {
+		t.Errorf("awsProvider.Plugins() = %v, want %v", got[0].Name, "aws")
+	}
+	_, err := version.NewVersion(got[0].Version)
+	if err != nil {
+		t.Error(err)
 	}
 }

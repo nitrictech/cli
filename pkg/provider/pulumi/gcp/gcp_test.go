@@ -18,15 +18,16 @@ package gcp
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slices"
 	"golang.org/x/oauth2"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -227,12 +228,18 @@ func TestValidate(t *testing.T) {
 }
 
 func Test_gcpProvider_Plugins(t *testing.T) {
-	want := []common.Plugin{
-		{Name: "gcp", Version: "v6.24.0"},
-		{Name: "random", Version: "v4.7.0"},
-	}
+	want := []string{"gcp", "random"}
+
 	got := (&gcpProvider{}).Plugins()
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("gcpProvider.Plugins() = %v, want %v", got, want)
+
+	for _, pl := range got {
+		_, err := version.NewVersion(pl.Version)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if !slices.Contains(want, pl.Name) {
+			t.Errorf("gcpProvider.Plugins() = %v not in want %v", pl, want)
+		}
 	}
 }

@@ -13,7 +13,7 @@ require (
 	github.com/fasthttp/router v1.4.10
 	github.com/getkin/kin-openapi v0.96.0
 	github.com/golang/mock v1.6.0
-	github.com/golangci/golangci-lint v1.46.1
+	github.com/golangci/golangci-lint v1.46.2
 	github.com/google/go-cmp v0.5.8
 	github.com/hashicorp/consul/sdk v0.9.0
 	github.com/hashicorp/go-getter v1.6.1
@@ -32,13 +32,13 @@ require (
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.22.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.2.0
-	github.com/pulumi/pulumi-gcp/sdk/v6 v6.25.0
+	github.com/pulumi/pulumi-gcp/sdk/v6 v6.26.0
 	github.com/pulumi/pulumi-random/sdk/v4 v4.7.0
 	github.com/pulumi/pulumi/sdk/v3 v3.33.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/segmentio/encoding v0.3.5
 	github.com/spf13/cobra v1.4.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.7.2
 	github.com/valyala/fasthttp v1.37.0
 	golang.org/x/exp v0.0.0-20220602145555-4a0574d9293f
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
@@ -47,8 +47,6 @@ require (
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
-
-replace github.com/golangci/golangci-lint => github.com/golangci/golangci-lint v1.46.1
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect
@@ -81,7 +79,7 @@ require (
 	github.com/ashanbrown/forbidigo v1.3.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
 	github.com/atomicgo/cursor v0.0.1 // indirect
-	github.com/aws/aws-sdk-go v1.44.27 // indirect
+	github.com/aws/aws-sdk-go v1.44.28 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bkielbasa/cyclop v1.2.0 // indirect
@@ -177,7 +175,7 @@ require (
 	github.com/ldez/gomoddirectives v0.2.3 // indirect
 	github.com/ldez/tagliatelle v0.3.1 // indirect
 	github.com/leonklingele/grouper v1.1.0 // indirect
-	github.com/lufeee/execinquery v1.2.0 // indirect
+	github.com/lufeee/execinquery v1.2.1 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.0 // indirect
 	github.com/maratori/testpackage v1.0.1 // indirect
@@ -218,7 +216,7 @@ require (
 	github.com/phayes/checkstyle v0.0.0-20170904204023-bfd46e6a821d // indirect
 	github.com/pkg/term v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/polyfloyd/go-errorlint v0.0.0-20211125173453-6d6d39c5bb8b // indirect
+	github.com/polyfloyd/go-errorlint v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect

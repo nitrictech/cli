@@ -19,22 +19,23 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set env to rc
+      - name: Push RC Nitric CLI to Dockerhub
         if: endsWith(github.ref, '/develop')
-        run: |
-          echo "NITRIC_LATEST=rc-latest" >> $GITHUB_ENV
-          echo "NITRIC_X64=rc-x64" >> $GITHUB_ENV
-      - name: Set env to production
-        if: endsWith(github.ref, '/main')
-        run: |
-          echo "NITRIC_LATEST=latest" >> $GITHUB_ENV
-          echo "NITRIC_X64=x64" >> $GITHUB_ENV
-      - name: Push Nitric CLI to Dockerhub
         uses: docker/build-push-action@v3
         with:
           context: .
           file: ./Dockerfile
           push: true
           tags: |
-            nitrictech/cli:$NITRIC_LATEST
-            nitrictech/cli:$NITRIC_X64
+            nitrictech/cli:rc-latest
+            nitrictech/cli:rc-64
+      - name: Push Main Nitric CLI to Dockerhub
+        if: endsWith(github.ref, '/main')
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            nitrictech/cli:latest
+            nitrictech/cli:x64

@@ -483,7 +483,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 
 	errs := multierror.ErrorList{}
 	for handler, f := range c.functions {
-		topicTriggers := make([]string, 0, len(f.subscriptions)+len(f.schedules))
+		topicTriggers := make([]string, 0, len(f.subscriptions))
 
 		for k := range f.apis {
 			spec, err := c.apiSpec(k)
@@ -517,13 +517,6 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 		s.Policies = append(s.Policies, f.policies...)
 
 		for k, v := range f.schedules {
-			// Create a new topic target
-			// replace spaced with hyphens
-			topicName := strings.ToLower(strings.ReplaceAll(k, " ", "-"))
-			s.Topics[topicName] = project.Topic{}
-
-			topicTriggers = append(topicTriggers, topicName)
-
 			var exp string
 			if v.GetCron() != nil {
 				exp = v.GetCron().Cron
@@ -544,14 +537,8 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 			newS := project.Schedule{
 				Expression: exp,
 				Target: project.ScheduleTarget{
-					Type: "topic",
-					Name: topicName,
-				},
-				Event: project.ScheduleEvent{
-					PayloadType: "io.nitric.schedule",
-					Payload: map[string]interface{}{
-						"schedule": k,
-					},
+					Type: "function",
+					Name: f.name,
 				},
 			}
 			if current, ok := s.Schedules[k]; ok {

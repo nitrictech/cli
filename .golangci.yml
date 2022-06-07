@@ -1,24 +1,25 @@
+---
 run:
   timeout: "5m"
   skip-files:
-  - tools/tools.go
+    - tools/tools.go
 
 linters:
   disable-all: true
   enable:
-  - goimports
-  - goheader
-  - gofmt
-  - whitespace
-  - staticcheck
-  - structcheck
-  - ineffassign
-  - varcheck
-  - unused
-  - deadcode
-  - misspell
-  - unconvert
-  - errcheck
+    - goimports
+    - goheader
+    - gofmt
+    - whitespace
+    - staticcheck
+    - structcheck
+    - ineffassign
+    - varcheck
+    - unused
+    - deadcode
+    - misspell
+    - unconvert
+    - errcheck
 
 issues:
   max-issues-per-linter: 0

@@ -19,6 +19,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -46,14 +47,14 @@ var (
 )
 
 var newProjectCmd = &cobra.Command{
-	Use:   "new [projectName] [templateName] [handlerGlob]",
+	Use:   "new [projectName] [templateName]",
 	Short: "Create a new project",
 	Long:  `Creates a new Nitric project from a template.`,
 	Example: `# For an interactive command that will ask the required questions
 nitric new
 
 # For a non-interactive command use the arguments.
-nitric new hello-world "official/TypeScript - Starter" "functions/*.ts" `,
+nitric new hello-world "official/TypeScript - Starter" `,
 	Run: func(cmd *cobra.Command, args []string) {
 		answers := struct {
 			ProjectName  string
@@ -109,24 +110,6 @@ nitric new hello-world "official/TypeScript - Starter" "functions/*.ts" `,
 			args = []string{} // reassign args to ensure validation works correctly.
 		}
 
-		if len(args) == 3 {
-			answers.Handlers = args[2]
-		} else {
-			qs = append(qs, &survey.Question{
-				Name: "handlers",
-				Prompt: &survey.Input{
-					Message: "Glob for the function handlers?",
-					Default: "functions/*.ts",
-					Suggest: func(toComplete string) []string {
-						return []string{
-							"functions/*.ts",
-							"functions/*.js",
-							"functions/*/*.go"}
-					},
-				},
-			})
-		}
-
 		if len(qs) > 0 {
 			err = survey.Ask(qs, &answers)
 			cobra.CheckErr(err)
@@ -134,18 +117,55 @@ nitric new hello-world "official/TypeScript - Starter" "functions/*.ts" `,
 
 		cd, err := filepath.Abs(".")
 		cobra.CheckErr(err)
-		p := project.Config{
-			Dir:      path.Join(cd, answers.ProjectName),
-			Name:     answers.ProjectName,
-			Handlers: []string{answers.Handlers},
+
+		projDir := path.Join(cd, answers.ProjectName)
+
+		err = downloadr.DownloadDirectoryContents(answers.TemplateName, projDir, force)
+		cobra.CheckErr(err)
+
+		var p *project.Config
+		// Check if the downloaded template has a default nitric.yaml file
+		if _, err := os.Stat(filepath.Join(projDir, "nitric.yaml")); errors.Is(err, os.ErrNotExist) {
+			// Old template detected, without nitric.yaml file - prompt for glob pattern for backwards compatibility
+			globQ := []*survey.Question{
+				{
+					Name: "handlers",
+					Prompt: &survey.Input{
+						Message: "Glob for the function handlers?",
+						Default: "functions/*.ts",
+						Suggest: func(toComplete string) []string {
+							return []string{
+								"functions/*.ts",
+								"functions/*.js",
+								"functions/*/*.go"}
+						},
+					},
+				},
+			}
+
+			globA := struct {
+				Handlers string
+			}{}
+
+			err = survey.Ask(globQ, &globA)
+			cobra.CheckErr(err)
+
+			p = &project.Config{
+				Dir:      path.Join(cd, answers.ProjectName),
+				Name:     answers.ProjectName,
+				Handlers: []string{globA.Handlers},
+			}
+		} else {
+			// Load and update the project name in the template's nitric.yaml
+			p, err = project.ConfigFromProjectPath(projDir)
+			cobra.CheckErr(err)
+			p.Name = answers.ProjectName
 		}
 
-		err = downloadr.DownloadDirectoryContents(answers.TemplateName, p.Dir, force)
-		cobra.CheckErr(err)
 		err = p.ToFile()
 		cobra.CheckErr(err)
 	},
-	Args: cobra.MaximumNArgs(3),
+	Args: cobra.MaximumNArgs(2),
 }
 
 func validateName(val interface{}) error {

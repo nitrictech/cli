@@ -157,8 +157,9 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				PushConfig: pubsub.SubscriptionPushConfigArgs{
 					OidcToken: pubsub.SubscriptionPushConfigOidcTokenArgs{
 						ServiceAccountEmail: res.Invoker.Email,
+						Audience:            res.Url,
 					},
-					PushEndpoint: res.Url,
+					PushEndpoint: pulumi.Sprintf("%s/x-nitric-subscription/%s", t, res.Url),
 				},
 			}, append(opts, pulumi.Parent(res))...)
 			if err != nil {

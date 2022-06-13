@@ -3,15 +3,15 @@ module github.com/nitrictech/cli
 go 1.18
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.4
+	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/Azure/azure-sdk-for-go v65.0.0+incompatible
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/docker/cli v20.10.16+incompatible
-	github.com/docker/docker v20.10.16+incompatible
+	github.com/docker/cli v20.10.17+incompatible
+	github.com/docker/docker v20.10.17+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fasthttp/router v1.4.10
-	github.com/getkin/kin-openapi v0.96.0
+	github.com/getkin/kin-openapi v0.97.0
 	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.46.2
 	github.com/google/go-cmp v0.5.8
@@ -22,27 +22,27 @@ require (
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/joho/godotenv v1.4.0
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
-	github.com/moby/moby v20.10.16+incompatible
+	github.com/moby/moby v20.10.17+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.9
-	github.com/nitrictech/nitric v0.17.0-rc.12
+	github.com/nitrictech/nitric v0.17.0-rc.14
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.41
 	github.com/pulumi/pulumi-aws/sdk/v4 v4.38.1
-	github.com/pulumi/pulumi-azure-native/sdk v1.64.1
+	github.com/pulumi/pulumi-azure-native/sdk v1.65.0
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
-	github.com/pulumi/pulumi-azuread/sdk/v5 v5.22.0
+	github.com/pulumi/pulumi-azuread/sdk/v5 v5.23.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.2.0
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.26.0
-	github.com/pulumi/pulumi-random/sdk/v4 v4.7.0
-	github.com/pulumi/pulumi/sdk/v3 v3.33.2
+	github.com/pulumi/pulumi-random/sdk/v4 v4.8.0
+	github.com/pulumi/pulumi/sdk/v3 v3.34.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/segmentio/encoding v0.3.5
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.2
 	github.com/valyala/fasthttp v1.37.0
-	golang.org/x/exp v0.0.0-20220602145555-4a0574d9293f
+	golang.org/x/exp v0.0.0-20220609121020-a51bd0440498
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
-	golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
+	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
 	google.golang.org/grpc v1.47.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -79,7 +79,7 @@ require (
 	github.com/ashanbrown/forbidigo v1.3.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
 	github.com/atomicgo/cursor v0.0.1 // indirect
-	github.com/aws/aws-sdk-go v1.44.28 // indirect
+	github.com/aws/aws-sdk-go v1.44.32 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bkielbasa/cyclop v1.2.0 // indirect
@@ -143,7 +143,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.4.0 // indirect
 	github.com/googleapis/go-type-adapters v1.0.0 // indirect
-	github.com/gookit/color v1.5.0 // indirect
+	github.com/gookit/color v1.5.1 // indirect
 	github.com/gordonklaus/ineffassign v0.0.0-20210914165742-4cc7213b9bc8 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
@@ -277,17 +277,17 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
-	golang.org/x/net v0.0.0-20220531201128-c960675eff93 // indirect
-	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
+	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
+	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.org/x/tools v0.1.11-0.20220316014157-77aa08bb151a // indirect
-	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect
-	google.golang.org/api v0.82.0 // indirect
+	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
+	google.golang.org/api v0.83.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220602131408-e326c6e8e9c8 // indirect
+	google.golang.org/genproto v0.0.0-20220608133413-ed9918b62aac // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect

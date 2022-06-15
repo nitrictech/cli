@@ -493,10 +493,11 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			Policy:    p,
 			ProjectID: pulumi.String(g.projectId),
 			Resources: &StackResources{
-				Topics:  g.topics,
-				Queues:  g.queueTopics,
-				Buckets: g.buckets,
-				Secrets: g.secrets,
+				Topics:        g.topics,
+				Queues:        g.queueTopics,
+				Subscriptions: g.queueSubscriptions,
+				Buckets:       g.buckets,
+				Secrets:       g.secrets,
 			},
 			Principals: principalMap,
 		}); err != nil {

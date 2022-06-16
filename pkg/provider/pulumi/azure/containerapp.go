@@ -24,7 +24,6 @@ import (
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/containerregistry"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/operationalinsights"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
@@ -45,7 +44,8 @@ type ContainerAppsArgs struct {
 	StorageAccountQueueEndpoint   pulumi.StringInput
 	MongoDatabaseName             pulumi.StringInput
 	MongoDatabaseConnectionString pulumi.StringInput
-	ManagedUser                   *managedidentity.UserAssignedIdentity
+
+	ManagedIdentityID pulumi.StringOutput
 }
 
 type ContainerApps struct {
@@ -205,7 +205,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			Env:               env,
 			Topics:            args.Topics,
 			Compute:           c,
-			ManagedUserID:     args.ManagedUser.ClientId,
+			ManagedIdentityID: args.ManagedIdentityID,
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, err
@@ -227,18 +227,7 @@ type ContainerAppArgs struct {
 	Env               app.EnvironmentVarArray
 	Compute           project.Compute
 	Topics            map[string]*eventgrid.Topic
-	ResourceGroupName pulumi.StringInput
-	Location          pulumi.StringInput
-	SubscriptionID    pulumi.StringInput
-	Registry          *containerregistry.Registry
-	RegistryUser      pulumi.StringPtrInput
-	RegistryPass      pulumi.StringPtrInput
-	ManagedEnv        *app.ManagedEnvironment
-	ImageUri          pulumi.StringInput
-	Env               app.EnvironmentVarArray
-	Compute           project.Compute
-	Topics            map[string]*eventgrid.Topic
-	ManagedUserID     pulumi.StringInput
+	ManagedIdentityID pulumi.StringOutput
 }
 
 type ContainerApp struct {
@@ -382,26 +371,27 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 	authName := fmt.Sprintf("%s-auth", appName)
 
 	app.NewContainerAppsAuthConfig(ctx, authName, &app.ContainerAppsAuthConfigArgs{
+		AuthConfigName:   pulumi.String("current"),
 		ContainerAppName: res.App.Name,
 		GlobalValidation: &app.GlobalValidationArgs{
-			UnauthenticatedClientAction: app.UnauthenticatedClientActionV2Return403,
+			UnauthenticatedClientAction: app.UnauthenticatedClientActionV2Return401,
 		},
 		IdentityProviders: &app.IdentityProvidersArgs{
 			AzureActiveDirectory: &app.AzureActiveDirectoryArgs{
 				Enabled: pulumi.Bool(true),
-				Validation: &app.AzureActiveDirectoryValidationArgs{
-					AllowedAudiences: pulumi.StringArray{args.ManagedUserID},
-				},
 				Registration: &app.AzureActiveDirectoryRegistrationArgs{
-					ClientId:     args.ManagedUserID,
-					OpenIdIssuer: pulumi.Sprintf("https://sts.windows.net/%s/v2.0", res.Sp.TenantID),
+					ClientId:                res.Sp.ClientID,
+					ClientSecretSettingName: pulumi.String("client-secret"),
+					OpenIdIssuer:            pulumi.Sprintf("https://sts.windows.net/%s/v2.0", res.Sp.TenantID),
+				},
+				Validation: &app.AzureActiveDirectoryValidationArgs{
+					AllowedAudiences: pulumi.StringArray{args.ManagedIdentityID},
 				},
 			},
 		},
 		Platform: &app.AuthPlatformArgs{
 			Enabled: pulumi.Bool(true),
 		},
-		Name:              pulumi.String("current"),
 		ResourceGroupName: args.ResourceGroupName,
 	}, pulumi.Parent(res.App))
 

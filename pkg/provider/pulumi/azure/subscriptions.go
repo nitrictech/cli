@@ -106,7 +106,9 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 				WebhookEndpoint: pulumiEventgrid.EventSubscriptionWebhookEndpointArgs{
 					Url: hostUrl,
 					// TODO: Reduce event chattiness here and handle internally in the Azure AppService HTTP Gateway?
-					MaxEventsPerBatch: pulumi.Int(1),
+					MaxEventsPerBatch:         pulumi.Int(1),
+					ActiveDirectoryAppIdOrUri: app.Sp.ClientID,
+					ActiveDirectoryTenantId:   app.Sp.TenantID,
 				},
 				RetryPolicy: pulumiEventgrid.EventSubscriptionRetryPolicyArgs{
 					MaxDeliveryAttempts: pulumi.Int(30),

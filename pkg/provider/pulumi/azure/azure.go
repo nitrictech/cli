@@ -205,23 +205,12 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "resource group create")
 	}
 
-	managedUser, err := managedidentity.NewUserAssignedIdentity(ctx, "managed-identity", &managedidentity.UserAssignedIdentityArgs{
-		Location:          pulumi.String(a.sc.Region),
-		ResourceGroupName: rg.Name,
-		ResourceName:      pulumi.String("managed-identity"),
-	})
-
-	if err != nil {
-		return err
-	}
-
 	contAppsArgs := &ContainerAppsArgs{
 		ResourceGroupName: rg.Name,
 		Location:          rg.Location,
 		SubscriptionID:    pulumi.String(clientConfig.SubscriptionId),
 		Topics:            map[string]*eventgrid.Topic{},
 		EnvMap:            a.envMap,
-		ManagedUser:       managedUser,
 	}
 
 	// Create a stack level keyvault if secrets are enabled
@@ -278,6 +267,17 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		contAppsArgs.MongoDatabaseConnectionString = mc.ConnectionString
 	}
 
+	managedUser, err := managedidentity.NewUserAssignedIdentity(ctx, "managed-identity", &managedidentity.UserAssignedIdentityArgs{
+		Location:          pulumi.String(a.sc.Region),
+		ResourceGroupName: rg.Name,
+		ResourceName:      pulumi.String("managed-identity"),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	contAppsArgs.ManagedIdentityID = managedUser.ClientId
 	var apps *ContainerApps
 	if len(a.proj.Functions) > 0 || len(a.proj.Containers) > 0 {
 		apps, err = a.newContainerApps(ctx, "containerApps", contAppsArgs)
@@ -309,7 +309,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 			OpenAPISpec:         v,
 			Apps:                apps.Apps,
 			SecurityDefinitions: a.proj.SecurityDefinitions[k],
-			ManagedUser:         managedUser,
+			ManagedIdentity:     managedUser,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)

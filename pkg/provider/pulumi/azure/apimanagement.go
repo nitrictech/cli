@@ -37,7 +37,7 @@ type AzureApiManagementArgs struct {
 	OpenAPISpec         *openapi3.T
 	Apps                map[string]*ContainerApp
 	SecurityDefinitions map[string]*v1.ApiSecurityDefinition
-	ManagedUser         *managedidentity.UserAssignedIdentity
+	ManagedIdentity     *managedidentity.UserAssignedIdentity
 }
 
 type AzureApiManagement struct {
@@ -71,11 +71,9 @@ func marshalOpenAPISpec(spec *openapi3.T) ([]byte, error) {
 func setSecurityRequirements(secReq *openapi3.SecurityRequirements, secDef map[string]*v1.ApiSecurityDefinition) []string {
 	jwtTemplates := make([]string, len(secDef))
 	for _, sec := range *secReq {
-		if sec != nil {
-			for sn := range sec {
-				if sd, ok := secDef[sn]; ok {
-					jwtTemplates = append(jwtTemplates, fmt.Sprintf(jwtTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")))
-				}
+		for sn := range sec {
+			if sd, ok := secDef[sn]; ok {
+				jwtTemplates = append(jwtTemplates, fmt.Sprintf(jwtTemplate, sd.GetJwt().Issuer, strings.Join(sd.GetJwt().Audiences, ",")))
 			}
 		}
 	}
@@ -89,7 +87,7 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 		return nil, err
 	}
 
-	managedIdentities := args.ManagedUser.ID().ToStringOutput().ApplyT(func(id string) apimanagement.UserIdentityPropertiesMapOutput {
+	managedIdentities := args.ManagedIdentity.ID().ToStringOutput().ApplyT(func(id string) apimanagement.UserIdentityPropertiesMapOutput {
 		return apimanagement.UserIdentityPropertiesMap{
 			id: nil,
 		}.ToUserIdentityPropertiesMapOutput()
@@ -186,7 +184,7 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 					OperationId:       pulumi.String(op.OperationID),
 					PolicyId:          pulumi.String("policy"),
 					Format:            pulumi.String("xml"),
-					Value:             pulumi.Sprintf(policyTemplate, app.App.LatestRevisionFqdn, jwtTemplateString, args.ManagedUser.ClientId, args.ManagedUser.ClientId),
+					Value:             pulumi.Sprintf(policyTemplate, app.App.LatestRevisionFqdn, jwtTemplateString, args.ManagedIdentity.ClientId, args.ManagedIdentity.ClientId),
 				}, pulumi.Parent(res.Api))
 
 				if err != nil {

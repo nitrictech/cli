@@ -44,14 +44,17 @@ func (p *Config) ToFile() error {
 	return ioutil.WriteFile(filepath.Join(p.Dir, "nitric.yaml"), b, 0644)
 }
 
-// Assume the project is in the currentDirectory
-func ConfigFromFile() (*Config, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, err
+// ConfigFromProjectPath - loads the config nitric.yaml file from the project path, defaults to the current working directory
+func ConfigFromProjectPath(projPath string) (*Config, error) {
+	if projPath == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		projPath = wd
 	}
 
-	absDir, err := filepath.Abs(wd)
+	absDir, err := filepath.Abs(projPath)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +62,7 @@ func ConfigFromFile() (*Config, error) {
 	p := &Config{
 		Dir: absDir,
 	}
-	yamlFile, err := ioutil.ReadFile(filepath.Join(wd, "nitric.yaml"))
+	yamlFile, err := ioutil.ReadFile(filepath.Join(projPath, "nitric.yaml"))
 	if err != nil {
 		return nil, errors.WithMessage(err, "No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
 	}

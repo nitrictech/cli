@@ -45,7 +45,7 @@ Documentation for all available commands:
 
 - nitric feedback : Provide feedback on your experience with nitric
 - nitric info : Gather information about Nitric and the environment
-- nitric new [projectName] [templateName] [handlerGlob] : Create a new project
+- nitric new [projectName] [templateName] : Create a new project
 - nitric run : Run your project locally for development and testing
 - nitric stack : Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)
 - nitric stack down [-s stack] : Undeploy a previously deployed stack, deleting resources
@@ -69,3 +69,4 @@ Documentation for all available commands:
 
 Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.
 cs](https://nitric.io/docs) to see how to get started using Nitric.
+using Nitric.

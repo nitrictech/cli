@@ -75,7 +75,7 @@ var newStackCmd = &cobra.Command{
 		}, &pName)
 		cobra.CheckErr(err)
 
-		pc, err := project.ConfigFromFile()
+		pc, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
 		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName}, map[string]string{})
@@ -106,7 +106,7 @@ var stackUpdateCmd = &cobra.Command{
 		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
 
-		config, err := project.ConfigFromFile()
+		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
 		proj, err := project.FromConfig(config)
@@ -194,7 +194,7 @@ nitric stack down -e aws -y`,
 		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
 
-		config, err := project.ConfigFromFile()
+		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
 		proj, err := project.FromConfig(config)
@@ -229,7 +229,7 @@ nitric stack list -s aws
 		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
 
-		config, err := project.ConfigFromFile()
+		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
 		proj, err := project.FromConfig(config)

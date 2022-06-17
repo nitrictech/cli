@@ -105,7 +105,7 @@ func (s *localSyslog) Start() error {
 
 	go func(channel syslog.LogPartsChannel) {
 		for logParts := range channel {
-			fmt.Fprintf(s.file, "%s %s %s\n", logParts["timestamp"], logParts["tag"], logParts["content"])
+			fmt.Fprintf(s.file, "%s %s\n", logParts["tag"], logParts["content"])
 		}
 	}(channel)
 
@@ -114,6 +114,7 @@ func (s *localSyslog) Start() error {
 	if err != nil {
 		return err
 	}
+	log.SetFlags(0)
 	log.SetOutput(logwriter)
 
 	return nil

@@ -21,13 +21,13 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	"github.com/pkg/errors"
 	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20201201"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
 
-	//"github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type AzureApiManagementArgs struct {
@@ -144,7 +144,6 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 	for _, pathItem := range args.OpenAPISpec.Paths {
 		for _, op := range pathItem.Operations() {
 			if v, ok := op.Extensions["x-nitric-target"]; ok {
-
 				var jwtTemplates []string
 
 				// Apply top level security

@@ -370,7 +370,7 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 
 	authName := fmt.Sprintf("%s-auth", appName)
 
-	app.NewContainerAppsAuthConfig(ctx, authName, &app.ContainerAppsAuthConfigArgs{
+	_, err = app.NewContainerAppsAuthConfig(ctx, authName, &app.ContainerAppsAuthConfigArgs{
 		AuthConfigName:   pulumi.String("current"),
 		ContainerAppName: res.App.Name,
 		GlobalValidation: &app.GlobalValidationArgs{
@@ -395,6 +395,9 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		ResourceGroupName: args.ResourceGroupName,
 	}, pulumi.Parent(res.App))
 
+	if err != nil {
+		return nil, err
+	}
 	// Determine required subscriptions so they can be setup once the container starts
 	for _, t := range args.Compute.Unit().Triggers.Topics {
 		topic, ok := args.Topics[t]

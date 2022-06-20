@@ -33,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider"
+	"github.com/nitrictech/cli/pkg/provider/pulumi"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/tasklet"
@@ -41,6 +42,7 @@ import (
 
 var (
 	confirmDown bool
+	cancelStack bool
 	envFile     string
 )
 
@@ -131,7 +133,8 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		p, err := provider.NewProvider(proj, s, envMap)
+		opts := pulumi.PulumiOpts{CancelStack: cancelStack}
+		p, err := provider.NewProvider(proj, s, envMap, &opts)
 		cobra.CheckErr(err)
 
 		if err := p.TryPullImages(); err != nil {
@@ -200,7 +203,8 @@ nitric stack down -e aws -y`,
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s, map[string]string{})
+		opts := pulumi.PulumiOpts{CancelStack: true}
+		p, err := provider.NewProvider(proj, s, map[string]string{}, &opts)
 		cobra.CheckErr(err)
 
 		deploy := tasklet.Runner{
@@ -251,8 +255,9 @@ func RootCommand() *cobra.Command {
 	stackCmd.AddCommand(newStackCmd)
 
 	stackCmd.AddCommand(stackUpdateCmd)
-	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
+	stackUpdateCmd.Flags().BoolVarP(&cancelStack, "cancel", "c", false, "confirm override previous deployment")
+	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(stackDeleteCmd)
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")

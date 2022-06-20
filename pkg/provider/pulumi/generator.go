@@ -38,10 +38,15 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
+type PulumiOpts struct {
+	CancelStack bool
+}
+
 type pulumiDeployment struct {
 	proj *project.Project
 	sc   *stack.Config
 	prov common.PulumiProvider
+	opts *PulumiOpts
 }
 
 type stackSummary struct {
@@ -57,7 +62,7 @@ var (
 	_ types.Provider = &pulumiDeployment{}
 )
 
-func New(p *project.Project, sc *stack.Config, envMap map[string]string) (types.Provider, error) {
+func New(p *project.Project, sc *stack.Config, envMap map[string]string, opts *PulumiOpts) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 	err := pv.Run()
 	if err != nil {
@@ -83,6 +88,7 @@ func New(p *project.Project, sc *stack.Config, envMap map[string]string) (types.
 		proj: p,
 		sc:   sc,
 		prov: prov,
+		opts: opts,
 	}, nil
 }
 
@@ -119,8 +125,10 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	}
 
 	// Cancel all previously running stacks
-	// It will only return an error if the stack isn't in an updating state, so we can just ignore it
-	_ = s.Cancel(ctx)
+	if p.opts.CancelStack {
+		// It will only return an error if the stack isn't in an updating state, so we can just ignore it
+		_ = s.Cancel(ctx)
+	}
 
 	for _, plug := range p.prov.Plugins() {
 		log.Busyf("Installing Pulumi plugin %s:%s", plug.Name, plug.Version)

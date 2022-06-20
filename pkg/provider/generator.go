@@ -26,10 +26,21 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-func NewProvider(p *project.Project, s *stack.Config, envMap map[string]string) (types.Provider, error) {
+func getProviderOpts[T interface{}](opts []interface{}) *T {
+	for _, o := range opts {
+		t, ok := o.(*T)
+		if ok {
+			return t
+		}
+	}
+	return nil
+}
+
+func NewProvider(p *project.Project, s *stack.Config, envMap map[string]string, opts ...interface{}) (types.Provider, error) {
 	switch s.Provider {
 	case stack.Aws, stack.Azure, stack.Digitalocean, stack.Gcp:
-		return pulumi.New(p, s, envMap)
+		pulumiOpts := getProviderOpts[pulumi.PulumiOpts](opts)
+		return pulumi.New(p, s, envMap, pulumiOpts)
 	default:
 		return nil, utils.NewNotSupportedErr(fmt.Sprintf("provider %s is not supported", s.Provider))
 	}

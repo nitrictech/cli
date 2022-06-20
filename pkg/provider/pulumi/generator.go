@@ -113,9 +113,14 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 			Runtime: workspace.NewProjectRuntimeInfo("go", nil),
 			Main:    p.proj.Dir,
 		}))
+
 	if err != nil {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
 	}
+
+	// Cancel all previously running stacks
+	// It will only return an error if the stack isn't in an updating state, so we can just ignore it
+	_ = s.Cancel(ctx)
 
 	for _, plug := range p.prov.Plugins() {
 		log.Busyf("Installing Pulumi plugin %s:%s", plug.Name, plug.Version)

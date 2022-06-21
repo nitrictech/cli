@@ -75,6 +75,10 @@ func NitricConfigDir() string {
 	return homeDir()
 }
 
+func NitricFeedbackPath() string {
+	return filepath.Join(homeDir(), "feedback")
+}
+
 // NitricLogDir returns the directory to find log files.
 func NitricLogDir(stackPath string) string {
 	return filepath.Join(stackPath, ".nitric")

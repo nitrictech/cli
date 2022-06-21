@@ -27,6 +27,10 @@ import (
 	"github.com/nitrictech/cli/pkg/ghissue"
 )
 
+const (
+	feedbackMsg = "Thanks for trying nitric!\nIf you have feedback you can raise issues on GitHub https://github.com/nitrictech/nitric or come talk with us directly on Discord https://discord.gg/EBPCEgG9"
+)
+
 var feedbackCmd = &cobra.Command{
 	Use:     "feedback",
 	Short:   "Provide feedback on your experience with nitric",

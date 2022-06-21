@@ -141,7 +141,7 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	log.Busyf("Refreshing the Pulumi stack")
 	_, err = s.Refresh(ctx)
 	if err != nil && strings.Contains(err.Error(), "[409] Conflict") {
-		return &s, errors.WithMessage(fmt.Errorf("Stack conflict occured. If you are sure an update is not in progress, use --force to override the stack state."), "Refresh")
+		return &s, errors.WithMessage(fmt.Errorf("Stack conflict occurred. If you are sure an update is not in progress, use --force to override the stack state."), "Refresh")
 	}
 	return &s, errors.WithMessage(err, "Refresh")
 }

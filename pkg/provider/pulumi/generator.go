@@ -38,15 +38,11 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-type PulumiOpts struct {
-	CancelStack bool
-}
-
 type pulumiDeployment struct {
 	proj *project.Project
 	sc   *stack.Config
 	prov common.PulumiProvider
-	opts *PulumiOpts
+	opts *types.ProviderOpts
 }
 
 type stackSummary struct {
@@ -62,7 +58,7 @@ var (
 	_ types.Provider = &pulumiDeployment{}
 )
 
-func New(p *project.Project, sc *stack.Config, envMap map[string]string, opts *PulumiOpts) (types.Provider, error) {
+func New(p *project.Project, sc *stack.Config, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 	err := pv.Run()
 	if err != nil {
@@ -119,13 +115,12 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 			Runtime: workspace.NewProjectRuntimeInfo("go", nil),
 			Main:    p.proj.Dir,
 		}))
-
 	if err != nil {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
 	}
 
 	// Cancel all previously running stacks
-	if p.opts.CancelStack {
+	if p.opts.Force {
 		// It will only return an error if the stack isn't in an updating state, so we can just ignore it
 		_ = s.Cancel(ctx)
 	}
@@ -145,6 +140,9 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 
 	log.Busyf("Refreshing the Pulumi stack")
 	_, err = s.Refresh(ctx)
+	if err != nil && strings.Contains(err.Error(), "[409] Conflict") {
+		return &s, errors.WithMessage(fmt.Errorf("Stack conflict occured. If you are sure an update is not in progress, use --force to override the stack state."), "Refresh")
+	}
 	return &s, errors.WithMessage(err, "Refresh")
 }
 

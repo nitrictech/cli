@@ -33,7 +33,6 @@ import (
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider"
-	"github.com/nitrictech/cli/pkg/provider/pulumi"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/tasklet"
@@ -42,7 +41,7 @@ import (
 
 var (
 	confirmDown bool
-	cancelStack bool
+	force       bool
 	envFile     string
 )
 
@@ -80,7 +79,7 @@ var newStackCmd = &cobra.Command{
 		pc, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
-		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName}, map[string]string{})
+		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName}, map[string]string{}, &types.ProviderOpts{})
 		cobra.CheckErr(err)
 
 		sc, err := prov.Ask()
@@ -133,8 +132,7 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		opts := pulumi.PulumiOpts{CancelStack: cancelStack}
-		p, err := provider.NewProvider(proj, s, envMap, &opts)
+		p, err := provider.NewProvider(proj, s, envMap, &types.ProviderOpts{Force: force})
 		cobra.CheckErr(err)
 
 		if err := p.TryPullImages(); err != nil {
@@ -203,8 +201,7 @@ nitric stack down -e aws -y`,
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		opts := pulumi.PulumiOpts{CancelStack: true}
-		p, err := provider.NewProvider(proj, s, map[string]string{}, &opts)
+		p, err := provider.NewProvider(proj, s, map[string]string{}, &types.ProviderOpts{Force: true})
 		cobra.CheckErr(err)
 
 		deploy := tasklet.Runner{
@@ -239,7 +236,7 @@ nitric stack list -s aws
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s, map[string]string{})
+		p, err := provider.NewProvider(proj, s, map[string]string{}, &types.ProviderOpts{})
 		cobra.CheckErr(err)
 
 		deps, err := p.List()
@@ -256,7 +253,7 @@ func RootCommand() *cobra.Command {
 
 	stackCmd.AddCommand(stackUpdateCmd)
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
-	stackUpdateCmd.Flags().BoolVarP(&cancelStack, "cancel", "c", false, "confirm override previous deployment")
+	stackUpdateCmd.Flags().BoolVarP(&force, "force", "f", false, "force override previous deployment")
 	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(stackDeleteCmd)

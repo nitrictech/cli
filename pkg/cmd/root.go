@@ -65,14 +65,20 @@ var rootCmd = &cobra.Command{
 			pterm.DisableStyling()
 		}
 		if cliCalledEnoughTimes(6) {
-			promptFeedback()
+			err := promptFeedback()
+			if err != nil {
+				fmt.Print(err.Error())
+			}
 		}
 	},
 }
 
 func cliCalledEnoughTimes(requiredTimes int) bool {
 	if _, err := os.Stat(utils.NitricFeedbackPath()); errors.Is(err, os.ErrNotExist) {
-		setFeedbackNum(0)
+		err := setFeedbackNum(0)
+		if err != nil {
+			return false
+		}
 		return true
 	}
 	contents, err := os.ReadFile(utils.NitricFeedbackPath())
@@ -91,7 +97,10 @@ func cliCalledEnoughTimes(requiredTimes int) bool {
 	} else if num > requiredTimes { // We can prompt
 		return true
 	} else {
-		setFeedbackNum(num + 1)
+		err := setFeedbackNum(num + 1)
+		if err != nil {
+			return false
+		}
 		return false
 	}
 }
@@ -102,7 +111,10 @@ func setFeedbackNum(num int) error {
 		return err
 	}
 	defer file.Close()
-	file.WriteString(fmt.Sprint(num))
+	_, err = file.WriteString(fmt.Sprint(num))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -120,7 +132,10 @@ func promptFeedback() error {
 	}}, &feedbackResp)
 	cobra.CheckErr(err)
 	if feedbackResp.FeedbackName == "No" {
-		setFeedbackNum(-1)
+		err := setFeedbackNum(-1)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

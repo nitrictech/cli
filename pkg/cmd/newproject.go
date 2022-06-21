@@ -31,7 +31,6 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/templates"
-	"github.com/nitrictech/cli/pkg/utils"
 )
 
 var (
@@ -44,14 +43,6 @@ var (
 	}
 	templateNameQu = survey.Question{
 		Name: "templateName",
-	}
-	feedbackQu = survey.Question{
-		Name: "feedbackName",
-		Prompt: &survey.Select{
-			Message: "Ask again later?",
-			Options: []string{"Yes", "No"},
-			Default: "No",
-		},
 	}
 )
 
@@ -71,19 +62,6 @@ nitric new hello-world "official/TypeScript - Starter" `,
 			FeedbackName string
 			Handlers     string
 		}{}
-
-		if !hasPromptedFeedback() {
-			fmt.Println(feedbackMsg)
-			feedbackResp := struct{ FeedbackName string }{}
-
-			err := survey.Ask([]*survey.Question{&feedbackQu}, &feedbackResp)
-			cobra.CheckErr(err)
-
-			if feedbackResp.FeedbackName == "No" {
-				file, _ := os.Create(utils.NitricFeedbackPath())
-				file.Close()
-			}
-		}
 
 		downloadr := templates.NewDownloader()
 		dirs, err := downloadr.Names()
@@ -189,13 +167,6 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		cobra.CheckErr(err)
 	},
 	Args: cobra.MaximumNArgs(2),
-}
-
-func hasPromptedFeedback() bool {
-	if _, err := os.Stat(utils.NitricFeedbackPath()); errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-	return true
 }
 
 func validateName(val interface{}) error {

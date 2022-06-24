@@ -132,7 +132,16 @@ func (a *azureProvider) Ask() (*stack.Config, error) {
 
 func (a *azureProvider) SupportedRegions() []string {
 	return []string{
+		"canadacentral",
+		"eastasia",
+		"eastus",
 		"eastus2",
+		"germanywestcentral",
+		"japaneast",
+		"northeurope",
+		"uksouth",
+		"westeurope",
+		"westus",
 	}
 }
 

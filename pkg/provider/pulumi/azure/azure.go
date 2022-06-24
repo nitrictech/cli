@@ -31,6 +31,7 @@ import (
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/keyvault"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -266,6 +267,17 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		contAppsArgs.MongoDatabaseConnectionString = mc.ConnectionString
 	}
 
+	managedUser, err := managedidentity.NewUserAssignedIdentity(ctx, "managed-identity", &managedidentity.UserAssignedIdentityArgs{
+		Location:          pulumi.String(a.sc.Region),
+		ResourceGroupName: rg.Name,
+		ResourceName:      pulumi.String("managed-identity"),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	contAppsArgs.ManagedIdentityID = managedUser.ClientId
 	var apps *ContainerApps
 	if len(a.proj.Functions) > 0 || len(a.proj.Containers) > 0 {
 		apps, err = a.newContainerApps(ctx, "containerApps", contAppsArgs)
@@ -291,11 +303,13 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k, v := range a.proj.ApiDocs {
 		_, err = newAzureApiManagement(ctx, k, &AzureApiManagementArgs{
-			ResourceGroupName: rg.Name,
-			OrgName:           pulumi.String(a.org),
-			AdminEmail:        pulumi.String(a.adminEmail),
-			OpenAPISpec:       v,
-			Apps:              apps.Apps,
+			ResourceGroupName:   rg.Name,
+			OrgName:             pulumi.String(a.org),
+			AdminEmail:          pulumi.String(a.adminEmail),
+			OpenAPISpec:         v,
+			Apps:                apps.Apps,
+			SecurityDefinitions: a.proj.SecurityDefinitions[k],
+			ManagedIdentity:     managedUser,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)

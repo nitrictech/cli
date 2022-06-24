@@ -44,6 +44,8 @@ type ContainerAppsArgs struct {
 	StorageAccountQueueEndpoint   pulumi.StringInput
 	MongoDatabaseName             pulumi.StringInput
 	MongoDatabaseConnectionString pulumi.StringInput
+
+	ManagedIdentityID pulumi.StringOutput
 }
 
 type ContainerApps struct {
@@ -203,6 +205,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			Env:               env,
 			Topics:            args.Topics,
 			Compute:           c,
+			ManagedIdentityID: args.ManagedIdentityID,
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, err
@@ -224,6 +227,7 @@ type ContainerAppArgs struct {
 	Env               app.EnvironmentVarArray
 	Compute           project.Compute
 	Topics            map[string]*eventgrid.Topic
+	ManagedIdentityID pulumi.StringOutput
 }
 
 type ContainerApp struct {
@@ -312,7 +316,9 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 
 	//memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
 	// we can't define memory without defining the cpu..
-	res.App, err = app.NewContainerApp(ctx, resourceName(ctx, name, ContainerAppRT), &app.ContainerAppArgs{
+	appName := resourceName(ctx, name, ContainerAppRT)
+
+	res.App, err = app.NewContainerApp(ctx, appName, &app.ContainerAppArgs{
 		ResourceGroupName:    args.ResourceGroupName,
 		Location:             args.Location,
 		ManagedEnvironmentId: args.ManagedEnv.ID(),
@@ -362,6 +368,36 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		return nil, err
 	}
 
+	authName := fmt.Sprintf("%s-auth", appName)
+
+	_, err = app.NewContainerAppsAuthConfig(ctx, authName, &app.ContainerAppsAuthConfigArgs{
+		AuthConfigName:   pulumi.String("current"),
+		ContainerAppName: res.App.Name,
+		GlobalValidation: &app.GlobalValidationArgs{
+			UnauthenticatedClientAction: app.UnauthenticatedClientActionV2Return401,
+		},
+		IdentityProviders: &app.IdentityProvidersArgs{
+			AzureActiveDirectory: &app.AzureActiveDirectoryArgs{
+				Enabled: pulumi.Bool(true),
+				Registration: &app.AzureActiveDirectoryRegistrationArgs{
+					ClientId:                res.Sp.ClientID,
+					ClientSecretSettingName: pulumi.String("client-secret"),
+					OpenIdIssuer:            pulumi.Sprintf("https://sts.windows.net/%s/v2.0", res.Sp.TenantID),
+				},
+				Validation: &app.AzureActiveDirectoryValidationArgs{
+					AllowedAudiences: pulumi.StringArray{args.ManagedIdentityID},
+				},
+			},
+		},
+		Platform: &app.AuthPlatformArgs{
+			Enabled: pulumi.Bool(true),
+		},
+		ResourceGroupName: args.ResourceGroupName,
+	}, pulumi.Parent(res.App))
+
+	if err != nil {
+		return nil, err
+	}
 	// Determine required subscriptions so they can be setup once the container starts
 	for _, t := range args.Compute.Unit().Triggers.Topics {
 		topic, ok := args.Topics[t]

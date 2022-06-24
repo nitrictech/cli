@@ -36,7 +36,9 @@ require (
 	github.com/pulumi/pulumi-random/sdk/v4 v4.8.0
 	github.com/pulumi/pulumi/sdk/v3 v3.34.1
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
 	github.com/segmentio/encoding v0.3.5
+	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.2
 	github.com/valyala/fasthttp v1.37.0
@@ -232,7 +234,6 @@ require (
 	github.com/ryanrolds/sqlclosecheck v0.3.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94 // indirect
 	github.com/sanposhiho/wastedassign/v2 v2.0.6 // indirect
-	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
 	github.com/securego/gosec/v2 v2.11.0 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
@@ -242,7 +243,6 @@ require (
 	github.com/sivchari/tenv v1.5.0 // indirect
 	github.com/sonatard/noctx v0.0.1 // indirect
 	github.com/sourcegraph/go-diff v0.6.1 // indirect
-	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect

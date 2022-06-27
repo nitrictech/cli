@@ -24,7 +24,7 @@ require (
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/moby/moby v20.10.17+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.9
-	github.com/nitrictech/nitric v0.17.0-rc.14
+	github.com/nitrictech/nitric v0.17.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.41
 	github.com/pulumi/pulumi-aws/sdk/v4 v4.38.1

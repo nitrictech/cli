@@ -17,13 +17,10 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
@@ -31,7 +28,6 @@ import (
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const feedbackMsg = "Thanks for trying nitric!\nIf you have feedback you can raise issues on GitHub https://github.com/nitrictech/nitric or come talk with us directly on Discord https://discord.gg/EBPCEgG9"
@@ -64,80 +60,11 @@ var rootCmd = &cobra.Command{
 		if output.CI {
 			pterm.DisableStyling()
 		}
-		if cliCalledEnoughTimes(6) {
-			err := promptFeedback()
-			if err != nil {
-				fmt.Print(err.Error())
-			}
+		err := promptFeedback()
+		if err != nil {
+			fmt.Println(err.Error())
 		}
 	},
-}
-
-func cliCalledEnoughTimes(requiredTimes int) bool {
-	if _, err := os.Stat(utils.NitricFeedbackPath()); errors.Is(err, os.ErrNotExist) {
-		err := setFeedbackNum(0)
-		if err != nil {
-			return false
-		}
-		return true
-	}
-	contents, err := os.ReadFile(utils.NitricFeedbackPath())
-	if err != nil {
-		return false
-	}
-	num := 0
-	if contents != nil {
-		num, err = strconv.Atoi(string(contents))
-		if err != nil {
-			return false
-		}
-	}
-	if num == -1 { // Set as do not prompt
-		return false
-	} else if num > requiredTimes { // We can prompt
-		return true
-	} else {
-		err := setFeedbackNum(num + 1)
-		if err != nil {
-			return false
-		}
-		return false
-	}
-}
-
-func setFeedbackNum(num int) error {
-	file, err := os.Create(utils.NitricFeedbackPath())
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = file.WriteString(fmt.Sprint(num))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func promptFeedback() error {
-	fmt.Println(feedbackMsg)
-	feedbackResp := struct{ FeedbackName string }{}
-
-	err := survey.Ask([]*survey.Question{{
-		Name: "feedbackName",
-		Prompt: &survey.Select{
-			Message: "Ask again later?",
-			Options: []string{"Yes", "No"},
-			Default: "No",
-		},
-	}}, &feedbackResp)
-	cobra.CheckErr(err)
-	if feedbackResp.FeedbackName == "No" {
-		err := setFeedbackNum(-1)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

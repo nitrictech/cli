@@ -29,8 +29,10 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/docker/docker/api/types"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
+	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudscheduler"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
@@ -39,13 +41,13 @@ import (
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/storage"
+	"github.com/pulumi/pulumi-random/sdk/v4/go/random"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	random "github.com/pulumi/pulumi-random/sdk/v4/go/random"
-
+	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
@@ -76,6 +78,9 @@ type gcpProvider struct {
 //go:embed pulumi-gcp-version.txt
 var gcpPluginVersion string
 
+//go:embed pulumi-random-version.txt
+var randomPluginVersion string
+
 func New(s *project.Project, t *stack.Config, envMap map[string]string) common.PulumiProvider {
 	return &gcpProvider{
 		proj:               s,
@@ -87,6 +92,7 @@ func New(s *project.Project, t *stack.Config, envMap map[string]string) common.P
 		queueSubscriptions: map[string]*pubsub.Subscription{},
 		images:             map[string]*common.Image{},
 		cloudRunners:       map[string]*CloudRunner{},
+		secrets:            map[string]*secretmanager.Secret{},
 	}
 }
 
@@ -95,6 +101,10 @@ func (g *gcpProvider) Plugins() []common.Plugin {
 		{
 			Name:    "gcp",
 			Version: strings.TrimSpace(gcpPluginVersion),
+		},
+		{
+			Name:    "random",
+			Version: strings.TrimSpace(randomPluginVersion),
 		},
 	}
 }
@@ -167,21 +177,21 @@ func (a *gcpProvider) Ask() (*stack.Config, error) {
 }
 
 func (g *gcpProvider) Validate() error {
-	errList := utils.NewErrorList()
+	errList := &multierror.ErrorList{}
 
 	if g.sc.Region == "" {
-		errList.Add(fmt.Errorf("target %s requires \"region\"", g.sc.Provider))
+		errList.Push(fmt.Errorf("target %s requires \"region\"", g.sc.Provider))
 	} else if !sliceutil.Contains(g.SupportedRegions(), g.sc.Region) {
-		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.sc.Region, g.sc.Provider)))
+		errList.Push(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.sc.Region, g.sc.Provider)))
 	}
 
-	if _, ok := g.sc.Extra["project"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider))
+	if proj, ok := g.sc.Extra["project"]; !ok || proj == nil {
+		errList.Push(fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider))
 	} else {
-		g.gcpProject = g.sc.Extra["project"].(string)
+		g.gcpProject = proj.(string)
 	}
 
-	return errList.Aggregate()
+	return errList.Err()
 }
 
 func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
@@ -189,16 +199,50 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 	if err != nil {
 		return err
 	}
+
 	return autoStack.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: g.gcpProject})
 }
 
-func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
-	var err error
-	g.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
+func (g *gcpProvider) TryPullImages() error {
+	ce, err := containerengine.Discover()
 	if err != nil {
 		return err
 	}
 
+	if proj, ok := g.sc.Extra["project"]; !ok || proj == nil {
+		return fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider)
+	} else {
+		g.gcpProject = proj.(string)
+	}
+
+	if err := g.setToken(); err != nil {
+		return errors.WithMessage(err, "setToken")
+	}
+
+	authConfig := types.AuthConfig{
+		Username:      "oauth2accesstoken",
+		Password:      g.token.AccessToken,
+		ServerAddress: "https://gcr.io",
+	}
+
+	encodedJSON, err := json.Marshal(authConfig)
+	if err != nil {
+		return errors.WithMessage(err, "json.Marshal auth")
+	}
+	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
+
+	for _, c := range g.proj.Computes() {
+		image := fmt.Sprintf("gcr.io/%s/%s:latest", g.gcpProject, c.ImageTagName(g.proj, g.sc.Provider))
+		err = ce.ImagePull(image, types.ImagePullOptions{RegistryAuth: authStr})
+		if err != nil {
+			return errors.WithMessage(err, "imagePull")
+		}
+	}
+
+	return nil
+}
+
+func (g *gcpProvider) setToken() error {
 	if g.token == nil { // for unit testing
 		creds, err := google.FindDefaultCredentialsWithParams(context.Background(), google.CredentialsParams{
 			Scopes: []string{
@@ -212,6 +256,19 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "Unable to acquire token source")
 		}
+	}
+	return nil
+}
+
+func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
+	var err error
+	g.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
+	if err != nil {
+		return err
+	}
+
+	if err := g.setToken(); err != nil {
+		return err
 	}
 
 	if g.projectId == "" {
@@ -284,12 +341,12 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 				}
 				payload = base64.StdEncoding.EncodeToString(eventJSON)
 			}
-
 			_, err = cloudscheduler.NewJob(ctx, k, &cloudscheduler.JobArgs{
 				TimeZone: pulumi.String("UTC"),
 				PubsubTarget: cloudscheduler.JobPubsubTargetArgs{
-					TopicName: pulumi.Sprintf("projects/%s/topics/%s", g.projectId, g.topics[sched.Target.Name].Name),
-					Data:      pulumi.String(payload),
+					Attributes: pulumi.ToStringMap(map[string]string{"x-nitric-topic": sched.Target.Name}),
+					TopicName:  pulumi.Sprintf("projects/%s/topics/%s", g.projectId, g.topics[sched.Target.Name].Name),
+					Data:       pulumi.String(payload),
 				},
 				Schedule: pulumi.String(strings.ReplaceAll(sched.Expression, "'", "")),
 			}, defaultResourceOptions)
@@ -406,9 +463,10 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			return err
 		}
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
-			Functions:   g.cloudRunners,
-			OpenAPISpec: v2doc,
-			ProjectId:   pulumi.String(g.projectId),
+			Functions:           g.cloudRunners,
+			OpenAPISpec:         v2doc,
+			ProjectId:           pulumi.String(g.projectId),
+			SecurityDefinitions: g.proj.SecurityDefinitions[k],
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -435,10 +493,11 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			Policy:    p,
 			ProjectID: pulumi.String(g.projectId),
 			Resources: &StackResources{
-				Topics:  g.topics,
-				Queues:  g.queueTopics,
-				Buckets: g.buckets,
-				Secrets: g.secrets,
+				Topics:        g.topics,
+				Queues:        g.queueTopics,
+				Subscriptions: g.queueSubscriptions,
+				Buckets:       g.buckets,
+				Secrets:       g.secrets,
 			},
 			Principals: principalMap,
 		}); err != nil {

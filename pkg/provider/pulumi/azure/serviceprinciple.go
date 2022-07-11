@@ -21,10 +21,10 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-type SevicePrincipleArgs struct {
+type ServicePrincipalArgs struct {
 }
 
-type SevicePrinciple struct {
+type ServicePrincipal struct {
 	pulumi.ResourceState
 
 	Name               string
@@ -34,16 +34,36 @@ type SevicePrinciple struct {
 	ClientSecret       pulumi.StringOutput
 }
 
-func newSevicePrinciple(ctx *pulumi.Context, name string, args *SevicePrincipleArgs, opts ...pulumi.ResourceOption) (*SevicePrinciple, error) {
-	res := &SevicePrinciple{Name: name}
+func newServicePrincipal(ctx *pulumi.Context, name string, args *ServicePrincipalArgs, opts ...pulumi.ResourceOption) (*ServicePrincipal, error) {
+	res := &ServicePrincipal{Name: name}
 	err := ctx.RegisterComponentResource("nitric:principal:AzureAD", name, res, opts...)
+	if err != nil {
+		return nil, err
+	}
+	current, err := azuread.GetClientConfig(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// create an application per service principal
+	appRoleId := pulumi.String("4962773b-9cdb-44cf-a8bf-237846a00ab7")
 	app, err := azuread.NewApplication(ctx, resourceName(ctx, name, ADApplicationRT), &azuread.ApplicationArgs{
 		DisplayName: pulumi.String(name + "App"),
+		Owners: pulumi.StringArray{
+			pulumi.String(current.ObjectId),
+		},
+		AppRoles: azuread.ApplicationAppRoleArray{
+			&azuread.ApplicationAppRoleArgs{
+				AllowedMemberTypes: pulumi.StringArray{
+					pulumi.String("Application"),
+				},
+				Description: pulumi.String("Enables webhook subscriptions to authenticate using this application"),
+				DisplayName: pulumi.String("AzureEventGridSecureWebhookSubscriber"),
+				Enabled:     pulumi.Bool(true),
+				Id:          appRoleId,
+				Value:       pulumi.String("4962773b-9cdb-44cf-a8bf-237846a00ab7"),
+			},
+		},
 		//Tags:        common.Tags(ctx, name+"App"),
 	}, pulumi.Parent(res))
 	if err != nil {
@@ -53,12 +73,25 @@ func newSevicePrinciple(ctx *pulumi.Context, name string, args *SevicePrincipleA
 
 	sp, err := azuread.NewServicePrincipal(ctx, resourceName(ctx, name, ADServicePrincipalRT), &azuread.ServicePrincipalArgs{
 		ApplicationId: app.ApplicationId,
+		Owners: pulumi.StringArray{
+			pulumi.String(current.ObjectId),
+		},
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
 	}
+
 	res.TenantID = sp.ApplicationTenantId
 	res.ServicePrincipalId = pulumi.StringOutput(sp.ID())
+
+	_, err = azuread.NewAppRoleAssignment(ctx, name+"sub-role", &azuread.AppRoleAssignmentArgs{
+		AppRoleId:         appRoleId,
+		PrincipalObjectId: pulumi.String(current.ObjectId),
+		ResourceObjectId:  sp.ID(),
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	spPwd, err := azuread.NewServicePrincipalPassword(ctx, resourceName(ctx, name, ADServicePrincipalPasswordRT), &azuread.ServicePrincipalPasswordArgs{
 		ServicePrincipalId: sp.ID().ToStringOutput(),

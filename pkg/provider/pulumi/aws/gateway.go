@@ -18,18 +18,24 @@ package aws
 
 import (
 	"fmt"
+	"net/url"
+	"path"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/apigatewayv2"
 	awslambda "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/lambda"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/segmentio/encoding/json"
+
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type ApiGatewayArgs struct {
-	OpenAPISpec     *openapi3.T
-	LambdaFunctions map[string]*Lambda
+	SecurityDefintions map[string]*v1.ApiSecurityDefinition
+	OpenAPISpec        *openapi3.T
+	LambdaFunctions    map[string]*Lambda
 }
 
 type ApiGateway struct {
@@ -55,6 +61,44 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 	nameArnPairs := make([]interface{}, 0, len(args.LambdaFunctions))
 
+	// augment open api spec with security definitions
+	for sn, sd := range args.SecurityDefintions {
+		if args.OpenAPISpec.Components.SecuritySchemes == nil {
+			args.OpenAPISpec.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
+		}
+
+		// if it's a JWT security definition
+
+		if sd.GetJwt() != nil {
+			issuerUrl, err := url.Parse(sd.GetJwt().GetIssuer())
+			if err != nil {
+				return nil, err
+			}
+
+			issuerUrl.Path = path.Join(issuerUrl.Path, ".well-known/openid-configuration")
+
+			args.OpenAPISpec.Components.SecuritySchemes[sn] = &openapi3.SecuritySchemeRef{
+				Value: &openapi3.SecurityScheme{
+					Type:             "openIdConnect",
+					OpenIdConnectUrl: issuerUrl.String(),
+					ExtensionProps: openapi3.ExtensionProps{
+						Extensions: map[string]interface{}{
+							"x-amazon-apigateway-authorizer": map[string]interface{}{
+								"type": "jwt",
+								"jwtConfiguration": map[string]interface{}{
+									"audience": sd.GetJwt().Audiences,
+								},
+								"identitySource": "$request.header.Authorization",
+							},
+						},
+					},
+				},
+			}
+		} else {
+			return nil, fmt.Errorf("unsupported security definition supplied")
+		}
+	}
+
 	// collect name arn pairs for output iteration
 	for k, v := range args.LambdaFunctions {
 		nameArnPairs = append(nameArnPairs, pulumi.All(k, v.Function.InvokeArn).ApplyT(func(args []interface{}) nameArnPair {
@@ -69,7 +113,6 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 	doc := pulumi.All(nameArnPairs...).ApplyT(func(pairs []interface{}) (string, error) {
 		naps := make(map[string]string)
-
 		for _, p := range pairs {
 			if pair, ok := p.(nameArnPair); ok {
 				naps[pair.name] = pair.invokeArn
@@ -89,8 +132,8 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 			args.OpenAPISpec.Paths[k] = p
 		}
 
-		b, err := args.OpenAPISpec.MarshalJSON()
-
+		// augment the api specs with security definitions where available
+		b, err := json.Marshal(args.OpenAPISpec)
 		if err != nil {
 			return "", err
 		}

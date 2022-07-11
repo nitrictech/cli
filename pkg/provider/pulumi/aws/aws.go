@@ -156,6 +156,10 @@ func policyResourceName(policy *v1.PolicyResource) (string, error) {
 	return md5Hash(policyDoc), nil
 }
 
+func (a *awsProvider) TryPullImages() error {
+	return nil
+}
+
 func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
@@ -316,8 +320,10 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k, v := range a.proj.ApiDocs {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
-			OpenAPISpec:     v,
-			LambdaFunctions: a.funcs})
+			OpenAPISpec:        v,
+			LambdaFunctions:    a.funcs,
+			SecurityDefintions: a.proj.SecurityDefinitions[k],
+		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)
 		}

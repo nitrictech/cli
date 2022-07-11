@@ -18,10 +18,16 @@ package gcp
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
+	"path"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi2"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/apigateway"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
@@ -29,12 +35,14 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/utils"
+	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type ApiGatewayArgs struct {
-	ProjectId   pulumi.StringInput
-	OpenAPISpec *openapi2.T
-	Functions   map[string]*CloudRunner
+	ProjectId           pulumi.StringInput
+	OpenAPISpec         *openapi2.T
+	Functions           map[string]*CloudRunner
+	SecurityDefinitions map[string]*v1.ApiSecurityDefinition
 }
 
 type ApiGateway struct {
@@ -50,6 +58,48 @@ type nameUrlPair struct {
 	invokeUrl string
 }
 
+type openIdConfig struct {
+	JwksUri       string `json:"jwks_uri"`
+	TokenEndpoint string `json:"token_endpoint"`
+	AuthEndpoint  string `json:"authorization_endpoint"`
+}
+
+func getOpenIdConnectConfig(issuer string) (*openIdConfig, error) {
+	// append well-known configuration to issuer
+	url, err := url.Parse(issuer)
+
+	if err != nil {
+		return nil, err
+	}
+
+	url.Path = path.Join(url.Path, ".well-known/openid-configuration")
+
+	// get the configuration document
+	resp, err := http.Get(url.String())
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("received non 200 status retrieving openid-configuration: %d", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	oidConf := &openIdConfig{}
+
+	if err := json.Unmarshal(body, oidConf); err != nil {
+		return nil, err
+	}
+
+	return oidConf, nil
+}
+
 func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts ...pulumi.ResourceOption) (*ApiGateway, error) {
 	res := &ApiGateway{Name: name}
 	err := ctx.RegisterComponentResource("nitric:api:GcpApiGateway", name, res, opts...)
@@ -58,6 +108,36 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	}
 
 	opts = append(opts, pulumi.Parent(res))
+
+	// augment document with security definitions
+	for sn, sd := range args.SecurityDefinitions {
+		if args.OpenAPISpec.SecurityDefinitions == nil {
+			args.OpenAPISpec.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
+		}
+
+		if sd.GetJwt() != nil {
+			oidConf, err := getOpenIdConnectConfig(sd.GetJwt().GetIssuer())
+
+			if err != nil {
+				return nil, err
+			}
+
+			args.OpenAPISpec.SecurityDefinitions[sn] = &openapi2.SecurityScheme{
+				Type:             "oauth2",
+				Flow:             "implicit",
+				AuthorizationURL: oidConf.AuthEndpoint,
+				ExtensionProps: openapi3.ExtensionProps{
+					Extensions: map[string]interface{}{
+						"x-google-issuer":    sd.GetJwt().Issuer,
+						"x-google-jwks_uri":  oidConf.JwksUri,
+						"x-google-audiences": strings.Join(sd.GetJwt().GetAudiences(), ","),
+					},
+				},
+			}
+		} else {
+			return nil, fmt.Errorf("error deploying gateway: unsupported security definition provided")
+		}
+	}
 
 	// Get service targets for IAM binding
 	funcs := map[string]*CloudRunner{}
@@ -161,7 +241,6 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		Project:     args.ProjectId,
 		Api:         res.Api.ApiId,
 		DisplayName: pulumi.String(name + "-config"),
-		ApiConfigId: pulumi.String(name + "-config"),
 		OpenapiDocuments: apigateway.ApiConfigOpenapiDocumentArray{
 			apigateway.ApiConfigOpenapiDocumentArgs{
 				Document: apigateway.ApiConfigOpenapiDocumentDocumentArgs{
@@ -176,7 +255,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 				GoogleServiceAccount: invoker.Email,
 			},
 		},
-	}, opts...)
+	}, append(opts, pulumi.ReplaceOnChanges([]string{"*"}))...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "api config")
 	}
@@ -226,6 +305,18 @@ func gcpOperation(op *openapi2.Operation, urls map[string]string) *openapi2.Oper
 
 	if _, ok := urls[name]; !ok {
 		return nil
+	}
+
+	if s, ok := op.Extensions["x-nitric-security"]; ok {
+		secName, isString := s.(string)
+
+		if isString {
+			op.Security = &openapi2.SecurityRequirements{
+				{
+					secName: {},
+				},
+			}
+		}
 	}
 
 	for i, r := range op.Responses {

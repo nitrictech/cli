@@ -17,23 +17,13 @@
 package utils
 
 import (
+	"go/build"
 	"log"
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
 )
-
-var isWsl = false
-
-func init() {
-	osrelease, err := os.ReadFile("/proc/sys/kernel/osrelease")
-	if err != nil {
-		isWsl = false
-	}
-	isWsl = strings.Contains(string(osrelease), "WSL2")
-}
 
 // slashSplitter - used to split strings, with the same output regardless of leading or trailing slashes
 // e.g - strings.FieldsFunc("/one/two/three/", f) == strings.FieldsFunc("/one/two/three", f) == strings.FieldsFunc("one/two/three", f) == ["one" "two" "three"]
@@ -64,13 +54,6 @@ func homeDir() string {
 
 // NitricRunDir returns the directory to place runtime data.
 func NitricRunDir() string {
-	if runtime.GOOS == "linux" && !isWsl {
-		u, err := user.Current()
-		if err != nil {
-			log.Fatal(err)
-		}
-		return filepath.Join("/run/user/", u.Uid, "nitric")
-	}
 	return filepath.Join(homeDir(), "run")
 }
 
@@ -113,4 +96,12 @@ func NewNitricLogFile(stackPath string) (string, error) {
 	}
 	tf.Close()
 	return tf.Name(), nil
+}
+
+func GoPath() (string, error) {
+	goPath := os.Getenv("GOPATH")
+	if goPath == "" {
+		goPath = build.Default.GOPATH
+	}
+	return goPath, nil
 }

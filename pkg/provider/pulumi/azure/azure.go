@@ -26,10 +26,12 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
+	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/keyvault"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -130,32 +132,41 @@ func (a *azureProvider) Ask() (*stack.Config, error) {
 
 func (a *azureProvider) SupportedRegions() []string {
 	return []string{
+		"canadacentral",
+		"eastasia",
+		"eastus",
 		"eastus2",
+		"germanywestcentral",
+		"japaneast",
+		"northeurope",
+		"uksouth",
+		"westeurope",
+		"westus",
 	}
 }
 
 func (a *azureProvider) Validate() error {
-	errList := utils.NewErrorList()
+	errList := &multierror.ErrorList{}
 
 	if a.sc.Region == "" {
-		errList.Add(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
+		errList.Push(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
 	} else if !sliceutil.Contains(a.SupportedRegions(), a.sc.Region) {
-		errList.Add(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
+		errList.Push(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
 	}
 
 	if _, ok := a.sc.Extra["org"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"org\"", a.sc.Provider))
+		errList.Push(fmt.Errorf("target %s requires \"org\"", a.sc.Provider))
 	} else {
 		a.org = a.sc.Extra["org"].(string)
 	}
 
 	if _, ok := a.sc.Extra["adminemail"]; !ok {
-		errList.Add(fmt.Errorf("target %s requires \"adminemail\"", a.sc.Provider))
+		errList.Push(fmt.Errorf("target %s requires \"adminemail\"", a.sc.Provider))
 	} else {
 		a.adminEmail = a.sc.Extra["adminemail"].(string)
 	}
 
-	return errList.Aggregate()
+	return errList.Err()
 }
 
 func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
@@ -175,6 +186,10 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 		return err
 	}
 	a.sc.Region = region.Value
+	return nil
+}
+
+func (a *azureProvider) TryPullImages() error {
 	return nil
 }
 
@@ -261,6 +276,17 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		contAppsArgs.MongoDatabaseConnectionString = mc.ConnectionString
 	}
 
+	managedUser, err := managedidentity.NewUserAssignedIdentity(ctx, "managed-identity", &managedidentity.UserAssignedIdentityArgs{
+		Location:          pulumi.String(a.sc.Region),
+		ResourceGroupName: rg.Name,
+		ResourceName:      pulumi.String("managed-identity"),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	contAppsArgs.ManagedIdentityID = managedUser.ClientId
 	var apps *ContainerApps
 	if len(a.proj.Functions) > 0 || len(a.proj.Containers) > 0 {
 		apps, err = a.newContainerApps(ctx, "containerApps", contAppsArgs)
@@ -274,7 +300,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		Apps:              apps.Apps,
 	})
 	if err != nil {
-		return errors.WithMessage(err, "subscripitons")
+		return errors.WithMessage(err, "subscriptions")
 	}
 
 	// TODO: Add schedule support
@@ -286,11 +312,13 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k, v := range a.proj.ApiDocs {
 		_, err = newAzureApiManagement(ctx, k, &AzureApiManagementArgs{
-			ResourceGroupName: rg.Name,
-			OrgName:           pulumi.String(a.org),
-			AdminEmail:        pulumi.String(a.adminEmail),
-			OpenAPISpec:       v,
-			Apps:              apps.Apps,
+			ResourceGroupName:   rg.Name,
+			OrgName:             pulumi.String(a.org),
+			AdminEmail:          pulumi.String(a.adminEmail),
+			OpenAPISpec:         v,
+			Apps:                apps.Apps,
+			SecurityDefinitions: a.proj.SecurityDefinitions[k],
+			ManagedIdentity:     managedUser,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)

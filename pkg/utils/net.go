@@ -14,23 +14,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package utils
 
 import (
 	"fmt"
-
-	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/provider/pulumi"
-	"github.com/nitrictech/cli/pkg/provider/types"
-	"github.com/nitrictech/cli/pkg/stack"
-	"github.com/nitrictech/cli/pkg/utils"
+	"net"
 )
 
-func NewProvider(p *project.Project, s *stack.Config, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
-	switch s.Provider {
-	case stack.Aws, stack.Azure, stack.Digitalocean, stack.Gcp:
-		return pulumi.New(p, s, envMap, opts)
-	default:
-		return nil, utils.NewNotSupportedErr(fmt.Sprintf("provider %s is not supported", s.Provider))
+func GetInterfaceIpv4Addr(interfaceName string) (string, error) {
+	ief, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return "", err
 	}
+
+	addrs, err := ief.Addrs()
+	if err != nil {
+		return "", err
+	}
+
+	var ipv4Addr net.IP
+	for _, addr := range addrs {
+		if ipv4Addr = addr.(*net.IPNet).IP.To4(); ipv4Addr != nil {
+			break
+		}
+	}
+
+	if ipv4Addr == nil {
+		return "", fmt.Errorf("interface %s don't have an ipv4 address", interfaceName)
+	}
+
+	return ipv4Addr.String(), nil
 }

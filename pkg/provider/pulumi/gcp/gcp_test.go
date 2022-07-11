@@ -18,17 +18,16 @@ package gcp
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slices"
 	"golang.org/x/oauth2"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -57,11 +56,11 @@ func (mocks) Call(args pulumi.MockCallArgs) (resource.PropertyMap, error) {
 }
 
 func TestGCP(t *testing.T) {
-	s := project.New(&project.Config{Name: "atest", Dir: "."})
-	s.Topics = map[string]project.Topic{"sales": {}}
-	s.Buckets = map[string]project.Bucket{"money": {}}
-	s.Queues = map[string]project.Queue{"checkout": {}}
-	s.Functions = map[string]project.Function{
+	p := project.New(&project.Config{Name: "atest", Dir: "."})
+	p.Topics = map[string]project.Topic{"sales": {}}
+	p.Buckets = map[string]project.Bucket{"money": {}}
+	p.Queues = map[string]project.Queue{"checkout": {}}
+	p.Functions = map[string]project.Function{
 		"runnner": {
 			Handler: "functions/create/main.go",
 			ComputeUnit: project.ComputeUnit{
@@ -70,7 +69,7 @@ func TestGCP(t *testing.T) {
 			},
 		},
 	}
-	s.Policies = []*v1.PolicyResource{
+	p.Policies = []*v1.PolicyResource{
 		{
 			Principals: []*v1.Resource{
 				{
@@ -89,48 +88,46 @@ func TestGCP(t *testing.T) {
 			},
 		},
 	}
-
-	projectName := s.Name
-	stackName := s.Name + "-deploy"
-
-	a := &gcpProvider{
-		proj: s,
-		sc: &stack.Config{
-			Provider: stack.Aws,
-			Region:   "mock",
-		},
-		token:              &oauth2.Token{AccessToken: "testing-token"},
-		projectId:          "test-project-id",
-		projectNumber:      "test-project-number",
-		buckets:            map[string]*storage.Bucket{},
-		topics:             map[string]*pubsub.Topic{},
-		queueTopics:        map[string]*pubsub.Topic{},
-		queueSubscriptions: map[string]*pubsub.Subscription{},
-		images: map[string]*common.Image{
-			"runner": {
-				DockerImage: &docker.Image{
-					ImageName: pulumi.Sprintf("docker.io/nitrictech/runner:latest"),
-				},
-			},
-		},
-		cloudRunners: map[string]*CloudRunner{},
+	p.Secrets = map[string]project.Secret{
+		"hush": {},
 	}
 
+	projectName := p.Name
+	stackName := p.Name + "-deploy"
+
+	sc := &stack.Config{
+		Provider: stack.Aws,
+		Region:   "mock",
+	}
+	gcpProv := New(p, sc, map[string]string{})
+	g := gcpProv.(*gcpProvider)
+	g.token = &oauth2.Token{AccessToken: "testing-token"}
+	g.projectId = "test-project-id"
+	g.projectNumber = "test-project-number"
+	g.images = map[string]*common.Image{
+		"runner": {
+			DockerImage: &docker.Image{
+				ImageName: pulumi.Sprintf("docker.io/nitrictech/runner:latest"),
+			},
+		},
+	}
+	g.cloudRunners = map[string]*CloudRunner{}
+
 	err := pulumi.RunErr(func(ctx *pulumi.Context) error {
-		err := a.Deploy(ctx)
+		err := g.Deploy(ctx)
 		assert.NoError(t, err)
 
 		var wg sync.WaitGroup
 
 		wg.Add(1)
-		a.topics["sales"].Name.ApplyT(func(name string) error {
+		g.topics["sales"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "sales", name, "topic has the wrong name %s!=%s", "sales", name)
 			wg.Done()
 			return nil
 		})
 
 		wg.Add(1)
-		a.topics["sales"].Labels.ApplyT(func(tags map[string]string) error {
+		g.topics["sales"].Labels.ApplyT(func(tags map[string]string) error {
 			expectTags := map[string]string{"x-nitric-name": "sales", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "topic has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
@@ -138,14 +135,14 @@ func TestGCP(t *testing.T) {
 		})
 
 		wg.Add(1)
-		a.buckets["money"].Name.ApplyT(func(name string) error {
+		g.buckets["money"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "money", name, "bucket has the wrong name %s!=%s", "money", name)
 			wg.Done()
 			return nil
 		})
 
 		wg.Add(1)
-		a.buckets["money"].Labels.ApplyT(func(tags map[string]string) error {
+		g.buckets["money"].Labels.ApplyT(func(tags map[string]string) error {
 			expectTags := map[string]string{"x-nitric-name": "money", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "money has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
@@ -153,28 +150,36 @@ func TestGCP(t *testing.T) {
 		})
 
 		wg.Add(1)
-		a.queueTopics["checkout"].Name.ApplyT(func(name string) error {
+		g.secrets["hush"].Labels.ApplyT(func(tags map[string]string) error {
+			expectTags := map[string]string{"x-nitric-name": "hush", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
+			assert.Equal(t, expectTags, tags, "hush has the wrong tags %s!=%s", expectTags, tags)
+			wg.Done()
+			return nil
+		})
+
+		wg.Add(1)
+		g.queueTopics["checkout"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "checkout", name, "queueTopic has the wrong name %s!=%s", "checkout", name)
 			wg.Done()
 			return nil
 		})
 
 		wg.Add(1)
-		a.queueSubscriptions["checkout"].Name.ApplyT(func(name string) error {
+		g.queueSubscriptions["checkout"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "checkout-sub", name, "queueSubscription has the wrong name %s!=%s", "checkout-sub", name)
 			wg.Done()
 			return nil
 		})
 
 		wg.Add(1)
-		a.cloudRunners["runner"].Service.Name.ApplyT(func(name string) error {
+		g.cloudRunners["runner"].Service.Name.ApplyT(func(name string) error {
 			assert.Equal(t, "runner", name, "cloudRunner has the wrong name %s!=%s", "runner", name)
 			wg.Done()
 			return nil
 		})
 
 		wg.Add(1)
-		a.cloudRunners["runner"].Service.Template.Spec().Containers().Index(pulumi.Int(0)).ApplyT(func(c cloudrun.ServiceTemplateSpecContainer) error {
+		g.cloudRunners["runner"].Service.Template.Spec().Containers().Index(pulumi.Int(0)).ApplyT(func(c cloudrun.ServiceTemplateSpecContainer) error {
 			assert.Equal(t, 9001, *c.Ports[0].ContainerPort)
 			assert.Equal(t, "docker.io/nitrictech/runner:latest", c.Image)
 			wg.Done()
@@ -186,7 +191,7 @@ func TestGCP(t *testing.T) {
 	}, pulumi.WithMocks(projectName, stackName, mocks(0)))
 	assert.NoError(t, err)
 
-	a.CleanUp()
+	g.CleanUp()
 }
 
 func TestValidate(t *testing.T) {
@@ -223,11 +228,18 @@ func TestValidate(t *testing.T) {
 }
 
 func Test_gcpProvider_Plugins(t *testing.T) {
-	want := []common.Plugin{
-		{Name: "gcp", Version: "v6.12.0"},
-	}
+	want := []string{"gcp", "random"}
+
 	got := (&gcpProvider{}).Plugins()
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("gcpProvider.Plugins() = %v, want %v", got, want)
+
+	for _, pl := range got {
+		_, err := version.NewVersion(pl.Version)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if !slices.Contains(want, pl.Name) {
+			t.Errorf("gcpProvider.Plugins() = %v not in want %v", pl, want)
+		}
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"regexp"
 	osruntime "runtime"
 	"strings"
@@ -28,8 +29,10 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/imdario/mergo"
+	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/moby/moby/pkg/stdcopy"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -42,6 +45,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/utils"
+	pb "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
@@ -87,10 +91,9 @@ func Populate(initial *project.Project, envMap map[string]string) (*project.Proj
 	return cc.ToProject()
 }
 
-// Collect - Collects information about all functions for a nitric project
 func (c *codeConfig) Collect() error {
 	wg := sync.WaitGroup{}
-	errList := utils.NewErrorList()
+	errList := &multierror.ErrorList{}
 
 	for _, f := range c.initialProject.Functions {
 		wg.Add(1)
@@ -100,13 +103,13 @@ func (c *codeConfig) Collect() error {
 			defer wg.Done()
 			rel, err := fn.RelativeHandlerPath(c.initialProject)
 			if err != nil {
-				errList.Add(err)
+				errList.Push(err)
 				return
 			}
 
 			err = c.collectOne(rel)
 			if err != nil {
-				errList.Add(err)
+				errList.Push(err)
 				return
 			}
 		}(f)
@@ -114,7 +117,7 @@ func (c *codeConfig) Collect() error {
 
 	wg.Wait()
 
-	return errList.Aggregate()
+	return errList.Err()
 }
 
 type apiHandler struct {
@@ -123,6 +126,22 @@ type apiHandler struct {
 }
 
 var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
+
+// Get the security definitions for an API in this stack
+func (c *codeConfig) securityDefinitions(api string) (map[string]*pb.ApiSecurityDefinition, error) {
+	sds := make(map[string]*pb.ApiSecurityDefinition)
+	for _, f := range c.functions {
+		// TODO: Ensure the function actually has API definitions
+		if f.apis != nil && f.apis[api] != nil && f.apis[api].securityDefinitions != nil {
+			for sn, sd := range f.apis[api].securityDefinitions {
+				// TODO: Check if this security definition has already been defined for conflicts
+				sds[sn] = sd
+			}
+		}
+	}
+
+	return sds, nil
+}
 
 // apiSpec produces an open api v3 spec for the requests API name
 func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
@@ -151,6 +170,15 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 					worker: w,
 				})
 			}
+
+			// Apply top level security rules to the API
+			if len(f.apis[api].security) > 0 {
+				for n, scopes := range f.apis[api].security {
+					doc.Security.With(openapi3.SecurityRequirement{
+						n: scopes,
+					})
+				}
+			}
 		}
 	}
 
@@ -178,21 +206,47 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 				return nil, fmt.Errorf("found conflicting operations")
 			}
 
-			doc.AddOperation(normalizedPath, m, &openapi3.Operation{
+			exts := map[string]interface{}{
+				"x-nitric-target": map[string]string{
+					"type": "function",
+					"name": w.target,
+				},
+			}
+
+			var sr *openapi3.SecurityRequirements = nil
+			if w.worker.Options != nil {
+				if w.worker.Options.SecurityDisabled {
+					sr = &openapi3.SecurityRequirements{}
+				} else if len(w.worker.Options.Security) > 0 {
+					sr = &openapi3.SecurityRequirements{}
+					if !w.worker.Options.SecurityDisabled {
+						for key, scopes := range w.worker.Options.Security {
+							sr.With(openapi3.SecurityRequirement{
+								key: scopes.Scopes,
+							})
+						}
+					}
+				}
+			}
+
+			pathItem.SetOperation(m, &openapi3.Operation{
 				OperationID: strings.ToLower(alphanumeric.ReplaceAllString(normalizedPath+m, "")),
 				Responses:   openapi3.NewResponses(),
 				ExtensionProps: openapi3.ExtensionProps{
-					Extensions: map[string]interface{}{
-						"x-nitric-target": map[string]string{
-							"type": "function",
-							"name": w.target,
-						},
-					},
+					Extensions: exts,
 				},
+				Security: sr,
 			})
 		}
 	}
 
+	if output.VerboseLevel > 3 {
+		b, err := doc.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("discovered api doc", string(b))
+	}
 	return doc, nil
 }
 
@@ -205,6 +259,7 @@ func ensureOneTrailingSlash(p string) string {
 
 func splitPath(workerPath string) (string, openapi3.Parameters) {
 	normalizedPath := ""
+
 	params := make(openapi3.Parameters, 0)
 	for _, p := range strings.Split(workerPath, "/") {
 		if strings.HasPrefix(p, ":") {
@@ -227,9 +282,40 @@ func splitPath(workerPath string) (string, openapi3.Parameters) {
 		}
 	}
 	// trim off trailing slash
-	normalizedPath = strings.TrimSuffix(normalizedPath, "/")
-
+	if normalizedPath != "/" {
+		normalizedPath = strings.TrimSuffix(normalizedPath, "/")
+	}
 	return normalizedPath, params
+}
+
+func useHostInterface(hc *container.HostConfig, iface string, port int) ([]string, error) {
+	dockerInternalAddr, err := utils.GetInterfaceIpv4Addr(iface)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("dockerInternalAddr ", dockerInternalAddr)
+
+	hc.NetworkMode = "host"
+
+	return []string{
+		fmt.Sprintf("SERVICE_ADDRESS=%s:%d", dockerInternalAddr, port),
+		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
+		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", dockerInternalAddr),
+	}, nil
+}
+
+func useDockerInternal(hc *container.HostConfig, port int) []string {
+	if osruntime.GOOS == "linux" {
+		// setup host.docker.internal to route to host gateway
+		// to access rpc server hosted by local CLI run
+		hc.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
+	}
+
+	return []string{
+		fmt.Sprintf("SERVICE_ADDRESS=%s:%d", "host.docker.internal", port),
+		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
+		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
+	}
 }
 
 // collectOne - Collects information about a function for a nitric stack
@@ -279,18 +365,20 @@ func (c *codeConfig) collectOne(handler string) error {
 		AutoRemove: true,
 		Mounts:     opts.Mounts,
 	}
-	if osruntime.GOOS == "linux" {
-		// setup host.docker.internal to route to host gateway
-		// to access rpc server hosted by local CLI run
-		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
+
+	var env []string
+	if os.Getenv("HOST_DOCKER_INTERNAL_IFACE") != "" {
+		env, err = useHostInterface(hostConfig, os.Getenv("HOST_DOCKER_INTERNAL_IFACE"), port)
+	} else {
+		env = useDockerInternal(hostConfig, port)
+	}
+	if err != nil {
+		return err
 	}
 
-	env := []string{
-		fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", port),
-		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", port),
-		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
-		"NITRIC_ENVIRONMENT=build", // this is to tell the sdk that we are running in the build and not proper runtime.
-	}
+	// this is to tell the sdk that we are running in the build and not proper runtime.
+	env = append(env, "NITRIC_ENVIRONMENT=build")
+
 	for k, v := range c.envMap {
 		env = append(env, k+"="+v)
 	}
@@ -305,8 +393,14 @@ func (c *codeConfig) collectOne(handler string) error {
 		WorkingDir:   opts.TargetWD,
 	}
 
+	if output.VerboseLevel > 2 {
+		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
+	}
+
 	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")
-	cID, err := ce.ContainerCreate(cc, hostConfig, nil, cn)
+	cID, err := ce.ContainerCreate(cc, hostConfig, &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{},
+	}, cn)
 	if err != nil {
 		return err
 	}
@@ -316,9 +410,6 @@ func (c *codeConfig) collectOne(handler string) error {
 		return err
 	}
 
-	if output.VerboseLevel > 2 {
-		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
-	}
 	logreader, err := ce.ContainerLogs(cID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -339,7 +430,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		_, _ = stdcopy.StdCopy(logWriter, logWriter, logreader)
 	}()
 
-	errs := utils.NewErrorList().WithSubject(handler)
+	errs := multierror.ErrorList{}
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
 	select {
 	case done := <-waitChan:
@@ -357,19 +448,22 @@ func (c *codeConfig) collectOne(handler string) error {
 			}
 		}
 		if done.StatusCode != 0 {
-			errs.Add(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
+			errs.Push(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
 		}
 	case cErr := <-cErrChan:
-		errs.Add(cErr)
+		errs.Push(cErr)
 	}
 
 	// When the container exits stop the server
 	grpcSrv.Stop()
-	errs.Add(<-errChan)
+	cErr := <-errChan
+	if cErr != nil {
+		errs.Push(cErr)
+	}
 
 	// Add the function
 	c.addFunction(fun, handler)
-	return errs.Aggregate()
+	return errs.Err()
 }
 
 func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {
@@ -387,7 +481,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 		return nil, err
 	}
 
-	errs := utils.NewErrorList()
+	errs := multierror.ErrorList{}
 	for handler, f := range c.functions {
 		topicTriggers := make([]string, 0, len(f.subscriptions)+len(f.schedules))
 
@@ -398,6 +492,13 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 			}
 
 			s.ApiDocs[k] = spec
+
+			secDefs, err := c.securityDefinitions(k)
+			if err != nil {
+				return nil, fmt.Errorf("error with security definitions for api: %s; %w", k, err)
+			}
+
+			s.SecurityDefinitions[k] = secDefs
 		}
 		for k := range f.buckets {
 			s.Buckets[k] = project.Bucket{}
@@ -430,13 +531,13 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 				e, err := cron.RateToCron(v.GetRate().Rate)
 
 				if err != nil {
-					errs.Add(fmt.Errorf("schedule expresson %s is invalid; %w", v.GetRate().Rate, err))
+					errs.Push(fmt.Errorf("schedule expresson %s is invalid; %w", v.GetRate().Rate, err))
 					continue
 				}
 
 				exp = e
 			} else {
-				errs.Add(fmt.Errorf("schedule %s is invalid", v.String()))
+				errs.Push(fmt.Errorf("schedule %s is invalid", v.String()))
 				continue
 			}
 
@@ -455,7 +556,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 			}
 			if current, ok := s.Schedules[k]; ok {
 				if err := mergo.Merge(&current, &newS); err != nil {
-					errs.Add(err)
+					errs.Push(err)
 				} else {
 					s.Schedules[k] = current
 				}
@@ -470,7 +571,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 
 		for k := range f.subscriptions {
 			if _, ok := f.topics[k]; !ok {
-				errs.Add(fmt.Errorf("subscription to topic %s defined, but topic does not exist", k))
+				errs.Push(fmt.Errorf("subscription to topic %s defined, but topic does not exist", k))
 			} else {
 				topicTriggers = append(topicTriggers, k)
 			}
@@ -480,7 +581,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 		if !ok {
 			fun, err = project.FunctionFromHandler(handler, s.Dir)
 			if err != nil {
-				errs.Add(fmt.Errorf("can not create function from %s %w", handler, err))
+				errs.Push(fmt.Errorf("can not create function from %s %w", handler, err))
 				continue
 			}
 		}
@@ -492,5 +593,5 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 		s.Functions[f.name] = fun
 	}
 
-	return s, errs.Aggregate()
+	return s, errs.Err()
 }

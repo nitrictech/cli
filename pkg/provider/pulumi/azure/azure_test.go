@@ -17,20 +17,24 @@
 package azure
 
 import (
-	"reflect"
 	"testing"
 
-	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
+	"github.com/hashicorp/go-version"
+	"golang.org/x/exp/slices"
 )
 
 func Test_azureProvider_Plugins(t *testing.T) {
-	want := []common.Plugin{
-		{Name: "azure-native", Version: "v1.60.0"},
-		{Name: "azure", Version: "v4.39.0"},
-		{Name: "azuread", Version: "v5.17.0"},
-	}
+	want := []string{"azure-native", "azure", "azuread"}
 	got := (&azureProvider{}).Plugins()
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("azureProvider.Plugins() = %v, want %v", got, want)
+
+	for _, pl := range got {
+		_, err := version.NewVersion(pl.Version)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if !slices.Contains(want, pl.Name) {
+			t.Errorf("azureProvider.Plugins() = %v not in want %v", pl, want)
+		}
 	}
 }

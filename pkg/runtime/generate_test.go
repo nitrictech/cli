@@ -18,12 +18,13 @@ package runtime
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/docker/docker/api/types/mount"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 func TestGenerate(t *testing.T) {
@@ -39,16 +40,22 @@ func TestGenerate(t *testing.T) {
 			handler:  "functions/list.ts",
 			version:  "latest",
 			provider: "azure",
-			wantFwriter: `FROM node:alpine
-RUN yarn global add typescript ts-node
+			wantFwriter: `FROM node:alpine as layer-build
+RUN yarn global add typescript @vercel/ncc
 COPY package.json *.lock *-lock.json /
 RUN yarn import || echo Lockfile already exists
 RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
+COPY . .
+RUN test -f tsconfig.json || echo '{"compilerOptions":{"esModuleInterop":true,"target":"es2015","moduleResolution":"node"}}' > tsconfig.json
+RUN ncc build functions/list.ts -m --v8-cache -o lib/
+FROM node:alpine as layer-final
+COPY --from=layer-build package.json package.json
+COPY --from=layer-build node_modules/ node_modules/
+COPY --from=layer-build lib/ /
 ADD https://github.com/nitrictech/nitric/releases/latest/download/membrane-azure /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane
 ENTRYPOINT ["/usr/local/bin/membrane"]
-COPY . .
-CMD ["ts-node", "-T", "functions/list.ts"]`,
+CMD ["node", "index.js"]`,
 		},
 		{
 			name:     "go",
@@ -63,7 +70,7 @@ WORKDIR /app/
 COPY go.mod *.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o /bin/main pkg/handler/...
+RUN go build -o /bin/main ./pkg/handler/...
 FROM alpine
 ADD https://github.com/nitrictech/nitric/releases/download/v1.2.3/membrane-aws /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane
@@ -245,6 +252,11 @@ RUN go install github.com/asalkeld/CompileDaemon@d4b10de`,
 }
 
 func TestLaunchOptsForFunction(t *testing.T) {
+	goPath, err := utils.GoPath()
+	if err != nil {
+		t.Error(err)
+	}
+
 	tests := []struct {
 		handler string
 		runCtx  string
@@ -280,10 +292,10 @@ func TestLaunchOptsForFunction(t *testing.T) {
 					"-verbose",
 					"-exclude-dir=.git",
 					"-exclude-dir=.nitric",
-					"-directory=.", "-polling=false", "-build=go build -o runtime ././...", "-command=./runtime"},
+					"-directory=.", "-polling=false", "-build=go build -buildvcs=false -o runtime ././...", "-command=./runtime"},
 				Mounts: []mount.Mount{
 					{
-						Type: "bind", Source: filepath.Join(os.Getenv("GOPATH"), "pkg"), Target: "/go/pkg",
+						Type: "bind", Source: filepath.Join(goPath, "pkg"), Target: "/go/pkg",
 					},
 					{
 						Type: "bind", Source: "../../", Target: "/go/src/github.com/nitrictech/cli",
@@ -311,6 +323,11 @@ func TestLaunchOptsForFunction(t *testing.T) {
 }
 
 func TestLaunchOptsForFunctionCollect(t *testing.T) {
+	goPath, err := utils.GoPath()
+	if err != nil {
+		t.Error(err)
+	}
+
 	tests := []struct {
 		handler string
 		runCtx  string
@@ -348,7 +365,7 @@ func TestLaunchOptsForFunctionCollect(t *testing.T) {
 					"go", "run", "././..."},
 				Mounts: []mount.Mount{
 					{
-						Type: "bind", Source: filepath.Join(os.Getenv("GOPATH"), "pkg"), Target: "/go/pkg",
+						Type: "bind", Source: filepath.Join(goPath, "pkg"), Target: "/go/pkg",
 					},
 					{
 						Type: "bind", Source: "../../", Target: "/go/src/github.com/nitrictech/cli",

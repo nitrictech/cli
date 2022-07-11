@@ -1,3 +1,4 @@
+---
 # This is an example .goreleaser.yml file with some sensible defaults.
 # Make sure to check the documentation at https://goreleaser.com
 project_name: nitric
@@ -12,16 +13,20 @@ builds:
       - CGO_ENABLED=0
     id: nitric
     binary: nitric
+    ldflags:
+      - -s -w -X github.com/nitrictech/cli/pkg/utils.Version={{.Version}} -X github.com/nitrictech/cli/pkg/utils.Commit={{.Commit}} -X github.com/nitrictech/cli/pkg/utils.BuildTime={{.Date}}
     goos:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
 archives:
   - replacements:
       darwin: macOS
       linux: Linux
       windows: Windows
-      386: i386
       amd64: x86_64
       archives:
     format_overrides:
@@ -56,5 +61,5 @@ brews:
     license: "Apache 2.0"
     dependencies:
       - name: git
-      - name: pulumi # needed for certain provider deployments
+      - name: pulumi  # needed for certain provider deployments
         type: optional

@@ -20,11 +20,11 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	app "github.com/pulumi/pulumi-azure-native/sdk/go/azure/app"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/containerregistry"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/operationalinsights"
-	web "github.com/pulumi/pulumi-azure-native/sdk/go/azure/web/v20210301"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -44,6 +44,8 @@ type ContainerAppsArgs struct {
 	StorageAccountQueueEndpoint   pulumi.StringInput
 	MongoDatabaseName             pulumi.StringInput
 	MongoDatabaseConnectionString pulumi.StringInput
+
+	ManagedIdentityID pulumi.StringOutput
 }
 
 type ContainerApps struct {
@@ -64,45 +66,45 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		return nil, err
 	}
 
-	env := web.EnvironmentVarArray{}
+	env := app.EnvironmentVarArray{}
 
 	if args.StorageAccountBlobEndpoint != nil {
-		env = append(env, web.EnvironmentVarArgs{
+		env = append(env, app.EnvironmentVarArgs{
 			Name:  pulumi.String("AZURE_STORAGE_ACCOUNT_BLOB_ENDPOINT"),
 			Value: args.StorageAccountBlobEndpoint,
 		})
 	}
 
 	if args.StorageAccountQueueEndpoint != nil {
-		env = append(env, web.EnvironmentVarArgs{
+		env = append(env, app.EnvironmentVarArgs{
 			Name:  pulumi.String("AZURE_STORAGE_ACCOUNT_QUEUE_ENDPOINT"),
 			Value: args.StorageAccountQueueEndpoint,
 		})
 	}
 
 	if args.MongoDatabaseConnectionString != nil {
-		env = append(env, web.EnvironmentVarArgs{
+		env = append(env, app.EnvironmentVarArgs{
 			Name:  pulumi.String("MONGODB_CONNECTION_STRING"),
 			Value: args.MongoDatabaseConnectionString,
 		})
 	}
 
 	if args.MongoDatabaseName != nil {
-		env = append(env, web.EnvironmentVarArgs{
+		env = append(env, app.EnvironmentVarArgs{
 			Name:  pulumi.String("MONGODB_DATABASE"),
 			Value: args.MongoDatabaseName,
 		})
 	}
 
 	if args.KVaultName != nil {
-		env = append(env, web.EnvironmentVarArgs{
+		env = append(env, app.EnvironmentVarArgs{
 			Name:  pulumi.String("KVAULT_NAME"),
 			Value: args.KVaultName,
 		})
 	}
 
 	for k, v := range args.EnvMap {
-		env = append(env, web.EnvironmentVarArgs{
+		env = append(env, app.EnvironmentVarArgs{
 			Name:  pulumi.String(k),
 			Value: pulumi.String(v),
 		})
@@ -137,13 +139,12 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		WorkspaceName:     aw.Name,
 	})
 
-	kube, err := web.NewKubeEnvironment(ctx, resourceName(ctx, name, KubeRT), &web.KubeEnvironmentArgs{
+	managedEnv, err := app.NewManagedEnvironment(ctx, resourceName(ctx, name, KubeRT), &app.ManagedEnvironmentArgs{
 		Location:          args.Location,
 		ResourceGroupName: args.ResourceGroupName,
-		EnvironmentType:   pulumi.String("Managed"),
-		AppLogsConfiguration: web.AppLogsConfigurationArgs{
+		AppLogsConfiguration: app.AppLogsConfigurationArgs{
 			Destination: pulumi.String("log-analytics"),
-			LogAnalyticsConfiguration: web.LogAnalyticsConfigurationArgs{
+			LogAnalyticsConfiguration: app.LogAnalyticsConfigurationArgs{
 				SharedKey:  sharedKeys.PrimarySharedKey(),
 				CustomerId: aw.CustomerId,
 			},
@@ -199,11 +200,12 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			Registry:          res.Registry,
 			RegistryUser:      adminUser,
 			RegistryPass:      adminPass,
-			KubeEnv:           kube,
+			ManagedEnv:        managedEnv,
 			ImageUri:          image.DockerImage.ImageName,
 			Env:               env,
 			Topics:            args.Topics,
 			Compute:           c,
+			ManagedIdentityID: args.ManagedIdentityID,
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, err
@@ -220,19 +222,20 @@ type ContainerAppArgs struct {
 	Registry          *containerregistry.Registry
 	RegistryUser      pulumi.StringPtrInput
 	RegistryPass      pulumi.StringPtrInput
-	KubeEnv           *web.KubeEnvironment
+	ManagedEnv        *app.ManagedEnvironment
 	ImageUri          pulumi.StringInput
-	Env               web.EnvironmentVarArray
+	Env               app.EnvironmentVarArray
 	Compute           project.Compute
 	Topics            map[string]*eventgrid.Topic
+	ManagedIdentityID pulumi.StringOutput
 }
 
 type ContainerApp struct {
 	pulumi.ResourceState
 
 	Name          string
-	Sp            *SevicePrinciple
-	App           *web.ContainerApp
+	Sp            *ServicePrincipal
+	App           *app.ContainerApp
 	Subscriptions map[string]*eventgrid.Topic
 }
 
@@ -258,7 +261,7 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		return nil, err
 	}
 
-	res.Sp, err = newSevicePrinciple(ctx, name, &SevicePrincipleArgs{}, pulumi.Parent(res))
+	res.Sp, err = newServicePrincipal(ctx, name, &ServicePrincipalArgs{}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
 	}
@@ -280,32 +283,32 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		}
 	}
 
-	env := web.EnvironmentVarArray{
-		web.EnvironmentVarArgs{
+	env := app.EnvironmentVarArray{
+		app.EnvironmentVarArgs{
 			Name:  pulumi.String("MIN_WORKERS"),
 			Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
 		},
-		web.EnvironmentVarArgs{
+		app.EnvironmentVarArgs{
 			Name:  pulumi.String("AZURE_SUBSCRIPTION_ID"),
 			Value: args.SubscriptionID,
 		},
-		web.EnvironmentVarArgs{
+		app.EnvironmentVarArgs{
 			Name:  pulumi.String("AZURE_RESOURCE_GROUP"),
 			Value: args.ResourceGroupName,
 		},
-		web.EnvironmentVarArgs{
+		app.EnvironmentVarArgs{
 			Name:      pulumi.String("AZURE_CLIENT_ID"),
 			SecretRef: pulumi.String("client-id"),
 		},
-		web.EnvironmentVarArgs{
+		app.EnvironmentVarArgs{
 			Name:      pulumi.String("AZURE_TENANT_ID"),
 			SecretRef: pulumi.String("tenant-id"),
 		},
-		web.EnvironmentVarArgs{
+		app.EnvironmentVarArgs{
 			Name:      pulumi.String("AZURE_CLIENT_SECRET"),
 			SecretRef: pulumi.String("client-secret"),
 		},
-		web.EnvironmentVarArgs{
+		app.EnvironmentVarArgs{
 			Name:  pulumi.String("TOLERATE_MISSING_SERVICES"),
 			Value: pulumi.String("true"),
 		},
@@ -313,45 +316,47 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 
 	//memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
 	// we can't define memory without defining the cpu..
-	res.App, err = web.NewContainerApp(ctx, resourceName(ctx, name, ContainerAppRT), &web.ContainerAppArgs{
-		ResourceGroupName: args.ResourceGroupName,
-		Location:          args.Location,
-		KubeEnvironmentId: args.KubeEnv.ID(),
-		Configuration: web.ConfigurationArgs{
-			Ingress: web.IngressArgs{
+	appName := resourceName(ctx, name, ContainerAppRT)
+
+	res.App, err = app.NewContainerApp(ctx, appName, &app.ContainerAppArgs{
+		ResourceGroupName:    args.ResourceGroupName,
+		Location:             args.Location,
+		ManagedEnvironmentId: args.ManagedEnv.ID(),
+		Configuration: app.ConfigurationArgs{
+			Ingress: app.IngressArgs{
 				External:   pulumi.BoolPtr(true),
 				TargetPort: pulumi.Int(9001),
 			},
-			Registries: web.RegistryCredentialsArray{
-				web.RegistryCredentialsArgs{
+			Registries: app.RegistryCredentialsArray{
+				app.RegistryCredentialsArgs{
 					Server:            args.Registry.LoginServer,
 					Username:          args.RegistryUser,
 					PasswordSecretRef: pulumi.String("pwd"),
 				},
 			},
-			Secrets: web.SecretArray{
-				web.SecretArgs{
+			Secrets: app.SecretArray{
+				app.SecretArgs{
 					Name:  pulumi.String("pwd"),
 					Value: args.RegistryPass,
 				},
-				web.SecretArgs{
+				app.SecretArgs{
 					Name:  pulumi.String("client-id"),
 					Value: res.Sp.ClientID,
 				},
-				web.SecretArgs{
+				app.SecretArgs{
 					Name:  pulumi.String("tenant-id"),
 					Value: res.Sp.TenantID,
 				},
-				web.SecretArgs{
+				app.SecretArgs{
 					Name:  pulumi.String("client-secret"),
 					Value: res.Sp.ClientSecret,
 				},
 			},
 		},
 		Tags: common.Tags(ctx, name),
-		Template: web.TemplateArgs{
-			Containers: web.ContainerArray{
-				web.ContainerArgs{
+		Template: app.TemplateArgs{
+			Containers: app.ContainerArray{
+				app.ContainerArgs{
 					Name:  pulumi.String("myapp"),
 					Image: args.ImageUri,
 					Env:   append(env, args.Env...),
@@ -363,6 +368,36 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		return nil, err
 	}
 
+	authName := fmt.Sprintf("%s-auth", appName)
+
+	_, err = app.NewContainerAppsAuthConfig(ctx, authName, &app.ContainerAppsAuthConfigArgs{
+		AuthConfigName:   pulumi.String("current"),
+		ContainerAppName: res.App.Name,
+		GlobalValidation: &app.GlobalValidationArgs{
+			UnauthenticatedClientAction: app.UnauthenticatedClientActionV2Return401,
+		},
+		IdentityProviders: &app.IdentityProvidersArgs{
+			AzureActiveDirectory: &app.AzureActiveDirectoryArgs{
+				Enabled: pulumi.Bool(true),
+				Registration: &app.AzureActiveDirectoryRegistrationArgs{
+					ClientId:                res.Sp.ClientID,
+					ClientSecretSettingName: pulumi.String("client-secret"),
+					OpenIdIssuer:            pulumi.Sprintf("https://sts.windows.net/%s/v2.0", res.Sp.TenantID),
+				},
+				Validation: &app.AzureActiveDirectoryValidationArgs{
+					AllowedAudiences: pulumi.StringArray{args.ManagedIdentityID},
+				},
+			},
+		},
+		Platform: &app.AuthPlatformArgs{
+			Enabled: pulumi.Bool(true),
+		},
+		ResourceGroupName: args.ResourceGroupName,
+	}, pulumi.Parent(res.App))
+
+	if err != nil {
+		return nil, err
+	}
 	// Determine required subscriptions so they can be setup once the container starts
 	for _, t := range args.Compute.Unit().Triggers.Topics {
 		topic, ok := args.Topics[t]

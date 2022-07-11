@@ -28,6 +28,7 @@ import (
 	"path"
 
 	"github.com/docker/docker/api/types/container"
+	multierror "github.com/missionMeteora/toolkit/errors"
 	"gopkg.in/mcuadros/go-syslog.v2"
 
 	"github.com/nitrictech/cli/pkg/utils"
@@ -45,13 +46,18 @@ func newSyslog(logPath string) ContainerLogger {
 }
 
 func (s *localSyslog) Stop() error {
-	errList := utils.NewErrorList()
+	errList := &multierror.ErrorList{}
 
-	errList.Add(s.server.Kill())
+	if err := s.server.Kill(); err != nil {
+		errList.Push(err)
+	}
 	s.server.Wait()
-	errList.Add(s.file.Close())
 
-	return errList.Aggregate()
+	if err := s.file.Close(); err != nil {
+		errList.Push(err)
+	}
+
+	return errList.Err()
 }
 
 func (s *localSyslog) Config() *container.LogConfig {
@@ -87,7 +93,7 @@ func (s *localSyslog) Start() error {
 		return err
 	}
 
-	err = os.MkdirAll(path.Dir(s.logPath), 0777)
+	err = os.MkdirAll(path.Dir(s.logPath), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -99,7 +105,7 @@ func (s *localSyslog) Start() error {
 
 	go func(channel syslog.LogPartsChannel) {
 		for logParts := range channel {
-			fmt.Fprintf(s.file, "%s %s %s\n", logParts["timestamp"], logParts["tag"], logParts["content"])
+			fmt.Fprintf(s.file, "%s %s\n", logParts["tag"], logParts["content"])
 		}
 	}(channel)
 
@@ -108,6 +114,7 @@ func (s *localSyslog) Start() error {
 	if err != nil {
 		return err
 	}
+	log.SetFlags(0)
 	log.SetOutput(logwriter)
 
 	return nil

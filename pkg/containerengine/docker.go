@@ -233,8 +233,8 @@ func (d *docker) ListImages(stackName, containerName string) ([]Image, error) {
 	return imgs, err
 }
 
-func (d *docker) ImagePull(rawImage string) error {
-	resp, err := d.cli.ImagePull(context.Background(), rawImage, types.ImagePullOptions{})
+func (d *docker) ImagePull(rawImage string, opts types.ImagePullOptions) error {
+	resp, err := d.cli.ImagePull(context.Background(), rawImage, opts)
 	if err != nil {
 		return errors.WithMessage(err, "Pull")
 	}

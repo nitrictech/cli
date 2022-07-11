@@ -38,10 +38,11 @@ type Policy struct {
 }
 
 type StackResources struct {
-	Topics  map[string]*pubsub.Topic
-	Queues  map[string]*pubsub.Topic
-	Buckets map[string]*storage.Bucket
-	Secrets map[string]*secretmanager.Secret
+	Topics        map[string]*pubsub.Topic
+	Queues        map[string]*pubsub.Topic
+	Subscriptions map[string]*pubsub.Subscription
+	Buckets       map[string]*storage.Bucket
+	Secrets       map[string]*secretmanager.Secret
 }
 
 type PrincipalMap = map[v1.ResourceType]map[string]*serviceaccount.Account
@@ -56,6 +57,12 @@ type PolicyArgs struct {
 	ProjectID pulumi.StringInput
 }
 
+var gcpListActions []string = []string{
+	"pubsub.topics.list",
+	"pubsub.snapshots.list",
+	"resourcemanager.projects.get",
+	"secretmanager.secrets.list",
+}
 var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_BucketFileList: {
 		"storage.objects.list",
@@ -73,25 +80,27 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_BucketFileDelete: {
 		"storage.objects.delete",
 	},
-	v1.Action_TopicDetail: {},
+	v1.Action_TopicDetail: {
+		"pubsub.topics.get",
+	},
 	v1.Action_TopicEventPublish: {
 		"pubsub.topics.publish",
 	},
-	v1.Action_TopicList: {
-		"pubsub.topics.list",
-	},
+	v1.Action_TopicList: {}, // see above in gcpListActions
 	v1.Action_QueueSend: {
+		"pubsub.topics.get",
 		"pubsub.topics.publish",
 	},
 	v1.Action_QueueReceive: {
+		"pubsub.topics.get",
 		"pubsub.topics.attachSubscription",
 		"pubsub.snapshots.seek",
 		"pubsub.subscriptions.consume",
 	},
-	v1.Action_QueueDetail: {},
-	v1.Action_QueueList: {
-		"pubsub.topics.list",
+	v1.Action_QueueDetail: {
+		"pubsub.topics.get",
 	},
+	v1.Action_QueueList: {}, // see above in gcpListActions
 	v1.Action_CollectionDocumentDelete: {
 		"appengine.applications.get",
 		"datastore.databases.get",
@@ -126,15 +135,24 @@ var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 		"appengine.applications.get",
 	},
 	v1.Action_SecretAccess: {
-		"secretmanager.locations.*",
+		"resourcemanager.projects.get",
+		"secretmanager.locations.get",
+		"secretmanager.locations.list",
 		"secretmanager.secrets.get",
 		"secretmanager.secrets.getIamPolicy",
-		"secretmanager.version.get",
-		"secretmanager.secrets.list",
+		"secretmanager.versions.get",
+		"secretmanager.versions.access",
 		"secretmanager.versions.list",
 	},
 	v1.Action_SecretPut: {
+		"resourcemanager.projects.get",
 		"secretmanager.versions.add",
+		"secretmanager.versions.enable",
+		"secretmanager.versions.destroy",
+		"secretmanager.versions.disable",
+		"secretmanager.versions.get",
+		"secretmanager.versions.access",
+		"secretmanager.versions.list",
 	},
 }
 
@@ -151,32 +169,26 @@ func getCollectionActions() []string {
 	return collectionActions
 }
 
-func filterCollectionActions(actions pulumi.StringArray) pulumi.StringArrayOutput {
-	arr, _ := actions.ToStringArrayOutput().ApplyT(func(actions []string) []string {
-		filteredActions := []string{}
-
-		for _, a := range actions {
-			for _, ca := range getCollectionActions() {
-				if a == ca {
-					filteredActions = append(filteredActions, a)
-					break
-				}
-			}
-		}
-
-		return filteredActions
-	}).(pulumi.StringArrayOutput)
-
-	return arr
-}
-
-func actionsToGcpActions(actions []v1.Action) pulumi.StringArray {
-	gcpActions := make(pulumi.StringArray, 0)
+func filterCollectionActions(actions []string) []string {
+	filteredActions := []string{}
 
 	for _, a := range actions {
-		for _, ga := range gcpActionsMap[a] {
-			gcpActions = append(gcpActions, pulumi.String(ga))
+		for _, ca := range getCollectionActions() {
+			if a == ca {
+				filteredActions = append(filteredActions, a)
+				break
+			}
 		}
+	}
+
+	return filteredActions
+}
+
+func actionsToGcpActions(actions []v1.Action) []string {
+	gcpActions := make([]string, 0)
+
+	for _, a := range actions {
+		gcpActions = append(gcpActions, gcpActionsMap[a]...)
 	}
 
 	return gcpActions
@@ -190,33 +202,34 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 	}
 
 	actions := actionsToGcpActions(args.Policy.Actions)
-	baseRoleId, err := random.NewRandomString(ctx, fmt.Sprintf("role-%s-id", name), &random.RandomStringArgs{
-		Special: pulumi.Bool(false),
-		Length:  pulumi.Int(8),
-		Keepers: pulumi.ToMap(map[string]interface{}{
-			"policy-name": name,
-		}),
-	}, pulumi.Parent(res))
+
+	rolePolicy, err := newCustomRole(ctx, name, actions, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
 	}
 
-	rolePolicy, err := projects.NewIAMCustomRole(ctx, name, &projects.IAMCustomRoleArgs{
-		Title:       pulumi.String(name),
-		Permissions: actions,
-		RoleId:      baseRoleId.ID(),
-	}, pulumi.Parent(res))
-
+	// for project level listings
+	listRolePolicy, err := newCustomRole(ctx, name+"list", gcpListActions, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
 	}
 
 	for _, principal := range args.Policy.Principals {
 		sa := args.Principals[v1.ResourceType_Function][principal.Name]
-
 		for _, resource := range args.Policy.Resources {
 			memberName := fmt.Sprintf("%s-%s", principal.Name, resource.Name)
 			memberId := pulumi.Sprintf("serviceAccount:%s", sa.Email)
+
+			// for project level listings
+			_, err = projects.NewIAMMember(ctx, memberName+"list", &projects.IAMMemberArgs{
+				Member:  memberId,
+				Project: args.ProjectID,
+				Role:    listRolePolicy.Name,
+			}, pulumi.Parent(res))
+
+			if err != nil {
+				return nil, err
+			}
 
 			switch resource.Type {
 			case v1.ResourceType_Bucket:
@@ -235,23 +248,7 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 			case v1.ResourceType_Collection:
 				collActions := filterCollectionActions(actions)
 
-				collectionRoleId, err := random.NewRandomString(ctx, fmt.Sprintf("role-%s-collection-id", name), &random.RandomStringArgs{
-					Special: pulumi.BoolPtr(false),
-					Length:  pulumi.Int(8),
-					Keepers: pulumi.ToMap(map[string]interface{}{
-						"policy-name": name,
-					}),
-				}, pulumi.Parent(res))
-				if err != nil {
-					return nil, err
-				}
-
-				collRole, err := projects.NewIAMCustomRole(ctx, memberName+"-role", &projects.IAMCustomRoleArgs{
-					Title:       pulumi.String(name),
-					Permissions: collActions,
-					RoleId:      collectionRoleId.ID(),
-				}, pulumi.Parent(res))
-
+				collRole, err := newCustomRole(ctx, memberName+"-role", collActions, pulumi.Parent(res))
 				if err != nil {
 					return nil, err
 				}
@@ -261,22 +258,44 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 					Project: args.ProjectID,
 					Role:    collRole.Name,
 				}, pulumi.Parent(res))
-
 				if err != nil {
 					return nil, err
 				}
 
 			case v1.ResourceType_Queue:
 				q := args.Resources.Queues[resource.Name]
+				s := args.Resources.Subscriptions[resource.Name] // the subscription and topic have the same name
 
 				_, err = pubsub.NewTopicIAMMember(ctx, memberName, &pubsub.TopicIAMMemberArgs{
 					Topic:  q.Name,
 					Member: memberId,
 					Role:   rolePolicy.Name,
 				}, pulumi.Parent(res))
-
 				if err != nil {
 					return nil, err
+				}
+
+				needSubConsume := false
+				for _, act := range args.Policy.Actions {
+					if act == v1.Action_QueueReceive {
+						needSubConsume = true
+						break
+					}
+				}
+				if needSubConsume {
+					subRolePolicy, err := newCustomRole(ctx, name+"subscription", []string{"pubsub.subscriptions.consume"}, pulumi.Parent(res))
+					if err != nil {
+						return nil, err
+					}
+
+					_, err = pubsub.NewSubscriptionIAMMember(ctx, memberName, &pubsub.SubscriptionIAMMemberArgs{
+						Subscription: s.Name,
+						Member:       memberId,
+						Role:         subRolePolicy.Name,
+					}, pulumi.Parent(res))
+					if err != nil {
+						return nil, err
+					}
 				}
 
 			case v1.ResourceType_Topic:
@@ -309,4 +328,23 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 	}
 
 	return res, nil
+}
+
+func newCustomRole(ctx *pulumi.Context, name string, actions []string, opts ...pulumi.ResourceOption) (*projects.IAMCustomRole, error) {
+	roleId, err := random.NewRandomString(ctx, fmt.Sprintf("role-%s-id", name), &random.RandomStringArgs{
+		Special: pulumi.Bool(false),
+		Length:  pulumi.Int(8),
+		Keepers: pulumi.ToMap(map[string]interface{}{
+			"policy-name": name,
+		}),
+	}, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return projects.NewIAMCustomRole(ctx, name, &projects.IAMCustomRoleArgs{
+		Title:       pulumi.String(name),
+		Permissions: pulumi.ToStringArray(actions),
+		RoleId:      roleId.ID(),
+	}, opts...)
 }

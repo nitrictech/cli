@@ -26,10 +26,10 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-func NewProvider(p *project.Project, s *stack.Config, envMap map[string]string) (types.Provider, error) {
+func NewProvider(p *project.Project, s *stack.Config, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
 	switch s.Provider {
 	case stack.Aws, stack.Azure, stack.Digitalocean, stack.Gcp:
-		return pulumi.New(p, s, envMap)
+		return pulumi.New(p, s, envMap, opts)
 	default:
 		return nil, utils.NewNotSupportedErr(fmt.Sprintf("provider %s is not supported", s.Provider))
 	}

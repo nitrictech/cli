@@ -25,6 +25,10 @@ type Deployment struct {
 	ApiEndpoints map[string]string `json:"apiEndpoints,omitempty"`
 }
 
+type ProviderOpts struct {
+	Force bool
+}
+
 type Provider interface {
 	Up(log output.Progress) (*Deployment, error)
 	Down(log output.Progress) error

@@ -41,6 +41,7 @@ import (
 
 var (
 	confirmDown bool
+	force       bool
 	envFile     string
 )
 
@@ -78,7 +79,7 @@ var newStackCmd = &cobra.Command{
 		pc, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
-		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName}, map[string]string{})
+		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName}, map[string]string{}, &types.ProviderOpts{})
 		cobra.CheckErr(err)
 
 		sc, err := prov.Ask()
@@ -131,7 +132,7 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		p, err := provider.NewProvider(proj, s, envMap)
+		p, err := provider.NewProvider(proj, s, envMap, &types.ProviderOpts{Force: force})
 		cobra.CheckErr(err)
 
 		if err := p.TryPullImages(); err != nil {
@@ -200,7 +201,7 @@ nitric stack down -e aws -y`,
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s, map[string]string{})
+		p, err := provider.NewProvider(proj, s, map[string]string{}, &types.ProviderOpts{Force: true})
 		cobra.CheckErr(err)
 
 		deploy := tasklet.Runner{
@@ -235,7 +236,7 @@ nitric stack list -s aws
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s, map[string]string{})
+		p, err := provider.NewProvider(proj, s, map[string]string{}, &types.ProviderOpts{})
 		cobra.CheckErr(err)
 
 		deps, err := p.List()
@@ -251,8 +252,9 @@ func RootCommand() *cobra.Command {
 	stackCmd.AddCommand(newStackCmd)
 
 	stackCmd.AddCommand(stackUpdateCmd)
-	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
+	stackUpdateCmd.Flags().BoolVarP(&force, "force", "f", false, "force override previous deployment")
+	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(stackDeleteCmd)
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")

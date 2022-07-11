@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/strslice"
+	"github.com/docker/go-connections/nat"
 	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
@@ -53,6 +55,9 @@ func (f *Function) Start(envMap map[string]string) error {
 		AutoRemove: true,
 		Mounts:     launchOpts.Mounts,
 		LogConfig:  *f.ce.Logger(f.runCtx).Config(),
+		PortBindings: launchOpts.PortBindings,
+		SecurityOpt: []string{"seccomp:unconfined"},
+		CapAdd: strslice.StrSlice{"SYS_PTRACE"},
 	}
 
 	if goruntime.GOOS == "linux" {
@@ -65,6 +70,7 @@ func (f *Function) Start(envMap map[string]string) error {
 		fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", 50051),
 		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", 50051),
 		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
+		"CGO_ENABLED=0",
 	}
 	for k, v := range envMap {
 		env = append(env, k+"="+v)
@@ -77,6 +83,10 @@ func (f *Function) Start(envMap map[string]string) error {
 		Entrypoint: launchOpts.Entrypoint,
 		Cmd:        launchOpts.Cmd,
 		WorkingDir: launchOpts.TargetWD,
+		ExposedPorts: nat.PortSet{
+			nat.Port("2345/tcp"): {},
+		},
+		
 	}
 
 	pterm.Debug.Print(containerengine.Cli(cc, hc))

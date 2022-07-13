@@ -71,7 +71,7 @@ var runCmd = &cobra.Command{
 		}
 
 		codeAsConfig := tasklet.Runner{
-			StartMsg: "Gathering configuration from code..",
+			StartMsg: "Gathering configuration from code...",
 			Runner: func(_ output.Progress) error {
 				proj, err = codeconfig.Populate(proj, envMap)
 				return err
@@ -93,11 +93,11 @@ var runCmd = &cobra.Command{
 		cobra.CheckErr(logger.Start())
 
 		createBaseImage := tasklet.Runner{
-			StartMsg: "Creating Dev Image",
+			StartMsg: "Creating development image",
 			Runner: func(_ output.Progress) error {
 				return build.CreateBaseDev(proj)
 			},
-			StopMsg: "Created Dev Image!",
+			StopMsg: "Development image created",
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
@@ -105,7 +105,7 @@ var runCmd = &cobra.Command{
 		pool := run.NewRunProcessPool()
 
 		startLocalServices := tasklet.Runner{
-			StartMsg: "Starting Local Services",
+			StartMsg: "Starting local services",
 			Runner: func(progress output.Progress) error {
 				go func(errch chan error) {
 					errch <- ls.Start(pool)
@@ -123,12 +123,12 @@ var runCmd = &cobra.Command{
 					if ls.Running() {
 						break
 					}
-					progress.Busyf("Waiting for Local Services to be ready")
+					progress.Busyf("Waiting for local services...")
 					time.Sleep(time.Second)
 				}
 				return nil
 			},
-			StopMsg: "Started Local Services!",
+			StopMsg: "Local services running",
 		}
 		tasklet.MustRun(startLocalServices, tasklet.Opts{
 			Signal: term,
@@ -137,7 +137,7 @@ var runCmd = &cobra.Command{
 		var functions []*run.Function
 
 		startFunctions := tasklet.Runner{
-			StartMsg: "Starting Functions",
+			StartMsg: "Starting functions",
 			Runner: func(_ output.Progress) error {
 				functions, err = run.FunctionsFromHandlers(proj)
 				if err != nil {
@@ -151,11 +151,11 @@ var runCmd = &cobra.Command{
 				}
 				return nil
 			},
-			StopMsg: "Started Functions!",
+			StopMsg: "Functions running",
 		}
 		tasklet.MustRun(startFunctions, tasklet.Opts{Signal: term})
 
-		pterm.DefaultBasicText.Println("Local running, use ctrl-C to stop")
+		pterm.DefaultBasicText.Println("Application running, use ctrl-C to stop")
 
 		stackState := run.NewStackState()
 

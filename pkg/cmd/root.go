@@ -30,6 +30,8 @@ import (
 	"github.com/nitrictech/cli/pkg/output"
 )
 
+const feedbackMsg = "Thanks for trying nitric!\nIf you have feedback you can raise issues on GitHub https://github.com/nitrictech/nitric or come talk with us directly on Discord discord.com/invite/Webemece5C"
+
 const usageTemplate = `Nitric - The fastest way to build serverless apps
 
 To start with nitric, run the 'nitric new' command:
@@ -57,6 +59,10 @@ var rootCmd = &cobra.Command{
 		}
 		if output.CI {
 			pterm.DisableStyling()
+		}
+		err := promptFeedback()
+		if err != nil {
+			fmt.Println(err.Error())
 		}
 	},
 }

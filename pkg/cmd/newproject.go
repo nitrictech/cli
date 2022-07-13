@@ -59,6 +59,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		answers := struct {
 			ProjectName  string
 			TemplateName string
+			FeedbackName string
 			Handlers     string
 		}{}
 

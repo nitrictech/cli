@@ -67,12 +67,14 @@ func (s *WorkerPoolEventService) Publish(topic string, event *events.NitricEvent
 
 	fmt.Printf("Publishing event to: %s\n", targets)
 	for _, target := range targets {
-		err = target.HandleEvent(evt)
-		if err != nil {
-			// this is likely an error in the user's handler, we don't want it to bring the server down.
-			// just log and move on.
-			fmt.Println(err)
-		}
+		go func(target worker.Worker) {
+			err = target.HandleEvent(evt)
+			if err != nil {
+				// this is likely an error in the user's handler, we don't want it to bring the server down.
+				// just log and move on.
+				fmt.Println(err)
+			}
+		}(target)
 	}
 
 	return nil

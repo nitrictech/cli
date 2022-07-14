@@ -30,7 +30,7 @@ require (
 	github.com/pulumi/pulumi-aws/sdk/v4 v4.38.1
 	github.com/pulumi/pulumi-azure-native/sdk v1.66.0
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
-	github.com/pulumi/pulumi-azuread/sdk/v5 v5.25.0
+	github.com/pulumi/pulumi-azuread/sdk/v5 v5.26.0
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.2.0
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.30.0
 	github.com/pulumi/pulumi-random/sdk/v4 v4.8.0
@@ -42,7 +42,7 @@ require (
 	github.com/spf13/cobra v1.5.0
 	github.com/stretchr/testify v1.8.0
 	github.com/valyala/fasthttp v1.38.0
-	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d
+	golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
 	golang.org/x/oauth2 v0.0.0-20220630143837-2104d58473e0
 	google.golang.org/grpc v1.47.0
@@ -83,7 +83,7 @@ require (
 	github.com/asdine/storm v2.1.2+incompatible // indirect
 	github.com/ashanbrown/forbidigo v1.3.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
-	github.com/aws/aws-sdk-go v1.44.47 // indirect
+	github.com/aws/aws-sdk-go v1.44.51 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bkielbasa/cyclop v1.2.0 // indirect
@@ -282,9 +282,9 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
-	golang.org/x/net v0.0.0-20220630215102-69896b714898 // indirect
+	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
-	golang.org/x/sys v0.0.0-20220702020025-31831981b65f // indirect
+	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
@@ -292,7 +292,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	google.golang.org/api v0.86.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220630174209-ad1d48641aa7 // indirect
+	google.golang.org/genproto v0.0.0-20220708155623-50e5f4832e73 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect

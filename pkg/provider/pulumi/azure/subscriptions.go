@@ -109,7 +109,7 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 			_, err = pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, app.Name+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
 				Scope: sub.ID(),
 				WebhookEndpoint: pulumiEventgrid.EventSubscriptionWebhookEndpointArgs{
-					Url: hostUrl,
+					Url: pulumi.Sprintf("%s/x-nitric-subscription/%s", hostUrl, subName),
 					// TODO: Reduce event chattiness here and handle internally in the Azure AppService HTTP Gateway?
 					MaxEventsPerBatch:         pulumi.Int(1),
 					ActiveDirectoryAppIdOrUri: app.Sp.ClientID,

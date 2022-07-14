@@ -50,6 +50,8 @@ func (mocks) NewResource(args pulumi.MockResourceArgs) (string, resource.Propert
 		outputs["arn"] = "test-arn"
 	case "aws:s3/bucket:Bucket":
 		outputs["bucket"] = args.Name
+	default:
+		outputs["arn"] = "test-arn"
 	}
 
 	outputs["name"] = args.Name
@@ -72,8 +74,7 @@ func TestAWS(t *testing.T) {
 	s.Schedules = map[string]project.Schedule{
 		"daily": {
 			Expression: "@daily",
-			Target:     project.ScheduleTarget{Type: "topic", Name: "sales"},
-			Event:      project.ScheduleEvent{PayloadType: "?"},
+			Target:     project.ScheduleTarget{Type: "function", Name: "runner"},
 		},
 	}
 	s.Functions = map[string]project.Function{

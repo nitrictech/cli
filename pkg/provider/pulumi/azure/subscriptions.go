@@ -19,6 +19,7 @@ package azure
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -78,8 +79,9 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 				}
 
 				body := bytes.NewBuffer(jsonStr)
-
-				req, err := http.NewRequestWithContext(hCtx, "POST", hostUrl, body)
+				// Use the nitric subscription context path with a dummy topic name
+				subTarget := fmt.Sprintf("%s/x-nitric-subscription/check", hostUrl)
+				req, err := http.NewRequestWithContext(hCtx, "POST", subTarget, body)
 				if err != nil {
 					return "", err
 				}

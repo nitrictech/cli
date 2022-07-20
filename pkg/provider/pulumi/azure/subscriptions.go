@@ -19,6 +19,7 @@ package azure
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -76,7 +77,9 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 				}
 
 				body := bytes.NewBuffer(jsonStr)
-				req, err := http.NewRequestWithContext(hCtx, "POST", hostUrl, body)
+				// Use the nitric subscription context path with a dummy topic name
+				subTarget := fmt.Sprintf("%s/x-nitric-subscription/check", hostUrl)
+				req, err := http.NewRequestWithContext(hCtx, "POST", subTarget, body)
 				if err != nil {
 					return "", err
 				}
@@ -104,7 +107,7 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 			_, err = pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, app.Name+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
 				Scope: sub.ID(),
 				WebhookEndpoint: pulumiEventgrid.EventSubscriptionWebhookEndpointArgs{
-					Url: hostUrl,
+					Url: pulumi.Sprintf("%s/x-nitric-subscription/%s", hostUrl, subName),
 					// TODO: Reduce event chattiness here and handle internally in the Azure AppService HTTP Gateway?
 					MaxEventsPerBatch:         pulumi.Int(1),
 					ActiveDirectoryAppIdOrUri: app.Sp.ClientID,

@@ -18,21 +18,22 @@ package aws
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/cloudwatch"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/lambda"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/cron"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 )
 
 type ScheduleArgs struct {
 	Expression string
-	TopicArn   pulumi.StringOutput
-	TopicName  pulumi.StringInput
+	Functions  map[string]*Lambda
+	Schedule   project.Schedule
 }
 
 type Schedule struct {
@@ -45,6 +46,7 @@ type Schedule struct {
 
 func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args ScheduleArgs, opts ...pulumi.ResourceOption) (*Schedule, error) {
 	res := &Schedule{Name: name}
+	normalizedName := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
 	err := ctx.RegisterComponentResource("nitric:schedule:AwsSchedule", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -56,48 +58,48 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 	if err != nil {
 		return nil, err
 	}
-
-	res.EventRule, err = cloudwatch.NewEventRule(ctx, name+"Schedule", &cloudwatch.EventRuleArgs{
+	res.EventRule, err = cloudwatch.NewEventRule(ctx, normalizedName, &cloudwatch.EventRuleArgs{
 		ScheduleExpression: pulumi.String(awsCronValue),
-		Tags:               common.Tags(ctx, name+"Schedule"),
+		Tags:               common.Tags(ctx, name),
 	}, opts...)
+
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "error creating CloudWatch EventRule")
 	}
 
-	res.EventTarget, err = cloudwatch.NewEventTarget(ctx, name+"Target", &cloudwatch.EventTargetArgs{
-		Rule: res.EventRule.Name,
-		Arn:  args.TopicArn,
-	}, opts...)
-	if err != nil {
-		return nil, err
-	}
+	var targetArn pulumi.StringInput = nil
+	switch args.Schedule.Target.Type {
+	case "function":
+		if f, ok := args.Functions[args.Schedule.Target.Name]; ok {
+			targetArn = f.Function.Arn
+			// give the event rule created above permission to access this lambda
 
-	pdocJSON := args.TopicArn.ApplyT(func(arn string) (string, error) {
-		pdoc, err := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
-			PolicyId: to.StringPtr("__default_policy_ID"),
-			Statements: []iam.GetPolicyDocumentStatement{
-				{
-					Sid:     to.StringPtr("__default_statement_ID"),
-					Effect:  to.StringPtr("Allow"),
-					Actions: []string{"SNS:Publish"},
-					Principals: []iam.GetPolicyDocumentStatementPrincipal{
-						{Type: "Service", Identifiers: []string{"events.amazonaws.com"}},
-					},
-					Resources: []string{arn},
-				},
-			},
-		})
-		if err != nil {
-			return "", err
+			_, err := lambda.NewPermission(ctx, normalizedName+"LambdaPermission", &lambda.PermissionArgs{
+				Action:    pulumi.String("lambda:InvokeFunction"),
+				Principal: pulumi.String("events.amazonaws.com"),
+				SourceArn: res.EventRule.Arn,
+				Function:  f.Function.Name,
+			})
+
+			if err != nil {
+				return nil, err
+			}
 		}
-		return pdoc.Json, nil
-	}).(pulumi.StringInput)
+	case "topic":
+		return nil, fmt.Errorf("schedule to topic target support has been deprecated and removed")
+	}
 
-	_, err = sns.NewTopicPolicy(ctx, fmt.Sprintf("%sTarget%vPolicy", name, args.TopicName), &sns.TopicPolicyArgs{
-		Arn:    args.TopicArn,
-		Policy: pdocJSON,
+	if targetArn == nil {
+		return nil, fmt.Errorf("unable to resolve schedule target")
+	}
+
+	res.EventTarget, err = cloudwatch.NewEventTarget(ctx, normalizedName, &cloudwatch.EventTargetArgs{
+		Rule: res.EventRule.Name,
+		Arn:  targetArn,
 	}, opts...)
+	if err != nil {
+		return nil, err
+	}
 
 	return res, err
 }

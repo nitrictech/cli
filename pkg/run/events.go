@@ -66,6 +66,7 @@ func (s *WorkerPoolEventService) Publish(topic string, event *events.NitricEvent
 	})
 
 	fmt.Printf("Publishing to %s topic, %d subscriber(s)\n", topic, len(targets))
+
 	for _, target := range targets {
 		go func(target worker.Worker) {
 			err = target.HandleEvent(evt)

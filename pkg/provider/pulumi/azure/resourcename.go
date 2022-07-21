@@ -96,6 +96,7 @@ func cleanPart(p string, rt ResouceType) string {
 	if !rt.AllowHyphen {
 		r = strings.ReplaceAll(r, "-", "")
 	}
+
 	return r
 }
 
@@ -116,9 +117,11 @@ func resourceName(ctx *pulumi.Context, name string, rt ResouceType) string {
 
 	maxLen := rt.MaxLen - autoNameLength
 	abbrLen := len(rt.Abbreviation)
+
 	if rt.AllowHyphen {
 		abbrLen += 1
 	}
+
 	if rt.UseName {
 		parts = []string{
 			utils.StringTrunc(cleanPart(name, rt), maxLen-abbrLen),

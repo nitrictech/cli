@@ -60,15 +60,18 @@ var (
 
 func New(p *project.Project, sc *stack.Config, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
+
 	err := pv.Run()
 	if err != nil {
 		if strings.Contains(err.Error(), "executable file not found") {
 			return nil, errors.WithMessage(err, "Please install pulumi from https://www.pulumi.com/docs/get-started/install/")
 		}
+
 		return nil, err
 	}
 
 	var prov common.PulumiProvider
+
 	switch sc.Provider {
 	case stack.Aws:
 		prov = aws.New(p, sc, envMap)
@@ -127,6 +130,7 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 
 	for _, plug := range p.prov.Plugins() {
 		log.Busyf("Installing Pulumi plugin %s:%s", plug.Name, plug.Version)
+
 		err = s.Workspace().InstallPlugin(ctx, plug.Name, plug.Version)
 		if err != nil {
 			return nil, errors.WithMessage(err, "InstallPlugin "+plug.String())
@@ -139,10 +143,12 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	}
 
 	log.Busyf("Refreshing the Pulumi stack")
+
 	_, err = s.Refresh(ctx)
 	if err != nil && strings.Contains(err.Error(), "[409] Conflict") {
 		return &s, errors.WithMessage(fmt.Errorf("Stack conflict occurred. If you are sure an update is not in progress, use --force to override the stack state."), "Refresh")
 	}
+
 	return &s, errors.WithMessage(err, "Refresh")
 }
 
@@ -153,10 +159,11 @@ func (p *pulumiDeployment) Up(log output.Progress) (*types.Deployment, error) {
 	}
 
 	res, err := s.Up(context.Background(), updateLoggingOpts(log)...)
-	defer p.prov.CleanUp()
 	if err != nil {
 		return nil, errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
 	}
+
+	defer p.prov.CleanUp()
 
 	d := &types.Deployment{
 		ApiEndpoints: map[string]string{},
@@ -167,6 +174,7 @@ func (p *pulumiDeployment) Up(log output.Progress) (*types.Deployment, error) {
 			d.ApiEndpoints[strings.TrimPrefix(k, "api:")] = fmt.Sprint(v.Value)
 		}
 	}
+
 	return d, nil
 }
 
@@ -191,6 +199,7 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 
 	stackName := p.proj.Name + "-" + p.sc.Name
 	result := []stackSummary{}
+
 	for _, st := range sl {
 		if strings.HasPrefix(st.Name, stackName) {
 			var stackListOutput = stackSummary{
@@ -201,9 +210,11 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 				ResourceCount:    st.ResourceCount,
 				URL:              st.URL,
 			}
+
 			result = append(result, stackListOutput)
 		}
 	}
+
 	return result, nil
 }
 
@@ -217,5 +228,6 @@ func (a *pulumiDeployment) Down(log output.Progress) error {
 	if err != nil {
 		return errors.WithMessage(err, res.Summary.Message)
 	}
+
 	return nil
 }

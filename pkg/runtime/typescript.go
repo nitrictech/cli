@@ -62,22 +62,25 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	}
 
 	buildstage.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "typescript", "@vercel/ncc"}})
+
 	if err := buildstage.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"}); err != nil {
 		return err
 	}
+
 	buildstage.Run(dockerfile.RunOptions{Command: []string{"yarn", "import", "||", "echo", "Lockfile already exists"}})
 	buildstage.Run(dockerfile.RunOptions{Command: []string{
 		"set", "-ex;",
 		"yarn", "install", "--production", "--frozen-lockfile", "--cache-folder", "/tmp/.cache;",
 		"rm", "-rf", "/tmp/.cache;"}})
+
 	err = buildstage.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
 	if err != nil {
 		return err
 	}
 
 	tsconfig := `'{"compilerOptions":{"esModuleInterop":true,"target":"es2015","moduleResolution":"node"}}'`
-	buildstage.Run(dockerfile.RunOptions{Command: []string{"test", "-f", "tsconfig.json", "||", "echo", tsconfig, ">", "tsconfig.json"}})
 
+	buildstage.Run(dockerfile.RunOptions{Command: []string{"test", "-f", "tsconfig.json", "||", "echo", tsconfig, ">", "tsconfig.json"}})
 	buildstage.Run(dockerfile.RunOptions{Command: []string{"ncc", "build", filepath.ToSlash(t.handler), "-m", "--v8-cache", "-o", "lib/"}})
 
 	// start final stage
@@ -86,7 +89,6 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 		As:     "final",
 		Ignore: javascriptIgnoreList,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -94,9 +96,11 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	if err := con.Copy(dockerfile.CopyOptions{From: buildstage.Name(), Src: "package.json", Dest: "package.json"}); err != nil {
 		return err
 	}
+
 	if err := con.Copy(dockerfile.CopyOptions{From: buildstage.Name(), Src: "node_modules/", Dest: "node_modules/"}); err != nil {
 		return err
 	}
+
 	if err := con.Copy(dockerfile.CopyOptions{From: buildstage.Name(), Src: "lib/", Dest: "/"}); err != nil {
 		return err
 	}
@@ -108,12 +112,12 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	})
 
 	lines, err := css.Compile(con.Name(), nil)
-
 	if err != nil {
 		return err
 	}
 
 	_, err = w.Write([]byte(strings.Join(lines, "\n")))
+
 	return err
 }
 
@@ -133,6 +137,7 @@ func (t *typescript) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+
 	return err
 }
 

@@ -90,6 +90,7 @@ func (a *awsProvider) Ask() (*stack.Config, error) {
 		Message: "select the region",
 		Options: a.SupportedRegions(),
 	}, &sc.Region)
+
 	return sc, err
 }
 
@@ -121,15 +122,18 @@ func (a *awsProvider) SupportedRegions() []string {
 
 func (a *awsProvider) Validate() error {
 	found := false
+
 	for _, r := range a.SupportedRegions() {
 		if r == a.sc.Region {
 			found = true
 			break
 		}
 	}
+
 	if !found {
 		return utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider))
 	}
+
 	return nil
 }
 
@@ -144,6 +148,7 @@ func (a *awsProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 func md5Hash(b []byte) string {
 	hasher := md5.New()
 	hasher.Write(b)
+
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
@@ -162,6 +167,7 @@ func (a *awsProvider) TryPullImages() error {
 
 func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
+
 	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
@@ -258,6 +264,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			if !ok {
 				return fmt.Errorf("schedule %s does not have a topic %s", k, s.Target.Name)
 			}
+
 			a.schedules[k], err = a.newSchedule(ctx, k, ScheduleArgs{
 				Expression: s.Expression,
 				TopicArn:   topic.Arn,
@@ -297,10 +304,10 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 				Username:        pulumi.String(authToken.UserName),
 				Password:        pulumi.String(authToken.Password),
 				TempDir:         a.tmpDir})
-
 			if err != nil {
 				return errors.WithMessage(err, "function image tag "+c.Unit().Name)
 			}
+
 			a.images[c.Unit().Name] = image
 		}
 
@@ -335,6 +342,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			_ = ctx.Log.Debug("policy has no actions "+fmt.Sprint(p), &pulumi.LogArgs{Ephemeral: true})
 			continue
 		}
+
 		policyName, err := policyResourceName(p)
 		if err != nil {
 			return err

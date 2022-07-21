@@ -72,6 +72,7 @@ func NitricConfigDir() string {
 
 		return filepath.Join(dirname, ".config", "nitric")
 	}
+
 	return homeDir()
 }
 
@@ -98,7 +99,9 @@ func NewNitricLogFile(stackPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	tf.Close()
+
 	return tf.Name(), nil
 }
 
@@ -107,5 +110,6 @@ func GoPath() (string, error) {
 	if goPath == "" {
 		goPath = build.Default.GOPATH
 	}
+
 	return goPath, nil
 }

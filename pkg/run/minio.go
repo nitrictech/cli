@@ -129,6 +129,7 @@ func (m *MinioServer) Start() error {
 	if err != nil {
 		return err
 	}
+
 	m.cid = cID
 	m.apiPort = int(port)
 
@@ -143,6 +144,7 @@ func (m *MinioServer) GetApiPort() int {
 
 func (m *MinioServer) Stop() error {
 	timeout := time.Second * 5
+
 	return m.ce.Stop(m.cid, &timeout)
 }
 

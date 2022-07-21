@@ -48,6 +48,7 @@ type Lambda struct {
 
 func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulumi.ResourceOption) (*Lambda, error) {
 	res := &Lambda{Name: name}
+
 	err := ctx.RegisterComponentResource("nitric:func:AWSLambda", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -131,6 +132,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	}
 
 	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
+
 	res.Function, err = awslambda.NewFunction(ctx, name, &awslambda.FunctionArgs{
 		ImageUri:    args.DockerImage.ImageName,
 		MemorySize:  pulumi.IntPtr(memory),

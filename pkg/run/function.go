@@ -66,6 +66,7 @@ func (f *Function) Start(envMap map[string]string) error {
 		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", 50051),
 		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),
 	}
+
 	for k, v := range envMap {
 		env = append(env, k+"="+v)
 	}
@@ -120,6 +121,7 @@ func newFunction(opts FunctionOpts) (*Function, error) {
 
 func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
 	funcs := make([]*Function, 0, len(p.Functions))
+
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return nil, err

@@ -57,5 +57,6 @@ func IntValueOrDefault(v, def int) int {
 	if v != 0 {
 		return v
 	}
+
 	return def
 }

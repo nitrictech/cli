@@ -37,16 +37,19 @@ func FromConfig(p *Config) (*Project, error) {
 
 	for _, g := range p.Handlers {
 		maybeFile := filepath.Join(s.Dir, g)
+
 		if _, err := os.Stat(maybeFile); err != nil {
 			fs, err := utils.GlobInDir(stackPath, g)
 			if err != nil {
 				return nil, err
 			}
+
 			for _, f := range fs {
 				fn, err := FunctionFromHandler(f, s.Dir)
 				if err != nil {
 					return nil, err
 				}
+
 				s.Functions[fn.Name] = fn
 			}
 		} else {
@@ -54,6 +57,7 @@ func FromConfig(p *Config) (*Project, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			s.Functions[fn.Name] = fn
 		}
 	}
@@ -67,10 +71,12 @@ func FromConfig(p *Config) (*Project, error) {
 
 func FunctionFromHandler(h, stackDir string) (Function, error) {
 	pterm.Debug.Println("Using function from " + h)
+
 	rt, err := runtime.NewRunTimeFromHandler(h)
 	if err != nil {
 		return Function{}, err
 	}
+
 	return Function{
 		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
 		Handler:     h,

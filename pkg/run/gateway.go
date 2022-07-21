@@ -69,14 +69,12 @@ func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
 		Http:   httpReq,
 		Filter: apiWorkerFilter(apiName),
 	})
-
 	if err != nil {
 		ctx.Error("No workers found for provided API route", 404)
 		return
 	}
 
 	resp, err := worker.HandleHttpRequest(httpReq)
-
 	if err != nil {
 		ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
 		return
@@ -144,6 +142,7 @@ func (s *BaseHttpGateway) Stop() error {
 	if s.server != nil {
 		return s.server.Shutdown()
 	}
+
 	return nil
 }
 

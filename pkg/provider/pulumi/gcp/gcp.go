@@ -26,8 +26,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 
+	nativestorage "cloud.google.com/go/storage"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/docker/docker/api/types"
 	"github.com/getkin/kin-openapi/openapi2conv"
@@ -206,16 +208,32 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 	return autoStack.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: g.gcpProject})
 }
 
-func (g *gcpProvider) TryPullImages() error {
+func (g *gcpProvider) ReadPulumiStack(ctx context.Context, backendURL string) (*common.PulumiStack, error) {
+	sc, err := nativestorage.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer sc.Close()
+
+	name := path.Join(".pulumi", "stacks", g.proj.Name+"-"+g.sc.Name+".json")
+
+	r, err := sc.Bucket(strings.ReplaceAll(backendURL, "gs://", "")).Object(name).NewReader(ctx)
+	if err != nil {
+		if errors.Is(err, nativestorage.ErrObjectNotExist) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return common.StackFromReader(r)
+}
+
+func (g *gcpProvider) TryPullImage(ctx context.Context, imageURL string) error {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return err
-	}
-
-	if proj, ok := g.sc.Extra["project"]; !ok || proj == nil {
-		return fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider)
-	} else {
-		g.gcpProject = proj.(string)
 	}
 
 	if err := g.setToken(); err != nil {
@@ -235,16 +253,7 @@ func (g *gcpProvider) TryPullImages() error {
 
 	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
 
-	for _, c := range g.proj.Computes() {
-		image := fmt.Sprintf("gcr.io/%s/%s:latest", g.gcpProject, c.ImageTagName(g.proj, g.sc.Provider))
-
-		err = ce.ImagePull(image, types.ImagePullOptions{RegistryAuth: authStr})
-		if err != nil {
-			return errors.WithMessage(err, "imagePull")
-		}
-	}
-
-	return nil
+	return ce.ImagePull(imageURL, types.ImagePullOptions{RegistryAuth: authStr})
 }
 
 func (g *gcpProvider) setToken() error {

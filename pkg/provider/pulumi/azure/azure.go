@@ -195,8 +195,12 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 	return nil
 }
 
-func (a *azureProvider) TryPullImages() error {
-	return nil
+func (a *azureProvider) ReadPulumiStack(ctx context.Context, backendURL string) (*common.PulumiStack, error) {
+	return nil, utils.NewNotSupportedErr("azure ReadPulumiStack()")
+}
+
+func (a *azureProvider) TryPullImage(ctx context.Context, imageURL string) error {
+	return utils.NewNotSupportedErr("azure TryPullImage()")
 }
 
 func (a *azureProvider) Deploy(ctx *pulumi.Context) error {

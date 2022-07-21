@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/md5"
 	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -28,6 +29,11 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	nativeecr "github.com/aws/aws-sdk-go/service/ecr"
+	dockertypes "github.com/docker/docker/api/types"
+	"github.com/moby/moby/api/types"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
@@ -40,6 +46,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
@@ -161,8 +168,52 @@ func policyResourceName(policy *v1.PolicyResource) (string, error) {
 	return md5Hash(policyDoc), nil
 }
 
-func (a *awsProvider) TryPullImages() error {
-	return nil
+func (a *awsProvider) ReadPulumiStack(ctx context.Context, backendURL string) (*common.PulumiStack, error) {
+	return nil, utils.NewNotSupportedErr("aws ReadPulumiStack()")
+}
+
+func (a *awsProvider) TryPullImage(ctx context.Context, imageURL string) error {
+	ce, err := containerengine.Discover()
+	if err != nil {
+		return err
+	}
+
+	sess, err := session.NewSession(&aws.Config{Region: &a.sc.Region})
+	if err != nil {
+		return errors.WithMessage(err, "TryPullImage: NewSession")
+	}
+
+	svc := nativeecr.New(sess)
+	input := &nativeecr.GetAuthorizationTokenInput{}
+
+	result, err := svc.GetAuthorizationToken(input)
+	if err != nil {
+		return errors.WithMessage(err, "TryPullImage: GetAuthorizationToken")
+	}
+
+	authToken := result.AuthorizationData[0]
+
+	b, err := base64.URLEncoding.DecodeString(*authToken.AuthorizationToken)
+	if err != nil {
+		return errors.WithMessage(err, "TryPullImage: Decode")
+	}
+
+	atSplit := strings.Split(string(b), ":")
+
+	authConfig := types.AuthConfig{
+		Username:      atSplit[0],
+		Password:      atSplit[1],
+		ServerAddress: *authToken.ProxyEndpoint,
+	}
+
+	encodedJSON, err := json.Marshal(authConfig)
+	if err != nil {
+		return errors.WithMessage(err, "TryPullImage: json.Marshal auth")
+	}
+
+	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
+
+	return ce.ImagePull(imageURL, dockertypes.ImagePullOptions{RegistryAuth: authStr})
 }
 
 func (a *awsProvider) Deploy(ctx *pulumi.Context) error {

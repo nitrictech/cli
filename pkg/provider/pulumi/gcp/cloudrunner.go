@@ -48,6 +48,8 @@ type CloudRunner struct {
 	Url     pulumi.StringInput
 }
 
+var defaultConcurrency = 300
+
 func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *CloudRunnerArgs, opts ...pulumi.ResourceOption) (*CloudRunner, error) {
 	res := &CloudRunner{
 		Name: name,
@@ -90,7 +92,8 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				},
 			},
 			Spec: cloudrun.ServiceTemplateSpecArgs{
-				ServiceAccountName: args.ServiceAccount.Email,
+				ServiceAccountName:   args.ServiceAccount.Email,
+				ContainerConcurrency: pulumi.Int(defaultConcurrency),
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
 						Envs:  env,

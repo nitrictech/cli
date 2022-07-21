@@ -24,15 +24,18 @@ func StringTrunc(s string, max int) string {
 	if len(s) <= max {
 		return s
 	}
+
 	return s[:max]
 }
 
 func JoinCamelCase(ss []string) string {
 	res := ss[0]
+
 	for i := 1; i < len(ss); i++ {
 		word := ss[i]
 		res += string(bytes.ToUpper([]byte{word[0]}))
 		res += word[1:]
 	}
+
 	return res
 }

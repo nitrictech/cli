@@ -52,6 +52,7 @@ type nameArnPair struct {
 
 func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts ...pulumi.ResourceOption) (*ApiGateway, error) {
 	res := &ApiGateway{Name: name}
+
 	err := ctx.RegisterComponentResource("nitric:api:AwsApiGateway", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -104,6 +105,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		nameArnPairs = append(nameArnPairs, pulumi.All(k, v.Function.InvokeArn).ApplyT(func(args []interface{}) nameArnPair {
 			name := args[0].(string)
 			arn := args[1].(string)
+
 			return nameArnPair{
 				name:      name,
 				invokeArn: arn,
@@ -113,6 +115,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 	doc := pulumi.All(nameArnPairs...).ApplyT(func(pairs []interface{}) (string, error) {
 		naps := make(map[string]string)
+
 		for _, p := range pairs {
 			if pair, ok := p.(nameArnPair); ok {
 				naps[pair.name] = pair.invokeArn
@@ -140,10 +143,6 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 		return string(b), nil
 	}).(pulumi.StringOutput)
-
-	if err != nil {
-		return nil, err
-	}
 
 	res.Api, err = apigatewayv2.NewApi(ctx, name, &apigatewayv2.ApiArgs{
 		Body:         doc,
@@ -190,21 +189,26 @@ func awsOperation(op *openapi3.Operation, funcs map[string]string) *openapi3.Ope
 	if op == nil {
 		return nil
 	}
+
 	name := ""
+
 	if v, ok := op.Extensions["x-nitric-target"]; ok {
 		targetMap, isMap := v.(map[string]string)
 		if isMap {
 			name = targetMap["name"]
 		}
 	}
+
 	if name == "" {
 		return nil
 	}
+
 	if _, ok := funcs[name]; !ok {
 		return nil
 	}
 
 	arn := funcs[name]
+
 	op.Extensions["x-amazon-apigateway-integration"] = map[string]string{
 		"type":                 "aws_proxy",
 		"httpMethod":           "POST",
@@ -213,5 +217,6 @@ func awsOperation(op *openapi3.Operation, funcs map[string]string) *openapi3.Ope
 		// Need to determine if the body of the..
 		"uri": arn,
 	}
+
 	return op
 }

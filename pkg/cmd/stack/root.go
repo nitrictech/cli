@@ -262,5 +262,6 @@ func RootCommand() *cobra.Command {
 
 	stackCmd.AddCommand(stackListCmd)
 	cobra.CheckErr(stack.AddOptions(stackListCmd, false))
+
 	return stackCmd
 }

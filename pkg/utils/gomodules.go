@@ -35,13 +35,16 @@ func GoModule(searchPath string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+
 		defer f.Close()
 
 		scanner := bufio.NewScanner(f)
+
 		for scanner.Scan() {
 			cols := strings.Split(scanner.Text(), " ")
 			return cols[1], nil
 		}
 	}
+
 	return "", errors.New("no valid go.mod found")
 }

@@ -127,6 +127,7 @@ func actionsToAwsActions(actions []v1.Action) []string {
 	for _, a := range actions {
 		awsActions = append(awsActions, awsActionsMap[a]...)
 	}
+
 	return awsActions
 }
 
@@ -173,6 +174,7 @@ func roleForPrincipal(resource *v1.Resource, principals PrincipalMap) (*iam.Role
 
 func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulumi.ResourceOption) (*Policy, error) {
 	res := &Policy{Name: name, RolePolicies: make([]*iam.RolePolicy, 0)}
+
 	err := ctx.RegisterComponentResource("nitric:policy:AWSPolicyRoles", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -183,6 +185,7 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 
 	// Get Targets
 	targetArns := make([]interface{}, 0, len(args.Policy.Resources))
+
 	for _, princ := range args.Policy.Resources {
 		if arn, err := arnForResource(princ, args.Resources); err == nil {
 			targetArns = append(targetArns, arn...)
@@ -194,6 +197,7 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 	// Get principal roles
 	// We're collecting roles here to ensure all defined principals are valid before proceeding
 	principalRoles := make(map[string]*iam.Role)
+
 	for _, princ := range args.Policy.Principals {
 		if role, err := roleForPrincipal(princ, args.Principals); err == nil {
 			// TODO: Eventually we'll need to combine resource type with principal
@@ -211,6 +215,7 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 
 	policyJson := pulumi.All(targetArns...).ApplyT(func(args []interface{}) (string, error) {
 		arns := make([]string, 0, len(args))
+
 		for _, iArn := range args {
 			arn, ok := iArn.(string)
 			if !ok {
@@ -230,27 +235,23 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 				},
 			},
 		})
-
 		if err != nil {
 			return "", err
 		}
 
 		return string(jsonb), nil
 	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating policy document")
-	}
 
 	// create role policy for each role
 	for k, r := range principalRoles {
 		// Role policies require a unique name
 		// Use a hash of the policy document to help create a unique name
 		policyName := fmt.Sprintf("%s-%s", k, md5Hash(serialPolicy))
+
 		rolePol, err := iam.NewRolePolicy(ctx, policyName, &iam.RolePolicyArgs{
 			Role:   r.ID(),
 			Policy: policyJson,
 		}, pulumi.Parent(res))
-
 		if err != nil {
 			return nil, err
 		}

@@ -63,6 +63,7 @@ var gcpListActions []string = []string{
 	"resourcemanager.projects.get",
 	"secretmanager.secrets.list",
 }
+
 var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_BucketFileList: {
 		"storage.objects.list",
@@ -196,6 +197,7 @@ func actionsToGcpActions(actions []v1.Action) []string {
 
 func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulumi.ResourceOption) (*Policy, error) {
 	res := &Policy{Name: name, RolePolicies: make([]*projects.IAMMember, 0)}
+
 	err := ctx.RegisterComponentResource("nitric:func:GCPPolicy", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -216,6 +218,7 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 
 	for _, principal := range args.Policy.Principals {
 		sa := args.Principals[v1.ResourceType_Function][principal.Name]
+
 		for _, resource := range args.Policy.Resources {
 			memberName := fmt.Sprintf("%s-%s", principal.Name, resource.Name)
 			memberId := pulumi.Sprintf("serviceAccount:%s", sa.Email)
@@ -226,7 +229,6 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 				Project: args.ProjectID,
 				Role:    listRolePolicy.Name,
 			}, pulumi.Parent(res))
-
 			if err != nil {
 				return nil, err
 			}
@@ -240,7 +242,6 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 					Member: memberId,
 					Role:   rolePolicy.Name,
 				}, pulumi.Parent(res))
-
 				if err != nil {
 					return nil, err
 				}
@@ -276,12 +277,14 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 				}
 
 				needSubConsume := false
+
 				for _, act := range args.Policy.Actions {
 					if act == v1.Action_QueueReceive {
 						needSubConsume = true
 						break
 					}
 				}
+
 				if needSubConsume {
 					subRolePolicy, err := newCustomRole(ctx, name+"subscription", []string{"pubsub.subscriptions.consume"}, pulumi.Parent(res))
 					if err != nil {
@@ -306,7 +309,6 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 					Member: memberId,
 					Role:   rolePolicy.Name,
 				}, pulumi.Parent(res))
-
 				if err != nil {
 					return nil, err
 				}
@@ -319,7 +321,6 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 					Member:   memberId,
 					Role:     rolePolicy.Name,
 				}, pulumi.Parent(res))
-
 				if err != nil {
 					return nil, err
 				}

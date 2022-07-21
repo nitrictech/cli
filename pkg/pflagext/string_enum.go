@@ -29,6 +29,7 @@ type stringEnum struct {
 // NewStringEnumVar give a list of allowed flag parameters, where the second argument is the default
 func NewStringEnumVar(value *string, allowed []string, d string) *stringEnum {
 	*value = d
+
 	return &stringEnum{
 		Allowed: allowed,
 		ValueP:  value,
@@ -46,12 +47,16 @@ func (e *stringEnum) Set(p string) error {
 				return true
 			}
 		}
+
 		return false
 	}
+
 	if !isIncluded(e.Allowed, p) {
 		return fmt.Errorf("%s is not included in %s", p, strings.Join(e.Allowed, ","))
 	}
+
 	*e.ValueP = p
+
 	return nil
 }
 

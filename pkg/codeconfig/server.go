@@ -57,11 +57,10 @@ func (s *Server) TriggerStream(stream pb.FaasService_TriggerStreamServer) error 
 		return s.function.AddScheduleHandler(w.Schedule)
 	case *pb.InitRequest_Subscription:
 		return s.function.AddSubscriptionHandler(w.Subscription)
-	default:
-		// treat as normal function worker
-		// XXX: No-op for now. This can be handled exclusively at runtime
 	}
 
+	// treat as normal function worker
+	// XXX: No-op for now. This can be handled exclusively at runtime
 	// Close the stream, once we've received the InitRequest
 	return nil
 }

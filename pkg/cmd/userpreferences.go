@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/utils"
 )
@@ -53,15 +52,19 @@ func readUserPreferences() (*UserPreferences, error) {
 			return nil, err
 		}
 	}
+
 	contents, err := os.ReadFile(utils.NitricPreferencesPath())
 	if err != nil {
 		return nil, err
 	}
+
 	var up *UserPreferences
+
 	err = json.Unmarshal(contents, &up)
 	if err != nil {
 		return nil, err
 	}
+
 	return up, nil
 }
 
@@ -71,23 +74,28 @@ func (up *UserPreferences) WriteToFile() error {
 		return err
 	}
 	defer file.Close()
+
 	contents, err := json.Marshal(up)
 	if err != nil {
 		return err
 	}
+
 	_, err = file.WriteString(string(contents))
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func (f *FeedbackPreferences) hasBeenWeek() bool {
 	weekAgo := time.Now().AddDate(0, 0, -7)
+
 	lastPrompt, err := time.Parse(time.RFC822, f.LastPrompt)
 	if err != nil {
 		return false
 	}
+
 	return lastPrompt.Before(weekAgo)
 }
 
@@ -96,9 +104,12 @@ func promptFeedback() error {
 	if err != nil {
 		return err
 	}
+
 	if up.Feedback.AskFeedback && up.Feedback.hasBeenWeek() {
 		up.Feedback.LastPrompt = time.Now().Format(time.RFC822)
+
 		fmt.Println(feedbackMsg)
+
 		feedbackResp := struct{ FeedbackName string }{}
 
 		err := survey.Ask([]*survey.Question{{
@@ -109,14 +120,19 @@ func promptFeedback() error {
 				Default: "No",
 			},
 		}}, &feedbackResp)
-		cobra.CheckErr(err)
+		if err != nil {
+			return err
+		}
+
 		if feedbackResp.FeedbackName == "No" {
 			up.Feedback.AskFeedback = false
 		}
+
 		err = up.WriteToFile()
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

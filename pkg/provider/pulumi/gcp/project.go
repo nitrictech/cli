@@ -63,12 +63,14 @@ func newProject(ctx *pulumi.Context, name string, args *ProjectArgs, opts ...pul
 		Name:     name,
 		Services: []*projects.Service{},
 	}
+
 	err := ctx.RegisterComponentResource("nitric:project:GcpProject", name, res, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	deps := []pulumi.Resource{}
+
 	for _, serv := range requiredServices {
 		s, err := projects.NewService(ctx, serv+"-enabled", &projects.ServiceArgs{
 			DisableDependentServices: pulumi.Bool(true),
@@ -79,6 +81,7 @@ func newProject(ctx *pulumi.Context, name string, args *ProjectArgs, opts ...pul
 		if err != nil {
 			return nil, err
 		}
+
 		res.Services = append(res.Services, s)
 		deps = append(deps, s)
 	}

@@ -38,24 +38,29 @@ func Create(s *project.Project, t *stack.Config) error {
 	if err != nil {
 		return err
 	}
+
 	for _, f := range s.Functions {
 		fh, err := dynamicDockerfile(s.Dir, f.Name)
 		if err != nil {
 			return err
 		}
+
 		defer func() { os.Remove(fh.Name()) }()
 
 		rt, err := runtime.NewRunTimeFromHandler(f.Handler)
 		if err != nil {
 			return err
 		}
+
 		err = rt.FunctionDockerfile(s.Dir, f.VersionString(s), t.Provider, fh)
 		if err != nil {
 			return err
 		}
+
 		fh.Close()
 
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
+
 		err = cr.Build(filepath.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs, rt.BuildIgnore())
 		if err != nil {
 			return err
@@ -64,11 +69,13 @@ func Create(s *project.Project, t *stack.Config) error {
 
 	for _, c := range s.Containers {
 		buildArgs := map[string]string{"PROVIDER": t.Provider}
+
 		err := cr.Build(filepath.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs, []string{})
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -78,13 +85,17 @@ func CreateBaseDev(s *project.Project) error {
 	if err != nil {
 		return err
 	}
+
 	imagesToBuild := map[string]string{}
+
 	for _, f := range s.Functions {
 		rt, err := runtime.NewRunTimeFromHandler(f.Handler)
 		if err != nil {
 			return err
 		}
+
 		lang := strings.Replace(filepath.Ext(f.Handler), ".", "", 1)
+
 		_, ok := imagesToBuild[lang]
 		if ok {
 			continue
@@ -107,6 +118,7 @@ func CreateBaseDev(s *project.Project) error {
 		if err := ce.Build(filepath.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}, rt.BuildIgnore()); err != nil {
 			return err
 		}
+
 		imagesToBuild[lang] = rt.DevImageName()
 	}
 
@@ -118,7 +130,9 @@ func List(s *project.Project) ([]containerengine.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	images := []containerengine.Image{}
+
 	for _, f := range s.Functions {
 		imgs, err := cr.ListImages(s.Name, f.Name)
 		if err != nil {
@@ -127,6 +141,7 @@ func List(s *project.Project) ([]containerengine.Image, error) {
 			images = append(images, imgs...)
 		}
 	}
+
 	for _, c := range s.Containers {
 		imgs, err := cr.ListImages(s.Name, c.Name)
 		if err != nil {
@@ -135,5 +150,6 @@ func List(s *project.Project) ([]containerengine.Image, error) {
 			images = append(images, imgs...)
 		}
 	}
+
 	return images, nil
 }

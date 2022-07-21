@@ -207,10 +207,6 @@ nitric stack down -e aws -y`,
 		deploy := tasklet.Runner{
 			StartMsg: "Deleting..",
 			Runner: func(progress output.Progress) error {
-				if err := p.TryPullImages(); err != nil {
-					pterm.Info.Print(err)
-				}
-
 				return p.Down(progress)
 			},
 			StopMsg: "Stack",

@@ -135,17 +135,7 @@ func (p *pulumiDeployment) TryPullImages() error {
 			continue
 		}
 
-		obj, ok := r.Outputs["imageUri"]
-		if !ok {
-			continue
-		}
-
-		imageURI, ok := obj.(string)
-		if !ok || imageURI == "" {
-			continue
-		}
-
-		err = p.prov.TryPullImage(context.TODO(), imageURI)
+		err = p.prov.TryPullImage(context.TODO(), r.Outputs["imageUri"].(string))
 		if err != nil {
 			merr.Push(err)
 		}

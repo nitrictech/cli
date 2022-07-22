@@ -154,7 +154,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 			if ok {
 				_, err = pubsub.NewSubscription(ctx, name+"-"+t+"-sub", &pubsub.SubscriptionArgs{
 					Topic:              topic.Name,
-					AckDeadlineSeconds: pulumi.Int(0),
+					AckDeadlineSeconds: pulumi.Int(300),
 					RetryPolicy: pubsub.SubscriptionRetryPolicyArgs{
 						MinimumBackoff: pulumi.String("15s"),
 						MaximumBackoff: pulumi.String("600s"),

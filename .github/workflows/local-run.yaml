@@ -46,3 +46,10 @@ jobs:
         run: |
           cd ${{ github.workspace }}/test-app
           make test
+
+      - name: Archive logfile
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: nitric-run-logs
+          path: ${{ github.workspace }}/test-app/.nitric/*.log

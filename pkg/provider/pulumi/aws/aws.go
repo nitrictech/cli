@@ -298,9 +298,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
-	secrets := map[string]*secretsmanager.Secret{}
 	for k := range a.proj.Secrets {
-		secrets[k], err = secretsmanager.NewSecret(ctx, k, &secretsmanager.SecretArgs{
+		a.secrets[k], err = secretsmanager.NewSecret(ctx, k, &secretsmanager.SecretArgs{
 			Name: pulumi.StringPtr(k),
 			Tags: common.Tags(ctx, k),
 		})

@@ -26,7 +26,7 @@ jobs:
       - name: checkout the test app
         uses: actions/checkout@v3
         with:
-          repository: asalkeld/test-app
+          repository: nitrictech/test-app
           path: test-app
 
       - name: Setup Go

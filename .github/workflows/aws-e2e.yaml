@@ -30,9 +30,9 @@ jobs:
           path: test-app
 
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.18.4
+          go-version: 1.18
 
       - name: Build Nitric
         run: |
@@ -68,9 +68,9 @@ jobs:
     needs: e2e-aws
     steps:
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.18.4
+          go-version: 1.18
 
       - name: Build Nitric
         run: |

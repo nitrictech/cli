@@ -14,7 +14,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18.4
+          go-version: 1.18
       - name: Update dependencies
         run: |
           make go-mod-update

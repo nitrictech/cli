@@ -300,7 +300,6 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k := range a.proj.Secrets {
 		a.secrets[k], err = secretsmanager.NewSecret(ctx, k, &secretsmanager.SecretArgs{
-			Name: pulumi.StringPtr(k),
 			Tags: common.Tags(ctx, k),
 		})
 		if err != nil {

@@ -1,0 +1,92 @@
+---
+name: Test nitric run
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    types: [labeled]
+
+env:
+  GOPROXY: https://proxy.golang.org
+  AWS_REGION: us-east-1
+
+jobs:
+  e2e-aws:
+    if: ${{ github.event.label.name == 'e2e-aws' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: cli
+
+      - name: checkout the test app
+        uses: actions/checkout@v3
+        with:
+          repository: nitrictech/test-app
+          path: test-app
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Build Nitric
+        run: |
+          cd ${{ github.workspace }}/cli
+          make build
+          mv bin/nitric $(go env GOPATH)/bin/nitric
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Nitric UP
+        run: |
+          cd ${{ github.workspace }}/test-app
+          nitric up -s aws --ci
+
+      - name: Set api endpoint
+        id: vars
+        run: echo "::set-output name=apiendpoint::$(cat ~/.pulumi/stacks/testr-aws.json|jq '.checkpoint.latest.resources[] | select(.type==\"aws:apigatewayv2/api:Api\").outputs.apiEndpoint')"
+
+      - name: Run Tests
+        env:
+          BASE_URL: ${{ steps.vars.outputs.apiendpoint }}
+        run: |
+          cd ${{ github.workspace }}/test-app
+          make test
+
+  cleanup-aws:
+    runs-on: ubuntu-latest
+    needs: e2e-aws
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Build Nitric
+        run: |
+          if ! [ -f $(go env GOPATH)/bin/nitric ]; then
+            cd ${{ github.workspace }}/cli
+            make build
+            mv bin/nitric $(go env GOPATH)/bin/nitric
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Nitric Down
+        run: |
+          cd ${{ github.workspace }}/test-app
+          nitric down -s aws --ci -y

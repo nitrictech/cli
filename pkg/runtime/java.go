@@ -72,6 +72,7 @@ func (t *java) FunctionDockerfile(funcCtxDir, version, provider string, w io.Wri
 	if err != nil {
 		return err
 	}
+
 	err = mavenBuild(buildCon, funcCtxDir)
 	if err != nil {
 		return err
@@ -89,6 +90,7 @@ func (t *java) FunctionDockerfile(funcCtxDir, version, provider string, w io.Wri
 	if err != nil {
 		return err
 	}
+
 	con.Config(dockerfile.ConfigOptions{
 		WorkingDir: "/",
 		Ports:      []int32{9001},
@@ -97,6 +99,7 @@ func (t *java) FunctionDockerfile(funcCtxDir, version, provider string, w io.Wri
 	withMembrane(con, version, provider)
 
 	_, err = w.Write([]byte(strings.Join(append(buildCon.Lines(), con.Lines()...), "\n")))
+
 	return err
 }
 
@@ -107,20 +110,26 @@ func mavenBuild(con dockerfile.ContainerState, contextDir string) error {
 	}
 
 	moduleDirs := []string{}
+
 	for _, p := range pomFiles {
 		moduleDirs = append(moduleDirs, path.Dir(p))
+
 		err = con.Copy(dockerfile.CopyOptions{Src: p, Dest: filepath.Join("./", p)})
 		if err != nil {
 			return err
 		}
 	}
+
 	con.Run(dockerfile.RunOptions{Command: []string{"mvn", "de.qaware.maven:go-offline-maven-plugin:resolve-dependencies"}})
+
 	for _, d := range moduleDirs {
 		err = con.Copy(dockerfile.CopyOptions{Src: d, Dest: filepath.Join("./", d)})
 		if err != nil {
 			return err
 		}
 	}
+
 	con.Run(dockerfile.RunOptions{Command: []string{"mvn", "clean", "package"}})
+
 	return nil
 }

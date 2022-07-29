@@ -53,6 +53,7 @@ func configFromFile(file string) (*Config, error) {
 	}
 
 	err = yaml.Unmarshal(yamlFile, s)
+
 	return s, err
 }
 
@@ -61,7 +62,9 @@ func AddOptions(cmd *cobra.Command, providerOnly bool) error {
 	if err != nil {
 		return err
 	}
+
 	stacks := []string{}
+
 	for _, sf := range stackFiles {
 		stacks = append(stacks, strings.TrimSuffix(strings.TrimPrefix(sf, "nitric-"), ".yaml"))
 	}

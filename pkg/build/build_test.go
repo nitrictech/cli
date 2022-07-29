@@ -37,6 +37,7 @@ func TestCreateBaseDev(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
 	defer os.RemoveAll(dir)
 
 	s := project.New(&project.Config{Name: "", Dir: dir})

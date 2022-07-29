@@ -43,6 +43,7 @@ var _ ContainerEngine = &podman{}
 
 func newPodman() (ContainerEngine, error) {
 	cmd := exec.Command("podman", "--version")
+
 	err := cmd.Run()
 	if err != nil {
 		return nil, err
@@ -52,10 +53,12 @@ func newPodman() (ContainerEngine, error) {
 	out := &bytes.Buffer{}
 	cmd = exec.Command("docker", "--version")
 	cmd.Stdout = out
+
 	err = cmd.Run()
 	if err != nil {
 		return nil, errors.WithMessage(err, "the podman-docker package is required")
 	}
+
 	if !strings.Contains(out.String(), "podman") {
 		// this is the actual docker cli installed as well, return an error here and just use docker.
 		return nil, errors.New("both podman and docker found, will use docker")
@@ -66,12 +69,14 @@ func newPodman() (ContainerEngine, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	// Test the connection
 	_, err = cli.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		fmt.Println("podman socket not running, please execute 'sudo systemctl start podman.socket'")
 		return nil, err
 	}
+
 	fmt.Println("podman found")
 
 	return &podman{docker: &docker{cli: cli}}, err

@@ -76,7 +76,9 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 	if err != nil {
 		return err
 	}
+
 	buildCon.Run(dockerfile.RunOptions{Command: []string{"go", "mod", "download"}})
+
 	err = buildCon.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
 	if err != nil {
 		return err
@@ -102,6 +104,7 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 	if err != nil {
 		return err
 	}
+
 	con.Run(dockerfile.RunOptions{Command: []string{"chmod", "+x-rw", "/bin/main"}})
 	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "tzdata"}})
 
@@ -112,6 +115,7 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 	})
 
 	_, err = w.Write([]byte(strings.Join(append(buildCon.Lines(), con.Lines()...), "\n")))
+
 	return err
 }
 
@@ -123,10 +127,12 @@ func (t *golang) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+
 	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "git"}})
 	con.Run(dockerfile.RunOptions{Command: []string{"go", "install", "github.com/asalkeld/CompileDaemon@d4b10de"}})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+
 	return err
 }
 
@@ -165,8 +171,10 @@ func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 	if err != nil {
 		return LaunchOpts{}, err
 	}
+
 	containerRunCtx := filepath.ToSlash(filepath.Join("/go/src", module))
 	relHandler := t.handler
+
 	if strings.HasPrefix(t.handler, runCtx) {
 		relHandler, err = filepath.Rel(runCtx, t.handler)
 		if err != nil {

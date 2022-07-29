@@ -67,15 +67,18 @@ func NewDownloader() Downloader {
 
 func (d *downloader) Names() ([]string, error) {
 	names := []string{}
+
 	if len(d.repo) == 0 {
 		err := d.repository()
 		if err != nil {
 			return nil, err
 		}
 	}
+
 	for _, ti := range d.repo {
 		names = append(names, ti.Name)
 	}
+
 	return names, nil
 }
 
@@ -85,6 +88,7 @@ func (d *downloader) Get(name string) *TemplateInfo {
 			return &ti
 		}
 	}
+
 	return nil
 }
 
@@ -93,10 +97,12 @@ func (d *downloader) readTemplatesConfig() ([]TemplateInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer file.Close()
 
 	decoder := yaml.NewDecoder(file)
 	repo := repository{}
+
 	if err := decoder.Decode(&repo); err != nil {
 		return nil, errors.WithMessage(err, "repository file "+d.configPath)
 	}
@@ -110,6 +116,7 @@ func officialStackName(name string) string {
 
 func (d *downloader) repository() error {
 	src := rawGitHubURL + "/" + filepath.Join(templatesRepo, "main/repository.yaml")
+
 	client := d.newGetter(&getter.Client{
 		Ctx: context.Background(),
 		//define the destination to where the directory will be stored. This will create the directory if it doesnt exist
@@ -136,6 +143,7 @@ func (d *downloader) repository() error {
 	}
 
 	d.repo = []TemplateInfo{}
+
 	for _, template := range list {
 		d.repo = append(d.repo, TemplateInfo{
 			Name: officialStackName(template.Name),
@@ -176,5 +184,6 @@ func (d *downloader) DownloadDirectoryContents(name string, destDir string, forc
 	})
 
 	err = client.Get()
+
 	return errors.WithMessagef(err, "error getting path %s", templatesRepoGitURL+"//"+template.Path)
 }

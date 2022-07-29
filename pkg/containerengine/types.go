@@ -61,16 +61,19 @@ func Discover() (ContainerEngine, error) {
 	if DiscoveredEngine != nil {
 		return DiscoveredEngine, nil
 	}
+
 	pm, err := newPodman()
 	if err == nil {
 		DiscoveredEngine = pm
 		return pm, nil
 	}
+
 	dk, err := newDocker()
 	if err == nil {
 		DiscoveredEngine = dk
 		return dk, nil
 	}
+
 	return nil, errors.New("neither podman nor docker found")
 }
 
@@ -113,9 +116,11 @@ func Cli(cc *container.Config, hc *container.HostConfig) string {
 	if cc.AttachStdout {
 		cmd = append(cmd, "-a", "stdout")
 	}
+
 	if cc.AttachStdin {
 		cmd = append(cmd, "-a", "stdin")
 	}
+
 	if cc.AttachStderr {
 		cmd = append(cmd, "-a", "stderr")
 	}

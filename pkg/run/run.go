@@ -75,8 +75,10 @@ func (l *localServices) Running() bool {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort("0.0.0.0", "50051"), time.Second)
 	if err == nil && conn != nil {
 		defer conn.Close()
+
 		return true
 	}
+
 	return false
 }
 
@@ -102,12 +104,14 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 	if err != nil {
 		return err
 	}
+
 	l.status.MinioEndpoint = fmt.Sprintf("localhost:%d", l.mio.GetApiPort())
 
 	// Connect dev storage
 	os.Setenv(minio.MINIO_ENDPOINT_ENV, l.status.MinioEndpoint)
 	os.Setenv(minio.MINIO_ACCESS_KEY_ENV, "minioadmin")
 	os.Setenv(minio.MINIO_SECRET_KEY_ENV, "minioadmin")
+
 	sp, err := minio.New()
 	if err != nil {
 		return err
@@ -115,6 +119,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 
 	// Connect dev documents
 	os.Setenv("LOCAL_DB_DIR", l.status.RunDir)
+
 	dp, err := boltdb_service.New()
 	if err != nil {
 		return err
@@ -122,6 +127,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 
 	// Connect secrets plugin
 	os.Setenv("LOCAL_SEC_DIR", l.status.RunDir)
+
 	secp, err := secret_service.New()
 	if err != nil {
 		return err
@@ -129,6 +135,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 
 	// Connect queue plugin
 	os.Setenv("LOCAL_QUEUE_DIR", l.status.RunDir)
+
 	qp, err := queue_service.New()
 	if err != nil {
 		return err

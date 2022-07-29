@@ -41,17 +41,22 @@ type mocks int
 // Create the mock.
 func (mocks) NewResource(args pulumi.MockResourceArgs) (string, resource.PropertyMap, error) {
 	outputs := args.Inputs.Mappable()
+
 	fmt.Println(args.TypeToken)
+
 	switch args.TypeToken {
 	case "gcp:cloudrun/service:Service":
 		outputs["statuses"] = []map[string]string{{"url": "test/url"}}
 	}
+
 	outputs["name"] = args.Name
+
 	return args.Name + "_id", resource.NewPropertyMapFromMap(outputs), nil
 }
 
 func (mocks) Call(args pulumi.MockCallArgs) (resource.PropertyMap, error) {
 	outputs := map[string]interface{}{}
+
 	return resource.NewPropertyMapFromMap(outputs), nil
 }
 
@@ -123,6 +128,7 @@ func TestGCP(t *testing.T) {
 		g.topics["sales"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "sales", name, "topic has the wrong name %s!=%s", "sales", name)
 			wg.Done()
+
 			return nil
 		})
 
@@ -131,6 +137,7 @@ func TestGCP(t *testing.T) {
 			expectTags := map[string]string{"x-nitric-name": "sales", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "topic has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
+
 			return nil
 		})
 
@@ -138,6 +145,7 @@ func TestGCP(t *testing.T) {
 		g.buckets["money"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "money", name, "bucket has the wrong name %s!=%s", "money", name)
 			wg.Done()
+
 			return nil
 		})
 
@@ -146,6 +154,7 @@ func TestGCP(t *testing.T) {
 			expectTags := map[string]string{"x-nitric-name": "money", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "money has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
+
 			return nil
 		})
 
@@ -154,6 +163,7 @@ func TestGCP(t *testing.T) {
 			expectTags := map[string]string{"x-nitric-name": "hush", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "hush has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
+
 			return nil
 		})
 
@@ -161,6 +171,7 @@ func TestGCP(t *testing.T) {
 		g.queueTopics["checkout"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "checkout", name, "queueTopic has the wrong name %s!=%s", "checkout", name)
 			wg.Done()
+
 			return nil
 		})
 
@@ -168,6 +179,7 @@ func TestGCP(t *testing.T) {
 		g.queueSubscriptions["checkout"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "checkout-sub", name, "queueSubscription has the wrong name %s!=%s", "checkout-sub", name)
 			wg.Done()
+
 			return nil
 		})
 
@@ -175,6 +187,7 @@ func TestGCP(t *testing.T) {
 		g.cloudRunners["runner"].Service.Name.ApplyT(func(name string) error {
 			assert.Equal(t, "runner", name, "cloudRunner has the wrong name %s!=%s", "runner", name)
 			wg.Done()
+
 			return nil
 		})
 
@@ -183,10 +196,12 @@ func TestGCP(t *testing.T) {
 			assert.Equal(t, 9001, *c.Ports[0].ContainerPort)
 			assert.Equal(t, "docker.io/nitrictech/runner:latest", c.Image)
 			wg.Done()
+
 			return nil
 		})
 
 		wg.Wait()
+
 		return nil
 	}, pulumi.WithMocks(projectName, stackName, mocks(0)))
 	assert.NoError(t, err)

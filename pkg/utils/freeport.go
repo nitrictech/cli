@@ -32,15 +32,18 @@ func Take(n int) ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer r.Close()
 
 	stderr := os.Stderr
 	os.Stderr = w
 	ports, err := freeport.Take(n)
 	os.Stderr = stderr
+
 	w.Close()
 
 	in := bufio.NewScanner(r)
+
 	for in.Scan() {
 		pterm.Debug.Println(strings.TrimPrefix(in.Text(), "[INFO] "))
 	}

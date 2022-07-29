@@ -20,6 +20,8 @@ linters:
     - misspell
     - unconvert
     - errcheck
+    - errorlint
+    - wsl
 
 issues:
   max-issues-per-linter: 0

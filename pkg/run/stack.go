@@ -102,6 +102,7 @@ func (r *RunStackState) ApiTable(port int) (string, int) {
 	}
 
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+
 	return str, len(r.apis)
 }
 
@@ -115,6 +116,7 @@ func (r *RunStackState) TopicTable(port int) (string, int) {
 	}
 
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+
 	return str, len(r.subs)
 }
 
@@ -129,6 +131,7 @@ func (r *RunStackState) SchedulesTable(port int) (string, int) {
 	}
 
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+
 	return str, len(r.schedules)
 }
 

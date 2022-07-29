@@ -33,6 +33,7 @@ func (c *Container) ImageTagName(s *Project, provider string) string {
 	if provider != "" {
 		providerString = "-" + provider
 	}
+
 	return fmt.Sprintf("%s-%s%s", s.Name, c.Name, providerString)
 }
 

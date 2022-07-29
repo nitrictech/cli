@@ -47,11 +47,13 @@ func (r *RunProcessPool) AddWorker(w worker.Worker) error {
 	if err := r.WorkerPool.AddWorker(w); err != nil {
 		return err
 	}
+
 	// notify listener of successfully added worker
 	r.notifyListeners(WorkerEvent{
 		Type:   WorkerEventType_Add,
 		Worker: w,
 	})
+
 	return nil
 }
 
@@ -59,11 +61,13 @@ func (r *RunProcessPool) RemoveWorker(w worker.Worker) error {
 	if err := r.WorkerPool.RemoveWorker(w); err != nil {
 		return err
 	}
+
 	// notify listener of successfully removed worker
 	r.notifyListeners(WorkerEvent{
 		Type:   WorkerEventType_Remove,
 		Worker: w,
 	})
+
 	return nil
 }
 

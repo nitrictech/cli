@@ -67,7 +67,6 @@ type openIdConfig struct {
 func getOpenIdConnectConfig(issuer string) (*openIdConfig, error) {
 	// append well-known configuration to issuer
 	url, err := url.Parse(issuer)
-
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +75,6 @@ func getOpenIdConnectConfig(issuer string) (*openIdConfig, error) {
 
 	// get the configuration document
 	resp, err := http.Get(url.String())
-
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +84,6 @@ func getOpenIdConnectConfig(issuer string) (*openIdConfig, error) {
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
-
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +99,7 @@ func getOpenIdConnectConfig(issuer string) (*openIdConfig, error) {
 
 func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts ...pulumi.ResourceOption) (*ApiGateway, error) {
 	res := &ApiGateway{Name: name}
+
 	err := ctx.RegisterComponentResource("nitric:api:GcpApiGateway", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -117,7 +115,6 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 		if sd.GetJwt() != nil {
 			oidConf, err := getOpenIdConnectConfig(sd.GetJwt().GetIssuer())
-
 			if err != nil {
 				return nil, err
 			}
@@ -141,20 +138,24 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 	// Get service targets for IAM binding
 	funcs := map[string]*CloudRunner{}
+
 	for _, pi := range args.OpenAPISpec.Paths {
 		for _, m := range []string{http.MethodGet, http.MethodPatch, http.MethodDelete, http.MethodPost, http.MethodPut} {
 			if pi.GetOperation(m) == nil {
 				continue
 			}
+
 			name, ok := keepOperation(pi.GetOperation(m).Extensions)
 			if !ok {
 				continue
 			}
+
 			if _, ok := args.Functions[name]; !ok {
 				continue
 			}
 
 			funcs[name] = args.Functions[name]
+
 			break
 		}
 	}
@@ -166,6 +167,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		nameArnPairs = append(nameArnPairs, pulumi.All(k, v.Url).ApplyT(func(args []interface{}) nameUrlPair {
 			name := args[0].(string)
 			url := args[1].(string)
+
 			return nameUrlPair{
 				name:      name,
 				invokeUrl: url,
@@ -178,6 +180,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	// Replace Nitric API Extensions with google api gateway extensions
 	doc := pulumi.All(nameArnPairs...).ApplyT(func(pairs []interface{}) (string, error) {
 		naps := make(map[string]string)
+
 		for _, p := range pairs {
 			if pair, ok := p.(nameUrlPair); ok {
 				naps[pair.name] = pair.invokeUrl
@@ -204,9 +207,6 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 
 		return base64.StdEncoding.EncodeToString(b), nil
 	}).(pulumi.StringOutput)
-	if err != nil {
-		return nil, err
-	}
 
 	res.Api, err = apigateway.NewApi(ctx, name, &apigateway.ApiArgs{
 		ApiId: pulumi.String(name),
@@ -225,6 +225,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	// Bind that IAM account as a member of all available service targets
 	for _, fun := range funcs {
 		iamName := fmt.Sprintf("%s-%s-binding", name, fun.Name)
+
 		_, err = cloudrun.NewIamMember(ctx, iamName, &cloudrun.IamMemberArgs{
 			Service:  fun.Service.Name,
 			Location: fun.Service.Location,
@@ -280,13 +281,16 @@ func keepOperation(opExt map[string]interface{}) (string, bool) {
 	if opExt == nil {
 		return "", false
 	}
+
 	name := ""
+
 	if v, ok := opExt["x-nitric-target"]; ok {
 		targetMap, isMap := v.(map[string]string)
 		if isMap {
 			name = targetMap["name"]
 		}
 	}
+
 	if name == "" {
 		return "", false
 	}
@@ -298,6 +302,7 @@ func gcpOperation(op *openapi2.Operation, urls map[string]string) *openapi2.Oper
 	if op == nil {
 		return nil
 	}
+
 	name, ok := keepOperation(op.Extensions)
 	if !ok {
 		return nil
@@ -329,5 +334,6 @@ func gcpOperation(op *openapi2.Operation, urls map[string]string) *openapi2.Oper
 		"address":          urls[name],
 		"path_translation": "APPEND_PATH_TO_ADDRESS",
 	}
+
 	return op
 }

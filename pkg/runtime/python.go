@@ -70,11 +70,14 @@ func (t *python) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 	con.Config(dockerfile.ConfigOptions{
 		WorkingDir: "/",
 	})
+
 	err = con.Copy(dockerfile.CopyOptions{Src: "requirements.txt", Dest: "requirements.txt"})
 	if err != nil {
 		return err
 	}
+
 	con.Run(dockerfile.RunOptions{Command: []string{"pip", "install", "--no-cache-dir", "-r", "requirements.txt"}})
+
 	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
 	if err != nil {
 		return err
@@ -89,6 +92,8 @@ func (t *python) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 		Ports: []int32{9001},
 		Cmd:   []string{"python", t.handler},
 	})
+
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+
 	return err
 }

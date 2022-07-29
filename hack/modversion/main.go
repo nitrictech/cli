@@ -32,16 +32,19 @@ func main() {
 	defer file.Close()
 
 	reader := bufio.NewReader(file)
+
 	for {
 		line, _, err := reader.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
+
 			panic(err)
 		}
 
 		words := strings.Split(string(line), " ")
+
 		if len(words) == 3 && strings.HasPrefix(words[0], os.Args[1]) {
 			fmt.Print(words[1])
 			break

@@ -22,9 +22,12 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18.3
+          go-version: 1.18
       - name: Build
         run: make build
+      - name: Set commit sha
+        id: vars
+        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - name: Push RC Nitric CLI to Dockerhub
         if: endsWith(github.ref, '/develop')
         uses: docker/build-push-action@v3
@@ -35,6 +38,7 @@ jobs:
           tags: |
             nitrictech/cli:rc-latest
             nitrictech/cli:rc-64
+            nitrictech/cli:${{ steps.vars.outputs.sha_short }}
       - name: Push Main Nitric CLI to Dockerhub
         if: endsWith(github.ref, '/main')
         uses: docker/build-push-action@v3
@@ -45,3 +49,4 @@ jobs:
           tags: |
             nitrictech/cli:latest
             nitrictech/cli:x64
+            nitrictech/cli:${{ steps.vars.outputs.sha_short }}

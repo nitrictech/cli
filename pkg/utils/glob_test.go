@@ -40,6 +40,7 @@ func TestFindFilesInDir(t *testing.T) {
 			want: []string{"pkg/provider/generator.go", "pkg/provider/pulumi/generator.go"},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.dir+":"+tt.name, func(t *testing.T) {
 			got, err := FindFilesInDir(tt.dir, tt.name)
@@ -47,6 +48,7 @@ func TestFindFilesInDir(t *testing.T) {
 				t.Errorf("FindFilesInDir() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("FindFilesInDir() = %v, want %v", got, tt.want)
 			}
@@ -72,17 +74,20 @@ func TestGlobInDir(t *testing.T) {
 			want:    []string{"pkg/provider/generator.go"},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.dir+":"+tt.pattern, func(t *testing.T) {
 			absDir, err := filepath.Abs(tt.dir)
 			if err != nil {
 				t.Error(err)
 			}
+
 			got, err := GlobInDir(absDir, tt.pattern)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GlobInDir() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GlobInDir() = %v, want %v", got, tt.want)
 			}

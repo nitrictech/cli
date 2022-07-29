@@ -40,6 +40,7 @@ type Subscriptions struct {
 
 func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs, opts ...pulumi.ResourceOption) (*Subscriptions, error) {
 	res := &Subscriptions{Name: name}
+
 	err := ctx.RegisterComponentResource("nitric:api:AzureApiManagement", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -70,12 +71,14 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 					Subject:     &empty,
 					DataVersion: &empty,
 				}
+
 				jsonStr, err := dummyEvgt.MarshalJSON()
 				if err != nil {
 					return "", err
 				}
 
 				body := bytes.NewBuffer(jsonStr)
+
 				req, err := http.NewRequestWithContext(hCtx, "POST", hostUrl, body)
 				if err != nil {
 					return "", err
@@ -89,6 +92,7 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 				client := &http.Client{
 					Timeout: 10 * time.Second,
 				}
+
 				resp, err := client.Do(req)
 				if err == nil {
 					resp.Body.Close()
@@ -100,6 +104,7 @@ func newSubscriptions(ctx *pulumi.Context, name string, args *SubscriptionsArgs,
 		}).(pulumi.StringOutput)
 
 		_ = ctx.Log.Info("creating subscriptions for "+app.Name, &pulumi.LogArgs{})
+
 		for subName, sub := range app.Subscriptions {
 			_, err = pulumiEventgrid.NewEventSubscription(ctx, resourceName(ctx, app.Name+"-"+subName, EventSubscriptionRT), &pulumiEventgrid.EventSubscriptionArgs{
 				Scope: sub.ID(),

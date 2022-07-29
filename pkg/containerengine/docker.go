@@ -53,12 +53,14 @@ var _ ContainerEngine = &docker{}
 
 func newDocker() (ContainerEngine, error) {
 	cmd := exec.Command("docker", "--version")
+
 	err := cmd.Run()
 	if err != nil {
 		return nil, err
 	}
 
 	cmd = exec.Command("docker", "ps")
+
 	err = cmd.Run()
 	if err != nil {
 		fmt.Println("docker daemon not running, please start it..")
@@ -91,6 +93,7 @@ func tarContextDir(relDockerfile, contextDir string, extraExcludes []string) (io
 	}
 
 	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
+
 	return archive.TarWithOptions(contextDir, &archive.TarOptions{
 		ExcludePatterns: excludes,
 		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
@@ -98,19 +101,26 @@ func tarContextDir(relDockerfile, contextDir string, extraExcludes []string) (io
 }
 
 func imageNameFromBuildContext(dockerfile, srcPath, imageTag string, excludes []string) (string, error) {
-	var buildContext io.ReadCloser
-	var err error
+	var (
+		buildContext io.ReadCloser
+		err          error
+	)
+
 	if strings.Contains(dockerfile, "nitric.dynamic.") {
 		// don't include the dynamic dockerfile as the timestamp on the file will cause it to have a different hash.
 		buildContext, err = tarContextDir("", srcPath, append(excludes, dockerfile))
+		if err != nil {
+			return "", err
+		}
 	} else {
 		buildContext, err = tarContextDir(dockerfile, srcPath, excludes)
-	}
-	if err != nil {
-		return "", err
+		if err != nil {
+			return "", err
+		}
 	}
 
 	hash := md5.New()
+
 	_, err = io.Copy(hash, buildContext)
 	if err != nil {
 		return "", err
@@ -141,6 +151,7 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	// try and find an existing image with this hash.
 	listOpts := types.ImageListOptions{Filters: filters.NewArgs()}
 	listOpts.Filters.Add("reference", imageTagWithHash)
+
 	imageSummaries, err := d.cli.ImageList(ctx, listOpts)
 	if err == nil && len(imageSummaries) > 0 {
 		return nil
@@ -154,6 +165,7 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 		ForceRemove:    true,
 		PullParent:     true,
 	}
+
 	res, err := d.cli.ImageBuild(ctx, buildContext, opts)
 	if err != nil {
 		return err
@@ -184,10 +196,12 @@ func print(rd io.Reader) error {
 	for scanner.Scan() {
 		lastLine = scanner.Text()
 		line := &Line{}
+
 		err := json.Unmarshal([]byte(lastLine), line)
 		if err != nil {
 			return err
 		}
+
 		if len(strings.TrimSpace(line.Stream)) > 0 {
 			if strings.Contains(line.Stream, "--->") {
 				if output.VerboseLevel >= 3 {
@@ -200,10 +214,12 @@ func print(rd io.Reader) error {
 	}
 
 	errLine := &ErrorLine{}
+
 	err := json.Unmarshal([]byte(lastLine), errLine)
 	if err != nil {
 		return err
 	}
+
 	if errLine.Error != "" {
 		return errors.New(errLine.Error)
 	}
@@ -214,15 +230,18 @@ func print(rd io.Reader) error {
 func (d *docker) ListImages(stackName, containerName string) ([]Image, error) {
 	opts := types.ImageListOptions{Filters: filters.NewArgs()}
 	opts.Filters.Add("reference", fmt.Sprintf("%s-%s-*", stackName, containerName))
+
 	imageSummaries, err := d.cli.ImageList(context.Background(), opts)
 	if err != nil {
 		return nil, err
 	}
 
 	imgs := []Image{}
+
 	for _, i := range imageSummaries {
 		nameParts := strings.Split(i.RepoTags[0], ":")
 		id := strings.Split(i.ID, ":")[1][0:12]
+
 		imgs = append(imgs, Image{
 			ID:         id,
 			Repository: nameParts[0],
@@ -230,6 +249,7 @@ func (d *docker) ListImages(stackName, containerName string) ([]Image, error) {
 			CreatedAt:  time.Unix(i.Created, 0).Local().String(),
 		})
 	}
+
 	return imgs, err
 }
 
@@ -238,7 +258,9 @@ func (d *docker) ImagePull(rawImage string, opts types.ImagePullOptions) error {
 	if err != nil {
 		return errors.WithMessage(err, "Pull")
 	}
+
 	defer resp.Close()
+
 	return print(resp)
 }
 
@@ -247,6 +269,7 @@ func (d *docker) ContainerCreate(config *container.Config, hostConfig *container
 	if err != nil {
 		return "", errors.WithMessage(err, "ContainerCreate")
 	}
+
 	return resp.ID, nil
 }
 
@@ -263,6 +286,7 @@ func (d *docker) RemoveByLabel(labels map[string]string) error {
 		All:     true,
 		Filters: filters.NewArgs(),
 	}
+
 	for name, value := range labels {
 		opts.Filters.Add("label", fmt.Sprintf("%s=%s", name, value))
 	}
@@ -271,12 +295,14 @@ func (d *docker) RemoveByLabel(labels map[string]string) error {
 	if err != nil {
 		return err
 	}
+
 	for _, con := range res {
 		err = d.cli.ContainerRemove(context.Background(), con.ID, types.ContainerRemoveOptions{Force: true})
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -292,13 +318,16 @@ func (d *docker) Logger(stackPath string) ContainerLogger {
 	if d.logger != nil {
 		return d.logger
 	}
+
 	logPath, _ := utils.NewNitricLogFile(stackPath)
 	d.logger = newSyslog(logPath)
+
 	return d.logger
 }
 
 func (d *docker) Version() string {
 	sv, _ := d.cli.ServerVersion(context.Background())
 	b, _ := yaml.Marshal(sv)
+
 	return string(b)
 }

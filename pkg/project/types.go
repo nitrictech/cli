@@ -146,14 +146,17 @@ func New(config *Config) *Project {
 
 func (s *Project) Computes() []Compute {
 	computes := []Compute{}
+
 	for _, c := range s.Functions {
 		copy := c
 		computes = append(computes, &copy)
 	}
+
 	for _, c := range s.Containers {
 		copy := c
 		computes = append(computes, &copy)
 	}
+
 	return computes
 }
 
@@ -171,6 +174,7 @@ func calculateDefaultPolicies(s *Project) []*v1.PolicyResource {
 	}
 
 	topicResources := make([]*v1.Resource, 0, len(s.Topics))
+
 	for name := range s.Topics {
 		topicResources = append(topicResources, &v1.Resource{
 			Name: name,
@@ -189,6 +193,7 @@ func calculateDefaultPolicies(s *Project) []*v1.PolicyResource {
 	})
 
 	bucketResources := make([]*v1.Resource, 0, len(s.Buckets))
+
 	for name := range s.Buckets {
 		bucketResources = append(bucketResources, &v1.Resource{
 			Name: name,
@@ -208,6 +213,7 @@ func calculateDefaultPolicies(s *Project) []*v1.PolicyResource {
 	})
 
 	queueResources := make([]*v1.Resource, 0, len(s.Queues))
+
 	for name := range s.Buckets {
 		queueResources = append(queueResources, &v1.Resource{
 			Name: name,
@@ -227,6 +233,7 @@ func calculateDefaultPolicies(s *Project) []*v1.PolicyResource {
 	})
 
 	collectionResources := make([]*v1.Resource, 0, len(s.Collections))
+
 	for name := range s.Collections {
 		collectionResources = append(collectionResources, &v1.Resource{
 			Name: name,
@@ -247,6 +254,7 @@ func calculateDefaultPolicies(s *Project) []*v1.PolicyResource {
 	})
 
 	secretResources := make([]*v1.Resource, 0, len(s.Secrets))
+
 	for name := range s.Secrets {
 		secretResources = append(secretResources, &v1.Resource{
 			Name: name,
@@ -272,19 +280,24 @@ func FromFile(name string) (*Project, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	dir, err := filepath.Abs(path.Dir(name))
 	if err != nil {
 		return nil, err
 	}
+
 	stack := &Project{Dir: dir}
+
 	err = yaml.Unmarshal(yamlFile, stack)
 	if err != nil {
 		return nil, err
 	}
+
 	for name, fn := range stack.Functions {
 		fn.Name = name
 		stack.Functions[name] = fn
 	}
+
 	for name, c := range stack.Containers {
 		c.Name = name
 		stack.Containers[name] = c
@@ -314,6 +327,7 @@ func (s *Project) ToFile(file string) error {
 	if err != nil {
 		return err
 	}
+
 	err = ioutil.WriteFile(file, b, 0644)
 	if err != nil {
 		return err
@@ -321,18 +335,22 @@ func (s *Project) ToFile(file string) error {
 
 	for apiName, apiFile := range s.Apis {
 		apiPath := filepath.Join(s.Dir, apiFile)
+
 		doc, ok := s.ApiDocs[apiName]
 		if !ok {
 			return fmt.Errorf("apiDoc %s does not exist", apiPath)
 		}
+
 		docJ, err := json.Marshal(doc)
 		if err != nil {
 			return err
 		}
+
 		err = ioutil.WriteFile(apiPath, docJ, 0644)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

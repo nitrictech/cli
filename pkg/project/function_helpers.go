@@ -37,13 +37,16 @@ func (f *Function) VersionString(s *Project) string {
 
 func (f *Function) RelativeHandlerPath(s *Project) (string, error) {
 	relativeHandlerPath := f.Handler
+
 	if filepath.IsAbs(f.Handler) {
 		var err error
+
 		relativeHandlerPath, err = filepath.Rel(s.Dir, f.Handler)
 		if err != nil {
 			return "", err
 		}
 	}
+
 	return relativeHandlerPath, nil
 }
 
@@ -54,6 +57,7 @@ func (f *Function) ImageTagName(s *Project, provider string) string {
 	if provider != "" {
 		providerString = "-" + provider
 	}
+
 	return fmt.Sprintf("%s-%s%s", s.Name, f.Name, providerString)
 }
 

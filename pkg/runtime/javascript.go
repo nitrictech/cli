@@ -59,12 +59,14 @@ func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	if err != nil {
 		return err
 	}
+
 	withMembrane(con, version, provider)
 
 	err = con.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
 	if err != nil {
 		return err
 	}
+
 	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "import", "||", "echo", "Lockfile already exists"}})
 	con.Run(dockerfile.RunOptions{Command: []string{
 		"set", "-ex;",
@@ -75,11 +77,13 @@ func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	if err != nil {
 		return err
 	}
+
 	con.Config(dockerfile.ConfigOptions{
 		Cmd: []string{"node", t.handler},
 	})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+
 	return err
 }
 
@@ -99,6 +103,7 @@ func (t *javascript) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 	})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
+
 	return err
 }
 

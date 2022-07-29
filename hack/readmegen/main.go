@@ -60,24 +60,31 @@ func readmeContent(readmePath string) ([]string, error) {
 
 	scanner := bufio.NewScanner(file)
 	output := []string{}
+
 	var inSection *section
+
 	for scanner.Scan() {
 		if inSection == nil {
 			for k, v := range sections {
 				if v.startLine == scanner.Text() {
 					inSection = sections[k]
+
 					delete(sections, k)
+
 					output = append(output, scanner.Text())
 					output = append(output, inSection.genFunc(v)...)
+
 					break
 				}
 			}
 		}
+
 		if inSection != nil {
 			if scanner.Text() == inSection.endLine {
 				inSection = nil
 			}
 		}
+
 		if inSection == nil {
 			output = append(output, scanner.Text())
 		}
@@ -86,11 +93,13 @@ func readmeContent(readmePath string) ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
+
 	return output, nil
 }
 
 func main() {
 	readmePath := os.Args[1]
+
 	output, err := readmeContent(readmePath)
 	if err != nil {
 		log.Fatal(err)

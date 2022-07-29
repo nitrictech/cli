@@ -81,16 +81,22 @@ func ConvertToAWS(schedule string) (string, error) {
 	if schedule == "" {
 		return "", errors.New("schedule can not be empty")
 	}
+
 	// If the schedule uses default CloudWatch Events syntax, pass it through for server-side validation.
 	if match := awsScheduleRegexp.FindStringSubmatch(schedule); match != nil {
 		return schedule, nil
 	}
+
 	// Try parsing the string as a cron expression to validate it.
 	if _, err := cron.ParseStandard(schedule); err != nil {
 		return "", fmt.Errorf("schedule is not valid cron, rate, or preset: %w", err)
 	}
-	var scheduleExpression string
-	var err error
+
+	var (
+		scheduleExpression string
+		err                error
+	)
+
 	switch {
 	case strings.HasPrefix(schedule, every):
 		scheduleExpression, err = toRate(schedule[len(every):])
@@ -108,6 +114,7 @@ func ConvertToAWS(schedule string) (string, error) {
 			return "", fmt.Errorf("parse cron schedule: %w", err)
 		}
 	}
+
 	return scheduleExpression, nil
 }
 
@@ -132,6 +139,7 @@ func toRate(duration string) (string, error) {
 	if minutes == 1 {
 		return fmt.Sprintf(fmtRateScheduleExpression, minutes, "minute"), nil
 	}
+
 	return fmt.Sprintf(fmtRateScheduleExpression, minutes, "minutes"), nil
 }
 
@@ -212,6 +220,7 @@ func toAWSCron(schedule string) (string, error) {
 	// crontab uses 0-6
 	// AWS uses 1-7 (Sunday-Saturday)
 	var newDOW []rune
+
 	for _, c := range sched[DOW] {
 		if unicode.IsDigit(c) {
 			// Check for standard 0-6 day range and increment

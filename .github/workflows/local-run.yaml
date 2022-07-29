@@ -1,0 +1,55 @@
+---
+name: Test nitric run
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+env:
+  GOPROXY: https://proxy.golang.org
+
+jobs:
+  nitric-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: cli
+
+      - name: checkout the test app
+        uses: actions/checkout@v3
+        with:
+          repository: nitrictech/test-app
+          path: test-app
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Build Nitric
+        run: |
+          cd ${{ github.workspace }}/cli
+          make build
+          mv bin/nitric $(go env GOPATH)/bin/nitric
+
+      - name: Run nitric-run in the background
+        run: |
+          cd ${{ github.workspace }}/test-app
+          nitric run --ci &
+
+      - name: Run Tests
+        run: |
+          cd ${{ github.workspace }}/test-app
+          make test
+
+      - name: Archive logfile
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: nitric-run-logs
+          path: ${{ github.workspace }}/test-app/.nitric/*.log

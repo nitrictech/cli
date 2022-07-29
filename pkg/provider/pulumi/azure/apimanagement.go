@@ -24,7 +24,6 @@ import (
 	"github.com/pkg/errors"
 	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20201201"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
-
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
@@ -63,13 +62,17 @@ const jwtTemplate = `<validate-jwt header-name="Authorization" failed-validation
 func marshalOpenAPISpec(spec *openapi3.T) ([]byte, error) {
 	sec := spec.Security
 	spec.Security = openapi3.SecurityRequirements{}
+
 	b, err := spec.MarshalJSON()
+
 	spec.Security = sec
+
 	return b, err
 }
 
 func setSecurityRequirements(secReq *openapi3.SecurityRequirements, secDef map[string]*v1.ApiSecurityDefinition) []string {
 	jwtTemplates := make([]string, len(secDef))
+
 	for _, sec := range *secReq {
 		for sn := range sec {
 			if sd, ok := secDef[sn]; ok {
@@ -77,11 +80,13 @@ func setSecurityRequirements(secReq *openapi3.SecurityRequirements, secDef map[s
 			}
 		}
 	}
+
 	return jwtTemplates
 }
 
 func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManagementArgs, opts ...pulumi.ResourceOption) (*AzureApiManagement, error) {
 	res := &AzureApiManagement{Name: name}
+
 	err := ctx.RegisterComponentResource("nitric:api:AzureApiManagement", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -106,7 +111,6 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 			UserAssignedIdentities: managedIdentities,
 		},
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -150,18 +154,23 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 				if args.OpenAPISpec.Security != nil {
 					jwtTemplates = setSecurityRequirements(&args.OpenAPISpec.Security, args.SecurityDefinitions)
 				}
+
 				// Override with path security
 				if op.Security != nil {
 					jwtTemplates = setSecurityRequirements(op.Security, args.SecurityDefinitions)
 				}
+
 				jwtTemplateString := strings.Join(jwtTemplates, "\n")
 
 				target := ""
+
 				targetMap, isMap := v.(map[string]string)
 				if !isMap {
 					continue
 				}
+
 				target = targetMap["name"]
+
 				app, ok := args.Apps[target]
 				if !ok {
 					continue
@@ -185,7 +194,6 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 					Format:            pulumi.String("xml"),
 					Value:             pulumi.Sprintf(policyTemplate, app.App.LatestRevisionFqdn, jwtTemplateString, args.ManagedIdentity.ClientId, args.ManagedIdentity.ClientId),
 				}, pulumi.Parent(res.Api))
-
 				if err != nil {
 					return nil, errors.WithMessage(err, "NewApiOperationPolicy "+op.OperationID)
 				}

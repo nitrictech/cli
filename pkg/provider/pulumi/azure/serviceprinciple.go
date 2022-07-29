@@ -36,10 +36,12 @@ type ServicePrincipal struct {
 
 func newServicePrincipal(ctx *pulumi.Context, name string, args *ServicePrincipalArgs, opts ...pulumi.ResourceOption) (*ServicePrincipal, error) {
 	res := &ServicePrincipal{Name: name}
+
 	err := ctx.RegisterComponentResource("nitric:principal:AzureAD", name, res, opts...)
 	if err != nil {
 		return nil, err
 	}
+
 	current, err := azuread.GetClientConfig(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -47,6 +49,7 @@ func newServicePrincipal(ctx *pulumi.Context, name string, args *ServicePrincipa
 
 	// create an application per service principal
 	appRoleId := pulumi.String("4962773b-9cdb-44cf-a8bf-237846a00ab7")
+
 	app, err := azuread.NewApplication(ctx, resourceName(ctx, name, ADApplicationRT), &azuread.ApplicationArgs{
 		DisplayName: pulumi.String(name + "App"),
 		Owners: pulumi.StringArray{
@@ -69,6 +72,7 @@ func newServicePrincipal(ctx *pulumi.Context, name string, args *ServicePrincipa
 	if err != nil {
 		return nil, err
 	}
+
 	res.ClientID = app.ApplicationId
 
 	sp, err := azuread.NewServicePrincipal(ctx, resourceName(ctx, name, ADServicePrincipalRT), &azuread.ServicePrincipalArgs{
@@ -99,6 +103,7 @@ func newServicePrincipal(ctx *pulumi.Context, name string, args *ServicePrincipa
 	if err != nil {
 		return nil, err
 	}
+
 	res.ClientSecret = spPwd.Value
 
 	return res, ctx.RegisterResourceOutputs(res, pulumi.Map{

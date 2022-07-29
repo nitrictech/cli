@@ -37,6 +37,7 @@ func Test_configFromFile(t *testing.T) {
 		t.Errorf("configFromFile() error = %v", err)
 		return
 	}
+
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("configFromFile() = %v, want %v", got, want)
 	}

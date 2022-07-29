@@ -55,6 +55,7 @@ func printJson(object interface{}) {
 	if err != nil {
 		panic(err)
 	}
+
 	fmt.Print(string(b))
 }
 
@@ -63,6 +64,7 @@ func printYaml(object interface{}) {
 	if err != nil {
 		panic(err)
 	}
+
 	fmt.Print(string(b))
 }
 
@@ -98,6 +100,7 @@ func nameFromField(f reflect.StructField) string {
 	if len(t) > 0 {
 		return t[0]
 	}
+
 	return ""
 }
 
@@ -134,10 +137,12 @@ func printList(object interface{}, out io.Writer) {
 	tab.SetOutputMirror(out)
 
 	t := reflect.TypeOf(object)
+
 	names := namesFrom(t.Elem())
 	if len(names) > 0 {
 		tab.AppendHeader(names)
 	}
+
 	rows := []table.Row{}
 	v := reflect.ValueOf(object)
 
@@ -145,6 +150,7 @@ func printList(object interface{}, out io.Writer) {
 		switch v.Index(i).Kind() {
 		case reflect.Struct:
 			row := table.Row{}
+
 			for fi := 0; fi < v.Index(i).NumField(); fi++ {
 				if len(row) < len(names) {
 					if v.Index(i).Field(fi).Kind() == reflect.Ptr {
@@ -154,6 +160,7 @@ func printList(object interface{}, out io.Writer) {
 					}
 				}
 			}
+
 			rows = append(rows, row)
 		case reflect.Slice, reflect.Array, reflect.Func, reflect.Chan, reflect.Interface, reflect.Map:
 			// not yet supported
@@ -162,6 +169,7 @@ func printList(object interface{}, out io.Writer) {
 			rows = append(rows, table.Row{v.Index(i)})
 		}
 	}
+
 	tab.AppendRows(rows)
 	tab.Render()
 }
@@ -189,20 +197,24 @@ func printMap(object interface{}, out io.Writer) {
 	for iter.Next() {
 		keyList = append(keyList, iter.Key())
 	}
+
 	sort.SliceStable(keyList, func(i, j int) bool {
 		return keyList[i].String() < keyList[j].String()
 	})
+
 	for _, k := range keyList {
 		v := value.MapIndex(k)
 
 		switch v.Kind() {
 		case reflect.Struct:
 			row := table.Row{k}
+
 			for fi := 0; fi < v.NumField(); fi++ {
 				if len(row) <= len(names) {
 					row = append(row, v.Field(fi))
 				}
 			}
+
 			rows = append(rows, row)
 		case reflect.Slice, reflect.Array, reflect.Func, reflect.Chan, reflect.Interface, reflect.Map:
 			// not yet supported
@@ -211,6 +223,7 @@ func printMap(object interface{}, out io.Writer) {
 			rows = append(rows, table.Row{k, v})
 		}
 	}
+
 	tab.AppendRows(rows)
 	tab.Render()
 }
@@ -229,6 +242,7 @@ func printStruct(object interface{}, out io.Writer) {
 	rows := []table.Row{}
 	v := reflect.ValueOf(object)
 	t := reflect.TypeOf(object)
+
 	for fi := 0; fi < v.NumField(); fi++ {
 		name := nameFromField(t.Field(fi))
 		if name != "" {

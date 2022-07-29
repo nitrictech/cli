@@ -29,6 +29,7 @@ func FindFilesInDir(dir string, name string) ([]string, error) {
 			// remove the provided dir (so it's like we have changed dir here)
 			files = append(files, strings.Replace(path, dir, "", 1))
 		}
+
 		return nil
 	})
 
@@ -39,31 +40,39 @@ func GlobInDir(dir, pattern string) ([]string, error) {
 	if !strings.HasPrefix(pattern, dir) {
 		pattern = filepath.Join(dir, pattern)
 	}
+
 	files, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err
 	}
+
 	final := []string{}
 	for _, f := range files {
 		final = append(final, strings.TrimPrefix(strings.TrimPrefix(f, dir), "/"))
 	}
+
 	return final, nil
 }
 
 func FilesExisting(files ...string) []string {
 	existing := []string{}
+
 	for _, f := range files {
 		if f == "" {
 			continue
 		}
+
 		info, err := os.Stat(f)
 		if err != nil {
 			continue
 		}
+
 		if info.IsDir() {
 			continue
 		}
+
 		existing = append(existing, f)
 	}
+
 	return existing
 }

@@ -37,15 +37,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	mods := []string{}
+
 	for _, r := range mf.Require {
 		if sliceutil.Contains(ignoreList, r.Mod.Path) {
 			continue
 		}
+
 		if r.Indirect {
 			continue // only update directly required modules
 		}
+
 		mods = append(mods, r.Mod.Path)
 	}
+
 	fmt.Print(strings.Join(mods, " "))
 }

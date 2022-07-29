@@ -30,6 +30,8 @@ import (
 	"github.com/nitrictech/cli/pkg/output"
 )
 
+const feedbackMsg = "Thanks for trying nitric!\nIf you have feedback you can raise issues on GitHub https://github.com/nitrictech/nitric or come talk with us directly on Discord discord.com/invite/Webemece5C"
+
 const usageTemplate = `Nitric - The fastest way to build serverless apps
 
 To start with nitric, run the 'nitric new' command:
@@ -52,11 +54,18 @@ var rootCmd = &cobra.Command{
 		if output.VerboseLevel > 1 {
 			pterm.EnableDebugMessages()
 		}
+
 		if output.VerboseLevel == 0 {
 			pterm.Info.Debugger = true
 		}
+
 		if output.CI {
 			pterm.DisableStyling()
+		}
+
+		err := promptFeedback()
+		if err != nil {
+			fmt.Println(err.Error())
 		}
 	},
 }
@@ -78,6 +87,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
 	rootCmd.PersistentFlags().BoolVar(&output.CI, "ci", false, "CI output mode, disable all output styling")
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
+
 	err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
 	})
@@ -93,6 +103,7 @@ func init() {
 	addAlias("stack update", "up", true)
 	addAlias("stack down", "down", true)
 	addAlias("stack list", "list", false)
+
 	rootCmd.Long = usageString()
 }
 
@@ -103,6 +114,7 @@ func addAlias(from, to string, commonCommand bool) {
 	if cmd.Annotations == nil {
 		cmd.Annotations = map[string]string{}
 	}
+
 	cmd.Annotations["alias:to"] = to
 	alias := &cobra.Command{
 		Annotations: map[string]string{"alias:from": from},
@@ -119,9 +131,11 @@ func addAlias(from, to string, commonCommand bool) {
 		},
 		DisableFlagParsing: true, // the real command will parse the flags
 	}
+
 	if commonCommand {
 		alias.Annotations["commonCommand"] = "yes"
 	}
+
 	rootCmd.AddCommand(alias)
 }
 
@@ -131,6 +145,7 @@ func CommonCommandsUsage() []string {
 		"Common commands in the CLI that you’ll be using:",
 		""}
 	cmdH = append(cmdH, cmdUsage([]string{}, rootCmd, true)...)
+
 	return append(cmdH, "")
 }
 
@@ -140,6 +155,7 @@ func AllCommandsUsage() []string {
 		"Documentation for all available commands:",
 		""}
 	cmdH = append(cmdH, cmdUsage([]string{}, rootCmd, false)...)
+
 	return append(cmdH, "")
 }
 
@@ -147,22 +163,24 @@ func AllCommandsUsage() []string {
 // if all commands, then the aliases are group with the full command.
 func cmdUsage(prefix []string, c *cobra.Command, commonOnly bool) []string {
 	cmdH := []string{}
-	args := append(prefix, c.Use)
-	use := strings.Join(args, " ")
+	use := strings.Join(append(prefix, c.Use), " ")
 
 	add := true
 	if _, ok := c.Annotations["commonCommand"]; commonOnly && !ok {
 		add = false
 	}
+
 	if _, ok := c.Annotations["alias:from"]; !commonOnly && ok {
 		add = false
 	}
+
 	if !c.HasParent() {
 		add = false
 	}
 
 	if add {
 		cmdH = append(cmdH, fmt.Sprintf("- %s : %s", use, c.Short))
+
 		if _, ok := c.Annotations["alias:to"]; ok {
 			use = "nitric " + c.Annotations["alias:to"]
 			cmdH = append(cmdH, fmt.Sprintf("  (alias: %s)", use))
@@ -172,5 +190,6 @@ func cmdUsage(prefix []string, c *cobra.Command, commonOnly bool) []string {
 	for _, sc := range c.Commands() {
 		cmdH = append(cmdH, cmdUsage(append(prefix, c.Use), sc, commonOnly)...)
 	}
+
 	return cmdH
 }

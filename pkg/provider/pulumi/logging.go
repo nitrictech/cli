@@ -36,22 +36,27 @@ func updateLoggingOpts(log output.Progress) []optup.Option {
 	opts := []optup.Option{
 		optup.EventStreams(upChannel),
 	}
+
 	go collectEvents(log, upChannel, "Deploying.. ")
 
 	if output.VerboseLevel >= 2 {
 		piper, pipew := io.Pipe()
+
 		go output.StdoutToPtermDebug(piper, log, "Deploying.. ")
 
 		opts = append(opts, optup.ProgressStreams(pipew))
 	}
+
 	if output.VerboseLevel > 2 {
 		var loglevel uint = uint(output.VerboseLevel)
+
 		opts = append(opts, optup.DebugLogging(debug.LoggingOptions{
 			LogLevel:      &loglevel,
 			LogToStdErr:   true,
 			FlowToPlugins: true,
 		}))
 	}
+
 	return opts
 }
 
@@ -60,6 +65,7 @@ func destroyLoggingOpts(log output.Progress) []optdestroy.Option {
 	opts := []optdestroy.Option{
 		optdestroy.EventStreams(upChannel),
 	}
+
 	go collectEvents(log, upChannel, "Deleting.. ")
 
 	if output.VerboseLevel >= 2 {
@@ -68,14 +74,17 @@ func destroyLoggingOpts(log output.Progress) []optdestroy.Option {
 
 		opts = append(opts, optdestroy.ProgressStreams(pipew))
 	}
+
 	if output.VerboseLevel > 2 {
 		var loglevel uint = uint(output.VerboseLevel)
+
 		opts = append(opts, optdestroy.DebugLogging(debug.LoggingOptions{
 			LogLevel:      &loglevel,
 			LogToStdErr:   true,
 			FlowToPlugins: true,
 		}))
 	}
+
 	return opts
 }
 
@@ -99,8 +108,10 @@ func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, 
 	failed := 0
 
 	for {
-		var event events.EngineEvent
-		var ok bool
+		var (
+			event events.EngineEvent
+			ok    bool
+		)
 
 		event, ok = <-eventChannel
 		if !ok {
@@ -109,10 +120,14 @@ func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, 
 
 		if event.ResourcePreEvent != nil && event.ResourcePreEvent.Metadata.Op != apitype.OpSame {
 			busy++
+
 			lastCreating := stepEventToString("ResourcePreEvent", &event.ResourcePreEvent.Metadata)
+
 			busyList[lastCreating] = time.Now()
+
 			log.Busyf(busyMsg, prefix, done, busy, failed)
 		}
+
 		if event.ResOutputsEvent != nil {
 			lc := stepEventToString("ResOutputsEvent", &event.ResOutputsEvent.Metadata)
 
@@ -131,8 +146,10 @@ func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, 
 			done++
 			log.Busyf(busyMsg, prefix, done, busy, failed)
 		}
+
 		if event.ResOpFailedEvent != nil {
 			lc := stepEventToString("ResOpFailedEvent", &event.ResOpFailedEvent.Metadata)
+
 			log.Failf("%s\n", lc)
 
 			delete(busyList, lc)

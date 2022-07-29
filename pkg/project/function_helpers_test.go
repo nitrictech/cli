@@ -25,6 +25,7 @@ import (
 
 func TestFunctionVersionString(t *testing.T) {
 	f := &Function{}
+
 	_, err := version.NewVersion(f.VersionString(nil))
 	if err != nil {
 		t.Error(err)

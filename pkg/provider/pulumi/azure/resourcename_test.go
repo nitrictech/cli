@@ -29,6 +29,7 @@ type logger struct {
 
 func (l *logger) Debug(msg string, args *pulumi.LogArgs) error {
 	l.t.Log(msg)
+
 	return nil
 }
 
@@ -158,10 +159,11 @@ func Test_resourceName(t *testing.T) {
 				Project: tt.project,
 				Stack:   tt.stackName,
 			})
-			testCtx.Log = &logger{t: t}
 			if err != nil {
 				t.Error(err)
 			}
+
+			testCtx.Log = &logger{t: t}
 
 			if got := resourceName(testCtx, tt.nameSuffix, tt.rt); got != tt.want {
 				t.Errorf("resourceName() = %v, want %v", got, tt.want)

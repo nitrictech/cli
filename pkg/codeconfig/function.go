@@ -50,10 +50,13 @@ func normalizePath(path string) string {
 	for i, part := range parts {
 		if strings.HasPrefix(part, ":") {
 			parts[i] = ":param"
+
 			continue
 		}
+
 		parts[i] = strings.ToLower(part)
 	}
+
 	return strings.Join(parts, "/")
 }
 
@@ -67,19 +70,23 @@ func matchingWorkers(a *pb.ApiWorker, b *pb.ApiWorker) bool {
 			}
 		}
 	}
+
 	return false
 }
 
 func (a *Api) AddWorker(worker *pb.ApiWorker) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	// Ensure the worker is unique
 	for _, existing := range a.workers {
 		if matchingWorkers(existing, worker) {
 			return fmt.Errorf("overlapping worker %v already registered, can't add new worker %v", existing, worker)
 		}
 	}
+
 	a.workers = append(a.workers, worker)
+
 	return nil
 }
 
@@ -121,6 +128,7 @@ type FunctionDependencies struct {
 func (a *FunctionDependencies) AddPolicy(p *pb.PolicyResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	for _, p := range p.Principals {
 		// If provided a blank function principal assume its for this function
 		if p.Type == pb.ResourceType_Function && p.Name == "" {
@@ -134,6 +142,7 @@ func (a *FunctionDependencies) AddPolicy(p *pb.PolicyResource) {
 func (a *FunctionDependencies) AddApiSecurityDefinitions(name string, sds map[string]*pb.ApiSecurityDefinition) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	if a.apis[name] == nil {
 		a.apis[name] = newApi()
 	}
@@ -146,6 +155,7 @@ func (a *FunctionDependencies) AddApiSecurityDefinitions(name string, sds map[st
 func (a *FunctionDependencies) AddApiSecurity(name string, security map[string]*pb.ApiScopes) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	if a.apis[name] == nil {
 		a.apis[name] = newApi()
 	}
@@ -158,6 +168,7 @@ func (a *FunctionDependencies) AddApiSecurity(name string, security map[string]*
 func (a *FunctionDependencies) AddApiHandler(aw *pb.ApiWorker) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	if a.apis[aw.Api] == nil {
 		a.apis[aw.Api] = newApi()
 	}
@@ -169,6 +180,7 @@ func (a *FunctionDependencies) AddApiHandler(aw *pb.ApiWorker) error {
 func (a *FunctionDependencies) AddSubscriptionHandler(sw *pb.SubscriptionWorker) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	// TODO: Determine if this subscription handler has a write policy to the same topic
 	if a.subscriptions[sw.Topic] != nil {
 		// return a new error
@@ -197,6 +209,7 @@ func (a *FunctionDependencies) WorkerCount() int {
 func (a *FunctionDependencies) AddScheduleHandler(sw *pb.ScheduleWorker) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	if a.schedules[sw.Key] != nil {
 		return fmt.Errorf("schedule %s already exists", sw.Key)
 	}
@@ -217,6 +230,7 @@ func (a *FunctionDependencies) AddBucket(name string, b *pb.BucketResource) {
 func (a *FunctionDependencies) AddTopic(name string, t *pb.TopicResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	a.topics[name] = t
 }
 
@@ -224,6 +238,7 @@ func (a *FunctionDependencies) AddTopic(name string, t *pb.TopicResource) {
 func (a *FunctionDependencies) AddCollection(name string, c *pb.CollectionResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	a.collections[name] = c
 }
 
@@ -231,12 +246,14 @@ func (a *FunctionDependencies) AddCollection(name string, c *pb.CollectionResour
 func (a *FunctionDependencies) AddQueue(name string, q *pb.QueueResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	a.queues[name] = q
 }
 
 func (a *FunctionDependencies) AddSecret(name string, s *pb.SecretResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
+
 	a.secrets[name] = s
 }
 

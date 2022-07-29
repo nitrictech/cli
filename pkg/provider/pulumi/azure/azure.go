@@ -112,6 +112,7 @@ func (a *azureProvider) Ask() (*stack.Config, error) {
 			},
 		},
 	}
+
 	sc := &stack.Config{
 		Name:     a.sc.Name,
 		Provider: a.sc.Provider,
@@ -175,26 +176,28 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 		if err != nil {
 			return err
 		}
+
 		err = autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.sc.Region})
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}
+
 	region, err := autoStack.GetConfig(ctx, "azure-native:location")
 	if err != nil {
 		return err
 	}
-	a.sc.Region = region.Value
-	return nil
-}
 
-func (a *azureProvider) TryPullImages() error {
+	a.sc.Region = region.Value
+
 	return nil
 }
 
 func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
+
 	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
@@ -209,7 +212,6 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		Location: pulumi.String(a.sc.Region),
 		Tags:     common.Tags(ctx, ctx.Stack()),
 	})
-
 	if err != nil {
 		return errors.WithMessage(err, "resource group create")
 	}
@@ -225,6 +227,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	// Create a stack level keyvault if secrets are enabled
 	// At the moment secrets have no config level setting
 	kvName := resourceName(ctx, "", KeyVaultRT)
+
 	kv, err := keyvault.NewVault(ctx, kvName, &keyvault.VaultArgs{
 		Location:          rg.Location,
 		ResourceGroupName: rg.Name,
@@ -239,10 +242,10 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		},
 		Tags: common.Tags(ctx, kvName),
 	})
-
 	if err != nil {
 		return err
 	}
+
 	contAppsArgs.KVaultName = kv.Name
 
 	if len(a.proj.Buckets) > 0 || len(a.proj.Queues) > 0 {
@@ -250,6 +253,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "storage create")
 		}
+
 		contAppsArgs.StorageAccountBlobEndpoint = sr.Account.PrimaryEndpoints.Blob()
 		contAppsArgs.StorageAccountQueueEndpoint = sr.Account.PrimaryEndpoints.Queue()
 	}
@@ -272,6 +276,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "mongodb collections")
 		}
+
 		contAppsArgs.MongoDatabaseName = mc.MongoDB.Name
 		contAppsArgs.MongoDatabaseConnectionString = mc.ConnectionString
 	}
@@ -281,13 +286,14 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		ResourceGroupName: rg.Name,
 		ResourceName:      pulumi.String("managed-identity"),
 	})
-
 	if err != nil {
 		return err
 	}
 
 	contAppsArgs.ManagedIdentityID = managedUser.ClientId
+
 	var apps *ContainerApps
+
 	if len(a.proj.Functions) > 0 || len(a.proj.Containers) > 0 {
 		apps, err = a.newContainerApps(ctx, "containerApps", contAppsArgs)
 		if err != nil {

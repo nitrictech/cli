@@ -45,6 +45,7 @@ type Schedule struct {
 
 func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args ScheduleArgs, opts ...pulumi.ResourceOption) (*Schedule, error) {
 	res := &Schedule{Name: name}
+
 	err := ctx.RegisterComponentResource("nitric:schedule:AwsSchedule", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -91,6 +92,7 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 		if err != nil {
 			return "", err
 		}
+
 		return pdoc.Json, nil
 	}).(pulumi.StringInput)
 

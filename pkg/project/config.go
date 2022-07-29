@@ -51,6 +51,7 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		projPath = wd
 	}
 
@@ -62,6 +63,7 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 	p := &Config{
 		Dir: absDir,
 	}
+
 	yamlFile, err := ioutil.ReadFile(filepath.Join(projPath, "nitric.yaml"))
 	if err != nil {
 		return nil, errors.WithMessage(err, "No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
@@ -71,5 +73,6 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return p, nil
 }

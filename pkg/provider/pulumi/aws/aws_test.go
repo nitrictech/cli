@@ -42,19 +42,24 @@ type mocks int
 // Create the mock.
 func (mocks) NewResource(args pulumi.MockResourceArgs) (string, resource.PropertyMap, error) {
 	outputs := args.Inputs.Mappable()
+
 	fmt.Println(args.TypeToken)
+
 	switch args.TypeToken {
 	case "aws:sns/topic:Topic":
 		outputs["arn"] = "test-arn"
 	case "aws:s3/bucket:Bucket":
 		outputs["bucket"] = args.Name
 	}
+
 	outputs["name"] = args.Name
+
 	return args.Name + "_id", resource.NewPropertyMapFromMap(outputs), nil
 }
 
 func (mocks) Call(args pulumi.MockCallArgs) (resource.PropertyMap, error) {
 	outputs := map[string]interface{}{}
+
 	return resource.NewPropertyMapFromMap(outputs), nil
 }
 
@@ -140,6 +145,7 @@ func TestAWS(t *testing.T) {
 			assert.Equal(t, expectQuery, query, "resourceGroup has the wrong query %s!=%s", expectQuery, query)
 
 			wg.Done()
+
 			return nil
 		})
 
@@ -147,6 +153,7 @@ func TestAWS(t *testing.T) {
 		a.topics["sales"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "sales", name, "topic has the wrong name %s!=%s", "sales", name)
 			wg.Done()
+
 			return nil
 		})
 
@@ -155,6 +162,7 @@ func TestAWS(t *testing.T) {
 			expectTags := map[string]string{"x-nitric-name": "sales", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "topic has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
+
 			return nil
 		})
 
@@ -162,6 +170,7 @@ func TestAWS(t *testing.T) {
 		a.buckets["money"].Bucket.ApplyT(func(name string) error {
 			assert.Equal(t, "money", name, "bucket has the wrong name %s!=%s", "money", name)
 			wg.Done()
+
 			return nil
 		})
 
@@ -170,6 +179,7 @@ func TestAWS(t *testing.T) {
 			expectTags := map[string]string{"x-nitric-name": "money", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "money has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
+
 			return nil
 		})
 
@@ -177,6 +187,7 @@ func TestAWS(t *testing.T) {
 		a.queues["checkout"].Name.ApplyT(func(name string) error {
 			assert.Equal(t, "checkout", name, "queue has the wrong name %s!=%s", "checkout", name)
 			wg.Done()
+
 			return nil
 		})
 
@@ -185,6 +196,7 @@ func TestAWS(t *testing.T) {
 			expectTags := map[string]string{"x-nitric-name": "checkout", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "checkout has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
+
 			return nil
 		})
 
@@ -193,6 +205,7 @@ func TestAWS(t *testing.T) {
 			expectTags := map[string]string{"x-nitric-name": "customer", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "customer has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
+
 			return nil
 		})
 
@@ -211,6 +224,7 @@ func TestAWS(t *testing.T) {
 
 			assert.Equal(t, expectAttrs, attrs, "customer table has the wrong attrs %s!=%s", expectAttrs, attrs)
 			wg.Done()
+
 			return nil
 		})
 
@@ -223,6 +237,7 @@ func TestAWS(t *testing.T) {
 			assert.Equal(t, "docker.io/nitrictech/runner:latest", *imageUri, "wrong imageUri %s!=%s", "", *imageUri)
 			assert.Equal(t, roleArn, fRole, "wrong role %s!=%s", roleArn, fRole)
 			wg.Done()
+
 			return nil
 		})
 
@@ -235,10 +250,12 @@ func TestAWS(t *testing.T) {
 			assert.Equal(t, "cron(0 0 * * ? *)", *expr, "wrong expression %s!=%s", "", *expr)
 			assert.Equal(t, topicArn, arn, "wrong arn %s!=%s", topicArn, arn)
 			wg.Done()
+
 			return nil
 		})
 
 		wg.Wait()
+
 		return nil
 	}, pulumi.WithMocks(projectName, stackName, mocks(0)))
 	assert.NoError(t, err)
@@ -262,9 +279,11 @@ func TestValidate(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := New(nil, tt.t, map[string]string{})
+
 			if err := a.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("awsProvider.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -278,6 +297,7 @@ func Test_awsProvider_Plugins(t *testing.T) {
 	if got[0].Name != "aws" {
 		t.Errorf("awsProvider.Plugins() = %v, want %v", got[0].Name, "aws")
 	}
+
 	_, err := version.NewVersion(got[0].Version)
 	if err != nil {
 		t.Error(err)

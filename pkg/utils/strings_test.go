@@ -42,6 +42,7 @@ func TestJoinCamelCase(t *testing.T) {
 			want: "one2XEight",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := JoinCamelCase(tt.ss); got != tt.want {
@@ -77,6 +78,7 @@ func TestStringTrunc(t *testing.T) {
 			want: "1234567",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := StringTrunc(tt.s, tt.max); got != tt.want {

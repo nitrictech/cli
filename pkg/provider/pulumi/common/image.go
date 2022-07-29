@@ -42,6 +42,7 @@ type Image struct {
 
 func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.ResourceOption) (*Image, error) {
 	res := &Image{Name: name}
+
 	err := ctx.RegisterComponentResource("nitric:Image", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -51,6 +52,7 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 	if err != nil {
 		return nil, err
 	}
+
 	_, err = dummyDockerFilePath.WriteString("FROM " + args.SourceImageName + "\n")
 	if err != nil {
 		return nil, err
@@ -70,6 +72,7 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 			Password: args.Password,
 		},
 	}
+
 	res.DockerImage, err = docker.NewImage(ctx, name+"-image", imageArgs, pulumi.Parent(res))
 	if err != nil {
 		return nil, err

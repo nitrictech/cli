@@ -72,7 +72,12 @@ func NitricConfigDir() string {
 
 		return filepath.Join(dirname, ".config", "nitric")
 	}
+
 	return homeDir()
+}
+
+func NitricPreferencesPath() string {
+	return filepath.Join(homeDir(), ".user-preferences.json")
 }
 
 // NitricLogDir returns the directory to find log files.
@@ -94,7 +99,9 @@ func NewNitricLogFile(stackPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	tf.Close()
+
 	return tf.Name(), nil
 }
 
@@ -103,5 +110,6 @@ func GoPath() (string, error) {
 	if goPath == "" {
 		goPath = build.Default.GOPATH
 	}
+
 	return goPath, nil
 }

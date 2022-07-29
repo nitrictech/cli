@@ -19,11 +19,9 @@ package pulumi
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
-	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
@@ -95,63 +93,6 @@ func New(p *project.Project, sc *stack.Config, envMap map[string]string, opts *t
 
 func (p *pulumiDeployment) Ask() (*stack.Config, error) {
 	return p.prov.Ask()
-}
-
-func (p *pulumiDeployment) TryPullImages() error {
-	if !strings.Contains(os.Getenv("PULUMI_BACKEND_URL"), "://") {
-		return nil
-	}
-
-	// s3://<bucket-path>, azblob://<container-path>, gs://<bucket-path>, or file://<fs-path>
-	backend := strings.Split(os.Getenv("PULUMI_BACKEND_URL"), ":")[0]
-	backendProv := p.prov
-
-	switch backend {
-	case "s3":
-		if p.sc.Provider != stack.Aws {
-			backendProv = aws.New(p.proj, p.sc, nil)
-		}
-	case "azblob":
-		if p.sc.Provider != stack.Azure {
-			backendProv = azure.New(p.proj, p.sc, nil)
-		}
-	case "gs":
-		if p.sc.Provider != stack.Gcp {
-			backendProv = gcp.New(p.proj, p.sc, nil)
-		}
-	default:
-		return nil
-	}
-
-	ps, err := backendProv.ReadPulumiStack(context.TODO(), os.Getenv("PULUMI_BACKEND_URL"))
-	if err != nil || ps == nil {
-		return err
-	}
-
-	merr := multierror.ErrorList{}
-
-	for _, r := range ps.Checkpoint.Latest.Resources {
-		if r.Type != "nitric:Image" {
-			continue
-		}
-
-		obj, ok := r.Outputs["imageUri"]
-		if !ok {
-			continue
-		}
-
-		imageURI, ok := obj.(string)
-		if !ok || imageURI == "" {
-			continue
-		}
-
-		err = p.prov.TryPullImage(context.TODO(), imageURI)
-		if err != nil {
-			merr.Push(err)
-		}
-	}
-
-	return merr.Err()
 }
 
 func (p *pulumiDeployment) SupportedRegions() []string {

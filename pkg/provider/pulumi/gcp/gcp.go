@@ -26,12 +26,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"strings"
 
-	nativestorage "cloud.google.com/go/storage"
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/docker/docker/api/types"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	multierror "github.com/missionMeteora/toolkit/errors"
@@ -49,7 +46,6 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
@@ -206,54 +202,6 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 	}
 
 	return autoStack.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: g.gcpProject})
-}
-
-func (g *gcpProvider) ReadPulumiStack(ctx context.Context, backendURL string) (*common.PulumiStack, error) {
-	sc, err := nativestorage.NewClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	defer sc.Close()
-
-	name := path.Join(".pulumi", "stacks", g.proj.Name+"-"+g.sc.Name+".json")
-
-	r, err := sc.Bucket(strings.ReplaceAll(backendURL, "gs://", "")).Object(name).NewReader(ctx)
-	if err != nil {
-		if errors.Is(err, nativestorage.ErrObjectNotExist) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return common.StackFromReader(r)
-}
-
-func (g *gcpProvider) TryPullImage(ctx context.Context, imageURL string) error {
-	ce, err := containerengine.Discover()
-	if err != nil {
-		return err
-	}
-
-	if err := g.setToken(); err != nil {
-		return errors.WithMessage(err, "setToken")
-	}
-
-	authConfig := types.AuthConfig{
-		Username:      "oauth2accesstoken",
-		Password:      g.token.AccessToken,
-		ServerAddress: "https://gcr.io",
-	}
-
-	encodedJSON, err := json.Marshal(authConfig)
-	if err != nil {
-		return errors.WithMessage(err, "json.Marshal auth")
-	}
-
-	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
-
-	return ce.ImagePull(imageURL, types.ImagePullOptions{RegistryAuth: authStr})
 }
 
 func (g *gcpProvider) setToken() error {

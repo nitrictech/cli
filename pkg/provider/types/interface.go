@@ -34,7 +34,6 @@ type Provider interface {
 	Down(log output.Progress) error
 	List() (interface{}, error)
 	Ask() (*stack.Config, error)
-	TryPullImages() error
 	SupportedRegions() []string
 	//Status()
 }

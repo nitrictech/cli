@@ -41,7 +41,6 @@ type PulumiProvider interface {
 	Deploy(*pulumi.Context) error
 	CleanUp()
 	Ask() (*stack.Config, error)
-	TryPullImages() error
 	SupportedRegions() []string
 }
 

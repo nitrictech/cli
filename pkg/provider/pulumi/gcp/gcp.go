@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/docker/docker/api/types"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	multierror "github.com/missionMeteora/toolkit/errors"
@@ -47,7 +46,6 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/stack"
@@ -204,47 +202,6 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 	}
 
 	return autoStack.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: g.gcpProject})
-}
-
-func (g *gcpProvider) TryPullImages() error {
-	ce, err := containerengine.Discover()
-	if err != nil {
-		return err
-	}
-
-	if proj, ok := g.sc.Extra["project"]; !ok || proj == nil {
-		return fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider)
-	} else {
-		g.gcpProject = proj.(string)
-	}
-
-	if err := g.setToken(); err != nil {
-		return errors.WithMessage(err, "setToken")
-	}
-
-	authConfig := types.AuthConfig{
-		Username:      "oauth2accesstoken",
-		Password:      g.token.AccessToken,
-		ServerAddress: "https://gcr.io",
-	}
-
-	encodedJSON, err := json.Marshal(authConfig)
-	if err != nil {
-		return errors.WithMessage(err, "json.Marshal auth")
-	}
-
-	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
-
-	for _, c := range g.proj.Computes() {
-		image := fmt.Sprintf("gcr.io/%s/%s:latest", g.gcpProject, c.ImageTagName(g.proj, g.sc.Provider))
-
-		err = ce.ImagePull(image, types.ImagePullOptions{RegistryAuth: authStr})
-		if err != nil {
-			return errors.WithMessage(err, "imagePull")
-		}
-	}
-
-	return nil
 }
 
 func (g *gcpProvider) setToken() error {

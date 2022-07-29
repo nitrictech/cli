@@ -95,10 +95,6 @@ func (p *pulumiDeployment) Ask() (*stack.Config, error) {
 	return p.prov.Ask()
 }
 
-func (p *pulumiDeployment) TryPullImages() error {
-	return p.prov.TryPullImages()
-}
-
 func (p *pulumiDeployment) SupportedRegions() []string {
 	return p.prov.SupportedRegions()
 }

@@ -135,10 +135,6 @@ var stackUpdateCmd = &cobra.Command{
 		p, err := provider.NewProvider(proj, s, envMap, &types.ProviderOpts{Force: force})
 		cobra.CheckErr(err)
 
-		if err := p.TryPullImages(); err != nil {
-			pterm.Info.Print(err)
-		}
-
 		buildImages := tasklet.Runner{
 			StartMsg: "Building Images",
 			Runner: func(_ output.Progress) error {

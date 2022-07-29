@@ -161,10 +161,6 @@ func policyResourceName(policy *v1.PolicyResource) (string, error) {
 	return md5Hash(policyDoc), nil
 }
 
-func (a *awsProvider) TryPullImages() error {
-	return nil
-}
-
 func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 

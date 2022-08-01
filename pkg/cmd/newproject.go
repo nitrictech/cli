@@ -59,6 +59,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		answers := struct {
 			ProjectName  string
 			TemplateName string
+			FeedbackName string
 			Handlers     string
 		}{}
 
@@ -83,10 +84,12 @@ nitric new hello-world "official/TypeScript - Starter" `,
 			if downloadr.Get(a) == nil {
 				return fmt.Errorf("%s not in %v", a, dirs)
 			}
+
 			return nil
 		}
 
 		qs := []*survey.Question{}
+
 		if len(args) > 0 {
 			if err := projectNameQu.Validate(args[0]); err != nil {
 				pterm.Error.PrintOnError(err)
@@ -173,11 +176,14 @@ func validateName(val interface{}) error {
 	if !ok {
 		return errors.New("project name must be a string")
 	}
+
 	if name == "" {
 		return errors.New("project name can not be empty")
 	}
+
 	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") || !nameRegex.MatchString(name) {
 		return errors.New("invalid project name, only letters, numbers and dashes are supported")
 	}
+
 	return nil
 }

@@ -29,6 +29,7 @@ func RateToCron(rate string) (string, error) {
 	if len(rateParts) < 2 {
 		return "", fmt.Errorf("not enough parts to rate expression %s", rate)
 	}
+
 	rateNum := rateParts[0]
 	rateType := rateParts[1]
 

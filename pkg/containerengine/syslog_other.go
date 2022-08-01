@@ -51,6 +51,7 @@ func (s *localSyslog) Stop() error {
 	if err := s.server.Kill(); err != nil {
 		errList.Push(err)
 	}
+
 	s.server.Wait()
 
 	if err := s.file.Close(); err != nil {
@@ -75,6 +76,7 @@ func (s *localSyslog) Start() error {
 	if err != nil {
 		return err
 	}
+
 	s.port = ports[0]
 
 	channel := make(syslog.LogPartsChannel)
@@ -83,6 +85,7 @@ func (s *localSyslog) Start() error {
 	s.server = syslog.NewServer()
 	s.server.SetFormat(syslog.Automatic)
 	s.server.SetHandler(handler)
+
 	err = s.server.ListenUDP(net.JoinHostPort("0.0.0.0", fmt.Sprint(s.port)))
 	if err != nil {
 		return err
@@ -114,6 +117,7 @@ func (s *localSyslog) Start() error {
 	if err != nil {
 		return err
 	}
+
 	log.SetFlags(0)
 	log.SetOutput(logwriter)
 

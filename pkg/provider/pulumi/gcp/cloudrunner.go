@@ -48,10 +48,13 @@ type CloudRunner struct {
 	Url     pulumi.StringInput
 }
 
+var defaultConcurrency = 300
+
 func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *CloudRunnerArgs, opts ...pulumi.ResourceOption) (*CloudRunner, error) {
 	res := &CloudRunner{
 		Name: name,
 	}
+
 	err := ctx.RegisterComponentResource("nitric:func:GCPCloudRunner", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -79,6 +82,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 512)
 	maxScale := common.IntValueOrDefault(args.Compute.Unit().MaxScale, 10)
 	minScale := common.IntValueOrDefault(args.Compute.Unit().MinScale, 0)
+
 	res.Service, err = cloudrun.NewService(ctx, name, &cloudrun.ServiceArgs{
 		Location: pulumi.String(g.sc.Region),
 		Project:  pulumi.String(args.ProjectId),
@@ -90,7 +94,8 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				},
 			},
 			Spec: cloudrun.ServiceTemplateSpecArgs{
-				ServiceAccountName: args.ServiceAccount.Email,
+				ServiceAccountName:   args.ServiceAccount.Email,
+				ContainerConcurrency: pulumi.Int(defaultConcurrency),
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
 						Envs:  env,
@@ -116,6 +121,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 		if len(ss) == 0 {
 			return "", errors.New("serviceStatus is empty")
 		}
+
 		return *ss[0].Url, nil
 	}).(pulumi.StringInput)
 
@@ -148,7 +154,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 			if ok {
 				_, err = pubsub.NewSubscription(ctx, name+"-"+t+"-sub", &pubsub.SubscriptionArgs{
 					Topic:              topic.Name,
-					AckDeadlineSeconds: pulumi.Int(0),
+					AckDeadlineSeconds: pulumi.Int(300),
 					RetryPolicy: pubsub.SubscriptionRetryPolicyArgs{
 						MinimumBackoff: pulumi.String("15s"),
 						MaximumBackoff: pulumi.String("600s"),

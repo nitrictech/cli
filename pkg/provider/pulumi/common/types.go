@@ -41,7 +41,6 @@ type PulumiProvider interface {
 	Deploy(*pulumi.Context) error
 	CleanUp()
 	Ask() (*stack.Config, error)
-	TryPullImages() error
 	SupportedRegions() []string
 }
 
@@ -57,5 +56,6 @@ func IntValueOrDefault(v, def int) int {
 	if v != 0 {
 		return v
 	}
+
 	return def
 }

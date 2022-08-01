@@ -61,8 +61,10 @@ func Gather() (*Diagnostics, error) {
 	if err != nil {
 		return &diag, err
 	}
+
 	diag.ContainerRuntime = ce.Type()
 	diag.ContainerRuntimeVersion = ce.Version()
+
 	return &diag, nil
 }
 

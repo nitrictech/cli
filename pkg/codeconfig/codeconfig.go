@@ -101,15 +101,18 @@ func (c *codeConfig) Collect() error {
 		// run files in parallel
 		go func(fn project.Function) {
 			defer wg.Done()
+
 			rel, err := fn.RelativeHandlerPath(c.initialProject)
 			if err != nil {
 				errList.Push(err)
+
 				return
 			}
 
 			err = c.collectOne(rel)
 			if err != nil {
 				errList.Push(err)
+
 				return
 			}
 		}(f)
@@ -130,6 +133,7 @@ var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 // Get the security definitions for an API in this stack
 func (c *codeConfig) securityDefinitions(api string) (map[string]*pb.ApiSecurityDefinition, error) {
 	sds := make(map[string]*pb.ApiSecurityDefinition)
+
 	for _, f := range c.functions {
 		// TODO: Ensure the function actually has API definitions
 		if f.apis != nil && f.apis[api] != nil && f.apis[api].securityDefinitions != nil {
@@ -163,6 +167,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if f.apis[api] != nil {
 			for _, w := range f.apis[api].workers {
 				workers = append(workers, &apiHandler{
@@ -214,6 +219,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 			}
 
 			var sr *openapi3.SecurityRequirements = nil
+
 			if w.worker.Options != nil {
 				if w.worker.Options.SecurityDisabled {
 					sr = &openapi3.SecurityRequirements{}
@@ -245,8 +251,10 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		fmt.Println("discovered api doc", string(b))
 	}
+
 	return doc, nil
 }
 
@@ -254,16 +262,18 @@ func ensureOneTrailingSlash(p string) string {
 	if len(p) > 0 && string(p[len(p)-1]) == "/" {
 		return p
 	}
+
 	return p + "/"
 }
 
 func splitPath(workerPath string) (string, openapi3.Parameters) {
 	normalizedPath := ""
-
 	params := make(openapi3.Parameters, 0)
+
 	for _, p := range strings.Split(workerPath, "/") {
 		if strings.HasPrefix(p, ":") {
 			paramName := strings.Replace(p, ":", "", -1)
+
 			params = append(params, &openapi3.ParameterRef{
 				Value: &openapi3.Parameter{
 					In:       "path",
@@ -285,6 +295,7 @@ func splitPath(workerPath string) (string, openapi3.Parameters) {
 	if normalizedPath != "/" {
 		normalizedPath = strings.TrimSuffix(normalizedPath, "/")
 	}
+
 	return normalizedPath, params
 }
 
@@ -293,6 +304,7 @@ func useHostInterface(hc *container.HostConfig, iface string, port int) ([]strin
 	if err != nil {
 		return nil, err
 	}
+
 	fmt.Println("dockerInternalAddr ", dockerInternalAddr)
 
 	hc.NetworkMode = "host"
@@ -372,6 +384,7 @@ func (c *codeConfig) collectOne(handler string) error {
 	} else {
 		env = useDockerInternal(hostConfig, port)
 	}
+
 	if err != nil {
 		return err
 	}
@@ -398,6 +411,7 @@ func (c *codeConfig) collectOne(handler string) error {
 	}
 
 	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")
+
 	cID, err := ce.ContainerCreate(cc, hostConfig, &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{},
 	}, cn)
@@ -421,32 +435,38 @@ func (c *codeConfig) collectOne(handler string) error {
 
 	logWriter := log.Writer()
 	logRW := &bytes.Buffer{}
+
 	if output.VerboseLevel <= 1 {
 		// if we are running in non-verbose then store the container logs in a buffer in case
 		// there are errors.
 		logWriter = logRW
 	}
+
 	go func() {
 		_, _ = stdcopy.StdCopy(logWriter, logWriter, logreader)
 	}()
 
 	errs := multierror.ErrorList{}
 	waitChan, cErrChan := ce.ContainerWait(cID, container.WaitConditionNextExit)
+
 	select {
 	case done := <-waitChan:
 		msg := ""
 		if done.Error != nil {
 			msg = done.Error.Message
 		}
+
 		if logRW.Len() > 0 {
 			for {
 				line, err := logRW.ReadString('\n')
 				if err != nil {
 					break
 				}
+
 				msg += "\n" + line
 			}
 		}
+
 		if done.StatusCode != 0 {
 			errs.Push(fmt.Errorf("error executing in container (code %d) %s", done.StatusCode, msg))
 		}
@@ -456,6 +476,7 @@ func (c *codeConfig) collectOne(handler string) error {
 
 	// When the container exits stop the server
 	grpcSrv.Stop()
+
 	cErr := <-errChan
 	if cErr != nil {
 		errs.Push(cErr)
@@ -463,6 +484,7 @@ func (c *codeConfig) collectOne(handler string) error {
 
 	// Add the function
 	c.addFunction(fun, handler)
+
 	return errs.Err()
 }
 
@@ -482,6 +504,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 	}
 
 	errs := multierror.ErrorList{}
+
 	for handler, f := range c.functions {
 		topicTriggers := make([]string, 0, len(f.subscriptions)+len(f.schedules))
 
@@ -500,15 +523,19 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 
 			s.SecurityDefinitions[k] = secDefs
 		}
+
 		for k := range f.buckets {
 			s.Buckets[k] = project.Bucket{}
 		}
+
 		for k := range f.collections {
 			s.Collections[k] = project.Collection{}
 		}
+
 		for k := range f.queues {
 			s.Queues[k] = project.Queue{}
 		}
+
 		for k := range f.secrets {
 			s.Secrets[k] = project.Secret{}
 		}
@@ -529,7 +556,6 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 				exp = v.GetCron().Cron
 			} else if v.GetRate() != nil {
 				e, err := cron.RateToCron(v.GetRate().Rate)
-
 				if err != nil {
 					errs.Push(fmt.Errorf("schedule expresson %s is invalid; %w", v.GetRate().Rate, err))
 					continue
@@ -554,6 +580,7 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 					},
 				},
 			}
+
 			if current, ok := s.Schedules[k]; ok {
 				if err := mergo.Merge(&current, &newS); err != nil {
 					errs.Push(err)
@@ -585,9 +612,11 @@ func (c *codeConfig) ToProject() (*project.Project, error) {
 				continue
 			}
 		}
+
 		fun.ComputeUnit.Triggers = project.Triggers{
 			Topics: topicTriggers,
 		}
+
 		// set the functions worker count
 		fun.WorkerCount = f.WorkerCount()
 		s.Functions[f.name] = fun

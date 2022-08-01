@@ -32,12 +32,16 @@ import (
 func TestRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mgetter := mock_utils.NewMockGetterClient(ctrl)
+
 	fh, err := os.CreateTemp("", "repository.*")
 	if err != nil {
 		t.Error(err)
 	}
+
 	configPath := fh.Name()
+
 	t.Cleanup(func() { os.Remove(fh.Name()) })
+
 	mgetter.EXPECT().Get().Do(func() {
 		encoder := yaml.NewEncoder(fh)
 		repo := repository{
@@ -55,19 +59,23 @@ func TestRepository(t *testing.T) {
 		if err := encoder.Encode(&repo); err != nil {
 			t.Error(err)
 		}
+
 		fh.Close()
 	})
+
 	d := &downloader{
 		configPath: configPath,
 		newGetter: func(c *getter.Client) utils.GetterClient {
 			return mgetter
 		},
 	}
+
 	err = d.repository()
 	if err != nil {
 		t.Errorf("downloader.repository() error = %v", err)
 		return
 	}
+
 	wantRepo := []TemplateInfo{
 		{
 			Name: "official/Java Stack (Multi Module)",

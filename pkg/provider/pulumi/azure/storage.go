@@ -43,12 +43,14 @@ func (a *azureProvider) newStorageResources(ctx *pulumi.Context, name string, ar
 		Queues:     map[string]*storage.Queue{},
 		Containers: map[string]*storage.BlobContainer{},
 	}
+
 	err := ctx.RegisterComponentResource("nitric:storage:AzureStorage", name, res, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	accName := resourceName(ctx, name, StorageAccountRT)
+
 	res.Account, err = storage.NewStorageAccount(ctx, accName, &storage.StorageAccountArgs{
 		AccessTier:        storage.AccessTierHot,
 		ResourceGroupName: args.ResourceGroupName,
@@ -81,5 +83,6 @@ func (a *azureProvider) newStorageResources(ctx *pulumi.Context, name string, ar
 			return nil, errors.WithMessage(err, "queue create")
 		}
 	}
+
 	return res, nil
 }

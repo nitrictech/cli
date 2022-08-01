@@ -36,12 +36,15 @@ type Progress interface {
 
 func StdoutToPtermDebug(b io.ReadCloser, p Progress, prefix string) {
 	defer b.Close()
+
 	buf := make([]byte, 1024)
+
 	for {
 		n, err := b.Read(buf)
 		if err != nil {
 			break
 		}
+
 		p.Debugf("%s %v", prefix, string(buf[:n]))
 	}
 }

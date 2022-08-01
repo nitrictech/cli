@@ -44,6 +44,7 @@ func (a *azureProvider) newMongoCollections(ctx *pulumi.Context, name string, ar
 		Name:        name,
 		Collections: map[string]*documentdb.MongoDBResourceMongoDBCollection{},
 	}
+
 	err := ctx.RegisterComponentResource("nitric:collections:CosmosMongo", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -59,6 +60,7 @@ func (a *azureProvider) newMongoCollections(ctx *pulumi.Context, name string, ar
 		IsZoneRedundant:  pulumi.Bool(false),
 		LocationName:     pulumi.String("canadacentral"),
 	}
+
 	if primaryGeo.LocationName == secondaryGeo.LocationName {
 		secondaryGeo.LocationName = pulumi.String("northeurope")
 	}
@@ -123,7 +125,6 @@ func (a *azureProvider) newMongoCollections(ctx *pulumi.Context, name string, ar
 			ResourceGroupName: rgName,
 			AccountName:       acctName,
 		})
-
 		if err != nil {
 			return "", err
 		}

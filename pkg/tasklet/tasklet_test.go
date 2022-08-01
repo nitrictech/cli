@@ -50,12 +50,14 @@ func TestRun(t *testing.T) {
 			wantErr: errors.New("tasklet timedout after 2s"),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := Run(tt.runner, tt.opts)
 			if (err != nil) != (tt.wantErr != nil) {
 				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			if (err != nil) && (tt.wantErr != nil) && err.Error() != tt.wantErr.Error() {
 				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			}

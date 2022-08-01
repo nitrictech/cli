@@ -76,6 +76,7 @@ func Run(runner Runner, opts Opts) error {
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		_ = spinner.Stop()
 	}()
@@ -99,6 +100,7 @@ func Run(runner Runner, opts Opts) error {
 	if opts.Timeout == 0 {
 		opts.Timeout = time.Hour // our infinite
 	}
+
 	timer := time.NewTimer(opts.Timeout)
 
 	go func() {
@@ -106,8 +108,10 @@ func Run(runner Runner, opts Opts) error {
 		if err != nil {
 			doErr <- err
 		}
+
 		done <- true
 	}()
+
 	select {
 	case err = <-doErr:
 	case <-timer.C:

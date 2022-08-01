@@ -61,6 +61,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		Name: name,
 		Apps: map[string]*ContainerApp{},
 	}
+
 	err := ctx.RegisterComponentResource("nitric:func:ContainerApps", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -151,7 +152,6 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		},
 		Tags: common.Tags(ctx, ctx.Stack()+"Kube"),
 	}, pulumi.Parent(res))
-
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +159,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 	creds := pulumi.All(args.ResourceGroupName, res.Registry.Name).ApplyT(func(args []interface{}) (*containerregistry.ListRegistryCredentialsResult, error) {
 		rgName := args[0].(string)
 		regName := args[1].(string)
+
 		return containerregistry.ListRegistryCredentials(ctx, &containerregistry.ListRegistryCredentialsArgs{
 			ResourceGroupName: rgName,
 			RegistryName:      regName,
@@ -169,11 +170,14 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		cred := arg.(*containerregistry.ListRegistryCredentialsResult)
 		return cred.Username
 	}).(pulumi.StringPtrOutput)
+
 	adminPass := creds.ApplyT(func(arg interface{}) (*string, error) {
 		cred := arg.(*containerregistry.ListRegistryCredentialsResult)
+
 		if len(cred.Passwords) == 0 || cred.Passwords[0].Value == nil {
 			return nil, fmt.Errorf("cannot retrieve container registry credentials")
 		}
+
 		return cred.Passwords[0].Value, nil
 	}).(pulumi.StringPtrOutput)
 
@@ -256,6 +260,7 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		Name:          name,
 		Subscriptions: map[string]*eventgrid.Topic{},
 	}
+
 	err := ctx.RegisterComponentResource("nitric:func:ContainerApp", name, res, opts...)
 	if err != nil {
 		return nil, err
@@ -394,10 +399,10 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		},
 		ResourceGroupName: args.ResourceGroupName,
 	}, pulumi.Parent(res.App))
-
 	if err != nil {
 		return nil, err
 	}
+
 	// Determine required subscriptions so they can be setup once the container starts
 	for _, t := range args.Compute.Unit().Triggers.Topics {
 		topic, ok := args.Topics[t]

@@ -128,7 +128,7 @@ func (t *golang) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
 		return err
 	}
 
-	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "git"}})
+	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "git", "gcc", "g++", "make"}})
 	con.Run(dockerfile.RunOptions{Command: []string{"go", "install", "github.com/asalkeld/CompileDaemon@master"}})
 
 	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))

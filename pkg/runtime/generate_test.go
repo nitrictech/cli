@@ -229,7 +229,7 @@ ENTRYPOINT ["node"]`,
 		{
 			handler: "pkg/list/main.go",
 			wantFwriter: `FROM golang:alpine
-RUN apk add --no-cache git
+RUN apk add --no-cache git gcc g++ make
 RUN go install github.com/asalkeld/CompileDaemon@master`,
 		},
 	}

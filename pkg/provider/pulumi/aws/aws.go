@@ -291,7 +291,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		image, ok := a.images[c.Unit().Name]
 		if !ok {
 			image, err = common.NewImage(ctx, c.Unit().Name, &common.ImageArgs{
-				LocalImageName:  localImageName,
+				ProjectDir:      a.proj.Dir,
+				Provider:        a.sc.Provider,
+				Compute:         c,
 				SourceImageName: c.ImageTagName(a.proj, a.sc.Provider),
 				RepositoryUrl:   repo.RepositoryUrl,
 				Server:          pulumi.String(authToken.ProxyEndpoint),

@@ -26,7 +26,6 @@ import (
 	"github.com/nitrictech/cli/mocks/mock_containerengine"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/stack"
 )
 
 func TestCreateBaseDev(t *testing.T) {
@@ -48,36 +47,6 @@ func TestCreateBaseDev(t *testing.T) {
 	containerengine.DiscoveredEngine = me
 
 	if err := CreateBaseDev(s); err != nil {
-		t.Errorf("CreateBaseDev() error = %v", err)
-	}
-}
-
-func TestCreate(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	me := mock_containerengine.NewMockContainerEngine(ctrl)
-	me.EXPECT().Build(gomock.Any(), ".", "test-stack--aws", map[string]string{"PROVIDER": "aws"}, []string{"node_modules/", ".nitric/", ".git/", ".idea/"})
-	me.EXPECT().Build("Dockerfile.custom", ".", "test-stack--aws", map[string]string{"PROVIDER": "aws"}, []string{})
-
-	containerengine.DiscoveredEngine = me
-
-	s := &project.Project{
-		Name: "test-stack",
-		Dir:  ".",
-		Functions: map[string]project.Function{
-			"list": {
-				Handler:     "functions/list.ts",
-				ComputeUnit: project.ComputeUnit{},
-			},
-		},
-		Containers: map[string]project.Container{
-			"doit": {
-				Dockerfile:  "Dockerfile.custom",
-				ComputeUnit: project.ComputeUnit{},
-			},
-		},
-	}
-
-	if err := Create(s, &stack.Config{Provider: "aws", Region: "eastus"}); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)
 	}
 }

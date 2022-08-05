@@ -28,7 +28,6 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
@@ -134,15 +133,6 @@ var stackUpdateCmd = &cobra.Command{
 
 		p, err := provider.NewProvider(proj, s, envMap, &types.ProviderOpts{Force: force})
 		cobra.CheckErr(err)
-
-		buildImages := tasklet.Runner{
-			StartMsg: "Building Images",
-			Runner: func(_ output.Progress) error {
-				return build.Create(proj, s)
-			},
-			StopMsg: "Images built",
-		}
-		tasklet.MustRun(buildImages, tasklet.Opts{})
 
 		d := &types.Deployment{}
 		deploy := tasklet.Runner{

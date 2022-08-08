@@ -17,7 +17,10 @@
 package common
 
 import (
+	"errors"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
@@ -48,6 +51,13 @@ func dockerfile(tempDir, projDir, provider string, c project.Compute) (string, e
 		err = rt.FunctionDockerfile(projDir, project.DefaultMembraneVersion, provider, fh)
 		if err != nil {
 			return "", err
+		}
+
+		if _, err := os.Stat(filepath.Join(projDir, ".dockerignore")); errors.Is(err, os.ErrNotExist) {
+			err = os.WriteFile(filepath.Join(projDir, ".dockerignore"), []byte(strings.Join(rt.BuildIgnore(), "\n")), 0600)
+			if err != nil {
+				return "", err
+			}
 		}
 
 		fh.Close()

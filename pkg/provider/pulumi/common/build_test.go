@@ -91,6 +91,8 @@ CMD ["node", "index.js"]`,
 					t.Error(cmp.Diff(tt.wantBody, string(contents)))
 				}
 			}
+
+			_ = os.Remove(".dockerignore")
 		})
 	}
 }

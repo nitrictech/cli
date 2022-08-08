@@ -62,7 +62,7 @@ CMD ["node", "index.js"]`,
 			handler:  "pkg/handler/list.go",
 			version:  "v1.2.3",
 			provider: "aws",
-			wantFwriter: `FROM golang:alpine as build
+			wantFwriter: `FROM golang:alpine as layer-build
 RUN apk update
 RUN apk upgrade
 RUN apk add --no-cache git gcc g++ make
@@ -71,11 +71,11 @@ COPY go.mod *.sum ./
 RUN go mod download
 COPY . .
 RUN go build -o /bin/main ./pkg/handler/...
-FROM alpine
+FROM alpine as layer-final
 ADD https://github.com/nitrictech/nitric/releases/download/v1.2.3/membrane-aws /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane
 ENTRYPOINT ["/usr/local/bin/membrane"]
-COPY --from=build /bin/main /bin/main
+COPY --from=layer-build /bin/main /bin/main
 RUN chmod +x-rw /bin/main
 RUN apk add --no-cache tzdata
 WORKDIR /
@@ -87,7 +87,7 @@ CMD ["/bin/main"]`,
 			handler:  "list.py",
 			version:  "v1.1.7",
 			provider: "digitalocean",
-			wantFwriter: `FROM python:3.7-slim
+			wantFwriter: `FROM python:3.7-slim as layer-final
 RUN pip install --upgrade pip
 WORKDIR /
 COPY requirements.txt requirements.txt
@@ -105,7 +105,7 @@ CMD ["python", "list.py"]`,
 			handler:  "functions/list.js",
 			version:  "latest",
 			provider: "gcp",
-			wantFwriter: `FROM node:alpine
+			wantFwriter: `FROM node:alpine as layer-final
 ADD https://github.com/nitrictech/nitric/releases/latest/download/membrane-gcp /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane
 ENTRYPOINT ["/usr/local/bin/membrane"]
@@ -120,15 +120,15 @@ CMD ["node", "functions/list.js"]`,
 			handler:  "testdata/test.java",
 			version:  "latest",
 			provider: "aws",
-			wantFwriter: `FROM maven:3-openjdk-11 as build
+			wantFwriter: `FROM maven:3-openjdk-11 as layer-build
 COPY /pom.xml pom.xml
 COPY /subdir/pom.xml subdir/pom.xml
 RUN mvn de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
 COPY / .
 COPY /subdir subdir
 RUN mvn clean package
-FROM adoptopenjdk/openjdk11:x86_64-alpine-jre-11.0.10_9
-COPY --from=build testdata/test.java function.jar
+FROM adoptopenjdk/openjdk11:x86_64-alpine-jre-11.0.10_9 as layer-final
+COPY --from=layer-build testdata/test.java function.jar
 WORKDIR /
 EXPOSE 9001
 CMD ["java", "-jar", "function.jar"]

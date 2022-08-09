@@ -49,6 +49,13 @@ const (
 	RuntimeJava       RuntimeExt = "java"
 
 	RuntimeUnknown RuntimeExt = ""
+
+	layerBuild = "build"
+	layerFinal = "final"
+)
+
+var (
+	commonIgnore = []string{".nitric/", ".git/", ".idea/", ".vscode/", ".github"}
 )
 
 type LaunchOpts struct {

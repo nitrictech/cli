@@ -17,15 +17,17 @@
 package common
 
 import (
-	"io/ioutil"
-
 	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	"github.com/nitrictech/cli/pkg/project"
 )
 
 type ImageArgs struct {
-	LocalImageName  string
+	ProjectDir      string
+	Provider        string
 	SourceImageName string
+	Compute         project.Compute
 	RepositoryUrl   pulumi.StringInput
 	TempDir         string
 	Server          pulumi.StringInput
@@ -48,12 +50,7 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 		return nil, err
 	}
 
-	dummyDockerFilePath, err := ioutil.TempFile(args.TempDir, "*.dockerfile")
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = dummyDockerFilePath.WriteString("FROM " + args.SourceImageName + "\n")
+	dockerFilePath, err := dockerfile(args.TempDir, args.ProjectDir, args.Provider, args.Compute)
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +58,17 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 	imageArgs := &docker.ImageArgs{
 		ImageName: args.RepositoryUrl,
 		Build: docker.DockerBuildArgs{
+			CacheFrom: docker.CacheFromPtr(&docker.CacheFromArgs{
+				Stages: pulumi.StringArray{
+					pulumi.String("layer-build"),
+					pulumi.String("layer-final"),
+				}}),
+			Context: pulumi.String(args.ProjectDir),
+			Args:    pulumi.StringMap{"PROVIDER": pulumi.String(args.Provider)},
 			Env: pulumi.StringMap{
 				"DOCKER_BUILDKIT": pulumi.String("1"),
 			},
-			Dockerfile: pulumi.String(dummyDockerFilePath.Name()),
+			Dockerfile: pulumi.String(dockerFilePath),
 		},
 		Registry: docker.ImageRegistryArgs{
 			Server:   args.Server,

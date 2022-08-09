@@ -36,7 +36,7 @@ type javascript struct {
 
 var (
 	_                    Runtime = &javascript{}
-	javascriptIgnoreList         = []string{"node_modules/", ".nitric/", ".git/", ".idea/"}
+	javascriptIgnoreList         = append(commonIgnore, "node_modules/")
 )
 
 func (t *javascript) DevImageName() string {
@@ -52,8 +52,11 @@ func (t *javascript) BuildIgnore() []string {
 }
 
 func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
-	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+	css := dockerfile.NewStateStore()
+
+	con, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",
+		As:     layerFinal, // no build stage in this
 		Ignore: javascriptIgnoreList,
 	})
 	if err != nil {

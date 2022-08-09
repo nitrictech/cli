@@ -42,7 +42,7 @@ func (t *golang) DevImageName() string {
 }
 
 func (t *golang) BuildIgnore() []string {
-	return []string{}
+	return commonIgnore
 }
 
 func (t *golang) ContainerName() string {
@@ -56,9 +56,11 @@ func (t *golang) ContainerName() string {
 }
 
 func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
-	buildCon, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+	css := dockerfile.NewStateStore()
+
+	buildCon, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   "golang:alpine",
-		As:     "build",
+		As:     layerBuild,
 		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
@@ -90,9 +92,10 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 		},
 	})
 
-	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+	con, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   "alpine",
-		Ignore: []string{},
+		As:     layerFinal,
+		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
 		return err
@@ -100,7 +103,7 @@ func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.W
 
 	withMembrane(con, version, provider)
 
-	err = con.Copy(dockerfile.CopyOptions{Src: "/bin/main", Dest: "/bin/main", From: "build"})
+	err = con.Copy(dockerfile.CopyOptions{Src: "/bin/main", Dest: "/bin/main", From: buildCon.Name()})
 	if err != nil {
 		return err
 	}

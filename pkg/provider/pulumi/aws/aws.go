@@ -193,9 +193,6 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k := range a.proj.Topics {
 		a.topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
-			// FIXME: Autonaming of topics disabled until improvements to
-			// nitric topic name discovery is made for SNS topics.
-			Name: pulumi.StringPtr(k),
 			Tags: common.Tags(ctx, k),
 		})
 		if err != nil {

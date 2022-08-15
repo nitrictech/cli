@@ -58,11 +58,12 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 	imageArgs := &docker.ImageArgs{
 		ImageName: args.RepositoryUrl,
 		Build: docker.DockerBuildArgs{
-			CacheFrom: docker.CacheFromPtr(&docker.CacheFromArgs{
-				Stages: pulumi.StringArray{
-					pulumi.String("layer-build"),
-					pulumi.String("layer-final"),
-				}}),
+			// This below is slowing done builds significantly.
+			//CacheFrom: docker.CacheFromPtr(&docker.CacheFromArgs{
+			//	Stages: pulumi.StringArray{
+			//		pulumi.String("layer-build"),
+			//		pulumi.String("layer-final"),
+			//	}}),
 			Context: pulumi.String(args.ProjectDir),
 			Args:    pulumi.StringMap{"PROVIDER": pulumi.String(args.Provider)},
 			Env: pulumi.StringMap{

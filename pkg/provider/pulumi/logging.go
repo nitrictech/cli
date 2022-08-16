@@ -31,7 +31,7 @@ import (
 	"github.com/nitrictech/cli/pkg/output"
 )
 
-func updateLoggingOpts(log output.Progress) []optup.Option {
+func updateLoggingOpts(log *pulumiLogger) []optup.Option {
 	upChannel := make(chan events.EngineEvent)
 	opts := []optup.Option{
 		optup.EventStreams(upChannel),
@@ -60,7 +60,7 @@ func updateLoggingOpts(log output.Progress) []optup.Option {
 	return opts
 }
 
-func destroyLoggingOpts(log output.Progress) []optdestroy.Option {
+func destroyLoggingOpts(log *pulumiLogger) []optdestroy.Option {
 	upChannel := make(chan events.EngineEvent)
 	opts := []optdestroy.Option{
 		optdestroy.EventStreams(upChannel),
@@ -100,7 +100,7 @@ func stepEventToString(eType string, evt *apitype.StepEventMetadata) string {
 
 const busyMsg = "%s %d/%d resources (%d failed)"
 
-func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, prefix string) {
+func collectEvents(log *pulumiLogger, eventChannel <-chan events.EngineEvent, prefix string) {
 	busyList := map[string]time.Time{}
 
 	busy := 0
@@ -117,6 +117,8 @@ func collectEvents(log output.Progress, eventChannel <-chan events.EngineEvent, 
 		if !ok {
 			return
 		}
+
+		log.CollectEvent(event)
 
 		if event.ResourcePreEvent != nil && event.ResourcePreEvent.Metadata.Op != apitype.OpSame {
 			busy++

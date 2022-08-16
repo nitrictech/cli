@@ -17,9 +17,11 @@
 package project
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 
@@ -91,6 +93,24 @@ var newStackCmd = &cobra.Command{
 	Annotations: map[string]string{"commonCommand": "yes"},
 }
 
+func writeDigest(projectName string, stackName string, summary *types.Summary) error {
+	stacksDir, err := utils.NitricStacksDir()
+
+	if err != nil {
+		return err
+	}
+
+	digestFile := path.Join(stacksDir, fmt.Sprintf("%s-%s.results.json", projectName, stackName))
+	// TODO: Also look at writing to a unique build identifier for buils status history
+	b, err := json.Marshal(summary)
+
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(digestFile, b, os.ModePerm)
+}
+
 var stackUpdateCmd = &cobra.Command{
 	Use:     "update [-s stack]",
 	Short:   "Create or update a deployed stack",
@@ -139,6 +159,7 @@ var stackUpdateCmd = &cobra.Command{
 			StartMsg: "Deploying..",
 			Runner: func(progress output.Progress) error {
 				d, err = p.Up(progress)
+				writeDigest(proj.Name, s.Name, d.Summary)
 				return err
 			},
 			StopMsg: "Stack",
@@ -150,6 +171,7 @@ var stackUpdateCmd = &cobra.Command{
 			rows = append(rows, []string{k, v})
 		}
 		_ = pterm.DefaultTable.WithBoxed().WithData(rows).Render()
+
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -193,7 +215,9 @@ nitric stack down -e aws -y`,
 		deploy := tasklet.Runner{
 			StartMsg: "Deleting..",
 			Runner: func(progress output.Progress) error {
-				return p.Down(progress)
+				sum, err := p.Down(progress)
+				writeDigest(proj.Name, s.Name, sum)
+				return err
 			},
 			StopMsg: "Stack",
 		}

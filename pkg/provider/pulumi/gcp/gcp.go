@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -226,7 +225,7 @@ func (g *gcpProvider) setToken() error {
 func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
-	g.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
+	g.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
 	}

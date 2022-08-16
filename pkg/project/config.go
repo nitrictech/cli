@@ -17,7 +17,6 @@
 package project
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -41,7 +40,7 @@ func (p *Config) ToFile() error {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(p.Dir, "nitric.yaml"), b, 0644)
+	return os.WriteFile(filepath.Join(p.Dir, "nitric.yaml"), b, 0644)
 }
 
 // ConfigFromProjectPath - loads the config nitric.yaml file from the project path, defaults to the current working directory
@@ -64,7 +63,7 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 		Dir: absDir,
 	}
 
-	yamlFile, err := ioutil.ReadFile(filepath.Join(projPath, "nitric.yaml"))
+	yamlFile, err := os.ReadFile(filepath.Join(projPath, "nitric.yaml"))
 	if err != nil {
 		return nil, errors.WithMessage(err, "No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
 	}

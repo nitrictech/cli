@@ -93,11 +93,14 @@ var newStackCmd = &cobra.Command{
 	Annotations: map[string]string{"commonCommand": "yes"},
 }
 
-func writeDigest(projectName string, stackName string, summary *types.Summary) error {
+func writeDigest(projectName string, stackName string, out output.Progress, summary *types.Summary) {
+	out.Busyf("Writing deployment results")
+
 	stacksDir, err := utils.NitricStacksDir()
 
 	if err != nil {
-		return err
+		out.Failf("Error getting Nitric stack directory: %w", err)
+		return
 	}
 
 	digestFile := path.Join(stacksDir, fmt.Sprintf("%s-%s.results.json", projectName, stackName))
@@ -105,10 +108,17 @@ func writeDigest(projectName string, stackName string, summary *types.Summary) e
 	b, err := json.Marshal(summary)
 
 	if err != nil {
-		return err
+		out.Failf("Error serializing deployment results: %w", err)
+		return
 	}
 
-	return os.WriteFile(digestFile, b, os.ModePerm)
+	err = os.WriteFile(digestFile, b, os.ModePerm)
+
+	if err != nil {
+		out.Failf("Error writing deployment results: %w", err)
+	}
+
+	out.Successf("build results written to: %s", digestFile)
 }
 
 var stackUpdateCmd = &cobra.Command{
@@ -159,7 +169,9 @@ var stackUpdateCmd = &cobra.Command{
 			StartMsg: "Deploying..",
 			Runner: func(progress output.Progress) error {
 				d, err = p.Up(progress)
-				writeDigest(proj.Name, s.Name, d.Summary)
+				// Write the digest regardless of deployment errors
+				writeDigest(proj.Name, s.Name, progress, d.Summary)
+
 				return err
 			},
 			StopMsg: "Stack",
@@ -216,7 +228,7 @@ nitric stack down -e aws -y`,
 			StartMsg: "Deleting..",
 			Runner: func(progress output.Progress) error {
 				sum, err := p.Down(progress)
-				writeDigest(proj.Name, s.Name, sum)
+				writeDigest(proj.Name, s.Name, progress, sum)
 				return err
 			},
 			StopMsg: "Stack",

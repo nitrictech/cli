@@ -19,7 +19,7 @@ package project
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 
@@ -276,7 +276,7 @@ func calculateDefaultPolicies(s *Project) []*v1.PolicyResource {
 }
 
 func FromFile(name string) (*Project, error) {
-	yamlFile, err := ioutil.ReadFile(name)
+	yamlFile, err := os.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func (s *Project) ToFile(file string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(file, b, 0644)
+	err = os.WriteFile(file, b, 0644)
 	if err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func (s *Project) ToFile(file string) error {
 			return err
 		}
 
-		err = ioutil.WriteFile(apiPath, docJ, 0644)
+		err = os.WriteFile(apiPath, docJ, 0644)
 		if err != nil {
 			return err
 		}

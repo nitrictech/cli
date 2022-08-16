@@ -229,12 +229,12 @@ func printMap(object interface{}, out io.Writer) {
 }
 
 // printStruct will print something like the following:
-//+------------+--------------------------------+
-//| ID         | 6e83378b322a                   |
-//| REPOSITORY | go-create-local                |
-//| TAG        | latest                         |
-//| CREATEDAT  | 2022-01-07 15:19:01 +1000 AEST |
-//+------------+--------------------------------+
+// +------------+--------------------------------+
+// | ID         | 6e83378b322a                   |
+// | REPOSITORY | go-create-local                |
+// | TAG        | latest                         |
+// | CREATEDAT  | 2022-01-07 15:19:01 +1000 AEST |
+// +------------+--------------------------------+
 func printStruct(object interface{}, out io.Writer) {
 	tab := table.NewWriter()
 	tab.SetOutputMirror(out)

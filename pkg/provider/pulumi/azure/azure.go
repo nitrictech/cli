@@ -20,7 +20,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -198,7 +197,7 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
-	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
+	a.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
 	}

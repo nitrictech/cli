@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -164,7 +163,7 @@ func policyResourceName(policy *v1.PolicyResource) (string, error) {
 func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
-	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
+	a.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
 	}

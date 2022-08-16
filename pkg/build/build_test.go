@@ -17,7 +17,6 @@
 package build
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestCreateBaseDev(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	me := mock_containerengine.NewMockContainerEngine(ctrl)
 
-	dir, err := ioutil.TempDir("", "test-nitric-build")
+	dir, err := os.MkdirTemp("", "test-nitric-build")
 	if err != nil {
 		t.Error(err)
 	}

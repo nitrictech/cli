@@ -21,7 +21,18 @@ import (
 	"github.com/nitrictech/cli/pkg/stack"
 )
 
+type ResourceState struct {
+	OpType   string
+	Errored  bool
+	Messages []string
+}
+
+type Summary struct {
+	Resources map[string]*ResourceState
+}
+
 type Deployment struct {
+	Summary      *Summary
 	ApiEndpoints map[string]string `json:"apiEndpoints,omitempty"`
 }
 
@@ -31,7 +42,7 @@ type ProviderOpts struct {
 
 type Provider interface {
 	Up(log output.Progress) (*Deployment, error)
-	Down(log output.Progress) error
+	Down(log output.Progress) (*Summary, error)
 	List() (interface{}, error)
 	Ask() (*stack.Config, error)
 	SupportedRegions() []string

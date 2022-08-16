@@ -25,7 +25,9 @@ import (
 // because it is unsupported.
 // Functions and methods should not return this error but should instead
 // return an error including appropriate context that satisfies
-//     errors.Is(err, errors.NotSupportedError)
+//
+//	errors.Is(err, errors.NotSupportedError)
+//
 // either by directly wrapping NotSupportedError or by implementing an Is method.
 type NotSupportedError struct {
 	error

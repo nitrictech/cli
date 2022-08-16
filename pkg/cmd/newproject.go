@@ -140,7 +140,8 @@ nitric new hello-world "official/TypeScript - Starter" `,
 							return []string{
 								"functions/*.ts",
 								"functions/*.js",
-								"functions/*/*.go"}
+								"functions/*/*.go",
+							}
 						},
 					},
 				},

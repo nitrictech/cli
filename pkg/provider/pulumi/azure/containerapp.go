@@ -193,7 +193,8 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			Username:        adminUser.Elem(),
 			Password:        adminPass.Elem(),
 			Server:          res.Registry.LoginServer,
-			TempDir:         a.tmpDir}, pulumi.Parent(res))
+			TempDir:         a.tmpDir,
+		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, errors.WithMessage(err, "function image tag "+c.Unit().Name)
 		}
@@ -320,7 +321,7 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 		},
 	}
 
-	//memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
+	// memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
 	// we can't define memory without defining the cpu..
 	appName := resourceName(ctx, name, ContainerAppRT)
 

@@ -97,7 +97,6 @@ func writeDigest(projectName string, stackName string, out output.Progress, summ
 	out.Busyf("Writing deployment results")
 
 	stacksDir, err := utils.NitricStacksDir()
-
 	if err != nil {
 		out.Failf("Error getting Nitric stack directory: %w", err)
 		return
@@ -106,7 +105,6 @@ func writeDigest(projectName string, stackName string, out output.Progress, summ
 	digestFile := path.Join(stacksDir, fmt.Sprintf("%s-%s.results.json", projectName, stackName))
 	// TODO: Also look at writing to a unique build identifier for buils status history
 	b, err := json.Marshal(summary)
-
 	if err != nil {
 		out.Failf("Error serializing deployment results: %w", err)
 		return
@@ -127,8 +125,7 @@ var stackUpdateCmd = &cobra.Command{
 	Long:    `Create or update a deployed stack`,
 	Example: `nitric stack update -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		//FIXME: Remove this error once multi-architecture support is complete
+		// FIXME: Remove this error once multi-architecture support is complete
 		if runtime.GOARCH != "amd64" {
 			cobra.CheckErr(fmt.Errorf("only x86_64 CPU architectures are supported for the `nitric up` command currently.\nSee https://github.com/nitrictech/nitric/issues/283 for updated status on multi-architecture support"))
 		}
@@ -183,7 +180,6 @@ var stackUpdateCmd = &cobra.Command{
 			rows = append(rows, []string{k, v})
 		}
 		_ = pterm.DefaultTable.WithBoxed().WithData(rows).Render()
-
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},

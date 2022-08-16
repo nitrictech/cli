@@ -41,7 +41,7 @@ func (p *Config) ToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, b, 0644)
+	return os.WriteFile(file, b, 0o644)
 }
 
 func configFromFile(file string) (*Config, error) {

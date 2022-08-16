@@ -74,7 +74,8 @@ func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	con.Run(dockerfile.RunOptions{Command: []string{
 		"set", "-ex;",
 		"yarn", "install", "--production", "--frozen-lockfile", "--cache-folder", "/tmp/.cache;",
-		"rm", "-rf", "/tmp/.cache;"}})
+		"rm", "-rf", "/tmp/.cache;",
+	}})
 
 	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
 	if err != nil {

@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -164,7 +163,7 @@ func policyResourceName(policy *v1.PolicyResource) (string, error) {
 func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
-	a.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
+	a.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
 	}
@@ -193,9 +192,6 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k := range a.proj.Topics {
 		a.topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
-			// FIXME: Autonaming of topics disabled until improvements to
-			// nitric topic name discovery is made for SNS topics.
-			Name: pulumi.StringPtr(k),
 			Tags: common.Tags(ctx, k),
 		})
 		if err != nil {
@@ -291,7 +287,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		image, ok := a.images[c.Unit().Name]
 		if !ok {
 			image, err = common.NewImage(ctx, c.Unit().Name, &common.ImageArgs{
-				LocalImageName:  localImageName,
+				ProjectDir:      a.proj.Dir,
+				Provider:        a.sc.Provider,
+				Compute:         c,
 				SourceImageName: c.ImageTagName(a.proj, a.sc.Provider),
 				RepositoryUrl:   repo.RepositoryUrl,
 				Server:          pulumi.String(authToken.ProxyEndpoint),

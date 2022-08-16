@@ -20,6 +20,7 @@ import (
 	"go/build"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -37,8 +38,8 @@ func SplitPath(p string) []string {
 	return strings.FieldsFunc(p, slashSplitter)
 }
 
-// homeDir gets the nitric home directory
-func homeDir() string {
+// NitricHomeDir gets the nitric home directory
+func NitricHomeDir() string {
 	nitricHomeEnv := os.Getenv("NITRIC_HOME")
 	if nitricHomeEnv != "" {
 		return nitricHomeEnv
@@ -54,12 +55,25 @@ func homeDir() string {
 
 // NitricRunDir returns the directory to place runtime data.
 func NitricRunDir() string {
-	return filepath.Join(homeDir(), "run")
+	return filepath.Join(NitricHomeDir(), "run")
 }
 
 // NitricTemplatesDir returns the directory to place template related data.
 func NitricTemplatesDir() string {
-	return filepath.Join(homeDir(), "store")
+	return filepath.Join(NitricHomeDir(), "store")
+}
+
+func NitricStacksDir() (string, error) {
+	homeDir := NitricHomeDir()
+	stacksDir := path.Join(homeDir, "stacks")
+
+	// ensure .nitric exists
+	err := os.MkdirAll(stacksDir, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+
+	return stacksDir, nil
 }
 
 // NitricConfigDir returns the directory to find configuration.
@@ -73,11 +87,11 @@ func NitricConfigDir() string {
 		return filepath.Join(dirname, ".config", "nitric")
 	}
 
-	return homeDir()
+	return NitricHomeDir()
 }
 
 func NitricPreferencesPath() string {
-	return filepath.Join(homeDir(), ".user-preferences.json")
+	return filepath.Join(NitricHomeDir(), ".user-preferences.json")
 }
 
 // NitricLogDir returns the directory to find log files.

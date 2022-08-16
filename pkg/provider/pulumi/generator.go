@@ -154,7 +154,13 @@ func (p *pulumiDeployment) Up(log output.Progress) (*types.Deployment, error) {
 		return nil, errors.WithMessage(err, "loading pulumi stack")
 	}
 
-	res, err := s.Up(context.Background(), updateLoggingOpts(log)...)
+	pLog := &pulumiLogger{
+		Progress: log,
+	}
+
+	res, err := s.Up(context.Background(), updateLoggingOpts(pLog)...)
+	summary := &types.Summary{Resources: pLog.resources}
+
 	if err != nil {
 		return nil, errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
 	}
@@ -162,6 +168,7 @@ func (p *pulumiDeployment) Up(log output.Progress) (*types.Deployment, error) {
 	defer p.prov.CleanUp()
 
 	d := &types.Deployment{
+		Summary:      summary,
 		ApiEndpoints: map[string]string{},
 	}
 
@@ -214,16 +221,24 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 	return result, nil
 }
 
-func (a *pulumiDeployment) Down(log output.Progress) error {
+func (a *pulumiDeployment) Down(log output.Progress) (*types.Summary, error) {
+	pLog := &pulumiLogger{
+		Progress: log,
+	}
+
 	s, err := a.load(log)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	res, err := s.Destroy(context.Background(), destroyLoggingOpts(log)...)
+	res, err := s.Destroy(context.Background(), destroyLoggingOpts(pLog)...)
+	summary := &types.Summary{
+		Resources: pLog.resources,
+	}
+
 	if err != nil {
-		return errors.WithMessage(err, res.Summary.Message)
+		return summary, errors.WithMessage(err, res.Summary.Message)
 	}
 
-	return nil
+	return summary, nil
 }

@@ -60,14 +60,16 @@ func (t *java) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 }
 
 func (t *java) BuildIgnore() []string {
-	return []string{}
+	return commonIgnore
 }
 
 func (t *java) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
-	buildCon, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+	css := dockerfile.NewStateStore()
+
+	buildCon, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   mavenOpenJDKImage,
-		As:     "build",
-		Ignore: []string{},
+		As:     layerBuild,
+		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
 		return err
@@ -78,15 +80,16 @@ func (t *java) FunctionDockerfile(funcCtxDir, version, provider string, w io.Wri
 		return err
 	}
 
-	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+	con, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   jvmRuntimeBaseImage,
-		Ignore: []string{},
+		As:     layerFinal,
+		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {
 		return err
 	}
 
-	err = con.Copy(dockerfile.CopyOptions{Src: t.handler, Dest: "function.jar", From: "build"})
+	err = con.Copy(dockerfile.CopyOptions{Src: t.handler, Dest: "function.jar", From: buildCon.Name()})
 	if err != nil {
 		return err
 	}

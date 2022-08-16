@@ -42,7 +42,7 @@ func (t *python) ContainerName() string {
 }
 
 func (t *python) BuildIgnore() []string {
-	return []string{"__pycache__/", "*.py[cod]", "*$py.class"}
+	return append(commonIgnore, "__pycache__/", "*.py[cod]", "*$py.class")
 }
 
 func (t *python) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
@@ -58,8 +58,11 @@ func (t *python) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
 }
 
 func (t *python) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
-	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
+	css := dockerfile.NewStateStore()
+
+	con, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   "python:3.7-slim",
+		As:     layerFinal,
 		Ignore: t.BuildIgnore(),
 	})
 	if err != nil {

@@ -18,7 +18,7 @@ package stack
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -41,13 +41,13 @@ func (p *Config) ToFile(file string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(file, b, 0644)
+	return os.WriteFile(file, b, 0644)
 }
 
 func configFromFile(file string) (*Config, error) {
 	s := &Config{}
 
-	yamlFile, err := ioutil.ReadFile(file)
+	yamlFile, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("no nitric stack found (unable to find %s). If you haven't created a stack yet, run `nitric stack new` to get started", file)
 	}

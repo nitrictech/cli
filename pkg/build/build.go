@@ -25,58 +25,11 @@ import (
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
-	"github.com/nitrictech/cli/pkg/stack"
 )
 
 func dynamicDockerfile(dir, name string) (*os.File, error) {
 	// create a more stable file name for the hashing
 	return os.CreateTemp(dir, "nitric.dynamic.Dockerfile.*")
-}
-
-func Create(s *project.Project, t *stack.Config) error {
-	cr, err := containerengine.Discover()
-	if err != nil {
-		return err
-	}
-
-	for _, f := range s.Functions {
-		fh, err := dynamicDockerfile(s.Dir, f.Name)
-		if err != nil {
-			return err
-		}
-
-		defer func() { os.Remove(fh.Name()) }()
-
-		rt, err := runtime.NewRunTimeFromHandler(f.Handler)
-		if err != nil {
-			return err
-		}
-
-		err = rt.FunctionDockerfile(s.Dir, f.VersionString(s), t.Provider, fh)
-		if err != nil {
-			return err
-		}
-
-		fh.Close()
-
-		buildArgs := map[string]string{"PROVIDER": t.Provider}
-
-		err = cr.Build(filepath.Base(fh.Name()), s.Dir, f.ImageTagName(s, t.Provider), buildArgs, rt.BuildIgnore())
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, c := range s.Containers {
-		buildArgs := map[string]string{"PROVIDER": t.Provider}
-
-		err := cr.Build(filepath.Join(s.Dir, c.Dockerfile), s.Dir, c.ImageTagName(s, t.Provider), buildArgs, []string{})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // CreateBaseDev builds images for code-as-config

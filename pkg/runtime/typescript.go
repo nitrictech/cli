@@ -54,7 +54,7 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	// Start build stage
 	buildstage, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",
-		As:     "build",
+		As:     layerBuild,
 		Ignore: javascriptIgnoreList,
 	})
 	if err != nil {
@@ -86,7 +86,7 @@ func (t *typescript) FunctionDockerfile(funcCtxDir, version, provider string, w 
 	// start final stage
 	con, err := css.NewContainer(dockerfile.NewContainerOpts{
 		From:   "node:alpine",
-		As:     "final",
+		As:     layerFinal,
 		Ignore: javascriptIgnoreList,
 	})
 	if err != nil {

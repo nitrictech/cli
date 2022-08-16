@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -226,7 +225,7 @@ func (g *gcpProvider) setToken() error {
 func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
-	g.tmpDir, err = ioutil.TempDir("", ctx.Stack()+"-*")
+	g.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
 	}
@@ -375,7 +374,9 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for _, c := range g.proj.Computes() {
 		if _, ok := g.images[c.Unit().Name]; !ok {
 			g.images[c.Unit().Name], err = common.NewImage(ctx, c.Unit().Name+"Image", &common.ImageArgs{
-				LocalImageName:  c.ImageTagName(g.proj, ""),
+				ProjectDir:      g.proj.Dir,
+				Provider:        g.sc.Provider,
+				Compute:         c,
 				SourceImageName: c.ImageTagName(g.proj, g.sc.Provider),
 				RepositoryUrl:   pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
 				Username:        pulumi.String("oauth2accesstoken"),

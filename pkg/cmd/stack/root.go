@@ -166,8 +166,10 @@ var stackUpdateCmd = &cobra.Command{
 			StartMsg: "Deploying..",
 			Runner: func(progress output.Progress) error {
 				d, err = p.Up(progress)
-				// Write the digest regardless of deployment errors
-				writeDigest(proj.Name, s.Name, progress, d.Summary)
+				// Write the digest regardless of deployment errors if available
+				if d != nil {
+					writeDigest(proj.Name, s.Name, progress, d.Summary)
+				}
 
 				return err
 			},
@@ -224,7 +226,9 @@ nitric stack down -e aws -y`,
 			StartMsg: "Deleting..",
 			Runner: func(progress output.Progress) error {
 				sum, err := p.Down(progress)
-				writeDigest(proj.Name, s.Name, progress, sum)
+				if sum != nil {
+					writeDigest(proj.Name, s.Name, progress, sum)
+				}
 				return err
 			},
 			StopMsg: "Stack",

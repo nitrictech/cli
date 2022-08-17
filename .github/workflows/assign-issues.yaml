@@ -6,7 +6,7 @@ on:
   pull_request:
     types: [opened]
 env:
-  MY_GITHUB_TOKEN: ${{ secrets.NITRIC_BOT_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.NITRIC_BOT_TOKEN }}
 
 jobs:
   assign_one_project:

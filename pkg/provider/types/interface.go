@@ -46,5 +46,5 @@ type Provider interface {
 	List() (interface{}, error)
 	Ask() (*stack.Config, error)
 	SupportedRegions() []string
-	//Status()
+	// Status()
 }

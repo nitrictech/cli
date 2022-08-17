@@ -28,9 +28,7 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-var (
-	stackPath string
-)
+var stackPath string
 
 func FromConfig(p *Config) (*Project, error) {
 	s := New(p)

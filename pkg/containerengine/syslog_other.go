@@ -101,7 +101,7 @@ func (s *localSyslog) Start() error {
 		return err
 	}
 
-	s.file, err = os.OpenFile(s.logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	s.file, err = os.OpenFile(s.logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o666)
 	if err != nil {
 		return err
 	}

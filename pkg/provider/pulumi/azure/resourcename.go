@@ -72,13 +72,13 @@ var (
 	// Can't start or end with hyphen. Can't use consecutive hyphens.
 	StorageQueueRT = ResouceType{MaxLen: 63, AllowHyphen: true, UseName: true}
 
-	//Alphanumerics and hyphens. Start with letter. End with letter or digit. Can't contain consecutive hyphens.
+	// Alphanumerics and hyphens. Start with letter. End with letter or digit. Can't contain consecutive hyphens.
 	KeyVaultRT = ResouceType{Abbreviation: "kv", MaxLen: 14, AllowUpperCase: true}
 
-	//Alphanumerics and hyphens.
+	// Alphanumerics and hyphens.
 	EventGridRT = ResouceType{Abbreviation: "evgt", MaxLen: 24, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 
-	//Alphanumerics and hyphens.
+	// Alphanumerics and hyphens.
 	EventSubscriptionRT = ResouceType{Abbreviation: "sub", MaxLen: 24, AllowUpperCase: true, AllowHyphen: true, UseName: true}
 
 	// Alphanumerics and hyphens, Start with letter and end with alphanumeric.

@@ -42,7 +42,8 @@ func TestCreateBaseDev(t *testing.T) {
 	s.Functions = map[string]project.Function{"foo": {Handler: "functions/list.ts"}}
 
 	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{}, []string{
-		".nitric/", ".git/", ".idea/", ".vscode/", ".github", "node_modules/"})
+		".nitric/", ".git/", ".idea/", ".vscode/", ".github", "node_modules/",
+	})
 
 	containerengine.DiscoveredEngine = me
 

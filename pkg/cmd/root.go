@@ -143,7 +143,8 @@ func CommonCommandsUsage() []string {
 	cmdH := []string{
 		"",
 		"Common commands in the CLI that you’ll be using:",
-		""}
+		"",
+	}
 	cmdH = append(cmdH, cmdUsage([]string{}, rootCmd, true)...)
 
 	return append(cmdH, "")
@@ -153,7 +154,8 @@ func AllCommandsUsage() []string {
 	cmdH := []string{
 		"",
 		"Documentation for all available commands:",
-		""}
+		"",
+	}
 	cmdH = append(cmdH, cmdUsage([]string{}, rootCmd, false)...)
 
 	return append(cmdH, "")

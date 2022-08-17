@@ -61,9 +61,7 @@ const (
 	fmtCronScheduleExpression = "cron(%s)"
 )
 
-var (
-	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Validates that an expression is of the form rate(xyz) or cron(abc)
-)
+var awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Validates that an expression is of the form rate(xyz) or cron(abc)
 
 // ConvertToAWS converts the Schedule string to the format required by Cloudwatch Events
 // https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents-expressions.html

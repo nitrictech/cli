@@ -54,9 +54,7 @@ const (
 	layerFinal = "final"
 )
 
-var (
-	commonIgnore = []string{".nitric/", ".git/", ".idea/", ".vscode/", ".github"}
-)
+var commonIgnore = []string{".nitric/", ".git/", ".idea/", ".vscode/", ".github"}
 
 type LaunchOpts struct {
 	Image      string

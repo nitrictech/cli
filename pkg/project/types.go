@@ -328,7 +328,7 @@ func (s *Project) ToFile(file string) error {
 		return err
 	}
 
-	err = os.WriteFile(file, b, 0644)
+	err = os.WriteFile(file, b, 0o644)
 	if err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func (s *Project) ToFile(file string) error {
 			return err
 		}
 
-		err = os.WriteFile(apiPath, docJ, 0644)
+		err = os.WriteFile(apiPath, docJ, 0o644)
 		if err != nil {
 			return err
 		}

@@ -54,9 +54,7 @@ type stackSummary struct {
 	URL              string `json:"url,omitempty"`
 }
 
-var (
-	_ types.Provider = &pulumiDeployment{}
-)
+var _ types.Provider = &pulumiDeployment{}
 
 func New(p *project.Project, sc *stack.Config, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
@@ -161,16 +159,16 @@ func (p *pulumiDeployment) Up(log output.Progress) (*types.Deployment, error) {
 	res, err := s.Up(context.Background(), updateLoggingOpts(pLog)...)
 	summary := &types.Summary{Resources: pLog.resources}
 
-	if err != nil {
-		return nil, errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
-	}
-
-	defer p.prov.CleanUp()
-
 	d := &types.Deployment{
 		Summary:      summary,
 		ApiEndpoints: map[string]string{},
 	}
+
+	if err != nil {
+		return d, errors.WithMessage(err, "Updating pulumi stack "+res.Summary.Message)
+	}
+
+	defer p.prov.CleanUp()
 
 	for k, v := range res.Outputs {
 		if strings.HasPrefix(k, "api:") {
@@ -205,7 +203,7 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 
 	for _, st := range sl {
 		if strings.HasPrefix(st.Name, stackName) {
-			var stackListOutput = stackSummary{
+			stackListOutput := stackSummary{
 				Name:             st.Name,
 				Deployed:         *st.ResourceCount > 0,
 				LastUpdate:       st.LastUpdate,

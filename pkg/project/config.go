@@ -40,7 +40,7 @@ func (p *Config) ToFile() error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(p.Dir, "nitric.yaml"), b, 0644)
+	return os.WriteFile(filepath.Join(p.Dir, "nitric.yaml"), b, 0o644)
 }
 
 // ConfigFromProjectPath - loads the config nitric.yaml file from the project path, defaults to the current working directory

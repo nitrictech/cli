@@ -33,30 +33,28 @@ type Project struct {
 	Services []*projects.Service
 }
 
-var (
-	requiredServices = []string{
-		// Enable IAM
-		"iam.googleapis.com",
-		// Enable cloud run
-		"run.googleapis.com",
-		// Enable pubsub
-		"pubsub.googleapis.com",
-		// Enable cloud scheduler
-		"cloudscheduler.googleapis.com",
-		// Enable cloud scheduler
-		"storage.googleapis.com",
-		// Enable Compute API (Networking/Load Balancing)
-		"compute.googleapis.com",
-		// Enable Container Registry API
-		"containerregistry.googleapis.com",
-		// Enable firestore API
-		"firestore.googleapis.com",
-		// Enable ApiGateway API
-		"apigateway.googleapis.com",
-		// Enable SecretManager API
-		"secretmanager.googleapis.com",
-	}
-)
+var requiredServices = []string{
+	// Enable IAM
+	"iam.googleapis.com",
+	// Enable cloud run
+	"run.googleapis.com",
+	// Enable pubsub
+	"pubsub.googleapis.com",
+	// Enable cloud scheduler
+	"cloudscheduler.googleapis.com",
+	// Enable cloud scheduler
+	"storage.googleapis.com",
+	// Enable Compute API (Networking/Load Balancing)
+	"compute.googleapis.com",
+	// Enable Container Registry API
+	"containerregistry.googleapis.com",
+	// Enable firestore API
+	"firestore.googleapis.com",
+	// Enable ApiGateway API
+	"apigateway.googleapis.com",
+	// Enable SecretManager API
+	"secretmanager.googleapis.com",
+}
 
 func newProject(ctx *pulumi.Context, name string, args *ProjectArgs, opts ...pulumi.ResourceOption) (*Project, error) {
 	res := &Project{

@@ -295,7 +295,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 				Server:          pulumi.String(authToken.ProxyEndpoint),
 				Username:        pulumi.String(authToken.UserName),
 				Password:        pulumi.String(authToken.Password),
-				TempDir:         a.tmpDir})
+				TempDir:         a.tmpDir,
+			})
 			if err != nil {
 				return errors.WithMessage(err, "function image tag "+c.Unit().Name)
 			}

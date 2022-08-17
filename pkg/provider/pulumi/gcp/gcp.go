@@ -208,7 +208,8 @@ func (g *gcpProvider) setToken() error {
 		creds, err := google.FindDefaultCredentialsWithParams(context.Background(), google.CredentialsParams{
 			Scopes: []string{
 				"https://www.googleapis.com/auth/cloud-platform",
-			}})
+			},
+		})
 		if err != nil {
 			return errors.WithMessage(err, "Unable to find credentials, try 'gcloud auth application-default login'")
 		}

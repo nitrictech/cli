@@ -292,7 +292,8 @@ func TestLaunchOptsForFunction(t *testing.T) {
 					"-verbose",
 					"-exclude-dir=.git",
 					"-exclude-dir=.nitric",
-					"-directory=.", "-polling=false", "-build=go build -buildvcs=false -o runtime ././...", "-command=./runtime"},
+					"-directory=.", "-polling=false", "-build=go build -buildvcs=false -o runtime ././...", "-command=./runtime",
+				},
 				Mounts: []mount.Mount{
 					{
 						Type: "bind", Source: filepath.Join(goPath, "pkg"), Target: "/go/pkg",
@@ -362,7 +363,8 @@ func TestLaunchOptsForFunctionCollect(t *testing.T) {
 				Image:    "nitric-go-dev",
 				TargetWD: "/go/src/github.com/nitrictech/cli",
 				Cmd: []string{
-					"go", "run", "././..."},
+					"go", "run", "././...",
+				},
 				Mounts: []mount.Mount{
 					{
 						Type: "bind", Source: filepath.Join(goPath, "pkg"), Target: "/go/pkg",

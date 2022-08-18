@@ -143,8 +143,6 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 		return nil, err
 	}
 
-	ctx.Export("api:"+name, res.Api.ServiceUrl)
-
 	for _, pathItem := range args.OpenAPISpec.Paths {
 		for _, op := range pathItem.Operations() {
 			if v, ok := op.Extensions["x-nitric-target"]; ok {
@@ -200,6 +198,8 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 			}
 		}
 	}
+
+	ctx.Export("api:"+name, res.Service.GatewayUrl)
 
 	return res, ctx.RegisterResourceOutputs(res, pulumi.Map{
 		"name":    pulumi.String(name),

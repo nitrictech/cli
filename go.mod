@@ -28,7 +28,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.45
 	github.com/pulumi/pulumi-aws/sdk/v4 v4.38.1
-	github.com/pulumi/pulumi-azure-native/sdk v1.67.0
+	github.com/pulumi/pulumi-azure-native/sdk v1.68.2
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.26.1
 	github.com/pulumi/pulumi-docker/sdk/v3 v3.4.0

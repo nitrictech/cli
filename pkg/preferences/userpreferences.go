@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package preferences
 
 import (
 	"encoding/json"
@@ -24,10 +24,14 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/google/uuid"
 
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
+const feedbackMsg = "Thanks for trying nitric!\nIf you have feedback you can raise issues on GitHub https://github.com/nitrictech/nitric or come talk with us directly on Discord discord.com/invite/Webemece5C"
+
+var defaultBackendPassPhrase = uuid.NewString()
 var defaultPreferences = &UserPreferences{
 	Feedback: FeedbackPreferences{
 		AskFeedback: true,
@@ -36,7 +40,8 @@ var defaultPreferences = &UserPreferences{
 }
 
 type UserPreferences struct {
-	Feedback FeedbackPreferences `json:"feedback"`
+	Feedback               FeedbackPreferences `json:"feedback"`
+	LocalBackendPassPhrase string
 }
 
 type FeedbackPreferences struct {
@@ -44,7 +49,18 @@ type FeedbackPreferences struct {
 	LastPrompt  string `json:"lastPrompt"`
 }
 
-func readUserPreferences() (*UserPreferences, error) {
+func GetLocalPassPhraseFile() (string, error) {
+	if _, err := os.Stat(utils.NitricLocalPassphrasePath()); errors.Is(err, os.ErrNotExist) {
+		err = os.WriteFile(utils.NitricLocalPassphrasePath(), []byte(defaultBackendPassPhrase), os.ModePerm)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return utils.NitricLocalPassphrasePath(), nil
+}
+
+func ReadUserPreferences() (*UserPreferences, error) {
 	// If there are no preferences, set as default
 	if _, err := os.Stat(utils.NitricPreferencesPath()); errors.Is(err, os.ErrNotExist) {
 		err := defaultPreferences.WriteToFile()
@@ -99,8 +115,8 @@ func (f *FeedbackPreferences) hasBeenWeek() bool {
 	return lastPrompt.Before(weekAgo)
 }
 
-func promptFeedback() error {
-	up, err := readUserPreferences()
+func PromptFeedback() error {
+	up, err := ReadUserPreferences()
 	if err != nil {
 		return err
 	}

@@ -90,6 +90,10 @@ func NitricConfigDir() string {
 	return NitricHomeDir()
 }
 
+func NitricLocalPassphrasePath() string {
+	return filepath.Join(NitricHomeDir(), ".local-stack-pass")
+}
+
 func NitricPreferencesPath() string {
 	return filepath.Join(NitricHomeDir(), ".user-preferences.json")
 }

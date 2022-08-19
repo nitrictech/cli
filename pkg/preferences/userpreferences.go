@@ -31,13 +31,15 @@ import (
 
 const feedbackMsg = "Thanks for trying nitric!\nIf you have feedback you can raise issues on GitHub https://github.com/nitrictech/nitric or come talk with us directly on Discord discord.com/invite/Webemece5C"
 
-var defaultBackendPassPhrase = uuid.NewString()
-var defaultPreferences = &UserPreferences{
-	Feedback: FeedbackPreferences{
-		AskFeedback: true,
-		LastPrompt:  time.Now().AddDate(-1, 0, 0).Format(time.RFC822),
-	},
-}
+var (
+	defaultBackendPassPhrase = uuid.NewString()
+	defaultPreferences       = &UserPreferences{
+		Feedback: FeedbackPreferences{
+			AskFeedback: true,
+			LastPrompt:  time.Now().AddDate(-1, 0, 0).Format(time.RFC822),
+		},
+	}
+)
 
 type UserPreferences struct {
 	Feedback               FeedbackPreferences `json:"feedback"`

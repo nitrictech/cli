@@ -58,6 +58,10 @@ nitric stack down
 nitric stack list
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if cmd.Root().PersistentPreRun != nil {
+			cmd.Root().PersistentPreRun(cmd, args)
+		}
+
 		// Respect existing pulumi configuration if one already exists
 		currPass := os.Getenv("PULUMI_CONFIG_PASSPHRASE")
 		currPassFile := os.Getenv("PULUMI_CONFIG_PASSPHRASE_FILE")

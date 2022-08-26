@@ -32,6 +32,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/preferences"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider"
 	"github.com/nitrictech/cli/pkg/provider/types"
@@ -56,6 +57,22 @@ A stack is a named update target, and a single project may have many of them.`,
 nitric stack down
 nitric stack list
 `,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if cmd.Root().PersistentPreRun != nil {
+			cmd.Root().PersistentPreRun(cmd, args)
+		}
+
+		// Respect existing pulumi configuration if one already exists
+		currPass := os.Getenv("PULUMI_CONFIG_PASSPHRASE")
+		currPassFile := os.Getenv("PULUMI_CONFIG_PASSPHRASE_FILE")
+		if currPass == "" && currPassFile == "" {
+			p, err := preferences.GetLocalPassPhraseFile()
+			cobra.CheckErr(err)
+
+			// Set the default
+			os.Setenv("PULUMI_CONFIG_PASSPHRASE_FILE", p)
+		}
+	},
 }
 
 var newStackCmd = &cobra.Command{

@@ -28,9 +28,8 @@ import (
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/preferences"
 )
-
-const feedbackMsg = "Thanks for trying nitric!\nIf you have feedback you can raise issues on GitHub https://github.com/nitrictech/nitric or come talk with us directly on Discord discord.com/invite/Webemece5C"
 
 const usageTemplate = `Nitric - The fastest way to build serverless apps
 
@@ -63,7 +62,7 @@ var rootCmd = &cobra.Command{
 			pterm.DisableStyling()
 		}
 
-		err := promptFeedback()
+		err := preferences.PromptFeedback()
 		if err != nil {
 			fmt.Println(err.Error())
 		}

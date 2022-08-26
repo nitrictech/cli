@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/md5"
 	_ "embed"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"

@@ -6,6 +6,7 @@ LABEL org.opencontainers.image.description="The Nitric CLI, in a Docker containe
 
 ENV GOLANG_VERSION 1.17.3
 ENV GOLANG_SHA256 550f9845451c0c94be679faf116291e7807a8d78b43149f9506c1b15eb89008c
+ENV DOCKER_PASS_CH v0.6.4
 
 # Install deps all in one step
 RUN apt-get update -y && \
@@ -60,6 +61,15 @@ RUN curl -fsSLo /tmp/go.tgz https://golang.org/dl/go${GOLANG_VERSION}.linux-amd6
   export PATH="/usr/local/go/bin:$PATH"; \
   go version
 ENV GOPATH /workspace/go
+
+# Install docker credential helper pass
+RUN curl -fsSLo /tmp/dch.tgz https://github.com/docker/docker-credential-helpers/releases/download/${DOCKER_PASS_CH}/docker-credential-pass-${DOCKER_PASS_CH}-amd64.tar.gz; \
+  tar -xf /tmp/dch.tgz; \
+  chmod +x docker-credential-pass; \
+  mv -f docker-credential-pass /usr/local/bin/; \
+  rm -rf /tmp/dch.tgz
+
+
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 
 # Passing --build-arg PULUMI_VERSION=vX.Y.Z will use that version

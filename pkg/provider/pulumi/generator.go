@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
@@ -125,7 +127,9 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	for _, plug := range p.prov.Plugins() {
 		log.Busyf("Installing Pulumi plugin %s:%s", plug.Name, plug.Version)
 
-		err = s.Workspace().InstallPlugin(ctx, plug.Name, plug.Version)
+		err = retry.Do(func() error {
+			return s.Workspace().InstallPlugin(ctx, plug.Name, plug.Version)
+		}, retry.Attempts(3), retry.Delay(time.Second))
 		if err != nil {
 			return nil, errors.WithMessage(err, "InstallPlugin "+plug.String())
 		}

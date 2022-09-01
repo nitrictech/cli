@@ -356,15 +356,14 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		image, ok := a.images[c.Unit().Name]
 		if !ok {
 			image, err = common.NewImage(ctx, c.Unit().Name, &common.ImageArgs{
-				ProjectDir:      a.proj.Dir,
-				Provider:        a.sc.Provider,
-				Compute:         c,
-				SourceImageName: c.ImageTagName(a.proj, a.sc.Provider),
-				RepositoryUrl:   repo.RepositoryUrl,
-				Server:          pulumi.String(authToken.ProxyEndpoint),
-				Username:        pulumi.String(authToken.UserName),
-				Password:        pulumi.String(authToken.Password),
-				TempDir:         a.tmpDir,
+				ProjectDir:    a.proj.Dir,
+				Provider:      a.sc.Provider,
+				Compute:       c,
+				RepositoryUrl: repo.RepositoryUrl,
+				Server:        pulumi.String(authToken.ProxyEndpoint),
+				Username:      pulumi.String(authToken.UserName),
+				Password:      pulumi.String(authToken.Password),
+				TempDir:       a.tmpDir,
 			})
 			if err != nil {
 				return errors.WithMessage(err, "function image tag "+c.Unit().Name)
@@ -375,7 +374,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 		a.funcs[c.Unit().Name], err = newLambda(ctx, c.Unit().Name, &LambdaArgs{
 			Topics:      a.topics,
-			DockerImage: image.DockerImage,
+			DockerImage: image,
 			Compute:     c,
 			StackName:   ctx.Stack(),
 			EnvMap:      a.envMap,

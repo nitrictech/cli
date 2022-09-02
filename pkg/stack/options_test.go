@@ -25,11 +25,6 @@ func Test_configFromFile(t *testing.T) {
 	want := &Config{
 		Name:     "zed",
 		Provider: "Azure",
-		Region:   "eastus2",
-		Extra: map[string]interface{}{
-			"adminemail": "admin@example.com",
-			"org":        "example.com",
-		},
 	}
 
 	got, err := configFromFile("data/nitric-x.yaml")

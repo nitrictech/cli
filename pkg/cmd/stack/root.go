@@ -22,7 +22,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -89,21 +88,18 @@ var newStackCmd = &cobra.Command{
 		pName := ""
 		err = survey.AskOne(&survey.Select{
 			Message: "Which Cloud do you wish to deploy to?",
-			Default: stack.Aws,
-			Options: stack.Providers,
+			Default: types.Aws,
+			Options: types.Providers,
 		}, &pName)
 		cobra.CheckErr(err)
 
 		pc, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
-		prov, err := provider.NewProvider(project.New(pc), &stack.Config{Name: name, Provider: pName}, map[string]string{}, &types.ProviderOpts{})
+		prov, err := provider.NewProvider(project.New(pc), name, pName, map[string]string{}, &types.ProviderOpts{})
 		cobra.CheckErr(err)
 
-		sc, err := prov.Ask()
-		cobra.CheckErr(err)
-
-		err = sc.ToFile(filepath.Join(pc.Dir, fmt.Sprintf("nitric-%s.yaml", sc.Name)))
+		err = prov.AskAndSave()
 		cobra.CheckErr(err)
 	},
 	Args:        cobra.MaximumNArgs(2),
@@ -175,7 +171,7 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		p, err := provider.NewProvider(proj, s, envMap, &types.ProviderOpts{Force: force})
+		p, err := provider.NewProvider(proj, s.Name, s.Provider, envMap, &types.ProviderOpts{Force: force})
 		cobra.CheckErr(err)
 
 		d := &types.Deployment{}
@@ -236,7 +232,7 @@ nitric stack down -e aws -y`,
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s, map[string]string{}, &types.ProviderOpts{Force: true})
+		p, err := provider.NewProvider(proj, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true})
 		cobra.CheckErr(err)
 
 		deploy := tasklet.Runner{
@@ -275,7 +271,7 @@ nitric stack list -s aws
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s, map[string]string{}, &types.ProviderOpts{})
+		p, err := provider.NewProvider(proj, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{})
 		cobra.CheckErr(err)
 
 		deps, err := p.List()

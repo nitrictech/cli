@@ -43,8 +43,10 @@ func TestFromConfig(t *testing.T) {
 				Name: "project",
 				Functions: map[string]Function{
 					"project": {
-						Handler:     "types.go",
-						ComputeUnit: ComputeUnit{Name: "project"},
+						Handler: "types.go",
+						ComputeUnit: ComputeUnit{
+							Name: "project",
+						},
 					},
 				},
 			},
@@ -61,8 +63,10 @@ func TestFromConfig(t *testing.T) {
 				Name: "pkg",
 				Functions: map[string]Function{
 					"stack": {
-						Handler:     "stack/options.go",
-						ComputeUnit: ComputeUnit{Name: "stack"},
+						Handler: "stack/options.go",
+						ComputeUnit: ComputeUnit{
+							Name: "stack",
+						},
 					},
 				},
 			},

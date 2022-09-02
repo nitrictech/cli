@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/golangci/golangci-lint/pkg/sliceutil"
+	"golang.org/x/exp/slices"
 	"golang.org/x/mod/modfile"
 )
 
@@ -41,7 +41,7 @@ func main() {
 	mods := []string{}
 
 	for _, r := range mf.Require {
-		if sliceutil.Contains(ignoreList, r.Mod.Path) {
+		if slices.Contains(ignoreList, r.Mod.Path) {
 			continue
 		}
 

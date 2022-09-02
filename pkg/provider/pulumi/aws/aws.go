@@ -24,9 +24,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
@@ -38,17 +40,30 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"golang.org/x/exp/slices"
+	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
+type awsFunctionConfig struct {
+	Memory  *int `yaml:"memory,omitempty"`
+	Timeout *int `yaml:"timeout,omitempty"`
+}
+
+type awsStackConfig struct {
+	Name     string                       `yaml:"name,omitempty"`
+	Provider string                       `yaml:"provider,omitempty"`
+	Region   string                       `yaml:"region,omitempty"`
+	Config   map[string]awsFunctionConfig `yaml:"config,omitempty"`
+}
+
 type awsProvider struct {
 	proj   *project.Project
-	sc     *stack.Config
+	sc     *awsStackConfig
 	envMap map[string]string
 	tmpDir string
 
@@ -67,10 +82,22 @@ type awsProvider struct {
 //go:embed pulumi-aws-version.txt
 var awsPluginVersion string
 
-func New(s *project.Project, t *stack.Config, envMap map[string]string) common.PulumiProvider {
+func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
+	b, err := os.ReadFile(filepath.Join(p.Dir, name+".yaml"))
+	if err != nil {
+		return nil, err
+	}
+
+	asc := &awsStackConfig{}
+
+	err = yaml.Unmarshal(b, asc)
+	if err != nil {
+		return nil, err
+	}
+
 	return &awsProvider{
-		proj:        s,
-		sc:          t,
+		proj:        p,
+		sc:          asc,
 		envMap:      envMap,
 		topics:      map[string]*sns.Topic{},
 		buckets:     map[string]*s3.Bucket{},
@@ -80,17 +107,24 @@ func New(s *project.Project, t *stack.Config, envMap map[string]string) common.P
 		images:      map[string]*common.Image{},
 		funcs:       map[string]*Lambda{},
 		schedules:   map[string]*Schedule{},
-	}
+	}, nil
 }
 
-func (a *awsProvider) Ask() (*stack.Config, error) {
-	sc := &stack.Config{Name: a.sc.Name, Provider: a.sc.Provider}
+func (a *awsProvider) AskAndSave() error {
 	err := survey.AskOne(&survey.Select{
 		Message: "select the region",
 		Options: a.SupportedRegions(),
-	}, &sc.Region)
+	}, &a.sc.Region)
+	if err != nil {
+		return err
+	}
 
-	return sc, err
+	b, err := yaml.Marshal(a.sc)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(a.proj.Dir, fmt.Sprintf("nitric-%s.yaml", a.sc.Name)), b, 0o644)
 }
 
 func (a *awsProvider) Plugins() []common.Plugin {
@@ -120,25 +154,60 @@ func (a *awsProvider) SupportedRegions() []string {
 }
 
 func (a *awsProvider) Validate() error {
-	found := false
+	errList := &multierror.ErrorList{}
 
-	for _, r := range a.SupportedRegions() {
-		if r == a.sc.Region {
-			found = true
-			break
+	if a.sc.Region == "" {
+		errList.Push(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
+	} else if !slices.Contains(a.SupportedRegions(), a.sc.Region) {
+		errList.Push(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
+	}
+
+	for fn, fc := range a.sc.Config {
+		if fc.Memory != nil && *fc.Memory < 128 {
+			errList.Push(fmt.Errorf("function config %s requires \"memory\" to be greater than 128 Mi", fn))
+		}
+
+		if fc.Timeout != nil && *fc.Timeout < 15 {
+			errList.Push(fmt.Errorf("function config %s requires \"timeout\" to be greater than 15 seconds", fn))
 		}
 	}
 
-	if !found {
-		return utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider))
-	}
-
-	return nil
+	return errList.Err()
 }
 
 func (a *awsProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	if a.sc.Region != "" {
+	if a.sc.Region != "" && autoStack != nil {
 		return autoStack.SetConfig(ctx, "aws:region", auto.ConfigValue{Value: a.sc.Region})
+	}
+
+	dc, dok := a.sc.Config["default"]
+
+	for fn, f := range a.proj.Functions {
+		f.ComputeUnit.Memory = 512
+		f.ComputeUnit.Timeout = 15
+
+		if dok {
+			if dc.Memory != nil {
+				f.ComputeUnit.Memory = *dc.Memory
+			}
+
+			if dc.Timeout != nil {
+				f.ComputeUnit.Timeout = *dc.Timeout
+			}
+		}
+
+		fc, ok := a.sc.Config[f.Handler]
+		if ok {
+			if fc.Memory != nil {
+				f.ComputeUnit.Memory = *fc.Memory
+			}
+
+			if fc.Timeout != nil {
+				f.ComputeUnit.Timeout = *fc.Timeout
+			}
+		}
+
+		a.proj.Functions[fn] = f
 	}
 
 	return nil

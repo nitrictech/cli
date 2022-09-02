@@ -39,14 +39,17 @@ type ComputeUnit struct {
 	// Triggers used to invoke this compute unit, e.g. Topic Subscriptions
 	Triggers Triggers `yaml:"triggers,omitempty"`
 
-	// The memory of the compute instance in MB
+	// The memory of the compute instance in MB: default 128
 	Memory int `yaml:"memory,omitempty"`
 
-	// The minimum number of instances to keep alive
+	// The minimum number of instances to keep alive: default 0
 	MinScale int `yaml:"minScale,omitempty"`
 
-	// The maximum number of instances to scale to
+	// The maximum number of instances to scale to: default 10
 	MaxScale int `yaml:"maxScale,omitempty"`
+
+	// The max running time of the function: default 15
+	Timeout int `yaml:"timeout,omitempty"`
 }
 
 type Function struct {

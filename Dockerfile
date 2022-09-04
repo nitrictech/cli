@@ -1,3 +1,15 @@
+FROM golang:buster as build
+
+WORKDIR /app/
+
+# Install dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN make build
+
 FROM python:3.9-slim
 
 LABEL "repository"="https://github.com/nitrictech/cli"
@@ -87,4 +99,4 @@ RUN pulumi plugin install resource random
 ENV HOST_DOCKER_INTERNAL_IFACE eth0
 ENV PULUMI_SKIP_UPDATE_CHECK "true"
 
-COPY bin/nitric /usr/bin/
+COPY --from=build /app/bin/nitric /usr/bin/

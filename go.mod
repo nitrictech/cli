@@ -6,7 +6,6 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
 	github.com/Azure/go-autorest/autorest/to v0.4.0
-	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/cli v20.10.17+incompatible
 	github.com/docker/docker v20.10.17+incompatible
@@ -16,7 +15,6 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.46.2
 	github.com/google/go-cmp v0.5.8
-	github.com/google/uuid v1.3.0
 	github.com/hashicorp/consul/sdk v0.11.0
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.6.0
@@ -50,6 +48,11 @@ require (
 	google.golang.org/grpc v1.48.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	github.com/avast/retry-go v3.0.0+incompatible
+	github.com/google/uuid v1.3.0
 )
 
 require (

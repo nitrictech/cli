@@ -94,7 +94,7 @@ var gcpPluginVersion string
 var randomPluginVersion string
 
 func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
-	b, err := os.ReadFile(filepath.Join(p.Dir, name+".yaml"))
+	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
 	if err != nil {
 		return nil, err
 	}

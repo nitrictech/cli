@@ -35,15 +35,6 @@ func ConfigFromOptions() (*Config, error) {
 	return configFromFile("nitric-" + stack + ".yaml")
 }
 
-func (p *Config) ToFile(file string) error {
-	b, err := yaml.Marshal(p)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(file, b, 0o644)
-}
-
 func configFromFile(file string) (*Config, error) {
 	s := &Config{}
 

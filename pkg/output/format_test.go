@@ -35,12 +35,11 @@ func Test_printStruct(t *testing.T) {
 	}{
 		{
 			name:   "json tags",
-			object: stack.Config{Name: "prod", Provider: "azure", Region: "somewhere"},
-			expect: `+----------+-----------+
-| NAME     | prod      |
-| PROVIDER | azure     |
-| REGION   | somewhere |
-+----------+-----------+
+			object: stack.Config{Name: "prod", Provider: "azure"},
+			expect: `+----------+-------+
+| NAME     | prod  |
+| PROVIDER | azure |
++----------+-------+
 `,
 		},
 	}
@@ -64,15 +63,15 @@ func Test_printList(t *testing.T) {
 		{
 			name: "json tags",
 			object: []stack.Config{
-				{Name: "a", Provider: "azure", Region: "somewhere"},
-				{Name: "b", Provider: "aws", Region: "xyz"},
+				{Name: "a", Provider: "azure"},
+				{Name: "b", Provider: "aws"},
 			},
-			expect: `+------+----------+-----------+
-| NAME | PROVIDER | REGION    |
-+------+----------+-----------+
-| b    | aws      | xyz       |
-| a    | azure    | somewhere |
-+------+----------+-----------+
+			expect: `+------+----------+
+| NAME | PROVIDER |
++------+----------+
+| b    | aws      |
+| a    | azure    |
++------+----------+
 `,
 		},
 	}
@@ -99,15 +98,15 @@ func Test_printMap(t *testing.T) {
 		{
 			name: "json tags",
 			object: map[string]stack.Config{
-				"t1": {Provider: "azure", Region: "somewhere"},
-				"t3": {Provider: "aws", Name: "foo"},
+				"t1": {Provider: "azure"},
+				"t3": {Name: "foo", Provider: "aws"},
 			},
-			wantOut: `+-----+------+----------+-----------+
-| KEY | NAME | PROVIDER | REGION    |
-+-----+------+----------+-----------+
-| t1  |      | azure    | somewhere |
-| t3  | foo  | aws      |           |
-+-----+------+----------+-----------+
+			wantOut: `+-----+------+----------+
+| KEY | NAME | PROVIDER |
++-----+------+----------+
+| t1  |      | azure    |
+| t3  | foo  | aws      |
++-----+------+----------+
 `,
 		},
 	}

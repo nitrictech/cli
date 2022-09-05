@@ -17,10 +17,12 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/go-version"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
@@ -33,7 +35,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/provider/types"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
@@ -110,9 +112,15 @@ func TestAWS(t *testing.T) {
 
 	a := &awsProvider{
 		proj: s,
-		sc: &stack.Config{
-			Provider: stack.Aws,
+		sc: &awsStackConfig{
+			Provider: types.Aws,
 			Region:   "mock",
+			Config: map[string]awsFunctionConfig{
+				"functions/create/main.go": {
+					Memory:  to.IntPtr(1024),
+					Timeout: to.IntPtr(23),
+				},
+			},
 		},
 		topics:      map[string]*sns.Topic{},
 		buckets:     map[string]*s3.Bucket{},
@@ -130,7 +138,10 @@ func TestAWS(t *testing.T) {
 	}
 
 	err := pulumi.RunErr(func(ctx *pulumi.Context) error {
-		err := a.Deploy(ctx)
+		err := a.Configure(context.TODO(), nil)
+		assert.NoError(t, err)
+
+		err = a.Deploy(ctx)
 		assert.NoError(t, err)
 
 		var wg sync.WaitGroup
@@ -229,13 +240,15 @@ func TestAWS(t *testing.T) {
 		})
 
 		wg.Add(1)
-		pulumi.All(a.funcs["runner"].Function.ImageUri, a.funcs["runner"].Function.Role, a.funcs["runner"].Role.Arn).ApplyT(func(all []interface{}) error {
+		pulumi.All(a.funcs["runner"].Function.ImageUri, a.funcs["runner"].Function.Role, a.funcs["runner"].Role.Arn, a.funcs["runner"].Function.MemorySize).ApplyT(func(all []interface{}) error {
 			imageUri := all[0].(*string)
 			fRole := all[1].(string)
 			roleArn := all[2].(string)
+			memSize := all[3].(*int)
 
 			assert.Equal(t, "docker.io/nitrictech/runner:latest", *imageUri, "wrong imageUri %s!=%s", "", *imageUri)
 			assert.Equal(t, roleArn, fRole, "wrong role %s!=%s", roleArn, fRole)
+			assert.Equal(t, *memSize, 1024)
 			wg.Done()
 
 			return nil
@@ -266,23 +279,23 @@ func TestAWS(t *testing.T) {
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		t       *stack.Config
+		t       *awsStackConfig
 		wantErr bool
 	}{
 		{
 			name: "valid",
-			t:    &stack.Config{Provider: stack.Aws, Region: "us-west-1"},
+			t:    &awsStackConfig{Provider: types.Aws, Region: "us-west-1"},
 		},
 		{
 			name:    "invalid",
-			t:       &stack.Config{Provider: stack.Aws, Region: "pole-north-right-next-to-santa"},
+			t:       &awsStackConfig{Provider: types.Aws, Region: "pole-north-right-next-to-santa"},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := New(nil, tt.t, map[string]string{})
+			a := &awsProvider{sc: tt.t}
 
 			if err := a.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("awsProvider.Validate() error = %v, wantErr %v", err, tt.wantErr)

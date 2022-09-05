@@ -131,12 +131,10 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		envVars[k] = pulumi.String(v)
 	}
 
-	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 128)
-
 	res.Function, err = awslambda.NewFunction(ctx, name, &awslambda.FunctionArgs{
 		ImageUri:    args.DockerImage.ImageName,
-		MemorySize:  pulumi.IntPtr(memory),
-		Timeout:     pulumi.IntPtr(15),
+		MemorySize:  pulumi.IntPtr(args.Compute.Unit().Memory),
+		Timeout:     pulumi.IntPtr(args.Compute.Unit().Timeout),
 		PackageType: pulumi.String("Image"),
 		Role:        res.Role.Arn,
 		Tags:        common.Tags(ctx, name),

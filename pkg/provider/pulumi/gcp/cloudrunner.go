@@ -79,7 +79,6 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 	}
 
 	// Deploy the func
-	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 512)
 	maxScale := common.IntValueOrDefault(args.Compute.Unit().MaxScale, 10)
 	minScale := common.IntValueOrDefault(args.Compute.Unit().MinScale, 0)
 
@@ -106,7 +105,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 							},
 						},
 						Resources: cloudrun.ServiceTemplateSpecContainerResourcesArgs{
-							Limits: pulumi.StringMap{"memory": pulumi.Sprintf("%dMi", memory)},
+							Limits: pulumi.StringMap{"memory": pulumi.Sprintf("%dMi", args.Compute.Unit().Memory)},
 						},
 					},
 				},

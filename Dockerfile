@@ -54,17 +54,11 @@ RUN apt-get update -y && \
   apt-get update -y && \
   apt-get install -y \
   docker-ce \
+  amazon-ecr-credential-helper \
   nodejs \
   yarn && \
   # Clean up the lists work
   rm -rf /var/lib/apt/lists/*
-
-# Install docker credential helper pass
-RUN curl -fsSLo /tmp/dch.tgz https://github.com/docker/docker-credential-helpers/releases/download/${DOCKER_PASS_CH}/docker-credential-pass-${DOCKER_PASS_CH}-amd64.tar.gz; \
-  tar -xf /tmp/dch.tgz; \
-  chmod +x docker-credential-pass; \
-  mv -f docker-credential-pass /usr/local/bin/; \
-  rm -rf /tmp/dch.tgz
 
 # Passing --build-arg PULUMI_VERSION=vX.Y.Z will use that version
 # of the SDK. Otherwise, we use whatever get.pulumi.com thinks is

@@ -40,7 +40,7 @@ func TestDockerfile(t *testing.T) {
 				Handler:     "functions/list.ts",
 				ComputeUnit: project.ComputeUnit{Name: "list"},
 			},
-			want: "nitric.list.Dockerfile",
+			want: ".nitric/list.Dockerfile",
 			wantBody: `FROM node:alpine as layer-build
 RUN yarn global add typescript @vercel/ncc
 COPY package.json *.lock *-lock.json /
@@ -68,11 +68,9 @@ CMD ["node", "index.js"]`,
 		},
 	}
 
-	td := t.TempDir()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fn, err := dockerfile(td, ".", "aws", tt.c)
+			fn, err := dockerfile(".", "aws", tt.c)
 			if (err != nil) != (tt.wantErr != nil) {
 				t.Errorf("dockerfile() error = %v", err)
 			}
@@ -93,6 +91,7 @@ CMD ["node", "index.js"]`,
 			}
 
 			_ = os.Remove(".dockerignore")
+			_ = os.RemoveAll(".nitric")
 		})
 	}
 }

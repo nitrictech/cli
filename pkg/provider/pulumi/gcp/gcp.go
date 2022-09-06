@@ -441,15 +441,14 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for _, c := range g.proj.Computes() {
 		if _, ok := g.images[c.Unit().Name]; !ok {
 			g.images[c.Unit().Name], err = common.NewImage(ctx, c.Unit().Name+"Image", &common.ImageArgs{
-				ProjectDir:      g.proj.Dir,
-				Provider:        g.sc.Provider,
-				Compute:         c,
-				SourceImageName: c.ImageTagName(g.proj, g.sc.Provider),
-				RepositoryUrl:   pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
-				Username:        pulumi.String("oauth2accesstoken"),
-				Password:        pulumi.String(g.token.AccessToken),
-				Server:          pulumi.String("https://gcr.io"),
-				TempDir:         g.tmpDir,
+				ProjectDir:    g.proj.Dir,
+				Provider:      g.sc.Provider,
+				Compute:       c,
+				RepositoryUrl: pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
+				Username:      pulumi.String("oauth2accesstoken"),
+				Password:      pulumi.String(g.token.AccessToken),
+				Server:        pulumi.String("https://gcr.io"),
+				TempDir:       g.tmpDir,
 			}, defaultResourceOptions)
 			if err != nil {
 				return errors.WithMessage(err, "function image tag "+c.Unit().Name)

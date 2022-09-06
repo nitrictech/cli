@@ -185,15 +185,14 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 		repositoryUrl := pulumi.Sprintf("%s/%s", res.Registry.LoginServer, c.ImageTagName(a.proj, a.sc.Provider))
 
 		image, err := common.NewImage(ctx, c.Unit().Name+"Image", &common.ImageArgs{
-			ProjectDir:      a.proj.Dir,
-			Provider:        a.sc.Provider,
-			Compute:         c,
-			SourceImageName: c.ImageTagName(a.proj, a.sc.Provider),
-			RepositoryUrl:   repositoryUrl,
-			Username:        adminUser.Elem(),
-			Password:        adminPass.Elem(),
-			Server:          res.Registry.LoginServer,
-			TempDir:         a.tmpDir,
+			ProjectDir:    a.proj.Dir,
+			Provider:      a.sc.Provider,
+			Compute:       c,
+			RepositoryUrl: repositoryUrl,
+			Username:      adminUser.Elem(),
+			Password:      adminPass.Elem(),
+			Server:        res.Registry.LoginServer,
+			TempDir:       a.tmpDir,
 		}, pulumi.Parent(res))
 		if err != nil {
 			return nil, errors.WithMessage(err, "function image tag "+c.Unit().Name)
@@ -207,7 +206,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			RegistryUser:      adminUser,
 			RegistryPass:      adminPass,
 			ManagedEnv:        managedEnv,
-			ImageUri:          image.DockerImage.ImageName,
+			ImageUri:          image.URI(),
 			Env:               env,
 			Topics:            args.Topics,
 			Compute:           c,

@@ -28,7 +28,6 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sqs"
-	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/stretchr/testify/assert"
@@ -37,6 +36,7 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit"
 )
 
 type mocks int
@@ -129,8 +129,9 @@ func TestAWS(t *testing.T) {
 		schedules:   map[string]*Schedule{},
 		images: map[string]*common.Image{
 			"runner": {
-				DockerImage: &docker.Image{
-					ImageName: pulumi.Sprintf("docker.io/nitrictech/runner:latest"),
+				DockerImage: &dockerbuildkit.Image{
+					Name:       pulumi.Sprintf("docker.io/nitrictech/runner:latest"),
+					RepoDigest: pulumi.Sprintf("docker.io/nitrictech/runner:latest@sha:foo"),
 				},
 			},
 		},
@@ -246,7 +247,7 @@ func TestAWS(t *testing.T) {
 			roleArn := all[2].(string)
 			memSize := all[3].(*int)
 
-			assert.Equal(t, "docker.io/nitrictech/runner:latest", *imageUri, "wrong imageUri %s!=%s", "", *imageUri)
+			assert.Equal(t, "docker.io/nitrictech/runner:latest@sha:foo", *imageUri, "wrong imageUri %s!=%s", "", *imageUri)
 			assert.Equal(t, roleArn, fRole, "wrong role %s!=%s", roleArn, fRole)
 			assert.Equal(t, *memSize, 1024)
 			wg.Done()

@@ -23,7 +23,6 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	awslambda "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/lambda"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
-	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -33,7 +32,7 @@ import (
 type LambdaArgs struct {
 	StackName   string
 	Topics      map[string]*sns.Topic
-	DockerImage *docker.Image
+	DockerImage *common.Image
 	Compute     project.Compute
 	EnvMap      map[string]string
 }
@@ -132,7 +131,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	}
 
 	res.Function, err = awslambda.NewFunction(ctx, name, &awslambda.FunctionArgs{
-		ImageUri:    args.DockerImage.ImageName,
+		ImageUri:    args.DockerImage.URI(),
 		MemorySize:  pulumi.IntPtr(args.Compute.Unit().Memory),
 		Timeout:     pulumi.IntPtr(args.Compute.Unit().Timeout),
 		PackageType: pulumi.String("Image"),

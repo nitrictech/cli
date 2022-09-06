@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-version"
-	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
@@ -37,6 +36,7 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit"
 )
 
 type mocks int
@@ -125,8 +125,9 @@ func TestGCP(t *testing.T) {
 	g.projectNumber = "test-project-number"
 	g.images = map[string]*common.Image{
 		"runner": {
-			DockerImage: &docker.Image{
-				ImageName: pulumi.Sprintf("docker.io/nitrictech/runner:latest"),
+			DockerImage: &dockerbuildkit.Image{
+				Name:       pulumi.Sprintf("docker.io/nitrictech/runner:latest"),
+				RepoDigest: pulumi.Sprintf("docker.io/nitrictech/runner:latest@sha:foo"),
 			},
 		},
 	}
@@ -208,7 +209,7 @@ func TestGCP(t *testing.T) {
 		wg.Add(1)
 		g.cloudRunners["runner"].Service.Template.Spec().Containers().Index(pulumi.Int(0)).ApplyT(func(c cloudrun.ServiceTemplateSpecContainer) error {
 			assert.Equal(t, 9001, *c.Ports[0].ContainerPort)
-			assert.Equal(t, "docker.io/nitrictech/runner:latest", c.Image)
+			assert.Equal(t, "docker.io/nitrictech/runner:latest@sha:foo", c.Image)
 			wg.Done()
 
 			return nil

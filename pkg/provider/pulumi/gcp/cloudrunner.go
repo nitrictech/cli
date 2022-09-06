@@ -98,7 +98,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
 						Envs:  env,
-						Image: args.Image.DockerImage.ImageName, // TODO check
+						Image: args.Image.URI(),
 						Ports: cloudrun.ServiceTemplateSpecContainerPortArray{
 							cloudrun.ServiceTemplateSpecContainerPortArgs{
 								ContainerPort: pulumi.Int(9001),

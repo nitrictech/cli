@@ -129,6 +129,15 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 		_ = s.Cancel(ctx)
 	}
 
+	// https://github.com/pulumi/pulumi/issues/9782
+	buildkitInstall := exec.Command("pulumi", "plugin", "install", "resource", "docker-buildkit", "0.1.17", "--server", "https://github.com/MaterializeInc/pulumi-docker-buildkit/releases/download/v0.1.17")
+
+	out, err := buildkitInstall.CombinedOutput()
+	if err != nil {
+		pl := &common.Plugin{Name: "docker-buildkit", Version: "0.1.17"}
+		return nil, errors.WithMessagef(err, "InstallPlugin %s \n%s", pl.String(), out)
+	}
+
 	for _, plug := range p.prov.Plugins() {
 		log.Busyf("Installing Pulumi plugin %s:%s", plug.Name, plug.Version)
 

@@ -17,7 +17,6 @@
 package common
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,11 +57,9 @@ func dockerfile(projDir, provider string, c project.Compute) (string, error) {
 			return "", err
 		}
 
-		if _, err := os.Stat(filepath.Join(projDir, ".dockerignore")); errors.Is(err, os.ErrNotExist) {
-			err = os.WriteFile(filepath.Join(projDir, ".dockerignore"), []byte(strings.Join(rt.BuildIgnore(), "\n")), 0o600)
-			if err != nil {
-				return "", err
-			}
+		err = os.WriteFile(fh.Name()+".dockerignore", []byte(strings.Join(rt.BuildIgnore(), "\n")), 0o600)
+		if err != nil {
+			return "", err
 		}
 
 		fh.Close()

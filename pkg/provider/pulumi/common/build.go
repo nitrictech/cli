@@ -57,7 +57,7 @@ func dockerfile(projDir, provider string, c project.Compute) (string, error) {
 			return "", err
 		}
 
-		err = os.WriteFile(fh.Name()+".dockerignore", []byte(strings.Join(rt.BuildIgnore(), "\n")), 0o600)
+		err = os.WriteFile(fh.Name()+".dockerignore", []byte(strings.Join(rt.BuildIgnore(), "\n")), 0o644)
 		if err != nil {
 			return "", err
 		}

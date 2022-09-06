@@ -176,10 +176,6 @@ func (a *awsProvider) Validate() error {
 }
 
 func (a *awsProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	if a.sc.Region != "" && autoStack != nil {
-		return autoStack.SetConfig(ctx, "aws:region", auto.ConfigValue{Value: a.sc.Region})
-	}
-
 	dc, dok := a.sc.Config["default"]
 
 	for fn, f := range a.proj.Functions {
@@ -208,6 +204,10 @@ func (a *awsProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 		}
 
 		a.proj.Functions[fn] = f
+	}
+
+	if a.sc.Region != "" && autoStack != nil {
+		return autoStack.SetConfig(ctx, "aws:region", auto.ConfigValue{Value: a.sc.Region})
 	}
 
 	return nil

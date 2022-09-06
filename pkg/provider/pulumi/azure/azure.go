@@ -202,27 +202,6 @@ func (a *azureProvider) Validate() error {
 }
 
 func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	if a.sc.Region != "" {
-		err := autoStack.SetConfig(ctx, "azure:location", auto.ConfigValue{Value: a.sc.Region})
-		if err != nil {
-			return err
-		}
-
-		err = autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.sc.Region})
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	region, err := autoStack.GetConfig(ctx, "azure-native:location")
-	if err != nil {
-		return err
-	}
-
-	a.sc.Region = region.Value
-
 	dc, dok := a.sc.Config["default"]
 
 	for fn, f := range a.proj.Functions {
@@ -253,7 +232,12 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 		a.proj.Functions[fn] = f
 	}
 
-	return nil
+	err := autoStack.SetConfig(ctx, "azure:location", auto.ConfigValue{Value: a.sc.Region})
+	if err != nil {
+		return err
+	}
+
+	return autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.sc.Region})
 }
 
 func (a *azureProvider) Deploy(ctx *pulumi.Context) error {

@@ -62,7 +62,7 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 	}
 
 	imageArgs := &dockerbuildkit.ImageArgs{
-		Name:       pulumi.Sprintf("%s:latest", args.RepositoryUrl),
+		Name:       args.RepositoryUrl,
 		Context:    pulumi.String(args.ProjectDir),
 		Dockerfile: pulumi.String(relDocker),
 		Registry: dockerbuildkit.RegistryArgs{

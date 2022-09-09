@@ -25,7 +25,10 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-var ignoreList = []string{"github.com/golangci/golangci-lint"}
+var ignoreList = []string{
+	"github.com/golangci/golangci-lint",
+	"golang.org/x/exp",
+}
 
 func main() {
 	b, err := os.ReadFile("go.mod")

@@ -1461,8 +1461,8 @@ github.com/nishanths/predeclared v0.2.2 h1:V2EPdZPliZymNAn79T8RkNApBjMmVKh5XRpLm
 github.com/nishanths/predeclared v0.2.2/go.mod h1:RROzoN6TnGQupbC+lqggsOlcgysk3LMK/HI84Mp280c=
 github.com/nitrictech/boxygen v0.0.1-rc.9 h1:7RbKe4wAfApSOJL0qqjMp9LgAgfZ40IWznRhPWHX+UA=
 github.com/nitrictech/boxygen v0.0.1-rc.9/go.mod h1:2XXi1xEwqitH4/gus1bHyG/IQe8WOniK+pybGTz2y/Y=
-github.com/nitrictech/nitric v0.17.0 h1:J3FRZnOYZMr0R5WxXeqliDA/ZEHErqnDzB8pMcfX4iQ=
-github.com/nitrictech/nitric v0.17.0/go.mod h1:I/q8xj6SuLtEZnmwyAvH8CQIHo/8n+mA951aCuA5Crw=
+github.com/nitrictech/nitric v0.18.0 h1:G8BvziLBzplgMjxL+SwxgdefvnPZSehZ0FoJaskMtBI=
+github.com/nitrictech/nitric v0.18.0/go.mod h1:3NT9L0aiRR+BdTXR49WNJ6uiyTLXr5yBxIzGFuVre90=
 github.com/nitrictech/protoutils v0.0.0-20220321024151-14f05ec4cd27/go.mod h1:foTDKqoQFITPHBz73s77dyIE9SRN2ZLO3HoTydxauiw=
 github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf h1:8MB8W8ylM8sCM2COGfiO39/tB6BTdiawLszaUGCNL5w=
 github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf/go.mod h1:b2lzk2a4o1bvSrSCE6yvTldHuXCJymuDVhdMJGOSslw=

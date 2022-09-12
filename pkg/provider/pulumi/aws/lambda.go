@@ -20,6 +20,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
+
+	"github.com/avast/retry-go"
+
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
 	awslambda "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/lambda"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
@@ -30,6 +36,7 @@ import (
 )
 
 type LambdaArgs struct {
+	Client      lambdaiface.LambdaAPI
 	StackName   string
 	Topics      map[string]*sns.Topic
 	DockerImage *common.Image
@@ -143,6 +150,27 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
+	// ensure that the lambda was deploy successfully
+	isHealthy := res.Function.Arn.ApplyT(func(arn string) (bool, error) {
+		payload, _ := json.Marshal(map[string]interface{}{
+			"x-nitric-healthcheck": true,
+		})
+
+		err := retry.Do(func() error {
+			_, err := args.Client.Invoke(&lambda.InvokeInput{
+				FunctionName: aws.String(arn),
+				Payload:      payload,
+			})
+
+			return err
+		}, retry.Attempts(3))
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
+	})
+
 	for _, t := range args.Compute.Unit().Triggers.Topics {
 		topic, ok := args.Topics[t]
 		if ok {
@@ -170,7 +198,8 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	}
 
 	return res, ctx.RegisterResourceOutputs(res, pulumi.Map{
-		"name":   pulumi.String(res.Name),
-		"lambda": res.Function,
+		"name":    pulumi.String(res.Name),
+		"lambda":  res.Function,
+		"healthy": isHealthy,
 	})
 }

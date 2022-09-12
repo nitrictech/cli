@@ -28,6 +28,10 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
@@ -62,10 +66,11 @@ type awsStackConfig struct {
 }
 
 type awsProvider struct {
-	proj   *project.Project
-	sc     *awsStackConfig
-	envMap map[string]string
-	tmpDir string
+	proj         *project.Project
+	sc           *awsStackConfig
+	lambdaClient lambdaiface.LambdaAPI
+	envMap       map[string]string
+	tmpDir       string
 
 	// created resources (mostly here for testing)
 	rg          *resourcegroups.Group
@@ -237,6 +242,13 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
+	if a.lambdaClient == nil {
+		sess := session.Must(session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+		}))
+		a.lambdaClient = lambda.New(sess, &aws.Config{Region: aws.String(a.sc.Region)})
+	}
+
 	rgQueryJSON, err := json.Marshal(map[string]interface{}{
 		"ResourceTypeFilters": []string{"AWS::AllSupported"},
 		"TagFilters": []interface{}{
@@ -373,6 +385,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 
 		a.funcs[c.Unit().Name], err = newLambda(ctx, c.Unit().Name, &LambdaArgs{
+			Client:      a.lambdaClient,
 			Topics:      a.topics,
 			DockerImage: image,
 			Compute:     c,

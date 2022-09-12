@@ -27,7 +27,7 @@ require (
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/moby/moby v20.10.17+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.9
-	github.com/nitrictech/nitric v0.17.0
+	github.com/nitrictech/nitric v0.18.0-rc.9
 	github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit v0.0.0-20220905035427-cd9de58e7968
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.46
@@ -50,6 +50,8 @@ require (
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+require github.com/aws/aws-sdk-go v1.44.94
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect
@@ -87,7 +89,6 @@ require (
 	github.com/asdine/storm v2.1.2+incompatible // indirect
 	github.com/ashanbrown/forbidigo v1.3.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
-	github.com/aws/aws-sdk-go v1.44.94 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bkielbasa/cyclop v1.2.0 // indirect

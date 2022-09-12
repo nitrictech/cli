@@ -25,11 +25,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/getkin/kin-openapi/openapi2conv"
-	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudscheduler"
@@ -42,18 +42,33 @@ import (
 	"github.com/pulumi/pulumi-random/sdk/v4/go/random"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"golang.org/x/exp/slices"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
+type gcpFunctionConfig struct {
+	Memory  *int `yaml:"memory,omitempty"`
+	Timeout *int `yaml:"timeout,omitempty"`
+}
+
+type gcpStackConfig struct {
+	Name     string                       `yaml:"name,omitempty"`
+	Provider string                       `yaml:"provider,omitempty"`
+	Region   string                       `yaml:"region,omitempty"`
+	Project  string                       `yaml:"project,omitempty"`
+	Config   map[string]gcpFunctionConfig `yaml:"config,omitempty"`
+}
+
 type gcpProvider struct {
-	sc         *stack.Config
+	sc         *gcpStackConfig
 	proj       *project.Project
 	envMap     map[string]string
 	tmpDir     string
@@ -78,10 +93,22 @@ var gcpPluginVersion string
 //go:embed pulumi-random-version.txt
 var randomPluginVersion string
 
-func New(s *project.Project, t *stack.Config, envMap map[string]string) common.PulumiProvider {
+func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
+	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
+	if err != nil {
+		return nil, err
+	}
+
+	gsc := &gcpStackConfig{Name: name, Provider: types.Gcp}
+
+	err = yaml.Unmarshal(b, gsc)
+	if err != nil {
+		return nil, err
+	}
+
 	return &gcpProvider{
-		proj:               s,
-		sc:                 t,
+		proj:               p,
+		sc:                 gsc,
 		envMap:             envMap,
 		buckets:            map[string]*storage.Bucket{},
 		topics:             map[string]*pubsub.Topic{},
@@ -90,7 +117,7 @@ func New(s *project.Project, t *stack.Config, envMap map[string]string) common.P
 		images:             map[string]*common.Image{},
 		cloudRunners:       map[string]*CloudRunner{},
 		secrets:            map[string]*secretmanager.Secret{},
-	}
+	}, nil
 }
 
 func (g *gcpProvider) Plugins() []common.Plugin {
@@ -137,7 +164,7 @@ func (g *gcpProvider) SupportedRegions() []string {
 	}
 }
 
-func (a *gcpProvider) Ask() (*stack.Config, error) {
+func (g *gcpProvider) AskAndSave() error {
 	answers := struct {
 		Region  string
 		Project string
@@ -148,7 +175,7 @@ func (a *gcpProvider) Ask() (*stack.Config, error) {
 			Name: "region",
 			Prompt: &survey.Select{
 				Message: "select the region",
-				Options: a.SupportedRegions(),
+				Options: g.SupportedRegions(),
 			},
 		},
 		{
@@ -159,21 +186,20 @@ func (a *gcpProvider) Ask() (*stack.Config, error) {
 		},
 	}
 
-	sc := &stack.Config{
-		Name:     a.sc.Name,
-		Provider: a.sc.Provider,
-		Extra:    map[string]interface{}{},
-	}
-
 	err := survey.Ask(qs, &answers)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sc.Region = answers.Region
-	sc.Extra["project"] = answers.Project
+	g.sc.Region = answers.Region
+	g.sc.Project = answers.Project
 
-	return sc, nil
+	b, err := yaml.Marshal(g.sc)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(g.proj.Dir, fmt.Sprintf("nitric-%s.yaml", g.sc.Name)), b, 0o644)
 }
 
 func (g *gcpProvider) Validate() error {
@@ -181,20 +207,60 @@ func (g *gcpProvider) Validate() error {
 
 	if g.sc.Region == "" {
 		errList.Push(fmt.Errorf("target %s requires \"region\"", g.sc.Provider))
-	} else if !sliceutil.Contains(g.SupportedRegions(), g.sc.Region) {
+	} else if !slices.Contains(g.SupportedRegions(), g.sc.Region) {
 		errList.Push(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.sc.Region, g.sc.Provider)))
 	}
 
-	if proj, ok := g.sc.Extra["project"]; !ok || proj == nil {
+	if g.sc.Project == "" {
 		errList.Push(fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider))
 	} else {
-		g.gcpProject = proj.(string)
+		g.gcpProject = g.sc.Project
+	}
+
+	for fn, fc := range g.sc.Config {
+		if fc.Memory != nil && *fc.Memory < 128 {
+			errList.Push(fmt.Errorf("function config %s requires \"memory\" to be greater than 128 Mi", fn))
+		}
+
+		if fc.Timeout != nil && *fc.Timeout < 15 {
+			errList.Push(fmt.Errorf("function config %s requires \"timeout\" to be greater than 15 seconds", fn))
+		}
 	}
 
 	return errList.Err()
 }
 
 func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
+	dc, dok := g.sc.Config["default"]
+
+	for fn, f := range g.proj.Functions {
+		f.ComputeUnit.Memory = 512
+		f.ComputeUnit.Timeout = 15
+
+		if dok {
+			if dc.Memory != nil {
+				f.ComputeUnit.Memory = *dc.Memory
+			}
+
+			if dc.Timeout != nil {
+				f.ComputeUnit.Timeout = *dc.Timeout
+			}
+		}
+
+		fc, ok := g.sc.Config[f.Handler]
+		if ok {
+			if fc.Memory != nil {
+				f.ComputeUnit.Memory = *fc.Memory
+			}
+
+			if fc.Timeout != nil {
+				f.ComputeUnit.Timeout = *fc.Timeout
+			}
+		}
+
+		g.proj.Functions[fn] = f
+	}
+
 	err := autoStack.SetConfig(ctx, "gcp:region", auto.ConfigValue{Value: g.sc.Region})
 	if err != nil {
 		return err
@@ -375,15 +441,14 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for _, c := range g.proj.Computes() {
 		if _, ok := g.images[c.Unit().Name]; !ok {
 			g.images[c.Unit().Name], err = common.NewImage(ctx, c.Unit().Name+"Image", &common.ImageArgs{
-				ProjectDir:      g.proj.Dir,
-				Provider:        g.sc.Provider,
-				Compute:         c,
-				SourceImageName: c.ImageTagName(g.proj, g.sc.Provider),
-				RepositoryUrl:   pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
-				Username:        pulumi.String("oauth2accesstoken"),
-				Password:        pulumi.String(g.token.AccessToken),
-				Server:          pulumi.String("https://gcr.io"),
-				TempDir:         g.tmpDir,
+				ProjectDir:    g.proj.Dir,
+				Provider:      g.sc.Provider,
+				Compute:       c,
+				RepositoryUrl: pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
+				Username:      pulumi.String("oauth2accesstoken"),
+				Password:      pulumi.String(g.token.AccessToken),
+				Server:        pulumi.String("https://gcr.io"),
+				TempDir:       g.tmpDir,
 			}, defaultResourceOptions)
 			if err != nil {
 				return errors.WithMessage(err, "function image tag "+c.Unit().Name)

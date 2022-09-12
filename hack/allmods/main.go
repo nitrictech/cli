@@ -21,11 +21,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/golangci/golangci-lint/pkg/sliceutil"
+	"golang.org/x/exp/slices"
 	"golang.org/x/mod/modfile"
 )
 
-var ignoreList = []string{"github.com/golangci/golangci-lint"}
+var ignoreList = []string{
+	"github.com/golangci/golangci-lint",
+	"golang.org/x/exp",
+}
 
 func main() {
 	b, err := os.ReadFile("go.mod")
@@ -41,7 +44,7 @@ func main() {
 	mods := []string{}
 
 	for _, r := range mf.Require {
-		if sliceutil.Contains(ignoreList, r.Mod.Path) {
+		if slices.Contains(ignoreList, r.Mod.Path) {
 			continue
 		}
 

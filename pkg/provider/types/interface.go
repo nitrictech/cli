@@ -18,8 +18,16 @@ package types
 
 import (
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/stack"
 )
+
+const (
+	Aws          = "aws"
+	Azure        = "azure"
+	Gcp          = "gcp"
+	Digitalocean = "digitalocean"
+)
+
+var Providers = []string{Aws, Azure, Gcp, Digitalocean}
 
 type ResourceState struct {
 	OpType   string
@@ -44,7 +52,7 @@ type Provider interface {
 	Up(log output.Progress) (*Deployment, error)
 	Down(log output.Progress) (*Summary, error)
 	List() (interface{}, error)
-	Ask() (*stack.Config, error)
+	AskAndSave() error
 	SupportedRegions() []string
 	// Status()
 }

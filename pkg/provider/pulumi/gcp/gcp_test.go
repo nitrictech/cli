@@ -22,8 +22,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-version"
-	"github.com/pulumi/pulumi-docker/sdk/v3/go/docker"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/stretchr/testify/assert"
@@ -32,8 +34,9 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/provider/types"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit"
 )
 
 type mocks int
@@ -100,19 +103,31 @@ func TestGCP(t *testing.T) {
 	projectName := p.Name
 	stackName := p.Name + "-deploy"
 
-	sc := &stack.Config{
-		Provider: stack.Aws,
-		Region:   "mock",
+	g := &gcpProvider{
+		proj:   p,
+		envMap: map[string]string{},
+		sc: &gcpStackConfig{
+			Name:     "deploy",
+			Provider: types.Gcp,
+			Region:   "mock",
+			Config:   map[string]gcpFunctionConfig{},
+		},
+		buckets:            map[string]*storage.Bucket{},
+		topics:             map[string]*pubsub.Topic{},
+		queueTopics:        map[string]*pubsub.Topic{},
+		queueSubscriptions: map[string]*pubsub.Subscription{},
+		images:             map[string]*common.Image{},
+		cloudRunners:       map[string]*CloudRunner{},
+		secrets:            map[string]*secretmanager.Secret{},
 	}
-	gcpProv := New(p, sc, map[string]string{})
-	g := gcpProv.(*gcpProvider)
 	g.token = &oauth2.Token{AccessToken: "testing-token"}
 	g.projectId = "test-project-id"
 	g.projectNumber = "test-project-number"
 	g.images = map[string]*common.Image{
 		"runner": {
-			DockerImage: &docker.Image{
-				ImageName: pulumi.Sprintf("docker.io/nitrictech/runner:latest"),
+			DockerImage: &dockerbuildkit.Image{
+				Name:       pulumi.Sprintf("docker.io/nitrictech/runner:latest"),
+				RepoDigest: pulumi.Sprintf("docker.io/nitrictech/runner:latest@sha:foo"),
 			},
 		},
 	}
@@ -194,7 +209,7 @@ func TestGCP(t *testing.T) {
 		wg.Add(1)
 		g.cloudRunners["runner"].Service.Template.Spec().Containers().Index(pulumi.Int(0)).ApplyT(func(c cloudrun.ServiceTemplateSpecContainer) error {
 			assert.Equal(t, 9001, *c.Ports[0].ContainerPort)
-			assert.Equal(t, "docker.io/nitrictech/runner:latest", c.Image)
+			assert.Equal(t, "docker.io/nitrictech/runner:latest@sha:foo", c.Image)
 			wg.Done()
 
 			return nil
@@ -212,29 +227,27 @@ func TestGCP(t *testing.T) {
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		t       *stack.Config
+		sc      *gcpStackConfig
 		wantErr bool
 	}{
 		{
 			name: "valid",
-			t: &stack.Config{
-				Provider: stack.Gcp,
+			sc: &gcpStackConfig{
+				Provider: types.Gcp,
 				Region:   "us-west4",
-				Extra: map[string]interface{}{
-					"project": "foo",
-				},
+				Project:  "foo",
 			},
 		},
 		{
 			name:    "invalid",
-			t:       &stack.Config{Provider: stack.Gcp, Region: "pole-north-right-next-to-santa"},
+			sc:      &gcpStackConfig{Provider: types.Gcp, Region: "pole-north-right-next-to-santa"},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := New(nil, tt.t, map[string]string{})
+			a := &gcpProvider{sc: tt.sc}
 			if err := a.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("gcpProvider.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}

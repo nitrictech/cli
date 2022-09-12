@@ -21,10 +21,10 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
@@ -34,20 +34,35 @@ import (
 	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"golang.org/x/exp/slices"
+	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	"github.com/nitrictech/cli/pkg/stack"
+	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
+type azureFunctionConfig struct {
+	Memory  *int `yaml:"memory,omitempty"`
+	Timeout *int `yaml:"timeout,omitempty"`
+}
+
+type azureStackConfig struct {
+	Name     string `yaml:"name,omitempty"`
+	Provider string `yaml:"provider,omitempty"`
+	Region   string `yaml:"region,omitempty"`
+
+	AdminEmail string                         `yaml:"adminemail,omitempty"`
+	Org        string                         `yaml:"org,omitempty"`
+	Config     map[string]azureFunctionConfig `yaml:"config,omitempty"`
+}
+
 type azureProvider struct {
-	proj       *project.Project
-	sc         *stack.Config
-	envMap     map[string]string
-	tmpDir     string
-	org        string
-	adminEmail string
+	proj   *project.Project
+	sc     *azureStackConfig
+	envMap map[string]string
+	tmpDir string
 }
 
 var (
@@ -59,12 +74,24 @@ var (
 	azureNativePluginVersion string
 )
 
-func New(s *project.Project, t *stack.Config, envMap map[string]string) common.PulumiProvider {
-	return &azureProvider{
-		proj:   s,
-		sc:     t,
-		envMap: envMap,
+func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
+	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
+	if err != nil {
+		return nil, err
 	}
+
+	asc := &azureStackConfig{Name: name, Provider: types.Azure}
+
+	err = yaml.Unmarshal(b, asc)
+	if err != nil {
+		return nil, err
+	}
+
+	return &azureProvider{
+		proj:   p,
+		sc:     asc,
+		envMap: envMap,
+	}, nil
 }
 
 func (a *azureProvider) Plugins() []common.Plugin {
@@ -84,7 +111,7 @@ func (a *azureProvider) Plugins() []common.Plugin {
 	}
 }
 
-func (a *azureProvider) Ask() (*stack.Config, error) {
+func (a *azureProvider) AskAndSave() error {
 	answers := struct {
 		Region     string
 		Org        string
@@ -112,22 +139,21 @@ func (a *azureProvider) Ask() (*stack.Config, error) {
 		},
 	}
 
-	sc := &stack.Config{
-		Name:     a.sc.Name,
-		Provider: a.sc.Provider,
-		Extra:    map[string]interface{}{},
-	}
-
 	err := survey.Ask(qs, &answers)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sc.Region = answers.Region
-	sc.Extra["adminemail"] = answers.AdminEmail
-	sc.Extra["org"] = answers.Org
+	a.sc.Region = answers.Region
+	a.sc.AdminEmail = answers.AdminEmail
+	a.sc.Org = answers.Org
 
-	return sc, nil
+	b, err := yaml.Marshal(a.sc)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(a.proj.Dir, fmt.Sprintf("nitric-%s.yaml", a.sc.Name)), b, 0o644)
 }
 
 func (a *azureProvider) SupportedRegions() []string {
@@ -150,48 +176,68 @@ func (a *azureProvider) Validate() error {
 
 	if a.sc.Region == "" {
 		errList.Push(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
-	} else if !sliceutil.Contains(a.SupportedRegions(), a.sc.Region) {
+	} else if !slices.Contains(a.SupportedRegions(), a.sc.Region) {
 		errList.Push(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
 	}
 
-	if _, ok := a.sc.Extra["org"]; !ok {
+	if a.sc.Org == "" {
 		errList.Push(fmt.Errorf("target %s requires \"org\"", a.sc.Provider))
-	} else {
-		a.org = a.sc.Extra["org"].(string)
 	}
 
-	if _, ok := a.sc.Extra["adminemail"]; !ok {
+	if a.sc.AdminEmail == "" {
 		errList.Push(fmt.Errorf("target %s requires \"adminemail\"", a.sc.Provider))
-	} else {
-		a.adminEmail = a.sc.Extra["adminemail"].(string)
+	}
+
+	for fn, fc := range a.sc.Config {
+		if fc.Memory != nil && *fc.Memory < 128 {
+			errList.Push(fmt.Errorf("function config %s requires \"memory\" to be greater than 128 Mi", fn))
+		}
+
+		if fc.Timeout != nil && *fc.Timeout < 15 {
+			errList.Push(fmt.Errorf("function config %s requires \"timeout\" to be greater than 15 seconds", fn))
+		}
 	}
 
 	return errList.Err()
 }
 
 func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	if a.sc.Region != "" {
-		err := autoStack.SetConfig(ctx, "azure:location", auto.ConfigValue{Value: a.sc.Region})
-		if err != nil {
-			return err
+	dc, dok := a.sc.Config["default"]
+
+	for fn, f := range a.proj.Functions {
+		f.ComputeUnit.Memory = 512
+		f.ComputeUnit.Timeout = 15
+
+		if dok {
+			if dc.Memory != nil {
+				f.ComputeUnit.Memory = *dc.Memory
+			}
+
+			if dc.Timeout != nil {
+				f.ComputeUnit.Timeout = *dc.Timeout
+			}
 		}
 
-		err = autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.sc.Region})
-		if err != nil {
-			return err
+		fc, ok := a.sc.Config[f.Handler]
+		if ok {
+			if fc.Memory != nil {
+				f.ComputeUnit.Memory = *fc.Memory
+			}
+
+			if fc.Timeout != nil {
+				f.ComputeUnit.Timeout = *fc.Timeout
+			}
 		}
 
-		return nil
+		a.proj.Functions[fn] = f
 	}
 
-	region, err := autoStack.GetConfig(ctx, "azure-native:location")
+	err := autoStack.SetConfig(ctx, "azure:location", auto.ConfigValue{Value: a.sc.Region})
 	if err != nil {
 		return err
 	}
 
-	a.sc.Region = region.Value
-
-	return nil
+	return autoStack.SetConfig(ctx, "azure-native:location", auto.ConfigValue{Value: a.sc.Region})
 }
 
 func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
@@ -318,8 +364,8 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	for k, v := range a.proj.ApiDocs {
 		_, err = newAzureApiManagement(ctx, k, &AzureApiManagementArgs{
 			ResourceGroupName:   rg.Name,
-			OrgName:             pulumi.String(a.org),
-			AdminEmail:          pulumi.String(a.adminEmail),
+			OrgName:             pulumi.String(a.sc.Org),
+			AdminEmail:          pulumi.String(a.sc.AdminEmail),
 			OpenAPISpec:         v,
 			Apps:                apps.Apps,
 			SecurityDefinitions: a.proj.SecurityDefinitions[k],

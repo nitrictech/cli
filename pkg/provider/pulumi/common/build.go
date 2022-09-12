@@ -17,7 +17,6 @@
 package common
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,16 +28,21 @@ import (
 
 func dynamicDockerfile(dir, name string) (*os.File, error) {
 	// create a more stable file name for the hashing
-	return os.CreateTemp(dir, "nitric."+name+".Dockerfile.*")
+	err := os.MkdirAll(filepath.Join(dir, ".nitric"), os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	return os.Create(filepath.Join(dir, ".nitric", name+".Dockerfile"))
 }
 
-func dockerfile(tempDir, projDir, provider string, c project.Compute) (string, error) {
+func dockerfile(projDir, provider string, c project.Compute) (string, error) {
 	switch x := c.(type) {
 	case *project.Container:
 		return x.Dockerfile, nil
 
 	case *project.Function:
-		fh, err := dynamicDockerfile(tempDir, x.Name)
+		fh, err := dynamicDockerfile(projDir, x.Name)
 		if err != nil {
 			return "", err
 		}
@@ -53,11 +57,9 @@ func dockerfile(tempDir, projDir, provider string, c project.Compute) (string, e
 			return "", err
 		}
 
-		if _, err := os.Stat(filepath.Join(projDir, ".dockerignore")); errors.Is(err, os.ErrNotExist) {
-			err = os.WriteFile(filepath.Join(projDir, ".dockerignore"), []byte(strings.Join(rt.BuildIgnore(), "\n")), 0o600)
-			if err != nil {
-				return "", err
-			}
+		err = os.WriteFile(fh.Name()+".dockerignore", []byte(strings.Join(rt.BuildIgnore(), "\n")), 0o644)
+		if err != nil {
+			return "", err
 		}
 
 		fh.Close()

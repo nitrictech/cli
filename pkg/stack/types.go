@@ -16,18 +16,7 @@
 
 package stack
 
-const (
-	Aws          = "aws"
-	Azure        = "azure"
-	Gcp          = "gcp"
-	Digitalocean = "digitalocean"
-)
-
-var Providers = []string{Aws, Azure, Gcp, Digitalocean}
-
 type Config struct {
-	Name     string                 `yaml:"name,omitempty"`
-	Provider string                 `yaml:"provider,omitempty"`
-	Region   string                 `yaml:"region,omitempty"`
-	Extra    map[string]interface{} `yaml:",inline,omitempty"`
+	Name     string `yaml:"name,omitempty"`
+	Provider string `yaml:"provider,omitempty"`
 }

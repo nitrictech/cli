@@ -30,44 +30,44 @@ import (
 
 var stackPath string
 
-func FromConfig(p *Config) (*Project, error) {
-	s := New(p)
+func FromConfig(c *Config) (*Project, error) {
+	p := New(c)
 
-	for _, g := range p.Handlers {
-		maybeFile := filepath.Join(s.Dir, g)
+	for _, h := range c.Handlers {
+		maybeFile := filepath.Join(p.Dir, h)
 
 		if _, err := os.Stat(maybeFile); err != nil {
-			fs, err := utils.GlobInDir(stackPath, g)
+			fs, err := utils.GlobInDir(stackPath, h)
 			if err != nil {
 				return nil, err
 			}
 
 			for _, f := range fs {
-				fn, err := FunctionFromHandler(f, s.Dir)
+				fn, err := FunctionFromHandler(f)
 				if err != nil {
 					return nil, err
 				}
 
-				s.Functions[fn.Name] = fn
+				p.Functions[fn.Name] = fn
 			}
 		} else {
-			fn, err := FunctionFromHandler(g, s.Dir)
+			fn, err := FunctionFromHandler(h)
 			if err != nil {
 				return nil, err
 			}
 
-			s.Functions[fn.Name] = fn
+			p.Functions[fn.Name] = fn
 		}
 	}
 
-	if len(s.Functions) == 0 {
-		return nil, fmt.Errorf("no functions were found with the glob '%s', try a new pattern", strings.Join(p.Handlers, ","))
+	if len(p.Functions) == 0 {
+		return nil, fmt.Errorf("no functions were found with the glob '%s', try a new pattern", strings.Join(c.Handlers, ","))
 	}
 
-	return s, nil
+	return p, nil
 }
 
-func FunctionFromHandler(h, stackDir string) (Function, error) {
+func FunctionFromHandler(h string) (Function, error) {
 	pterm.Debug.Println("Using function from " + h)
 
 	rt, err := runtime.NewRunTimeFromHandler(h)
@@ -76,7 +76,9 @@ func FunctionFromHandler(h, stackDir string) (Function, error) {
 	}
 
 	return Function{
-		ComputeUnit: ComputeUnit{Name: rt.ContainerName()},
-		Handler:     h,
+		ComputeUnit: ComputeUnit{
+			Name: rt.ContainerName(),
+		},
+		Handler: h,
 	}, nil
 }

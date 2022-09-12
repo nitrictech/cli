@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
@@ -34,15 +36,15 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/gcp"
 	"github.com/nitrictech/cli/pkg/provider/types"
-	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type pulumiDeployment struct {
-	proj *project.Project
-	sc   *stack.Config
-	prov common.PulumiProvider
-	opts *types.ProviderOpts
+	proj      *project.Project
+	stackName string
+	provider  string
+	prov      common.PulumiProvider
+	opts      *types.ProviderOpts
 }
 
 type stackSummary struct {
@@ -56,7 +58,7 @@ type stackSummary struct {
 
 var _ types.Provider = &pulumiDeployment{}
 
-func New(p *project.Project, sc *stack.Config, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
+func New(p *project.Project, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 
 	err := pv.Run()
@@ -70,27 +72,32 @@ func New(p *project.Project, sc *stack.Config, envMap map[string]string, opts *t
 
 	var prov common.PulumiProvider
 
-	switch sc.Provider {
-	case stack.Aws:
-		prov = aws.New(p, sc, envMap)
-	case stack.Azure:
-		prov = azure.New(p, sc, envMap)
-	case stack.Gcp:
-		prov = gcp.New(p, sc, envMap)
+	switch provider {
+	case types.Aws:
+		prov, err = aws.New(p, name, envMap)
+	case types.Azure:
+		prov, err = azure.New(p, name, envMap)
+	case types.Gcp:
+		prov, err = gcp.New(p, name, envMap)
 	default:
-		return nil, utils.NewNotSupportedErr("pulumi provider " + sc.Provider + " not suppored")
+		return nil, utils.NewNotSupportedErr("pulumi provider " + provider + " not suppored")
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	return &pulumiDeployment{
-		proj: p,
-		sc:   sc,
-		prov: prov,
-		opts: opts,
+		proj:      p,
+		stackName: name,
+		provider:  provider,
+		prov:      prov,
+		opts:      opts,
 	}, nil
 }
 
-func (p *pulumiDeployment) Ask() (*stack.Config, error) {
-	return p.prov.Ask()
+func (p *pulumiDeployment) AskAndSave() error {
+	return p.prov.AskAndSave()
 }
 
 func (p *pulumiDeployment) SupportedRegions() []string {
@@ -102,7 +109,7 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 		return nil, err
 	}
 
-	stackName := p.proj.Name + "-" + p.sc.Name
+	stackName := p.proj.Name + "-" + p.stackName
 	ctx := context.Background()
 
 	s, err := auto.UpsertStackInlineSource(ctx, stackName, p.proj.Name, p.prov.Deploy,
@@ -122,10 +129,21 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 		_ = s.Cancel(ctx)
 	}
 
+	// https://github.com/pulumi/pulumi/issues/9782
+	buildkitInstall := exec.Command("pulumi", "plugin", "install", "resource", "docker-buildkit", "0.1.17", "--server", "https://github.com/MaterializeInc/pulumi-docker-buildkit/releases/download/v0.1.17")
+
+	out, err := buildkitInstall.CombinedOutput()
+	if err != nil {
+		pl := &common.Plugin{Name: "docker-buildkit", Version: "0.1.17"}
+		return nil, errors.WithMessagef(err, "InstallPlugin %s \n%s", pl.String(), out)
+	}
+
 	for _, plug := range p.prov.Plugins() {
 		log.Busyf("Installing Pulumi plugin %s:%s", plug.Name, plug.Version)
 
-		err = s.Workspace().InstallPlugin(ctx, plug.Name, plug.Version)
+		err = retry.Do(func() error {
+			return s.Workspace().InstallPlugin(ctx, plug.Name, plug.Version)
+		}, retry.Attempts(3), retry.Delay(time.Second))
 		if err != nil {
 			return nil, errors.WithMessage(err, "InstallPlugin "+plug.String())
 		}
@@ -198,7 +216,7 @@ func (p *pulumiDeployment) List() (interface{}, error) {
 		return nil, errors.WithMessage(err, "ListStacks")
 	}
 
-	stackName := p.proj.Name + "-" + p.sc.Name
+	stackName := p.proj.Name + "-" + p.stackName
 	result := []stackSummary{}
 
 	for _, st := range sl {

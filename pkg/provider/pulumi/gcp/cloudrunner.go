@@ -79,13 +79,13 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 	}
 
 	// Deploy the func
-	memory := common.IntValueOrDefault(args.Compute.Unit().Memory, 512)
 	maxScale := common.IntValueOrDefault(args.Compute.Unit().MaxScale, 10)
 	minScale := common.IntValueOrDefault(args.Compute.Unit().MinScale, 0)
 
 	res.Service, err = cloudrun.NewService(ctx, name, &cloudrun.ServiceArgs{
-		Location: pulumi.String(g.sc.Region),
-		Project:  pulumi.String(args.ProjectId),
+		AutogenerateRevisionName: pulumi.BoolPtr(true),
+		Location:                 pulumi.String(g.sc.Region),
+		Project:                  pulumi.String(args.ProjectId),
 		Template: cloudrun.ServiceTemplateArgs{
 			Metadata: cloudrun.ServiceTemplateMetadataArgs{
 				Annotations: pulumi.StringMap{
@@ -99,14 +99,14 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
 						Envs:  env,
-						Image: args.Image.DockerImage.ImageName, // TODO check
+						Image: args.Image.URI(),
 						Ports: cloudrun.ServiceTemplateSpecContainerPortArray{
 							cloudrun.ServiceTemplateSpecContainerPortArgs{
 								ContainerPort: pulumi.Int(9001),
 							},
 						},
 						Resources: cloudrun.ServiceTemplateSpecContainerResourcesArgs{
-							Limits: pulumi.StringMap{"memory": pulumi.Sprintf("%dMi", memory)},
+							Limits: pulumi.StringMap{"memory": pulumi.Sprintf("%dMi", args.Compute.Unit().Memory)},
 						},
 					},
 				},

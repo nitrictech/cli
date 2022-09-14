@@ -54,7 +54,6 @@ RUN apt-get update -y && \
   apt-get update -y && \
   apt-get install -y \
   docker-ce \
-  amazon-ecr-credential-helper \
   nodejs \
   yarn && \
   # Clean up the lists work
@@ -68,6 +67,12 @@ ARG PULUMI_VERSION
 # Install the Pulumi SDK, including the CLI and language runtimes.
 RUN curl -fsSL https://get.pulumi.com/ | bash -s -- --version $PULUMI_VERSION && \
   mv ~/.pulumi/bin/* /usr/bin
+
+curl -fsSLo /tmp/dch.tgz https://github.com/docker/docker-credential-helpers/releases/download/${DOCKER_PASS_CH}/docker-credential-pass-${DOCKER_PASS_CH}-amd64.tar.gz; \
+  tar -xf /tmp/dch.tgz; \
+  chmod +x docker-credential-pass; \
+  mv -f docker-credential-pass /usr/bin/; \
+  rm -rf /tmp/dch.tgz
 
 ENV HOST_DOCKER_INTERNAL_IFACE eth0
 ENV PULUMI_SKIP_UPDATE_CHECK "true"

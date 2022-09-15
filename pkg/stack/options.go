@@ -51,7 +51,9 @@ func ConfigFromOptions() (*Config, error) {
 	sName := stack // Default to the supplied stack
 	if sName == "" {
 		stacks, err := GetStacks()
-		cobra.CheckErr(err)
+		if err != nil {
+			return nil, err
+		}
 
 		if len(stacks) == 1 {
 			// If there is only one stack use that
@@ -62,7 +64,10 @@ func ConfigFromOptions() (*Config, error) {
 				Message: "Which stack do you wish to deploy?",
 				Options: stacks,
 			}, &sName)
-			cobra.CheckErr(err)
+			
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

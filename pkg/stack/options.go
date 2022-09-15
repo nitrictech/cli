@@ -64,7 +64,7 @@ func ConfigFromOptions() (*Config, error) {
 				Message: "Which stack do you wish to deploy?",
 				Options: stacks,
 			}, &sName)
-			
+
 			if err != nil {
 				return nil, err
 			}

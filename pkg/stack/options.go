@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
@@ -30,9 +31,47 @@ import (
 
 var stack string
 
+func GetStacks() ([]string, error) {
+	stackFiles, err := utils.GlobInDir(".", "nitric-*.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	stacks := []string{}
+
+	for _, sf := range stackFiles {
+		stacks = append(stacks, strings.TrimSuffix(strings.TrimPrefix(sf, "nitric-"), ".yaml"))
+	}
+
+	return stacks, nil
+}
+
 // Assume the project is in the currentDirectory
 func ConfigFromOptions() (*Config, error) {
-	return configFromFile("nitric-" + stack + ".yaml")
+	sName := stack // Default to the supplied stack
+	if sName == "" {
+		stacks, err := GetStacks()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(stacks) == 1 {
+			// If there is only one stack use that
+			sName = stacks[0]
+		} else if len(stacks) > 0 {
+			// List all the other stacks
+			err = survey.AskOne(&survey.Select{
+				Message: "Which stack do you wish to deploy?",
+				Options: stacks,
+			}, &sName)
+
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return configFromFile("nitric-" + sName + ".yaml")
 }
 
 func configFromFile(file string) (*Config, error) {
@@ -49,22 +88,12 @@ func configFromFile(file string) (*Config, error) {
 }
 
 func AddOptions(cmd *cobra.Command, providerOnly bool) error {
-	stackFiles, err := utils.GlobInDir(".", "nitric-*.yaml")
+	stacks, err := GetStacks()
 	if err != nil {
 		return err
 	}
 
-	stacks := []string{}
-
-	for _, sf := range stackFiles {
-		stacks = append(stacks, strings.TrimSuffix(strings.TrimPrefix(sf, "nitric-"), ".yaml"))
-	}
-
 	cmd.Flags().VarP(pflagext.NewStringEnumVar(&stack, stacks, ""), "stack", "s", "use this to refer to a stack configuration nitric-<stackname>.yaml")
-
-	if err = cobra.MarkFlagRequired(cmd.Flags(), "stack"); err != nil {
-		return err
-	}
 
 	return cmd.RegisterFlagCompletionFunc("stack", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return stacks, cobra.ShellCompDirectiveDefault

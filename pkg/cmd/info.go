@@ -17,6 +17,9 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/ghissue"
@@ -28,8 +31,13 @@ var infoCmd = &cobra.Command{
 	Short: "Gather information about Nitric and the environment",
 	Long:  `Gather information about Nitric and the environment.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		d, err := ghissue.Gather()
-		cobra.CheckErr(err)
-		output.Print(d)
+		d := ghissue.Gather()
+
+		s, err := json.MarshalIndent(d, "", "  ")
+		if err != nil {
+			output.Print(d)
+		} else {
+			fmt.Println(string(s))
+		}
 	},
 }

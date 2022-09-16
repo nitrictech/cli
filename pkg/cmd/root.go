@@ -29,6 +29,7 @@ import (
 	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/preferences"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const usageTemplate = `Nitric - The fastest way to build serverless apps
@@ -60,6 +61,14 @@ var rootCmd = &cobra.Command{
 
 		if output.CI {
 			pterm.DisableStyling()
+		}
+
+		// Ensure the Nitric Home Directory Exists
+		if _, err := os.Stat(utils.NitricHomeDir()); os.IsNotExist(err) {
+			err := os.MkdirAll(utils.NitricHomeDir(), 0700) // Create the Nitric Home Directory if it's missing
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("Failed to create nitric home directory. %w", err))
+			}
 		}
 
 		err := preferences.PromptFeedback()

@@ -102,13 +102,13 @@ func New(p *project.Project, name string, envMap map[string]string) (common.Pulu
 
 	// Hydrate from file if already exists
 	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
-	if !errors.Is(err, os.ErrNotExist) {
-		return nil, err
-	} else if err == nil {
+	if err == nil {
 		err = yaml.Unmarshal(b, gsc)
 		if err != nil {
 			return nil, err
 		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
 	}
 
 	return &gcpProvider{

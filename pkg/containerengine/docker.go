@@ -28,6 +28,7 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
@@ -202,13 +203,15 @@ func print(rd io.Reader) error {
 			return err
 		}
 
-		if len(strings.TrimSpace(line.Stream)) > 0 {
-			if strings.Contains(line.Stream, "--->") {
+		text := strings.TrimRightFunc(line.Stream, unicode.IsSpace)
+
+		if len(text) > 0 {
+			if strings.Contains(text, "--->") {
 				if output.VerboseLevel >= 3 {
-					log.Default().Print(line.Stream)
+					log.Default().Println(text)
 				}
 			} else {
-				log.Default().Print(line.Stream)
+				log.Default().Println(text)
 			}
 		}
 	}

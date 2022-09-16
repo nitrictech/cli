@@ -94,16 +94,21 @@ var gcpPluginVersion string
 var randomPluginVersion string
 
 func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
-	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
-	if err != nil {
-		return nil, err
+	gsc := &gcpStackConfig{
+		Name:     name,
+		Provider: types.Gcp,
+		Config:   map[string]gcpFunctionConfig{},
 	}
 
-	gsc := &gcpStackConfig{Name: name, Provider: types.Gcp}
-
-	err = yaml.Unmarshal(b, gsc)
-	if err != nil {
+	// Hydrate from file if already exists
+	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
+	if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
+	} else if err == nil {
+		err = yaml.Unmarshal(b, gsc)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &gcpProvider{

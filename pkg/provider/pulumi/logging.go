@@ -134,14 +134,14 @@ func collectEvents(log *pulumiLogger, eventChannel <-chan events.EngineEvent, pr
 			lc := stepEventToString("ResOutputsEvent", &event.ResOutputsEvent.Metadata)
 
 			if event.ResOutputsEvent.Metadata.Op == apitype.OpSame {
-				log.Debugf("%s\n", lc)
+				log.Debugf("%s", lc)
 			} else {
 				if st, ok := busyList[lc]; ok {
 					// if possible print out how long it took
 					d := time.Since(st).Round(time.Second)
-					log.Successf("%s (%s)\n", lc, d.String())
+					log.Successf("%s (%s)", lc, d.String())
 				} else {
-					log.Successf("%s %t\n", lc, busyList[lc])
+					log.Successf("%s %t", lc, busyList[lc])
 				}
 			}
 
@@ -152,7 +152,7 @@ func collectEvents(log *pulumiLogger, eventChannel <-chan events.EngineEvent, pr
 		if event.ResOpFailedEvent != nil {
 			lc := stepEventToString("ResOpFailedEvent", &event.ResOpFailedEvent.Metadata)
 
-			log.Failf("%s\n", lc)
+			log.Failf("%s", lc)
 
 			delete(busyList, lc)
 

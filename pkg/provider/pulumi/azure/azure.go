@@ -75,12 +75,23 @@ var (
 )
 
 func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
-	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
-	if err != nil {
-		return nil, err
+	// default provider config
+	asc := &azureStackConfig{
+		Name:     name,
+		Provider: types.Azure,
+		Config:   map[string]azureFunctionConfig{},
 	}
 
-	asc := &azureStackConfig{Name: name, Provider: types.Azure}
+	// Hydrate from file if already exists
+	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	} else if err == nil {
+		err = yaml.Unmarshal(b, asc)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	err = yaml.Unmarshal(b, asc)
 	if err != nil {

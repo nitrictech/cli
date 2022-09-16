@@ -49,6 +49,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
+	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
@@ -88,16 +89,22 @@ type awsProvider struct {
 var awsPluginVersion string
 
 func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
-	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
-	if err != nil {
-		return nil, err
+	// default provider config
+	asc := &awsStackConfig{
+		Name:     name,
+		Provider: types.Aws,
+		Config:   map[string]awsFunctionConfig{},
 	}
 
-	asc := &awsStackConfig{}
-
-	err = yaml.Unmarshal(b, asc)
-	if err != nil {
+	// Hydrate from file if already exists
+	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
+	if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
+	} else if err == nil {
+		err = yaml.Unmarshal(b, asc)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &awsProvider{

@@ -28,6 +28,10 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
@@ -45,6 +49,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
+	"github.com/nitrictech/cli/pkg/provider/types"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
@@ -62,10 +67,11 @@ type awsStackConfig struct {
 }
 
 type awsProvider struct {
-	proj   *project.Project
-	sc     *awsStackConfig
-	envMap map[string]string
-	tmpDir string
+	proj         *project.Project
+	sc           *awsStackConfig
+	lambdaClient lambdaiface.LambdaAPI
+	envMap       map[string]string
+	tmpDir       string
 
 	// created resources (mostly here for testing)
 	rg          *resourcegroups.Group
@@ -83,16 +89,22 @@ type awsProvider struct {
 var awsPluginVersion string
 
 func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
-	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
-	if err != nil {
-		return nil, err
+	// default provider config
+	asc := &awsStackConfig{
+		Name:     name,
+		Provider: types.Aws,
+		Config:   map[string]awsFunctionConfig{},
 	}
 
-	asc := &awsStackConfig{}
-
-	err = yaml.Unmarshal(b, asc)
-	if err != nil {
+	// Hydrate from file if already exists
+	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
+	if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
+	} else if err == nil {
+		err = yaml.Unmarshal(b, asc)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &awsProvider{
@@ -237,6 +249,13 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
+	if a.lambdaClient == nil {
+		sess := session.Must(session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+		}))
+		a.lambdaClient = lambda.New(sess, &aws.Config{Region: aws.String(a.sc.Region)})
+	}
+
 	rgQueryJSON, err := json.Marshal(map[string]interface{}{
 		"ResourceTypeFilters": []string{"AWS::AllSupported"},
 		"TagFilters": []interface{}{
@@ -373,6 +392,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 
 		a.funcs[c.Unit().Name], err = newLambda(ctx, c.Unit().Name, &LambdaArgs{
+			Client:      a.lambdaClient,
 			Topics:      a.topics,
 			DockerImage: image,
 			Compute:     c,

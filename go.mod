@@ -3,14 +3,14 @@ module github.com/nitrictech/cli
 go 1.18
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.5
+	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1
-	github.com/docker/cli v20.10.17+incompatible
-	github.com/docker/docker v20.10.17+incompatible
+	github.com/docker/cli v20.10.18+incompatible
+	github.com/docker/docker v20.10.18+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fasthttp/router v1.4.12
 	github.com/getkin/kin-openapi v0.100.0
@@ -25,14 +25,14 @@ require (
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/joho/godotenv v1.4.0
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
-	github.com/moby/moby v20.10.17+incompatible
+	github.com/moby/moby v20.10.18+incompatible
 	github.com/nitrictech/boxygen v0.0.1-rc.9
-	github.com/nitrictech/nitric v0.17.0
+	github.com/nitrictech/nitric v0.18.0
 	github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit v0.0.0-20220905035427-cd9de58e7968
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.46
 	github.com/pulumi/pulumi-aws/sdk/v4 v4.38.1
-	github.com/pulumi/pulumi-azure-native/sdk v1.75.0
+	github.com/pulumi/pulumi-azure-native/sdk v1.76.0
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.28.0
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.36.0
@@ -45,11 +45,13 @@ require (
 	github.com/valyala/fasthttp v1.40.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
-	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094
+	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1
 	google.golang.org/grpc v1.49.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+require github.com/aws/aws-sdk-go v1.44.95
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect
@@ -87,7 +89,6 @@ require (
 	github.com/asdine/storm v2.1.2+incompatible // indirect
 	github.com/ashanbrown/forbidigo v1.3.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
-	github.com/aws/aws-sdk-go v1.44.94 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bkielbasa/cyclop v1.2.0 // indirect
@@ -138,7 +139,7 @@ require (
 	github.com/go-xmlfmt/xmlfmt v0.0.0-20191208150333-d5b6f63a941b // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
-	github.com/gofrs/uuid v4.2.0+incompatible // indirect
+	github.com/gofrs/uuid v4.3.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -237,7 +238,7 @@ require (
 	github.com/quasilyte/gogrep v0.0.0-20220120141003-628d8b3623b5 // indirect
 	github.com/quasilyte/regex/syntax v0.0.0-20200407221936-30656e2c4a95 // indirect
 	github.com/quasilyte/stdinfo v0.0.0-20220114132959-f7386bf02567 // indirect
-	github.com/rivo/uniseg v0.3.4 // indirect
+	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/ryancurrah/gomodguard v1.2.3 // indirect
 	github.com/ryanrolds/sqlclosecheck v0.3.0 // indirect
@@ -288,9 +289,9 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
-	golang.org/x/net v0.0.0-20220907135653-1e95f45603a7 // indirect
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
-	golang.org/x/sys v0.0.0-20220908164124-27713097b956 // indirect
+	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
@@ -298,7 +299,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.95.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220908141613-51c1cc9bc6d0 // indirect
+	google.golang.org/genproto v0.0.0-20220909194730-69f6226f97e5 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect

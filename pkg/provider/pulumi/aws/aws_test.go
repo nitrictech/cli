@@ -23,6 +23,8 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-version"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
@@ -31,6 +33,8 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/stretchr/testify/assert"
+
+	mock_lambdaiface "github.com/nitrictech/cli/mocks/mock_lambda"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
@@ -48,6 +52,8 @@ func (mocks) NewResource(args pulumi.MockResourceArgs) (string, resource.Propert
 	fmt.Println(args.TypeToken)
 
 	switch args.TypeToken {
+	case "aws:lambda/function:Function":
+		outputs["arn"] = "test-arn"
 	case "aws:sns/topic:Topic":
 		outputs["arn"] = "test-arn"
 	case "aws:s3/bucket:Bucket":
@@ -110,6 +116,10 @@ func TestAWS(t *testing.T) {
 	projectName := s.Name
 	stackName := s.Name + "-deploy"
 
+	ctrl := gomock.NewController(t)
+	mockLambda := mock_lambdaiface.NewMockLambdaAPI(ctrl)
+	mockLambda.EXPECT().Invoke(gomock.Any()).AnyTimes().Return(&lambda.InvokeOutput{}, nil)
+
 	a := &awsProvider{
 		proj: s,
 		sc: &awsStackConfig{
@@ -122,11 +132,12 @@ func TestAWS(t *testing.T) {
 				},
 			},
 		},
-		topics:      map[string]*sns.Topic{},
-		buckets:     map[string]*s3.Bucket{},
-		queues:      map[string]*sqs.Queue{},
-		collections: map[string]*dynamodb.Table{},
-		schedules:   map[string]*Schedule{},
+		lambdaClient: mockLambda,
+		topics:       map[string]*sns.Topic{},
+		buckets:      map[string]*s3.Bucket{},
+		queues:       map[string]*sqs.Queue{},
+		collections:  map[string]*dynamodb.Table{},
+		schedules:    map[string]*Schedule{},
 		images: map[string]*common.Image{
 			"runner": {
 				DockerImage: &dockerbuildkit.Image{
@@ -273,6 +284,8 @@ func TestAWS(t *testing.T) {
 		return nil
 	}, pulumi.WithMocks(projectName, stackName, mocks(0)))
 	assert.NoError(t, err)
+
+	ctrl.Finish()
 
 	a.CleanUp()
 }

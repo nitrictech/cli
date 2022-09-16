@@ -32,13 +32,14 @@ import (
 )
 
 type Diagnostics struct {
-	OS                      string `json:"os"`
-	Arch                    string `json:"arch"`
-	GoVersion               string `json:"goVersion"`
-	CliVersion              string `json:"cliVersion"`
-	FabricVersion           string `json:"fabricVersion"`
-	ContainerRuntime        string `json:"containerRuntime"`
-	ContainerRuntimeVersion string `json:"containerRuntimeVersion"`
+	OS                      string   `json:"os"`
+	Arch                    string   `json:"arch"`
+	GoVersion               string   `json:"goVersion"`
+	CliVersion              string   `json:"cliVersion"`
+	FabricVersion           string   `json:"fabricVersion"`
+	ContainerRuntime        string   `json:"containerRuntime"`
+	ContainerRuntimeVersion string   `json:"containerRuntimeVersion"`
+	DetectedErrors          []string `json:"detectedErrors"`
 }
 
 type GHIssue struct {
@@ -49,27 +50,29 @@ type GHIssue struct {
 }
 
 var diag = Diagnostics{
-	OS:            runtime.GOOS,
-	Arch:          runtime.GOARCH,
-	GoVersion:     runtime.Version(),
-	CliVersion:    utils.Version,
-	FabricVersion: project.DefaultMembraneVersion,
+	OS:             runtime.GOOS,
+	Arch:           runtime.GOARCH,
+	GoVersion:      runtime.Version(),
+	CliVersion:     utils.Version,
+	FabricVersion:  project.DefaultMembraneVersion,
+	DetectedErrors: make([]string, 0),
 }
 
-func Gather() (*Diagnostics, error) {
+func Gather() *Diagnostics {
 	ce, err := containerengine.Discover()
 	if err != nil {
-		return &diag, err
+		diag.DetectedErrors = append(diag.DetectedErrors, err.Error())
+		return &diag
 	}
 
 	diag.ContainerRuntime = ce.Type()
 	diag.ContainerRuntimeVersion = ce.Version()
 
-	return &diag, nil
+	return &diag
 }
 
 func BugLink(err interface{}) string {
-	d, _ := Gather()
+	d := Gather()
 	issue := GHIssue{
 		Diagnostics: *d,
 		Error:       fmt.Sprint(err),

@@ -40,8 +40,7 @@ var feedbackCmd = &cobra.Command{
 			Body  string
 		}{}
 
-		d, err := ghissue.Gather()
-		cobra.CheckErr(err)
+		d := ghissue.Gather()
 
 		diag, err := yaml.Marshal(d)
 		cobra.CheckErr(err)

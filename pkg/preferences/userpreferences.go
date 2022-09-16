@@ -89,7 +89,7 @@ func ReadUserPreferences() (*UserPreferences, error) {
 func (up *UserPreferences) WriteToFile() error {
 	file, err := os.Create(utils.NitricPreferencesPath())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update user preferences.\n\tUnable to access file: %s", utils.NitricPreferencesPath())
 	}
 	defer file.Close()
 

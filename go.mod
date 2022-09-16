@@ -7,6 +7,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/avast/retry-go v3.0.0+incompatible
+	github.com/aws/aws-sdk-go v1.44.95
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/cli v20.10.18+incompatible
@@ -50,8 +51,6 @@ require (
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
-
-require github.com/aws/aws-sdk-go v1.44.95
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect

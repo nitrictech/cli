@@ -17,7 +17,10 @@
 package output
 
 import (
+	"bufio"
 	"io"
+	"strings"
+	"unicode"
 
 	"github.com/pterm/pterm"
 )
@@ -37,15 +40,13 @@ type Progress interface {
 func StdoutToPtermDebug(b io.ReadCloser, p Progress, prefix string) {
 	defer b.Close()
 
-	buf := make([]byte, 1024)
+	sc := bufio.NewScanner(b)
+	for sc.Scan() {
+		line := strings.TrimRightFunc(sc.Text(), unicode.IsSpace)
 
-	for {
-		n, err := b.Read(buf)
-		if err != nil {
-			break
+		if line != "" {
+			p.Debugf("%s %v\n", prefix, line)
 		}
-
-		p.Debugf("%s %v", prefix, string(buf[:n]))
 	}
 }
 
@@ -54,7 +55,7 @@ type pTermWriter struct {
 }
 
 func (p *pTermWriter) Write(b []byte) (n int, err error) {
-	p.prefix.Println(string(b))
+	p.prefix.Println(strings.TrimRightFunc(string(b), unicode.IsSpace))
 
 	return len(b), nil
 }

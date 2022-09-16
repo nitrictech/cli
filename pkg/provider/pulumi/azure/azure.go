@@ -84,17 +84,12 @@ func New(p *project.Project, name string, envMap map[string]string) (common.Pulu
 
 	// Hydrate from file if already exists
 	b, err := os.ReadFile(filepath.Join(p.Dir, "nitric-"+name+".yaml"))
-	if !errors.Is(err, os.ErrNotExist) {
-		return nil, err
-	} else if err == nil {
+	if err == nil {
 		err = yaml.Unmarshal(b, asc)
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	err = yaml.Unmarshal(b, asc)
-	if err != nil {
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 

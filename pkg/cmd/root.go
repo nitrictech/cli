@@ -64,7 +64,7 @@ var rootCmd = &cobra.Command{
 
 		// Ensure the Nitric Home Directory Exists
 		if _, err := os.Stat(utils.NitricHomeDir()); os.IsNotExist(err) {
-			err := os.MkdirAll(utils.NitricHomeDir(), 0700) // Create the Nitric Home Directory if it's missing
+			err := os.MkdirAll(utils.NitricHomeDir(), 0o700) // Create the Nitric Home Directory if it's missing
 			if err != nil {
 				cobra.CheckErr(fmt.Errorf("Failed to create nitric home directory. %w", err))
 			}

@@ -17,6 +17,7 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -68,6 +69,8 @@ func ConfigFromOptions() (*Config, error) {
 			if err != nil {
 				return nil, err
 			}
+		} else {
+			return nil, errors.New("No nitric stacks found, run `nitric stack new` to create a new stack")
 		}
 	}
 

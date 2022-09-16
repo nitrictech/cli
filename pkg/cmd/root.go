@@ -28,7 +28,6 @@ import (
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/preferences"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
@@ -69,11 +68,6 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				cobra.CheckErr(fmt.Errorf("Failed to create nitric home directory. %w", err))
 			}
-		}
-
-		err := preferences.PromptFeedback()
-		if err != nil {
-			fmt.Println(err.Error())
 		}
 	},
 }

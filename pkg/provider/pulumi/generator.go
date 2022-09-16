@@ -18,6 +18,7 @@ package pulumi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -54,6 +55,12 @@ type stackSummary struct {
 	UpdateInProgress bool   `json:"updateInProgress"`
 	ResourceCount    *int   `json:"resourceCount,omitempty"`
 	URL              string `json:"url,omitempty"`
+}
+
+type pulumiBackend struct{}
+
+type pulumiAbout struct {
+	Backend *pulumiBackend `json:"backend"`
 }
 
 var _ types.Provider = &pulumiDeployment{}
@@ -112,13 +119,35 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	stackName := p.proj.Name + "-" + p.stackName
 	ctx := context.Background()
 
-	s, err := auto.UpsertStackInlineSource(ctx, stackName, p.proj.Name, p.prov.Deploy,
+	aboutData, err := exec.Command("pulumi", "about", "-j").Output()
+	if err != nil {
+		return nil, errors.WithMessage(err, "Failed to determine login state of pulumi")
+	}
+
+	// Default to local backend if not already logged in
+	about := &pulumiAbout{}
+
+	err = json.Unmarshal([]byte(strings.TrimSpace(string(aboutData))), about)
+	if err != nil {
+		return nil, errors.WithMessage(err, "Failed to determine login state of pulumi")
+	}
+
+	upsertOpts := []auto.LocalWorkspaceOption{
 		auto.SecretsProvider("passphrase"),
 		auto.Project(workspace.Project{
 			Name:    tokens.PackageName(p.proj.Name),
 			Runtime: workspace.NewProjectRuntimeInfo("go", nil),
 			Main:    p.proj.Dir,
+		}),
+	}
+
+	if about.Backend == nil {
+		upsertOpts = append(upsertOpts, auto.EnvVars(map[string]string{
+			"PULUMI_BACKEND_URL": "file://~",
 		}))
+	}
+
+	s, err := auto.UpsertStackInlineSource(ctx, stackName, p.proj.Name, p.prov.Deploy, upsertOpts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "UpsertStackInlineSource")
 	}

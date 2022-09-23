@@ -3,6 +3,7 @@
 ![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/nitrictech/cli/Tests/develop?label=tests)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nitrictech/cli)
 ![GitHub all releases](https://img.shields.io/github/downloads/nitrictech/cli/total)
+  <a href="https://discord.gg/Webemece5C"><img alt="Discord" src="https://img.shields.io/discord/955259353043173427?label=discord"></a>
 
 ## Overview
 
@@ -60,6 +61,8 @@ Documentation for all available commands:
 ## Get in touch
 
 - Ask questions in [GitHub discussions](https://github.com/nitrictech/nitric/discussions)
+
+- Join us on [Discord](https://discord.gg/Webemece5C)
 
 - Find us on [Twitter](https://twitter.com/nitric_io)
 

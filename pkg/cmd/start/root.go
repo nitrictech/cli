@@ -36,8 +36,6 @@ import (
 	"github.com/nitrictech/cli/pkg/tasklet"
 )
 
-var envFile string
-
 var startCmd = &cobra.Command{
 	Use:         "start",
 	Short:       "Run nitric services locally for development and testing",

@@ -50,7 +50,7 @@ func (r *RunStorageService) ensureBucketExists(bucket string) error {
 		Bucket: aws.String(bucket),
 	})
 
-	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == s3.ErrCodeNoSuchBucket {
+	if _, ok := err.(awserr.Error); ok {
 		_, err = r.client.CreateBucket(&s3.CreateBucketInput{
 			Bucket:           aws.String(bucket),
 			GrantFullControl: aws.String("*"),

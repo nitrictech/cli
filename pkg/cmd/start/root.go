@@ -38,7 +38,7 @@ import (
 
 var envFile string
 
-var servicesCmd = &cobra.Command{
+var startCmd = &cobra.Command{
 	Use:         "start",
 	Short:       "Run nitric services locally for development and testing",
 	Long:        `Run nitric services locally for development and testing`,
@@ -140,6 +140,5 @@ var servicesCmd = &cobra.Command{
 }
 
 func RootCommand() *cobra.Command {
-	servicesCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
-	return servicesCmd
+	return startCmd
 }

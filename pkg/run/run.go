@@ -112,7 +112,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 	os.Setenv(minio.MINIO_ACCESS_KEY_ENV, "minioadmin")
 	os.Setenv(minio.MINIO_SECRET_KEY_ENV, "minioadmin")
 
-	sp, err := minio.New()
+	sp, err := NewStorage()
 	if err != nil {
 		return err
 	}

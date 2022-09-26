@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+
 	"github.com/nitrictech/nitric/pkg/plugins/storage"
 	s3_service "github.com/nitrictech/nitric/pkg/plugins/storage/s3"
 	"github.com/nitrictech/nitric/pkg/utils"
@@ -157,6 +158,7 @@ func NewStorage() (storage.StorageService, error) {
 		DisableSSL:       aws.Bool(true),
 		S3ForcePathStyle: aws.Bool(true),
 	}
+
 	newSession, err := session.NewSession(s3Config)
 	if err != nil {
 		return nil, fmt.Errorf("error creating new session")
@@ -165,6 +167,9 @@ func NewStorage() (storage.StorageService, error) {
 	s3Client := s3.New(newSession)
 
 	s3Service, err := s3_service.NewWithClient(nil, s3Client, s3_service.WithSelector(nameSelector))
+	if err != nil {
+		return nil, err
+	}
 
 	return &RunStorageService{
 		StorageService: s3Service,

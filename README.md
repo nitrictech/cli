@@ -28,6 +28,7 @@ Common commands in the CLI that you’ll be using:
 - nitric down : Undeploy a previously deployed stack, deleting resources
 - nitric run : Run your project locally for development and testing
 - nitric stack new : Create a new Nitric stack
+- nitric start : Run nitric services locally for development and testing
 - nitric up : Create or update a deployed stack
 
 ## Help with Commands
@@ -56,6 +57,7 @@ Documentation for all available commands:
 - nitric stack new : Create a new Nitric stack
 - nitric stack update [-s stack] : Create or update a deployed stack
   (alias: nitric up)
+- nitric start : Run nitric services locally for development and testing
 - nitric version : Print the version number of this CLI
 
 ## Get in touch

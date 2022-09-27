@@ -62,7 +62,7 @@ func ConfigFromOptions() (*Config, error) {
 		} else if len(stacks) > 0 {
 			// List all the other stacks
 			err = survey.AskOne(&survey.Select{
-				Message: "Which stack do you wish to deploy?",
+				Message: "Which stack?",
 				Options: stacks,
 			}, &sName)
 

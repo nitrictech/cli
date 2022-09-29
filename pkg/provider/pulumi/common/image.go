@@ -72,7 +72,12 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 		},
 	}
 
-	res.DockerImage, err = dockerbuildkit.NewImage(ctx, name+"-image", imageArgs, pulumi.Parent(res))
+	resOpts := []pulumi.ResourceOption{ pulumi.Parent(res) }
+	for _, o := range opts {
+		resOpts = append(resOpts, o)
+	}
+
+	res.DockerImage, err = dockerbuildkit.NewImage(ctx, name+"-image", imageArgs, resOpts...)
 	if err != nil {
 		return nil, err
 	}

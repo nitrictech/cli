@@ -383,7 +383,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 				Username:      pulumi.String(authToken.UserName),
 				Password:      pulumi.String(authToken.Password),
 				TempDir:       a.tmpDir,
-			}, pulumi.DependsOn([]pulumi.Resource{ repo }))
+			}, pulumi.DependsOn([]pulumi.Resource{repo}))
 			if err != nil {
 				return errors.WithMessage(err, "function image tag "+c.Unit().Name)
 			}

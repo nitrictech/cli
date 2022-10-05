@@ -130,8 +130,9 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 	}
 
 	envVars := pulumi.StringMap{
-		"NITRIC_STACK": pulumi.String(args.StackName),
-		"MIN_WORKERS":  pulumi.String(fmt.Sprint(args.Compute.Workers())),
+		"NITRIC_ENVIRONMENT": pulumi.String("cloud"),
+		"NITRIC_STACK":       pulumi.String(args.StackName),
+		"MIN_WORKERS":        pulumi.String(fmt.Sprint(args.Compute.Workers())),
 	}
 	for k, v := range args.EnvMap {
 		envVars[k] = pulumi.String(v)

@@ -147,6 +147,7 @@ var stackUpdateCmd = &cobra.Command{
 		cobra.CheckErr(err)
 
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
 
 		envFiles := utils.FilesExisting(".env", ".env.production", envFile)
 		envMap := map[string]string{}
@@ -219,6 +220,9 @@ nitric stack down -e aws -y`,
 
 		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
+
+		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
 
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)

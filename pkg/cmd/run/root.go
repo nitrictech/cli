@@ -55,6 +55,7 @@ var runCmd = &cobra.Command{
 
 		// Divert default log output to pterm debug
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
 
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)

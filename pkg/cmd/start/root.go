@@ -48,6 +48,7 @@ var startCmd = &cobra.Command{
 
 		// Divert default log output to pterm debug
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
 
 		ls := run.NewLocalServices(&project.Project{
 			Name: "local",

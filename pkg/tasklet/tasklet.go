@@ -50,19 +50,35 @@ type taskletContext struct {
 var _ output.Progress = &taskletContext{}
 
 func (c *taskletContext) Debugf(format string, a ...interface{}) {
-	pterm.Debug.Printf(format, a...)
+	if output.CI {
+		if output.VerboseLevel > 1 {
+			fmt.Println(fmt.Sprintf(format, a...))
+		}
+	} else {
+		pterm.Debug.Println(fmt.Sprintf(format, a...))
+	}
 }
 
 func (c *taskletContext) Busyf(format string, a ...interface{}) {
-	c.spinner.UpdateText(fmt.Sprintf(format, a...))
+	if !output.CI {
+		c.spinner.UpdateText(fmt.Sprintf(format, a...))
+	}
 }
 
 func (c *taskletContext) Successf(format string, a ...interface{}) {
-	c.spinner.SuccessPrinter.Printf(format, a...)
+	if output.CI {
+		fmt.Println(fmt.Sprintf(format, a...))
+	} else {
+		c.spinner.SuccessPrinter.Printf(format, a...)
+	}
 }
 
 func (c *taskletContext) Failf(format string, a ...interface{}) {
-	pterm.Error.Printf(format, a...)
+	if output.CI {
+		fmt.Println(fmt.Sprintf(format, a...))
+	} else {
+		pterm.Error.Printf(format, a...)
+	}
 }
 
 func MustRun(runner Runner, opts Opts) {

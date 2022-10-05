@@ -64,7 +64,6 @@ func newDocker() (ContainerEngine, error) {
 
 	err = cmd.Run()
 	if err != nil {
-		fmt.Println("docker daemon not running, please start it..")
 		return nil, err
 	}
 

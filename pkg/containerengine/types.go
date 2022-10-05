@@ -74,7 +74,7 @@ func Discover() (ContainerEngine, error) {
 		return dk, nil
 	}
 
-	return nil, errors.New("neither podman nor docker found")
+	return nil, errors.New("Nitric relies on Docker to containerize your project. Please refer to the installation instructions - https://nitric.io/docs/installation")
 }
 
 func buildTimeout() time.Duration {

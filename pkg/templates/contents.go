@@ -134,7 +134,7 @@ func (d *downloader) repository() error {
 
 	// download file
 	if err := client.Get(); err != nil {
-		return fmt.Errorf("error getting path %s: %w", src, err)
+		return fmt.Errorf("Nitric relies on Git to fetch dependencies. Please refer to the installation instructions - https://nitric.io/docs/installation")
 	}
 
 	list, err := d.readTemplatesConfig()
@@ -185,5 +185,5 @@ func (d *downloader) DownloadDirectoryContents(name string, destDir string, forc
 
 	err = client.Get()
 
-	return errors.WithMessagef(err, "error getting path %s", templatesRepoGitURL+"//"+template.Path)
+	return errors.WithMessagef(err, "Nitric relies on Git to fetch dependencies. Please refer to the installation instructions - https://nitric.io/docs/installation")
 }

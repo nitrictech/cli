@@ -51,11 +51,11 @@ var runCmd = &cobra.Command{
 	Annotations: map[string]string{"commonCommand": "yes"},
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
-		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
-		signal.Notify(term, os.Interrupt, syscall.SIGINT)
+		signal.Notify(term, syscall.SIGTERM, syscall.SIGINT)
 
 		// Divert default log output to pterm debug
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
 
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)

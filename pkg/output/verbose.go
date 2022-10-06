@@ -45,7 +45,7 @@ func StdoutToPtermDebug(b io.ReadCloser, p Progress, prefix string) {
 		line := strings.TrimRightFunc(sc.Text(), unicode.IsSpace)
 
 		if line != "" {
-			p.Debugf("%s %v\n", prefix, line)
+			p.Debugf("%s %v", prefix, line)
 		}
 	}
 }

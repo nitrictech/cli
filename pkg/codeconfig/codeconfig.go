@@ -305,8 +305,6 @@ func useHostInterface(hc *container.HostConfig, iface string, port int) ([]strin
 		return nil, err
 	}
 
-	fmt.Println("dockerInternalAddr ", dockerInternalAddr)
-
 	hc.NetworkMode = "host"
 
 	return []string{

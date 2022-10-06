@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/joho/godotenv"
@@ -74,10 +75,13 @@ nitric stack list
 }
 
 var newStackCmd = &cobra.Command{
-	Use:         "new",
-	Short:       "Create a new Nitric stack",
-	Long:        `Creates a new Nitric stack.`,
-	Run:         NewStack,
+	Use:   "new",
+	Short: "Create a new Nitric stack",
+	Long:  `Creates a new Nitric stack.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		err := newStack(cmd, args)
+		cobra.CheckErr(err)
+	},
 	Args:        cobra.MaximumNArgs(2),
 	Annotations: map[string]string{"commonCommand": "yes"},
 }
@@ -128,7 +132,9 @@ var stackUpdateCmd = &cobra.Command{
 				pterm.Info.Println("You can run `nitric stack new` to create a new stack.")
 				os.Exit(0)
 			}
-			NewStack(cmd, args)
+			err = newStack(cmd, args)
+			cobra.CheckErr(err)
+
 			s, err = stack.ConfigFromOptions()
 			cobra.CheckErr(err)
 		}
@@ -288,27 +294,36 @@ func RootCommand() *cobra.Command {
 	return stackCmd
 }
 
-func NewStack(cmd *cobra.Command, args []string) {
+func newStack(cmd *cobra.Command, args []string) error {
 	name := ""
+
 	err := survey.AskOne(&survey.Input{
 		Message: "What do you want to call your new stack?",
 	}, &name)
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
 	pName := ""
+
 	err = survey.AskOne(&survey.Select{
 		Message: "Which Cloud do you wish to deploy to?",
 		Default: types.Aws,
 		Options: types.Providers,
 	}, &pName)
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
 	pc, err := project.ConfigFromProjectPath("")
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
 	prov, err := provider.NewProvider(project.New(pc), name, pName, map[string]string{}, &types.ProviderOpts{})
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
-	err = prov.AskAndSave()
-	cobra.CheckErr(err)
+	return prov.AskAndSave()
 }

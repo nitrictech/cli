@@ -121,7 +121,7 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 
 	aboutData, err := exec.Command("pulumi", "about", "-j").Output()
 	if err != nil {
-		return nil, errors.WithMessage(err, "Failed to determine login state of pulumi")
+		return nil, errors.WithMessage(err, "Nitric relies on Pulumi to deploy your project. Please refer to the installation instructions - https://nitric.io/docs/installation")
 	}
 
 	// Default to local backend if not already logged in
@@ -129,7 +129,7 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 
 	err = json.Unmarshal([]byte(strings.TrimSpace(string(aboutData))), about)
 	if err != nil {
-		return nil, errors.WithMessage(err, "Failed to determine login state of pulumi")
+		return nil, errors.WithMessage(err, "Nitric relies on Pulumi to deploy your project. Please refer to the installation instructions - https://nitric.io/docs/installation")
 	}
 
 	upsertOpts := []auto.LocalWorkspaceOption{

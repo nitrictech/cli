@@ -116,7 +116,7 @@ var stackUpdateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := stack.ConfigFromOptions()
 
-		if s == nil {
+		if err != nil && strings.Contains(err.Error(), "No nitric stacks found") {
 			confirm := ""
 			err = survey.AskOne(&survey.Select{
 				Message: "A stack is required to deploy your project, create one now?",

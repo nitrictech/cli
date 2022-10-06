@@ -3,6 +3,7 @@
 ![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/nitrictech/cli/Tests/develop?label=tests)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nitrictech/cli)
 ![GitHub all releases](https://img.shields.io/github/downloads/nitrictech/cli/total)
+  <a href="https://discord.gg/Webemece5C"><img alt="Discord" src="https://img.shields.io/discord/955259353043173427?label=discord"></a>
 
 ## Overview
 
@@ -27,6 +28,7 @@ Common commands in the CLI that you’ll be using:
 - nitric down : Undeploy a previously deployed stack, deleting resources
 - nitric run : Run your project locally for development and testing
 - nitric stack new : Create a new Nitric stack
+- nitric start : Run nitric services locally for development and testing
 - nitric up : Create or update a deployed stack
 
 ## Help with Commands
@@ -55,11 +57,14 @@ Documentation for all available commands:
 - nitric stack new : Create a new Nitric stack
 - nitric stack update [-s stack] : Create or update a deployed stack
   (alias: nitric up)
+- nitric start : Run nitric services locally for development and testing
 - nitric version : Print the version number of this CLI
 
 ## Get in touch
 
 - Ask questions in [GitHub discussions](https://github.com/nitrictech/nitric/discussions)
+
+- Join us on [Discord](https://discord.gg/Webemece5C)
 
 - Find us on [Twitter](https://twitter.com/nitric_io)
 

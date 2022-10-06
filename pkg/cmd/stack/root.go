@@ -74,33 +74,10 @@ nitric stack list
 }
 
 var newStackCmd = &cobra.Command{
-	Use:   "new",
-	Short: "Create a new Nitric stack",
-	Long:  `Creates a new Nitric stack.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		name := ""
-		err := survey.AskOne(&survey.Input{
-			Message: "What do you want to call your new stack?",
-		}, &name)
-		cobra.CheckErr(err)
-
-		pName := ""
-		err = survey.AskOne(&survey.Select{
-			Message: "Which Cloud do you wish to deploy to?",
-			Default: types.Aws,
-			Options: types.Providers,
-		}, &pName)
-		cobra.CheckErr(err)
-
-		pc, err := project.ConfigFromProjectPath("")
-		cobra.CheckErr(err)
-
-		prov, err := provider.NewProvider(project.New(pc), name, pName, map[string]string{}, &types.ProviderOpts{})
-		cobra.CheckErr(err)
-
-		err = prov.AskAndSave()
-		cobra.CheckErr(err)
-	},
+	Use:         "new",
+	Short:       "Create a new Nitric stack",
+	Long:        `Creates a new Nitric stack.`,
+	Run:         NewStack,
 	Args:        cobra.MaximumNArgs(2),
 	Annotations: map[string]string{"commonCommand": "yes"},
 }
@@ -138,7 +115,23 @@ var stackUpdateCmd = &cobra.Command{
 	Example: `nitric stack update -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := stack.ConfigFromOptions()
-		cobra.CheckErr(err)
+
+		if s == nil {
+			confirm := ""
+			err = survey.AskOne(&survey.Select{
+				Message: "A stack is required to deploy your project, create one now?",
+				Default: "Yes",
+				Options: []string{"Yes", "No"},
+			}, &confirm)
+			cobra.CheckErr(err)
+			if confirm != "Yes" {
+				pterm.Info.Println("You can run `nitric stack new` to create a new stack.")
+				os.Exit(0)
+			}
+			NewStack(cmd, args)
+			s, err = stack.ConfigFromOptions()
+			cobra.CheckErr(err)
+		}
 
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
@@ -293,4 +286,29 @@ func RootCommand() *cobra.Command {
 	cobra.CheckErr(stack.AddOptions(stackListCmd, false))
 
 	return stackCmd
+}
+
+func NewStack(cmd *cobra.Command, args []string) {
+	name := ""
+	err := survey.AskOne(&survey.Input{
+		Message: "What do you want to call your new stack?",
+	}, &name)
+	cobra.CheckErr(err)
+
+	pName := ""
+	err = survey.AskOne(&survey.Select{
+		Message: "Which Cloud do you wish to deploy to?",
+		Default: types.Aws,
+		Options: types.Providers,
+	}, &pName)
+	cobra.CheckErr(err)
+
+	pc, err := project.ConfigFromProjectPath("")
+	cobra.CheckErr(err)
+
+	prov, err := provider.NewProvider(project.New(pc), name, pName, map[string]string{}, &types.ProviderOpts{})
+	cobra.CheckErr(err)
+
+	err = prov.AskAndSave()
+	cobra.CheckErr(err)
 }

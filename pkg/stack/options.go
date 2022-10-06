@@ -70,7 +70,7 @@ func ConfigFromOptions() (*Config, error) {
 				return nil, err
 			}
 		} else {
-			return nil, errors.New("No nitric stacks found, run `nitric stack new` to create a new stack")
+			return nil, errors.New("No nitric stacks found.")
 		}
 	}
 

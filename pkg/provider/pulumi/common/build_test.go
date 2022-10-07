@@ -53,7 +53,7 @@ FROM node:alpine as layer-final
 COPY --from=layer-build package.json package.json
 COPY --from=layer-build node_modules/ node_modules/
 COPY --from=layer-build lib/ /
-ADD https://github.com/nitrictech/nitric/releases/download/v0.18.0/membrane-aws /usr/local/bin/membrane
+ADD https://github.com/nitrictech/nitric/releases/download/v0.18.1-rc.2/membrane-aws /usr/local/bin/membrane
 RUN chmod +x-rw /usr/local/bin/membrane
 ENTRYPOINT ["/usr/local/bin/membrane"]
 CMD ["node", "index.js"]`,

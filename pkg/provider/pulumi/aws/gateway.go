@@ -22,8 +22,8 @@ import (
 	"path"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/apigatewayv2"
-	awslambda "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/lambda"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/apigatewayv2"
+	awslambda "github.com/pulumi/pulumi-aws/sdk/v5/go/aws/lambda"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/segmentio/encoding/json"

@@ -34,14 +34,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/resourcegroups"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/secretsmanager"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sqs"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/dynamodb"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ecr"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/resourcegroups"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/secretsmanager"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sns"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"golang.org/x/exp/slices"
@@ -366,7 +366,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		localImageName := c.ImageTagName(a.proj, "")
 
 		repo, err := ecr.NewRepository(ctx, localImageName, &ecr.RepositoryArgs{
-			Tags: common.Tags(ctx, localImageName),
+			ForceDelete: pulumi.BoolPtr(true),
+			Tags:        common.Tags(ctx, localImageName),
 		})
 		if err != nil {
 			return err

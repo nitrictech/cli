@@ -62,6 +62,10 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 
 	env := cloudrun.ServiceTemplateSpecContainerEnvArray{
 		cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String("NITRIC_ENVIRONMENT"),
+			Value: pulumi.String("cloud"),
+		},
+		cloudrun.ServiceTemplateSpecContainerEnvArgs{
 			Name:  pulumi.String("MIN_WORKERS"),
 			Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
 		},

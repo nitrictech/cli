@@ -291,6 +291,10 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 
 	env := app.EnvironmentVarArray{
 		app.EnvironmentVarArgs{
+			Name:  pulumi.String("NITRIC_ENVIRONMENT"),
+			Value: pulumi.String("cloud"),
+		},
+		app.EnvironmentVarArgs{
 			Name:  pulumi.String("MIN_WORKERS"),
 			Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
 		},

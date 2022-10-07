@@ -62,6 +62,7 @@ func (f *Function) Start(envMap map[string]string) error {
 	}
 
 	env := []string{
+		"NITRIC_ENVIRONMENT=run",
 		fmt.Sprintf("SERVICE_ADDRESS=host.docker.internal:%d", 50051),
 		fmt.Sprintf("NITRIC_SERVICE_PORT=%d", 50051),
 		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", "host.docker.internal"),

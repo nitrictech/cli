@@ -27,7 +27,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 )
 
-func TestCreateBaseDev(t *testing.T) {
+func TestBuildBaseImages(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	me := mock_containerengine.NewMockContainerEngine(ctrl)
 
@@ -39,15 +39,15 @@ func TestCreateBaseDev(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	s := project.New(&project.Config{Name: "", Dir: dir})
-	s.Functions = map[string]project.Function{"foo": {Handler: "functions/list.ts"}}
+	s.Functions = map[string]project.Function{"foo": {Handler: "functions/list.ts", ComputeUnit: project.ComputeUnit{Name: "foo"}}}
 
-	me.EXPECT().Build(gomock.Any(), dir, "nitric-ts-dev", map[string]string{}, []string{
-		".nitric/", ".git/", ".idea/", ".vscode/", ".github", "node_modules/",
+	me.EXPECT().Build(gomock.Any(), dir, "-foo", gomock.Any(), []string{
+		".nitric/", ".git/", ".idea/", ".vscode/", ".github/", "*.dockerfile", "*.dockerignore", "node_modules/",
 	})
 
 	containerengine.DiscoveredEngine = me
 
-	if err := CreateBaseDev(s); err != nil {
+	if err := BuildBaseImages(s); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)
 	}
 }

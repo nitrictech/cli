@@ -29,6 +29,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/preferences"
@@ -154,6 +155,16 @@ var stackUpdateCmd = &cobra.Command{
 			envMap, err = godotenv.Read(envFiles...)
 			cobra.CheckErr(err)
 		}
+
+		// build base images on updates
+		createBaseImage := tasklet.Runner{
+			StartMsg: "Building Images",
+			Runner: func(_ output.Progress) error {
+				return build.BuildBaseImages(proj)
+			},
+			StopMsg: "Images Built",
+		}
+		tasklet.MustRun(createBaseImage, tasklet.Opts{})
 
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",

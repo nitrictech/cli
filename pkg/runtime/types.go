@@ -18,25 +18,16 @@ package runtime
 
 import (
 	"errors"
-	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/docker/docker/api/types/mount"
-
-	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
 )
 
 type Runtime interface {
-	DevImageName() string
 	ContainerName() string
 	BuildIgnore() []string
-	FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error
-	FunctionDockerfileForCodeAsConfig(w io.Writer) error // FunctionDockerfileForCodeAsConfig generates a base image for code-as-config
-	LaunchOptsForFunction(stackDir string) (LaunchOpts, error)
-	LaunchOptsForFunctionCollect(stackDir string) (LaunchOpts, error)
+	BaseDockerFile(w io.Writer) error
+	BuildArgs() map[string]string
 }
 
 type RuntimeExt string
@@ -46,23 +37,11 @@ const (
 	RuntimeJavascript RuntimeExt = "js"
 	RuntimePython     RuntimeExt = "py"
 	RuntimeGolang     RuntimeExt = "go"
-	RuntimeJava       RuntimeExt = "java"
 
 	RuntimeUnknown RuntimeExt = ""
-
-	layerBuild = "build"
-	layerFinal = "final"
 )
 
-var commonIgnore = []string{".nitric/", ".git/", ".idea/", ".vscode/", ".github"}
-
-type LaunchOpts struct {
-	Image      string
-	TargetWD   string
-	Entrypoint []string
-	Cmd        []string
-	Mounts     []mount.Mount
-}
+var commonIgnore = []string{".nitric/", ".git/", ".idea/", ".vscode/", ".github/", "*.dockerfile", "*.dockerignore"}
 
 func NewRunTimeFromHandler(handler string) (Runtime, error) {
 	rt := RuntimeExt(strings.Replace(filepath.Ext(handler), ".", "", -1))
@@ -76,28 +55,7 @@ func NewRunTimeFromHandler(handler string) (Runtime, error) {
 		return &python{rte: rt, handler: handler}, nil
 	case RuntimeTypescript:
 		return &typescript{rte: rt, handler: handler}, nil
-	case RuntimeJava:
-		return &java{rte: rt, handler: handler}, nil
 	default:
 		return nil, errors.New("runtime '" + string(rt) + "' not supported")
 	}
-}
-
-func withMembrane(con dockerfile.ContainerState, version, provider string) {
-	membraneName := "membrane-" + provider
-	fetchFrom := fmt.Sprintf("https://github.com/nitrictech/nitric/releases/download/%s/%s", version, membraneName)
-
-	if version == "latest" {
-		fetchFrom = fmt.Sprintf("https://github.com/nitrictech/nitric/releases/%s/download/%s", version, membraneName)
-	}
-
-	if os.Getenv("LOCAL_MEMBRANE") != "" {
-		fetchFrom = os.Getenv("LOCAL_MEMBRANE") + "/" + membraneName
-	}
-
-	con.Add(dockerfile.AddOptions{Src: fetchFrom, Dest: "/usr/local/bin/membrane"})
-	con.Run(dockerfile.RunOptions{Command: []string{"chmod", "+x-rw", "/usr/local/bin/membrane"}})
-	con.Config(dockerfile.ConfigOptions{
-		Entrypoint: []string{"/usr/local/bin/membrane"},
-	})
 }

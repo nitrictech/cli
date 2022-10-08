@@ -19,26 +19,23 @@ package containerengine
 import (
 	"bufio"
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/idtools"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/output"
@@ -79,100 +76,52 @@ func (d *docker) Type() string {
 	return "docker"
 }
 
-func tarContextDir(relDockerfile, contextDir string, extraExcludes []string) (io.ReadCloser, error) {
-	excludes, err := build.ReadDockerignore(contextDir)
-	if err != nil {
-		return nil, err
-	}
+func (d *docker) Inspect(imageName string) (types.ImageInspect, error) {
+	ii, _, err := d.cli.ImageInspectWithRaw(context.Background(), imageName)
 
-	excludes = append(excludes, utils.NitricLogDir(contextDir))
-	excludes = append(excludes, extraExcludes...)
-
-	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
-		return nil, errors.Errorf("error checking context: '%s'.", err)
-	}
-
-	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
-
-	return archive.TarWithOptions(contextDir, &archive.TarOptions{
-		ExcludePatterns: excludes,
-		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
-	})
-}
-
-func imageNameFromBuildContext(dockerfile, srcPath, imageTag string, excludes []string) (string, error) {
-	var (
-		buildContext io.ReadCloser
-		err          error
-	)
-
-	if strings.Contains(dockerfile, "nitric.dynamic.") {
-		// don't include the dynamic dockerfile as the timestamp on the file will cause it to have a different hash.
-		buildContext, err = tarContextDir("", srcPath, append(excludes, dockerfile))
-		if err != nil {
-			return "", err
-		}
-	} else {
-		buildContext, err = tarContextDir(dockerfile, srcPath, excludes)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	hash := md5.New()
-
-	_, err = io.Copy(hash, buildContext)
-	if err != nil {
-		return "", err
-	}
-
-	imageName := imageTag
-	if strings.Contains(imageTag, ":") {
-		imageName = strings.Split(imageTag, ":")[0]
-	}
-
-	return strings.ToLower(imageName + ":" + hex.EncodeToString(hash.Sum(nil))), nil
+	return ii, err
 }
 
 func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), buildTimeout())
-	defer cancel()
-
-	imageTagWithHash, err := imageNameFromBuildContext(dockerfile, srcPath, imageTag, excludes)
+	// write a temporary dockerignore file
+	ignoreFile, err := os.Create(fmt.Sprintf("%s.dockerignore", dockerfile))
 	if err != nil {
 		return err
 	}
 
-	buildContext, err := tarContextDir(dockerfile, srcPath, excludes)
+	_, err = ignoreFile.Write([]byte(strings.Join(excludes, "\n")))
 	if err != nil {
 		return err
 	}
 
-	// try and find an existing image with this hash.
-	listOpts := types.ImageListOptions{Filters: filters.NewArgs()}
-	listOpts.Filters.Add("reference", imageTagWithHash)
-
-	imageSummaries, err := d.cli.ImageList(ctx, listOpts)
-	if err == nil && len(imageSummaries) > 0 {
-		return nil
-	}
-
-	opts := types.ImageBuildOptions{
-		SuppressOutput: false,
-		Dockerfile:     dockerfile,
-		Tags:           []string{strings.ToLower(imageTag), imageTagWithHash},
-		Remove:         true,
-		ForceRemove:    true,
-		PullParent:     true,
-	}
-
-	res, err := d.cli.ImageBuild(ctx, buildContext, opts)
+	err = ignoreFile.Close()
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
 
-	return print(res.Body)
+	defer func() {
+		os.Remove(ignoreFile.Name())
+	}()
+
+	buildArgsCmd := make([]string, 0)
+	for k, v := range buildArgs {
+		buildArgsCmd = append(buildArgsCmd, "--build-arg", fmt.Sprintf("%s=%s", k, v))
+	}
+
+	args := []string{
+		"buildx", "build", srcPath, "-f", dockerfile, "-t", imageTag, "--platform", "linux/amd64",
+	}
+	args = append(args, buildArgsCmd...)
+
+	cmd := exec.Command("docker", args...)
+	cmd.Stderr = output.NewPtermWriter(pterm.Debug)
+
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type ErrorLine struct {

@@ -31,6 +31,42 @@ type RunStackState struct {
 	schedules map[string]int
 }
 
+func StateFromPool(pool worker.WorkerPool) *RunStackState {
+	r := NewStackState()
+	wrkrs := pool.GetWorkers(&worker.GetWorkerOptions{})
+
+	for _, wrkr := range wrkrs {
+		switch wrkr.(type) {
+		case *worker.RouteWorker:
+			w := wrkr.(*worker.RouteWorker)
+
+			if _, ok := r.apis[w.Api()]; !ok {
+				r.apis[w.Api()] = 1
+			} else {
+				r.apis[w.Api()] = r.apis[w.Api()] + 1
+			}
+		case *worker.SubscriptionWorker:
+			w := wrkr.(*worker.SubscriptionWorker)
+
+			if _, ok := r.subs[w.Topic()]; !ok {
+				r.subs[w.Topic()] = 1
+			} else {
+				r.subs[w.Topic()] = r.subs[w.Topic()] + 1
+			}
+		case *worker.ScheduleWorker:
+			w := wrkr.(*worker.ScheduleWorker)
+
+			if _, ok := r.schedules[w.Key()]; !ok {
+				r.schedules[w.Key()] = 1
+			} else {
+				r.schedules[w.Key()] = r.schedules[w.Key()] + 1
+			}
+		}
+	}
+
+	return r
+}
+
 func (r *RunStackState) UpdateFromWorkerEvent(evt WorkerEvent) {
 	if evt.Type == WorkerEventType_Add {
 		switch evt.Worker.(type) {
@@ -90,6 +126,27 @@ func (r *RunStackState) UpdateFromWorkerEvent(evt WorkerEvent) {
 			}
 		}
 	}
+}
+
+func (r *RunStackState) Tables(port int) string {
+	tables := []string{}
+
+	table, rows := r.ApiTable(9001)
+	if rows > 0 {
+		tables = append(tables, table)
+	}
+
+	table, rows = r.TopicTable(9001)
+	if rows > 0 {
+		tables = append(tables, table)
+	}
+
+	table, rows = r.SchedulesTable(9001)
+	if rows > 0 {
+		tables = append(tables, table)
+	}
+
+	return strings.Join(tables, "\n\n")
 }
 
 func (r *RunStackState) ApiTable(port int) (string, int) {

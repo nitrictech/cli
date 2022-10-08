@@ -46,6 +46,7 @@ type ContainerEngine interface {
 	Type() string
 	Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error
 	ListImages(stackName, containerName string) ([]Image, error)
+	Inspect(imageName string) (types.ImageInspect, error)
 	ImagePull(rawImage string, opts types.ImagePullOptions) error
 	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error
@@ -62,12 +63,6 @@ func Discover() (ContainerEngine, error) {
 		return DiscoveredEngine, nil
 	}
 
-	pm, err := newPodman()
-	if err == nil {
-		DiscoveredEngine = pm
-		return pm, nil
-	}
-
 	dk, err := newDocker()
 	if err == nil {
 		DiscoveredEngine = dk
@@ -75,10 +70,6 @@ func Discover() (ContainerEngine, error) {
 	}
 
 	return nil, errors.New("Nitric relies on Docker to containerize your project. Please refer to the installation instructions - https://nitric.io/docs/installation")
-}
-
-func buildTimeout() time.Duration {
-	return 15 * time.Minute
 }
 
 func Cli(cc *container.Config, hc *container.HostConfig) string {

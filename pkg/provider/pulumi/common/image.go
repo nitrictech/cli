@@ -22,10 +22,12 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit"
 )
 
 type ImageArgs struct {
+	SourceImage   string
 	ProjectDir    string
 	Provider      string
 	Compute       project.Compute
@@ -51,7 +53,12 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 		return nil, err
 	}
 
-	dockerFilePath, err := dockerfile(args.ProjectDir, args.Provider, args.Compute)
+	buildArgs, err := runtime.WrapperBuildArgs(args.SourceImage, args.Provider, project.DefaultMembraneVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	dockerFilePath, err := dockerfile(args.ProjectDir, buildArgs.Dockerfile, args.Compute)
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +68,19 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 		return nil, err
 	}
 
+	bArgs := make(dockerbuildkit.BuildArgArray, 0)
+	for k, v := range buildArgs.Args {
+		bArgs = append(bArgs, dockerbuildkit.BuildArgArgs{
+			Name:  pulumi.String(k),
+			Value: pulumi.String(v),
+		})
+	}
+
 	imageArgs := &dockerbuildkit.ImageArgs{
 		Name:       args.RepositoryUrl,
 		Context:    pulumi.String(args.ProjectDir),
 		Dockerfile: pulumi.String(relDocker),
+		Args:       bArgs,
 		Registry: dockerbuildkit.RegistryArgs{
 			Server:   args.Server,
 			Username: args.Username,

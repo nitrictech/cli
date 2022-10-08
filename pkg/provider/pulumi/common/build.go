@@ -36,7 +36,7 @@ func dynamicDockerfile(dir, name string) (*os.File, error) {
 	return os.Create(filepath.Join(dir, ".nitric", name+".Dockerfile"))
 }
 
-func dockerfile(projDir, provider string, c project.Compute) (string, error) {
+func dockerfile(projDir, dockerfile string, c project.Compute) (string, error) {
 	switch x := c.(type) {
 	case *project.Container:
 		return x.Dockerfile, nil
@@ -52,7 +52,7 @@ func dockerfile(projDir, provider string, c project.Compute) (string, error) {
 			return "", err
 		}
 
-		err = rt.FunctionDockerfile(projDir, project.DefaultMembraneVersion, provider, fh)
+		_, err = fh.Write([]byte(dockerfile))
 		if err != nil {
 			return "", err
 		}
@@ -67,5 +67,5 @@ func dockerfile(projDir, provider string, c project.Compute) (string, error) {
 		return fh.Name(), nil
 	}
 
-	return "", utils.NewNotSupportedErr("only Function and Containers supported")
+	return "", utils.NewNotSupportedErr("only Functions supported")
 }

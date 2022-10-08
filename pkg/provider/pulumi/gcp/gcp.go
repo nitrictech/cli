@@ -449,6 +449,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 				ProjectDir:    g.proj.Dir,
 				Provider:      g.sc.Provider,
 				Compute:       c,
+				SourceImage:   fmt.Sprintf("%s-%s", g.proj.Name, c.Unit().Name),
 				RepositoryUrl: pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
 				Username:      pulumi.String("oauth2accesstoken"),
 				Password:      pulumi.String(g.token.AccessToken),

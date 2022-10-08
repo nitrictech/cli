@@ -17,16 +17,10 @@
 package runtime
 
 import (
-	"fmt"
+	_ "embed"
 	"io"
 	"path/filepath"
-	osruntime "runtime"
 	"strings"
-
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/strslice"
-
-	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
 )
 
 type javascript struct {
@@ -34,14 +28,13 @@ type javascript struct {
 	handler string
 }
 
+//go:embed javascript.dockerfile
+var javascriptDockerfile string
+
 var (
 	_                    Runtime = &javascript{}
 	javascriptIgnoreList         = append(commonIgnore, "node_modules/")
 )
-
-func (t *javascript) DevImageName() string {
-	return fmt.Sprintf("nitric-%s-dev", t.rte)
-}
 
 func (t *javascript) ContainerName() string {
 	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
@@ -51,102 +44,13 @@ func (t *javascript) BuildIgnore() []string {
 	return javascriptIgnoreList
 }
 
-func (t *javascript) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
-	css := dockerfile.NewStateStore()
-
-	con, err := css.NewContainer(dockerfile.NewContainerOpts{
-		From:   "node:alpine",
-		As:     layerFinal, // no build stage in this
-		Ignore: javascriptIgnoreList,
-	})
-	if err != nil {
-		return err
-	}
-
-	withMembrane(con, version, provider)
-
-	err = con.Copy(dockerfile.CopyOptions{Src: "package.json *.lock *-lock.json", Dest: "/"})
-	if err != nil {
-		return err
-	}
-
-	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "import", "||", "echo", "Lockfile already exists"}})
-	con.Run(dockerfile.RunOptions{Command: []string{
-		"set", "-ex;",
-		"yarn", "install", "--production", "--frozen-lockfile", "--cache-folder", "/tmp/.cache;",
-		"rm", "-rf", "/tmp/.cache;",
-	}})
-
-	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
-	if err != nil {
-		return err
-	}
-
-	con.Config(dockerfile.ConfigOptions{
-		Cmd: []string{"node", t.handler},
-	})
-
-	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
-
+func (t *javascript) BaseDockerFile(w io.Writer) error {
+	_, err := w.Write([]byte(javascriptDockerfile))
 	return err
 }
 
-func (t *javascript) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
-	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
-		From:   "node:alpine",
-		Ignore: javascriptIgnoreList,
-	})
-	if err != nil {
-		return err
+func (t *javascript) BuildArgs() map[string]string {
+	return map[string]string{
+		"HANDLER": filepath.ToSlash(t.handler),
 	}
-
-	con.Run(dockerfile.RunOptions{Command: []string{"yarn", "global", "add", "nodemon"}})
-	con.Config(dockerfile.ConfigOptions{
-		Entrypoint: []string{"node"},
-		WorkingDir: "/app/",
-	})
-
-	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
-
-	return err
-}
-
-func (t *javascript) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
-	return LaunchOpts{
-		Image:      t.DevImageName(),
-		Entrypoint: strslice.StrSlice{"node"},
-		Cmd:        strslice.StrSlice{"/app/" + filepath.ToSlash(t.handler)},
-		TargetWD:   "/app",
-		Mounts: []mount.Mount{
-			{
-				Type:   "bind",
-				Source: runCtx,
-				Target: "/app",
-			},
-		},
-	}, nil
-}
-
-func (t *javascript) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
-	var cmd []string
-
-	if osruntime.GOOS == "windows" {
-		// https://github.com/remy/nodemon#application-isnt-restarting
-		cmd = strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "-L", "--exec", "node " + "/app/" + filepath.ToSlash(t.handler)}
-	} else {
-		cmd = strslice.StrSlice{"--watch", "/app/**", "--ext", "ts,js,json", "--exec", "node " + "/app/" + filepath.ToSlash(t.handler)}
-	}
-
-	return LaunchOpts{
-		TargetWD: "/app",
-		Mounts: []mount.Mount{
-			{
-				Type:   "bind",
-				Source: runCtx,
-				Target: "/app",
-			},
-		},
-		Entrypoint: strslice.StrSlice{"nodemon"},
-		Cmd:        cmd,
-	}, nil
 }

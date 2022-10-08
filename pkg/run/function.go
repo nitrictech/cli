@@ -32,6 +32,7 @@ import (
 type Function struct {
 	projectName string
 	handler     string
+	name        string
 	runCtx      string
 	rt          runtime.Runtime
 	ce          containerengine.ContainerEngine
@@ -40,18 +41,12 @@ type Function struct {
 }
 
 func (f *Function) Name() string {
-	return f.rt.ContainerName()
+	return f.name
 }
 
 func (f *Function) Start(envMap map[string]string) error {
-	launchOpts, err := f.rt.LaunchOptsForFunction(f.runCtx)
-	if err != nil {
-		return err
-	}
-
 	hc := &container.HostConfig{
 		AutoRemove: true,
-		Mounts:     launchOpts.Mounts,
 		LogConfig:  *f.ce.Logger(f.runCtx).Config(),
 	}
 
@@ -73,12 +68,9 @@ func (f *Function) Start(envMap map[string]string) error {
 	}
 
 	cc := &container.Config{
-		Image: f.rt.DevImageName(), // Select an image to use based on the handler
+		Image: fmt.Sprintf("%s-%s", f.projectName, f.Name()), // Select an image to use based on the handler
 		// Set the address to the bound port
-		Env:        env,
-		Entrypoint: launchOpts.Entrypoint,
-		Cmd:        launchOpts.Cmd,
-		WorkingDir: launchOpts.TargetWD,
+		Env: env,
 	}
 
 	pterm.Debug.Print(containerengine.Cli(cc, hc))
@@ -99,6 +91,7 @@ func (f *Function) Stop() error {
 }
 
 type FunctionOpts struct {
+	Name            string
 	ProjectName     string
 	Handler         string
 	RunCtx          string
@@ -112,6 +105,7 @@ func newFunction(opts FunctionOpts) (*Function, error) {
 	}
 
 	return &Function{
+		name:        opts.Name,
 		rt:          rt,
 		projectName: opts.ProjectName,
 		handler:     opts.Handler,
@@ -135,6 +129,7 @@ func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
 		}
 
 		if f, err := newFunction(FunctionOpts{
+			Name:            f.Name,
 			RunCtx:          p.Dir,
 			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,

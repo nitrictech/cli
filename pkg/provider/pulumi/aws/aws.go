@@ -379,6 +379,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 				ProjectDir:    a.proj.Dir,
 				Provider:      a.sc.Provider,
 				Compute:       c,
+				SourceImage:   fmt.Sprintf("%s-%s", a.proj.Name, c.Unit().Name),
 				RepositoryUrl: repo.RepositoryUrl,
 				Server:        pulumi.String(authToken.ProxyEndpoint),
 				Username:      pulumi.String(authToken.UserName),

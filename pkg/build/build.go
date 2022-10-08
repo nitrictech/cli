@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
@@ -29,32 +28,24 @@ import (
 
 func dynamicDockerfile(dir, name string) (*os.File, error) {
 	// create a more stable file name for the hashing
-	return os.CreateTemp(dir, "nitric.dynamic.Dockerfile.*")
+	return os.Create(filepath.Join(dir, fmt.Sprintf("%s.nitric.dynamic.dockerfile", name)))
 }
 
-// CreateBaseDev builds images for code-as-config
-func CreateBaseDev(s *project.Project) error {
+// Build base non-nitric wrapped docker image
+// These will also be used for config as code runs
+func BuildBaseImages(s *project.Project) error {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return err
 	}
 
-	imagesToBuild := map[string]string{}
-
-	for _, f := range s.Functions {
-		rt, err := runtime.NewRunTimeFromHandler(f.Handler)
+	for _, fun := range s.Functions {
+		rt, err := runtime.NewRunTimeFromHandler(fun.Handler)
 		if err != nil {
 			return err
 		}
 
-		lang := strings.Replace(filepath.Ext(f.Handler), ".", "", 1)
-
-		_, ok := imagesToBuild[lang]
-		if ok {
-			continue
-		}
-
-		f, err := dynamicDockerfile(s.Dir, f.Name)
+		f, err := dynamicDockerfile(s.Dir, fun.Name)
 		if err != nil {
 			return err
 		}
@@ -64,15 +55,13 @@ func CreateBaseDev(s *project.Project) error {
 			os.Remove(f.Name())
 		}()
 
-		if err := rt.FunctionDockerfileForCodeAsConfig(f); err != nil {
+		if err := rt.BaseDockerFile(f); err != nil {
 			return err
 		}
 
-		if err := ce.Build(filepath.Base(f.Name()), s.Dir, rt.DevImageName(), map[string]string{}, rt.BuildIgnore()); err != nil {
+		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), rt.BuildIgnore()); err != nil {
 			return err
 		}
-
-		imagesToBuild[lang] = rt.DevImageName()
 	}
 
 	return nil

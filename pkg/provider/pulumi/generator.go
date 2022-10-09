@@ -120,7 +120,7 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	ctx := context.Background()
 
 	aboutData, err := exec.Command("pulumi", "about", "-j").Output()
-	if strings.Contains(err.Error(), "executable file not found") {
+	if err != nil && strings.Contains(err.Error(), "executable file not found") {
 		return nil, errors.WithMessage(err, "please install pulumi from https://www.pulumi.com/docs/get-started/install/")
 	}
 

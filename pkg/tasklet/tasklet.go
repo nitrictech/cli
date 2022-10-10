@@ -20,7 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/pterm/pterm"
 
@@ -52,7 +54,7 @@ var _ output.Progress = &taskletContext{}
 func (c *taskletContext) Debugf(format string, a ...interface{}) {
 	if output.CI {
 		if output.VerboseLevel > 1 {
-			fmt.Println(fmt.Sprintf(format, a...))
+			fmt.Println(strings.TrimFunc(fmt.Sprintf(format, a...), unicode.IsSpace))
 		}
 	} else {
 		pterm.Debug.Println(fmt.Sprintf(format, a...))
@@ -67,7 +69,7 @@ func (c *taskletContext) Busyf(format string, a ...interface{}) {
 
 func (c *taskletContext) Successf(format string, a ...interface{}) {
 	if output.CI {
-		fmt.Println(fmt.Sprintf(format, a...))
+		fmt.Println(strings.TrimFunc(fmt.Sprintf(format, a...), unicode.IsSpace))
 	} else {
 		c.spinner.SuccessPrinter.Printf(format, a...)
 	}
@@ -75,7 +77,7 @@ func (c *taskletContext) Successf(format string, a ...interface{}) {
 
 func (c *taskletContext) Failf(format string, a ...interface{}) {
 	if output.CI {
-		fmt.Println(fmt.Sprintf(format, a...))
+		fmt.Println(strings.TrimFunc(fmt.Sprintf(format, a...), unicode.IsSpace))
 	} else {
 		pterm.Error.Printf(format, a...)
 	}

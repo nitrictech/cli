@@ -116,12 +116,7 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	cmd := exec.Command("docker", args...)
 	cmd.Stderr = output.NewPtermWriter(pterm.Debug)
 
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Run()
 }
 
 type ErrorLine struct {

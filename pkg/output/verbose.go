@@ -54,8 +54,10 @@ type pTermWriter struct {
 	prefix pterm.PrefixPrinter
 }
 
+// Write is here to so that pTermWriter can be used as an io.Writer
+// eg. `command.stdout = NewPtermWriter()`
 func (p *pTermWriter) Write(b []byte) (n int, err error) {
-	p.prefix.Println(strings.TrimRightFunc(string(b), unicode.IsSpace))
+	p.prefix.Print(string(b))
 
 	return len(b), nil
 }

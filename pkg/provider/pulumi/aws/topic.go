@@ -1,16 +1,33 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package aws
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sfn"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sns"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+
+	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 )
 
 type Topic struct {
@@ -36,6 +53,9 @@ func newTopic(ctx *pulumi.Context, name string, args *TopicArgs, opts ...pulumi.
 	res.Sns, err = sns.NewTopic(ctx, name, &sns.TopicArgs{
 		Tags: common.Tags(ctx, name),
 	}, pulumi.Parent(res))
+	if err != nil {
+		return nil, err
+	}
 
 	// create a State Machine to support delayed messaging
 	// unfortunately we cannot create a single dynamic state machine that uses

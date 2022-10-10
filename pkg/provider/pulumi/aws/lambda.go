@@ -38,7 +38,7 @@ import (
 type LambdaArgs struct {
 	Client      lambdaiface.LambdaAPI
 	StackName   string
-	Topics      map[string]*sns.Topic
+	Topics      map[string]*Topic
 	DockerImage *common.Image
 	Compute     project.Compute
 	EnvMap      map[string]string
@@ -129,6 +129,8 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
+	// allow lambda to execute step function
+
 	envVars := pulumi.StringMap{
 		"NITRIC_ENVIRONMENT": pulumi.String("cloud"),
 		"NITRIC_STACK":       pulumi.String(args.StackName),
@@ -176,7 +178,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		topic, ok := args.Topics[t]
 		if ok {
 			_, err = awslambda.NewPermission(ctx, name+t+"Permission", &awslambda.PermissionArgs{
-				SourceArn: topic.Arn,
+				SourceArn: topic.Sns.Arn,
 				Function:  res.Function.Name,
 				Principal: pulumi.String("sns.amazonaws.com"),
 				Action:    pulumi.String("lambda:InvokeFunction"),
@@ -188,7 +190,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 			_, err = sns.NewTopicSubscription(ctx, name+t+"Subscription", &sns.TopicSubscriptionArgs{
 				Endpoint: res.Function.Arn,
 				Protocol: pulumi.String("lambda"),
-				Topic:    topic.ID(), // TODO check (was topic.sns)
+				Topic:    topic.Sns.ID(), // TODO check (was topic.sns)
 			}, opts...)
 			if err != nil {
 				return nil, err

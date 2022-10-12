@@ -354,10 +354,6 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	}
 
 	for key := range g.proj.Topics {
-		if err != nil {
-			return err
-		}
-
 		g.topics[key], err = pubsub.NewTopic(ctx, key, &pubsub.TopicArgs{
 			Name:   pulumi.String(key),
 			Labels: common.Tags(ctx, key),

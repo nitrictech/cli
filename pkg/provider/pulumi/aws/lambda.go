@@ -102,8 +102,6 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		"Statement": []map[string]interface{}{
 			{
 				"Action": []string{
-					// "sns:ConfirmSubscription",
-					// "sns:Unsubscribe",
 					"sns:ListTopics",
 					"sqs:ListQueues",
 					"dynamodb:ListTables",
@@ -190,7 +188,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 			_, err = sns.NewTopicSubscription(ctx, name+t+"Subscription", &sns.TopicSubscriptionArgs{
 				Endpoint: res.Function.Arn,
 				Protocol: pulumi.String("lambda"),
-				Topic:    topic.Sns.ID(), // TODO check (was topic.sns)
+				Topic:    topic.Sns.ID(),
 			}, opts...)
 			if err != nil {
 				return nil, err

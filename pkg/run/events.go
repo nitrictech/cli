@@ -32,7 +32,7 @@ type WorkerPoolEventService struct {
 	pool worker.WorkerPool
 }
 
-func (s *WorkerPoolEventService) deliverEvent(evt *triggers.Event) error {
+func (s *WorkerPoolEventService) deliverEvent(evt *triggers.Event) {
 	targets := s.pool.GetWorkers(&worker.GetWorkerOptions{
 		Event: evt,
 	})
@@ -49,8 +49,6 @@ func (s *WorkerPoolEventService) deliverEvent(evt *triggers.Event) error {
 			}
 		}(target)
 	}
-
-	return nil
 }
 
 // Publish a message to a given topic

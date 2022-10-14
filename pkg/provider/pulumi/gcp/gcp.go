@@ -33,6 +33,7 @@ import (
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudscheduler"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudtasks"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
@@ -339,6 +340,19 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	var topicDelayQueue *cloudtasks.Queue
+	if len(g.proj.Topics) > 0 {
+		// create a shared queue for enabling delayed messaging
+		// cloud run functions will create OIDC tokens for their own service accounts
+		// to apply to push actions to pubsub, so their scope should still be limited to that
+		topicDelayQueue, err = cloudtasks.NewQueue(ctx, "delay-queue", &cloudtasks.QueueArgs{
+			Location: pulumi.String(g.sc.Region),
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	for key := range g.proj.Topics {
 		g.topics[key], err = pubsub.NewTopic(ctx, key, &pubsub.TopicArgs{
 			Name:   pulumi.String(key),
@@ -433,6 +447,8 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		Permissions: pulumi.ToStringArray([]string{
 			"storage.buckets.list",
 			"storage.buckets.get",
+			"cloudtasks.queues.get",
+			"cloudtasks.tasks.create",
 			// permission for blob signing
 			// this is safe as only permissions this account has are delegated
 			"iam.serviceAccounts.signBlob",
@@ -479,6 +495,16 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			return errors.WithMessage(err, "function project membership "+c.Unit().Name)
 		}
 
+		// give the service account permission to use itself
+		_, err = serviceaccount.NewIAMMember(ctx, c.Unit().Name+"-acct-member", &serviceaccount.IAMMemberArgs{
+			ServiceAccountId: sa.Name,
+			Member:           pulumi.Sprintf("serviceAccount:%s", sa.Email),
+			Role:             pulumi.String("roles/iam.serviceAccountUser"),
+		})
+		if err != nil {
+			return errors.WithMessage(err, "service account self membership "+c.Unit().Name)
+		}
+
 		g.cloudRunners[c.Unit().Name], err = g.newCloudRunner(ctx, c.Unit().Name, &CloudRunnerArgs{
 			Location:       pulumi.String(g.sc.Region),
 			ProjectId:      g.projectId,
@@ -487,6 +513,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			Image:          g.images[c.Unit().Name],
 			ServiceAccount: sa,
 			EnvMap:         g.envMap,
+			DelayQueue:     topicDelayQueue,
 		}, defaultResourceOptions)
 		if err != nil {
 			return err

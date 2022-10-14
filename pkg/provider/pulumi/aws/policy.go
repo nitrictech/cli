@@ -24,7 +24,6 @@ import (
 	iam "github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/secretsmanager"
-	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sns"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
@@ -39,7 +38,7 @@ type Policy struct {
 }
 
 type StackResources struct {
-	Topics      map[string]*sns.Topic
+	Topics      map[string]*Topic
 	Queues      map[string]*sqs.Queue
 	Buckets     map[string]*s3.Bucket
 	Collections map[string]*dynamodb.Table
@@ -78,6 +77,8 @@ var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	},
 	v1.Action_TopicEventPublish: {
 		"sns:Publish",
+		"states:StartExecution",
+		"states:StateSyncExecution",
 	},
 	v1.Action_QueueSend: {
 		"sqs:SendMessage",
@@ -140,7 +141,7 @@ func arnForResource(resource *v1.Resource, resources *StackResources) ([]interfa
 		}
 	case v1.ResourceType_Topic:
 		if t, ok := resources.Topics[resource.Name]; ok {
-			return []interface{}{t.Arn}, nil
+			return []interface{}{t.Sns.Arn, t.Sfn.Arn}, nil
 		}
 	case v1.ResourceType_Queue:
 		if q, ok := resources.Queues[resource.Name]; ok {

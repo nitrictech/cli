@@ -40,7 +40,6 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/resourcegroups"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/secretsmanager"
-	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sns"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -75,7 +74,7 @@ type awsProvider struct {
 
 	// created resources (mostly here for testing)
 	rg          *resourcegroups.Group
-	topics      map[string]*sns.Topic
+	topics      map[string]*Topic
 	buckets     map[string]*s3.Bucket
 	queues      map[string]*sqs.Queue
 	collections map[string]*dynamodb.Table
@@ -111,7 +110,7 @@ func New(p *project.Project, name string, envMap map[string]string) (common.Pulu
 		proj:        p,
 		sc:          asc,
 		envMap:      envMap,
-		topics:      map[string]*sns.Topic{},
+		topics:      map[string]*Topic{},
 		buckets:     map[string]*s3.Bucket{},
 		queues:      map[string]*sqs.Queue{},
 		collections: map[string]*dynamodb.Table{},
@@ -278,9 +277,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "resource group create")
 	}
 
-	for k := range a.proj.Topics {
-		a.topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
-			Tags: common.Tags(ctx, k),
+	for k, v := range a.proj.Topics {
+		a.topics[k], err = newTopic(ctx, k, &TopicArgs{
+			Topic: v,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "sns topic "+k)
@@ -345,8 +344,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 			a.schedules[k], err = a.newSchedule(ctx, k, ScheduleArgs{
 				Expression: s.Expression,
-				TopicArn:   topic.Arn,
-				TopicName:  topic.Name,
+				TopicArn:   topic.Sns.Arn,
+				TopicName:  topic.Sns.Name,
 			})
 			if err != nil {
 				return errors.WithMessage(err, "schedule "+k)

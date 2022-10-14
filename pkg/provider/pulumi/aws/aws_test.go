@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/dynamodb"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
-	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sns"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -133,7 +132,7 @@ func TestAWS(t *testing.T) {
 			},
 		},
 		lambdaClient: mockLambda,
-		topics:       map[string]*sns.Topic{},
+		topics:       map[string]*Topic{},
 		buckets:      map[string]*s3.Bucket{},
 		queues:       map[string]*sqs.Queue{},
 		collections:  map[string]*dynamodb.Table{},
@@ -173,7 +172,7 @@ func TestAWS(t *testing.T) {
 		})
 
 		wg.Add(1)
-		a.topics["sales"].Name.ApplyT(func(name string) error {
+		a.topics["sales"].Sns.Name.ApplyT(func(name string) error {
 			assert.Equal(t, "sales", name, "topic has the wrong name %s!=%s", "sales", name)
 			wg.Done()
 
@@ -181,7 +180,7 @@ func TestAWS(t *testing.T) {
 		})
 
 		wg.Add(1)
-		a.topics["sales"].Tags.ApplyT(func(tags map[string]string) error {
+		a.topics["sales"].Sns.Tags.ApplyT(func(tags map[string]string) error {
 			expectTags := map[string]string{"x-nitric-name": "sales", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "topic has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
@@ -267,7 +266,7 @@ func TestAWS(t *testing.T) {
 		})
 
 		wg.Add(1)
-		pulumi.All(a.schedules["daily"].EventRule.ScheduleExpression, a.schedules["daily"].EventTarget.Arn, a.topics["sales"].Arn).ApplyT(func(all []interface{}) error {
+		pulumi.All(a.schedules["daily"].EventRule.ScheduleExpression, a.schedules["daily"].EventTarget.Arn, a.topics["sales"].Sns.Arn).ApplyT(func(all []interface{}) error {
 			expr := all[0].(*string)
 			arn := all[1].(string)
 			topicArn := all[2].(string)

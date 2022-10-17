@@ -69,7 +69,7 @@ func Discover() (ContainerEngine, error) {
 		return dk, nil
 	}
 
-	return nil, errors.New("Nitric relies on Docker to containerize your project. Please refer to the installation instructions - https://nitric.io/docs/installation")
+	return nil, errors.New("Nitric relies on Docker to be running before containerizing your project. Please refer to our installation instructions - https://nitric.io/docs/installation")
 }
 
 func Cli(cc *container.Config, hc *container.HostConfig) string {

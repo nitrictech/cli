@@ -13,11 +13,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package run
 
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/nitrictech/nitric/pkg/plugins/errors"
 	"github.com/nitrictech/nitric/pkg/plugins/errors/codes"
@@ -31,8 +33,27 @@ type WorkerPoolEventService struct {
 	pool worker.WorkerPool
 }
 
+func (s *WorkerPoolEventService) deliverEvent(evt *triggers.Event) {
+	targets := s.pool.GetWorkers(&worker.GetWorkerOptions{
+		Event: evt,
+	})
+
+	fmt.Printf("Publishing to %s topic, %d subscriber(s)\n", evt.Topic, len(targets))
+
+	for _, target := range targets {
+		go func(target worker.Worker) {
+			err := target.HandleEvent(evt)
+			if err != nil {
+				// this is likely an error in the user's handler, we don't want it to bring the server down.
+				// just log and move on.
+				fmt.Println(err)
+			}
+		}(target)
+	}
+}
+
 // Publish a message to a given topic
-func (s *WorkerPoolEventService) Publish(topic string, event *events.NitricEvent) error {
+func (s *WorkerPoolEventService) Publish(topic string, delay int, event *events.NitricEvent) error {
 	newErr := errors.ErrorsWithScope(
 		"WorkerPoolEventService.Publish",
 		map[string]interface{}{
@@ -60,22 +81,14 @@ func (s *WorkerPoolEventService) Publish(topic string, event *events.NitricEvent
 		Payload: marshaledPayload,
 	}
 
-	// get all scribers to this event
-	targets := s.pool.GetWorkers(&worker.GetWorkerOptions{
-		Event: evt,
-	})
-
-	fmt.Printf("Publishing to %s topic, %d subscriber(s)\n", topic, len(targets))
-
-	for _, target := range targets {
-		go func(target worker.Worker) {
-			err = target.HandleEvent(evt)
-			if err != nil {
-				// this is likely an error in the user's handler, we don't want it to bring the server down.
-				// just log and move on.
-				fmt.Println(err)
-			}
-		}(target)
+	if delay > 0 {
+		go func(evt *triggers.Event) {
+			// Wait to deliver the events
+			time.Sleep(time.Duration(delay) * time.Second)
+			s.deliverEvent(evt)
+		}(evt)
+	} else {
+		s.deliverEvent(evt)
 	}
 
 	return nil

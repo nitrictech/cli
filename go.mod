@@ -26,7 +26,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/moby/moby v20.10.18+incompatible
-	github.com/nitrictech/nitric v0.19.0-rc.2
+	github.com/nitrictech/nitric v0.19.0
 	github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit v0.0.0-20220905035427-cd9de58e7968
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.49

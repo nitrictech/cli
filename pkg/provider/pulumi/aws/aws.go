@@ -167,6 +167,11 @@ func (a *awsProvider) SupportedRegions() []string {
 func (a *awsProvider) Validate() error {
 	errList := &multierror.ErrorList{}
 
+	_, err := session.NewSession()
+	if err != nil {
+		errList.Push(fmt.Errorf("unable to validate AWS credentials - see https://nitric.io/docs/reference/aws for config info"))
+	}
+
 	if a.sc.Region == "" {
 		errList.Push(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
 	} else if !slices.Contains(a.SupportedRegions(), a.sc.Region) {

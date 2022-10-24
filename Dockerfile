@@ -35,8 +35,6 @@ RUN apt-get update -y && \
   pass \
   unzip && \
   # Get all of the signatures we need all at once.
-  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key  | apt-key add - && \
-  curl -fsSL https://dl.yarnpkg.com/debian/pubkey.gpg              | apt-key add - && \
   curl -fsSL https://download.docker.com/linux/debian/gpg          | apt-key add - && \
   # IAM Authenticator for EKS
   curl -fsSLo /usr/bin/aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.10.3/2018-07-26/bin/linux/amd64/aws-iam-authenticator && \
@@ -47,16 +45,10 @@ RUN apt-get update -y && \
   ./aws/install && \
   rm -rf aws && \
   # Add additional apt repos all at once
-  echo "deb https://deb.nodesource.com/node_14.x $(lsb_release -cs) main"                         | tee /etc/apt/sources.list.d/node.list             && \
-  echo "deb https://dl.yarnpkg.com/debian/ stable main"                                           | tee /etc/apt/sources.list.d/yarn.list             && \
   echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"      | tee /etc/apt/sources.list.d/docker.list           && \
   # Install second wave of dependencies
   apt-get update -y && \
-  apt-get install -y \
-  docker-ce \
-  amazon-ecr-credential-helper \
-  nodejs \
-  yarn && \
+  apt-get install -y docker-ce && \
   # Clean up the lists work
   rm -rf /var/lib/apt/lists/*
 
@@ -68,6 +60,12 @@ ARG PULUMI_VERSION
 # Install the Pulumi SDK, including the CLI and language runtimes.
 RUN curl -fsSL https://get.pulumi.com/ | bash -s -- --version $PULUMI_VERSION && \
   mv ~/.pulumi/bin/* /usr/bin
+
+RUN curl -fsSLo /tmp/dch.tgz https://github.com/docker/docker-credential-helpers/releases/download/${DOCKER_PASS_CH}/docker-credential-pass-${DOCKER_PASS_CH}-amd64.tar.gz; \
+  tar -xf /tmp/dch.tgz; \
+  chmod +x docker-credential-pass; \
+  mv -f docker-credential-pass /usr/bin/; \
+  rm -rf /tmp/dch.tgz
 
 ENV HOST_DOCKER_INTERNAL_IFACE eth0
 ENV PULUMI_SKIP_UPDATE_CHECK "true"

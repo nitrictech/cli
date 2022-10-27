@@ -49,6 +49,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
+	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
@@ -192,7 +193,7 @@ func (a *awsProvider) Validate() error {
 }
 
 func (a *awsProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	dc, dok := a.sc.Config["default"]
+	dc, dok := a.sc.Config[stack.DefaultFunctionConfig]
 
 	for fn, f := range a.proj.Functions {
 		f.ComputeUnit.Memory = 512

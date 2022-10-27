@@ -51,13 +51,15 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
+	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type gcpFunctionConfig struct {
-	Memory  *int `yaml:"memory,omitempty"`
-	Timeout *int `yaml:"timeout,omitempty"`
+	Memory  *int    `yaml:"memory,omitempty"`
+	Timeout *int    `yaml:"timeout,omitempty"`
+	Project *string `yaml:"project,omitempty"`
 }
 
 type gcpStackConfig struct {
@@ -69,11 +71,10 @@ type gcpStackConfig struct {
 }
 
 type gcpProvider struct {
-	sc         *gcpStackConfig
-	proj       *project.Project
-	envMap     map[string]string
-	tmpDir     string
-	gcpProject string
+	sc     *gcpStackConfig
+	proj   *project.Project
+	envMap map[string]string
+	tmpDir string
 
 	token         *oauth2.Token
 	projectNumber string
@@ -198,7 +199,11 @@ func (g *gcpProvider) AskAndSave() error {
 	}
 
 	g.sc.Region = answers.Region
-	g.sc.Project = answers.Project
+	g.sc.Config = map[string]gcpFunctionConfig{
+		stack.DefaultFunctionConfig: {
+			Project: &answers.Project,
+		},
+	}
 
 	b, err := yaml.Marshal(g.sc)
 	if err != nil {
@@ -217,19 +222,23 @@ func (g *gcpProvider) Validate() error {
 		errList.Push(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", g.sc.Region, g.sc.Provider)))
 	}
 
-	if g.sc.Project == "" {
-		errList.Push(fmt.Errorf("target %s requires GCP \"project\"", g.sc.Provider))
-	} else {
-		g.gcpProject = g.sc.Project
+	def, dok := g.sc.Config[stack.DefaultFunctionConfig]
+
+	if !dok && g.sc.Project == "" && def.Project == nil {
+		errList.Push(fmt.Errorf("config.default %s requires \"project\"", g.sc.Provider))
 	}
 
 	for fn, fc := range g.sc.Config {
 		if fc.Memory != nil && *fc.Memory < 128 {
-			errList.Push(fmt.Errorf("function config %s requires \"memory\" to be greater than 128 Mi", fn))
+			errList.Push(fmt.Errorf("config.\"%s\" requires \"memory\" to be greater than 128 Mi", fn))
 		}
 
 		if fc.Timeout != nil && *fc.Timeout < 15 {
-			errList.Push(fmt.Errorf("function config %s requires \"timeout\" to be greater than 15 seconds", fn))
+			errList.Push(fmt.Errorf("config.\"%s\" requires \"timeout\" to be greater than 15 seconds", fn))
+		}
+
+		if fc.Project != nil && fn != stack.DefaultFunctionConfig {
+			errList.Push(fmt.Errorf("config.\"%s\".project should be set as config.default.project", fn))
 		}
 	}
 
@@ -237,20 +246,26 @@ func (g *gcpProvider) Validate() error {
 }
 
 func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	dc, dok := g.sc.Config["default"]
+	dc, dok := g.sc.Config[stack.DefaultFunctionConfig]
+	if !dok {
+		g.sc.Config[stack.DefaultFunctionConfig] = gcpFunctionConfig{}
+	}
+
+	if dc.Project == nil {
+		dc.Project = &g.sc.Project
+		g.sc.Config[stack.DefaultFunctionConfig] = dc
+	}
 
 	for fn, f := range g.proj.Functions {
 		f.ComputeUnit.Memory = 512
 		f.ComputeUnit.Timeout = 15
 
-		if dok {
-			if dc.Memory != nil {
-				f.ComputeUnit.Memory = *dc.Memory
-			}
+		if dc.Memory != nil {
+			f.ComputeUnit.Memory = *dc.Memory
+		}
 
-			if dc.Timeout != nil {
-				f.ComputeUnit.Timeout = *dc.Timeout
-			}
+		if dc.Timeout != nil {
+			f.ComputeUnit.Timeout = *dc.Timeout
 		}
 
 		fc, ok := g.sc.Config[f.Handler]
@@ -272,7 +287,7 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 		return err
 	}
 
-	return autoStack.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: g.gcpProject})
+	return autoStack.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: *g.sc.Config[stack.DefaultFunctionConfig].Project})
 }
 
 func (g *gcpProvider) setToken() error {
@@ -309,7 +324,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 
 	if g.projectId == "" {
 		project, err := organizations.LookupProject(ctx, &organizations.LookupProjectArgs{
-			ProjectId: &g.gcpProject,
+			ProjectId: g.sc.Config[stack.DefaultFunctionConfig].Project,
 		}, nil)
 		if err != nil {
 			return err

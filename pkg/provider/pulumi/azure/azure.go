@@ -40,12 +40,15 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
+	"github.com/nitrictech/cli/pkg/stack"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type azureFunctionConfig struct {
-	Memory  *int `yaml:"memory,omitempty"`
-	Timeout *int `yaml:"timeout,omitempty"`
+	Memory     *int    `yaml:"memory,omitempty"`
+	Timeout    *int    `yaml:"timeout,omitempty"`
+	AdminEmail *string `yaml:"adminemail,omitempty"`
+	Org        *string `yaml:"org,omitempty"`
 }
 
 type azureStackConfig struct {
@@ -151,8 +154,12 @@ func (a *azureProvider) AskAndSave() error {
 	}
 
 	a.sc.Region = answers.Region
-	a.sc.AdminEmail = answers.AdminEmail
-	a.sc.Org = answers.Org
+	a.sc.Config = map[string]azureFunctionConfig{
+		stack.DefaultFunctionConfig: {
+			AdminEmail: &answers.AdminEmail,
+			Org:        &answers.Org,
+		},
+	}
 
 	b, err := yaml.Marshal(a.sc)
 	if err != nil {
@@ -186,21 +193,31 @@ func (a *azureProvider) Validate() error {
 		errList.Push(utils.NewNotSupportedErr(fmt.Sprintf("region %s not supported on provider %s", a.sc.Region, a.sc.Provider)))
 	}
 
-	if a.sc.Org == "" {
-		errList.Push(fmt.Errorf("target %s requires \"org\"", a.sc.Provider))
+	def, dok := a.sc.Config[stack.DefaultFunctionConfig]
+
+	if !dok || (a.sc.Org == "" && def.Org == nil) {
+		errList.Push(fmt.Errorf("config.default %s requires \"org\"", a.sc.Provider))
 	}
 
-	if a.sc.AdminEmail == "" {
-		errList.Push(fmt.Errorf("target %s requires \"adminemail\"", a.sc.Provider))
+	if !dok || (a.sc.AdminEmail == "" && def.AdminEmail == nil) {
+		errList.Push(fmt.Errorf("config.default %s requires \"adminemail\"", a.sc.Provider))
 	}
 
 	for fn, fc := range a.sc.Config {
 		if fc.Memory != nil && *fc.Memory < 128 {
-			errList.Push(fmt.Errorf("function config %s requires \"memory\" to be greater than 128 Mi", fn))
+			errList.Push(fmt.Errorf("config.\"%s\" requires \"memory\" to be greater than 128 Mi", fn))
 		}
 
 		if fc.Timeout != nil && *fc.Timeout < 15 {
-			errList.Push(fmt.Errorf("function config %s requires \"timeout\" to be greater than 15 seconds", fn))
+			errList.Push(fmt.Errorf("config.\"%s\" requires \"timeout\" to be greater than 15 seconds", fn))
+		}
+
+		if fc.AdminEmail != nil && fn != stack.DefaultFunctionConfig {
+			errList.Push(fmt.Errorf("config.\"%s\".adminemail should be set as default.adminemail", fn))
+		}
+
+		if fc.Org != nil && fn != stack.DefaultFunctionConfig {
+			errList.Push(fmt.Errorf("config.\"%s\".org should be set as a default.org", fn))
 		}
 	}
 
@@ -208,20 +225,31 @@ func (a *azureProvider) Validate() error {
 }
 
 func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) error {
-	dc, dok := a.sc.Config["default"]
+	dc, dok := a.sc.Config[stack.DefaultFunctionConfig]
+	if !dok {
+		a.sc.Config[stack.DefaultFunctionConfig] = azureFunctionConfig{}
+	}
+
+	if dc.AdminEmail == nil {
+		dc.AdminEmail = &a.sc.AdminEmail
+	}
+
+	if dc.Org == nil {
+		dc.Org = &a.sc.Org
+	}
+
+	a.sc.Config[stack.DefaultFunctionConfig] = dc
 
 	for fn, f := range a.proj.Functions {
 		f.ComputeUnit.Memory = 512
 		f.ComputeUnit.Timeout = 15
 
-		if dok {
-			if dc.Memory != nil {
-				f.ComputeUnit.Memory = *dc.Memory
-			}
+		if dc.Memory != nil {
+			f.ComputeUnit.Memory = *dc.Memory
+		}
 
-			if dc.Timeout != nil {
-				f.ComputeUnit.Timeout = *dc.Timeout
-			}
+		if dc.Timeout != nil {
+			f.ComputeUnit.Timeout = *dc.Timeout
 		}
 
 		fc, ok := a.sc.Config[f.Handler]
@@ -370,8 +398,8 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	for k, v := range a.proj.ApiDocs {
 		_, err = newAzureApiManagement(ctx, k, &AzureApiManagementArgs{
 			ResourceGroupName:   rg.Name,
-			OrgName:             pulumi.String(a.sc.Org),
-			AdminEmail:          pulumi.String(a.sc.AdminEmail),
+			OrgName:             pulumi.String(*a.sc.Config[stack.DefaultFunctionConfig].Org),
+			AdminEmail:          pulumi.String(*a.sc.Config[stack.DefaultFunctionConfig].AdminEmail),
 			OpenAPISpec:         v,
 			Apps:                apps.Apps,
 			SecurityDefinitions: a.proj.SecurityDefinitions[k],

@@ -16,6 +16,8 @@
 
 package stack
 
+const DefaultFunctionConfig = "default"
+
 type Config struct {
 	Name     string `yaml:"name,omitempty"`
 	Provider string `yaml:"provider,omitempty"`

@@ -21,6 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudtasks"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/pubsub"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -38,6 +39,7 @@ type CloudRunnerArgs struct {
 	EnvMap         map[string]string
 	ServiceAccount *serviceaccount.Account
 	Topics         map[string]*pubsub.Topic
+	DelayQueue     *cloudtasks.Queue
 }
 
 type CloudRunner struct {
@@ -62,6 +64,10 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 
 	env := cloudrun.ServiceTemplateSpecContainerEnvArray{
 		cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String("NITRIC_ENVIRONMENT"),
+			Value: pulumi.String("cloud"),
+		},
+		cloudrun.ServiceTemplateSpecContainerEnvArgs{
 			Name:  pulumi.String("MIN_WORKERS"),
 			Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),
 		},
@@ -69,6 +75,18 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 			Name:  pulumi.String("NITRIC_STACK"),
 			Value: pulumi.String(ctx.Stack()),
 		},
+		cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String("SERVICE_ACCOUNT_EMAIL"),
+			Value: args.ServiceAccount.Email,
+		},
+	}
+
+	// Ensure functions are aware of the delay queue
+	if args.DelayQueue != nil {
+		env = append(env, cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String("DELAY_QUEUE_NAME"),
+			Value: pulumi.Sprintf("projects/%s/locations/%s/queues/%s", args.DelayQueue.Project, args.DelayQueue.Location, args.DelayQueue.Name),
+		})
 	}
 
 	for k, v := range args.EnvMap {

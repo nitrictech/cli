@@ -17,17 +17,9 @@
 package runtime
 
 import (
-	"fmt"
+	_ "embed"
 	"io"
 	"path/filepath"
-	osruntime "runtime"
-	"strings"
-
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/strslice"
-
-	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type golang struct {
@@ -37,12 +29,22 @@ type golang struct {
 
 var _ Runtime = &golang{}
 
-func (t *golang) DevImageName() string {
-	return fmt.Sprintf("nitric-%s-dev", t.rte)
-}
+//go:embed golang.dockerfile
+var golangDockerfile string
 
 func (t *golang) BuildIgnore() []string {
 	return commonIgnore
+}
+
+func (t *golang) BaseDockerFile(w io.Writer) error {
+	_, err := w.Write([]byte(golangDockerfile))
+	return err
+}
+
+func (t *golang) BuildArgs() map[string]string {
+	return map[string]string{
+		"HANDLER": filepath.ToSlash(filepath.Dir(t.handler)),
+	}
 }
 
 func (t *golang) ContainerName() string {
@@ -53,168 +55,4 @@ func (t *golang) ContainerName() string {
 	}
 
 	return filepath.Base(filepath.Dir(absH))
-}
-
-func (t *golang) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
-	css := dockerfile.NewStateStore()
-
-	buildCon, err := css.NewContainer(dockerfile.NewContainerOpts{
-		From:   "golang:alpine",
-		As:     layerBuild,
-		Ignore: t.BuildIgnore(),
-	})
-	if err != nil {
-		return err
-	}
-
-	buildCon.Run(dockerfile.RunOptions{Command: []string{"apk", "update"}})
-	buildCon.Run(dockerfile.RunOptions{Command: []string{"apk", "upgrade"}})
-	buildCon.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "git", "gcc", "g++", "make"}})
-	buildCon.Config(dockerfile.ConfigOptions{
-		WorkingDir: "/app/",
-	})
-
-	err = buildCon.Copy(dockerfile.CopyOptions{Src: "go.mod *.sum", Dest: "./"})
-	if err != nil {
-		return err
-	}
-
-	buildCon.Run(dockerfile.RunOptions{Command: []string{"go", "mod", "download"}})
-
-	err = buildCon.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
-	if err != nil {
-		return err
-	}
-
-	buildCon.Run(dockerfile.RunOptions{
-		Command: []string{
-			"go", "build", "-o", "/bin/main", "./" + filepath.Dir(t.handler) + "/...",
-		},
-	})
-
-	con, err := css.NewContainer(dockerfile.NewContainerOpts{
-		From:   "alpine",
-		As:     layerFinal,
-		Ignore: t.BuildIgnore(),
-	})
-	if err != nil {
-		return err
-	}
-
-	withMembrane(con, version, provider)
-
-	err = con.Copy(dockerfile.CopyOptions{Src: "/bin/main", Dest: "/bin/main", From: buildCon.Name()})
-	if err != nil {
-		return err
-	}
-
-	con.Run(dockerfile.RunOptions{Command: []string{"chmod", "+x-rw", "/bin/main"}})
-	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "tzdata"}})
-
-	con.Config(dockerfile.ConfigOptions{
-		Ports:      []int32{9001},
-		WorkingDir: "/",
-		Cmd:        []string{"/bin/main"},
-	})
-
-	_, err = w.Write([]byte(strings.Join(append(buildCon.Lines(), con.Lines()...), "\n")))
-
-	return err
-}
-
-func (t *golang) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
-	con, err := dockerfile.NewContainer(dockerfile.NewContainerOpts{
-		From:   "golang:alpine",
-		Ignore: t.BuildIgnore(),
-	})
-	if err != nil {
-		return err
-	}
-
-	con.Run(dockerfile.RunOptions{Command: []string{"apk", "add", "--no-cache", "git", "gcc", "g++", "make"}})
-	con.Run(dockerfile.RunOptions{Command: []string{"go", "install", "github.com/asalkeld/CompileDaemon@master"}})
-
-	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
-
-	return err
-}
-
-func (t *golang) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
-	module, err := utils.GoModule(runCtx)
-	if err != nil {
-		return LaunchOpts{}, err
-	}
-
-	goPath, err := utils.GoPath()
-	if err != nil {
-		return LaunchOpts{}, err
-	}
-
-	return LaunchOpts{
-		Image:    t.DevImageName(),
-		TargetWD: filepath.ToSlash(filepath.Join("/go/src", module)),
-		Cmd:      strslice.StrSlice{"go", "run", "./" + filepath.ToSlash(filepath.Dir(t.handler)) + "/..."},
-		Mounts: []mount.Mount{
-			{
-				Type:   "bind",
-				Source: filepath.Join(goPath, "pkg"),
-				Target: "/go/pkg",
-			},
-			{
-				Type:   "bind",
-				Source: runCtx,
-				Target: filepath.ToSlash(filepath.Join("/go/src", module)),
-			},
-		},
-	}, nil
-}
-
-func (t *golang) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
-	module, err := utils.GoModule(runCtx)
-	if err != nil {
-		return LaunchOpts{}, err
-	}
-
-	containerRunCtx := filepath.ToSlash(filepath.Join("/go/src", module))
-	relHandler := t.handler
-
-	if strings.HasPrefix(t.handler, runCtx) {
-		relHandler, err = filepath.Rel(runCtx, t.handler)
-		if err != nil {
-			return LaunchOpts{}, err
-		}
-	}
-
-	goPath, err := utils.GoPath()
-	if err != nil {
-		return LaunchOpts{}, err
-	}
-
-	opts := LaunchOpts{
-		TargetWD: containerRunCtx,
-		Cmd: strslice.StrSlice{
-			"/go/bin/CompileDaemon",
-			"-verbose",
-			"-exclude-dir=.git",
-			"-exclude-dir=.nitric",
-			"-directory=.",
-			fmt.Sprintf("-polling=%t", osruntime.GOOS == "windows"),
-			fmt.Sprintf("-build=go build -buildvcs=false -o %s ./%s/...", t.ContainerName(), filepath.ToSlash(filepath.Dir(relHandler))),
-			"-command=./" + t.ContainerName(),
-		},
-		Mounts: []mount.Mount{
-			{
-				Type:   "bind",
-				Source: filepath.Join(goPath, "pkg"),
-				Target: "/go/pkg",
-			},
-			{
-				Type:   "bind",
-				Source: runCtx,
-				Target: containerRunCtx,
-			},
-		},
-	}
-
-	return opts, nil
 }

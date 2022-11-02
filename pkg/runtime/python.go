@@ -17,14 +17,14 @@
 package runtime
 
 import (
-	"fmt"
+	_ "embed"
 	"io"
 	"path/filepath"
 	"strings"
-
-	"github.com/nitrictech/boxygen/pkg/backend/dockerfile"
-	"github.com/nitrictech/cli/pkg/utils"
 )
+
+//go:embed python.dockerfile
+var pythonDockerfile string
 
 type python struct {
 	rte     RuntimeExt
@@ -32,10 +32,6 @@ type python struct {
 }
 
 var _ Runtime = &python{}
-
-func (t *python) DevImageName() string {
-	return fmt.Sprintf("nitric-%s-dev", t.rte)
-}
 
 func (t *python) ContainerName() string {
 	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
@@ -45,58 +41,13 @@ func (t *python) BuildIgnore() []string {
 	return append(commonIgnore, "__pycache__/", "*.py[cod]", "*$py.class")
 }
 
-func (t *python) FunctionDockerfileForCodeAsConfig(w io.Writer) error {
-	return utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
-}
-
-func (t *python) LaunchOptsForFunctionCollect(runCtx string) (LaunchOpts, error) {
-	return LaunchOpts{}, utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
-}
-
-func (t *python) LaunchOptsForFunction(runCtx string) (LaunchOpts, error) {
-	return LaunchOpts{}, utils.NewNotSupportedErr("code-as-config not supported on " + string(t.rte))
-}
-
-func (t *python) FunctionDockerfile(funcCtxDir, version, provider string, w io.Writer) error {
-	css := dockerfile.NewStateStore()
-
-	con, err := css.NewContainer(dockerfile.NewContainerOpts{
-		From:   "python:3.7-slim",
-		As:     layerFinal,
-		Ignore: t.BuildIgnore(),
-	})
-	if err != nil {
-		return err
-	}
-
-	con.Run(dockerfile.RunOptions{Command: []string{"pip", "install", "--upgrade", "pip"}})
-	con.Config(dockerfile.ConfigOptions{
-		WorkingDir: "/",
-	})
-
-	err = con.Copy(dockerfile.CopyOptions{Src: "requirements.txt", Dest: "requirements.txt"})
-	if err != nil {
-		return err
-	}
-
-	con.Run(dockerfile.RunOptions{Command: []string{"pip", "install", "--no-cache-dir", "-r", "requirements.txt"}})
-
-	err = con.Copy(dockerfile.CopyOptions{Src: ".", Dest: "."})
-	if err != nil {
-		return err
-	}
-
-	withMembrane(con, version, provider)
-
-	con.Config(dockerfile.ConfigOptions{
-		Env: map[string]string{
-			"PYTHONPATH": "/app/:${PYTHONPATH}",
-		},
-		Ports: []int32{9001},
-		Cmd:   []string{"python", t.handler},
-	})
-
-	_, err = w.Write([]byte(strings.Join(con.Lines(), "\n")))
-
+func (t *python) BaseDockerFile(w io.Writer) error {
+	_, err := w.Write([]byte(pythonDockerfile))
 	return err
+}
+
+func (t *python) BuildArgs() map[string]string {
+	return map[string]string{
+		"HANDLER": filepath.ToSlash(t.handler),
+	}
 }

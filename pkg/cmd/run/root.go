@@ -21,7 +21,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -32,7 +31,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/build"
-	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
@@ -51,11 +49,11 @@ var runCmd = &cobra.Command{
 	Annotations: map[string]string{"commonCommand": "yes"},
 	Run: func(cmd *cobra.Command, args []string) {
 		term := make(chan os.Signal, 1)
-		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
-		signal.Notify(term, os.Interrupt, syscall.SIGINT)
+		signal.Notify(term, syscall.SIGTERM, syscall.SIGINT)
 
 		// Divert default log output to pterm debug
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
 
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
@@ -70,16 +68,6 @@ var runCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
-		codeAsConfig := tasklet.Runner{
-			StartMsg: "Gathering configuration from code...",
-			Runner: func(_ output.Progress) error {
-				proj, err = codeconfig.Populate(proj, envMap)
-				return err
-			},
-			StopMsg: "Configuration gathered",
-		}
-		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
-
 		ls := run.NewLocalServices(proj)
 		if ls.Running() {
 			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")
@@ -93,11 +81,11 @@ var runCmd = &cobra.Command{
 		cobra.CheckErr(logger.Start())
 
 		createBaseImage := tasklet.Runner{
-			StartMsg: "Creating development image",
+			StartMsg: "Building Images",
 			Runner: func(_ output.Progress) error {
-				return build.CreateBaseDev(proj)
+				return build.BuildBaseImages(proj)
 			},
-			StopMsg: "Development image created",
+			StopMsg: "Images Built",
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{Signal: term})
 
@@ -157,9 +145,11 @@ var runCmd = &cobra.Command{
 
 		pterm.DefaultBasicText.Println("Application running, use ctrl-C to stop")
 
-		stackState := run.NewStackState()
+		stackState := run.StateFromPool(pool)
 
 		area, _ := pterm.DefaultArea.Start()
+		area.Update(stackState.Tables(9001))
+
 		lck := sync.Mutex{}
 		// React to worker pool state and update services table
 		pool.Listen(func(we run.WorkerEvent) {
@@ -168,23 +158,7 @@ var runCmd = &cobra.Command{
 			// area.Clear()
 
 			stackState.UpdateFromWorkerEvent(we)
-
-			tables := []string{}
-			table, rows := stackState.ApiTable(9001)
-			if rows > 0 {
-				tables = append(tables, table)
-			}
-
-			table, rows = stackState.TopicTable(9001)
-			if rows > 0 {
-				tables = append(tables, table)
-			}
-
-			table, rows = stackState.SchedulesTable(9001)
-			if rows > 0 {
-				tables = append(tables, table)
-			}
-			area.Update(strings.Join(tables, "\n\n"))
+			area.Update(stackState.Tables(9001))
 		})
 
 		select {

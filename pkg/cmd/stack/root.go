@@ -22,12 +22,14 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/joho/godotenv"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/preferences"
@@ -78,27 +80,7 @@ var newStackCmd = &cobra.Command{
 	Short: "Create a new Nitric stack",
 	Long:  `Creates a new Nitric stack.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		name := ""
-		err := survey.AskOne(&survey.Input{
-			Message: "What do you want to call your new stack?",
-		}, &name)
-		cobra.CheckErr(err)
-
-		pName := ""
-		err = survey.AskOne(&survey.Select{
-			Message: "Which Cloud do you wish to deploy to?",
-			Default: types.Aws,
-			Options: types.Providers,
-		}, &pName)
-		cobra.CheckErr(err)
-
-		pc, err := project.ConfigFromProjectPath("")
-		cobra.CheckErr(err)
-
-		prov, err := provider.NewProvider(project.New(pc), name, pName, map[string]string{}, &types.ProviderOpts{})
-		cobra.CheckErr(err)
-
-		err = prov.AskAndSave()
+		err := newStack(cmd, args)
 		cobra.CheckErr(err)
 	},
 	Args:        cobra.MaximumNArgs(2),
@@ -138,7 +120,25 @@ var stackUpdateCmd = &cobra.Command{
 	Example: `nitric stack update -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := stack.ConfigFromOptions()
-		cobra.CheckErr(err)
+
+		if err != nil && strings.Contains(err.Error(), "No nitric stacks found") {
+			confirm := ""
+			err = survey.AskOne(&survey.Select{
+				Message: "A stack is required to deploy your project, create one now?",
+				Default: "Yes",
+				Options: []string{"Yes", "No"},
+			}, &confirm)
+			cobra.CheckErr(err)
+			if confirm != "Yes" {
+				pterm.Info.Println("You can run `nitric stack new` to create a new stack.")
+				os.Exit(0)
+			}
+			err = newStack(cmd, args)
+			cobra.CheckErr(err)
+
+			s, err = stack.ConfigFromOptions()
+			cobra.CheckErr(err)
+		}
 
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
@@ -147,6 +147,7 @@ var stackUpdateCmd = &cobra.Command{
 		cobra.CheckErr(err)
 
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
 
 		envFiles := utils.FilesExisting(".env", ".env.production", envFile)
 		envMap := map[string]string{}
@@ -154,6 +155,16 @@ var stackUpdateCmd = &cobra.Command{
 			envMap, err = godotenv.Read(envFiles...)
 			cobra.CheckErr(err)
 		}
+
+		// build base images on updates
+		createBaseImage := tasklet.Runner{
+			StartMsg: "Building Images",
+			Runner: func(_ output.Progress) error {
+				return build.BuildBaseImages(proj)
+			},
+			StopMsg: "Images Built",
+		}
+		tasklet.MustRun(createBaseImage, tasklet.Opts{})
 
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
@@ -219,6 +230,9 @@ nitric stack down -e aws -y`,
 
 		s, err := stack.ConfigFromOptions()
 		cobra.CheckErr(err)
+
+		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
 
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
@@ -293,4 +307,38 @@ func RootCommand() *cobra.Command {
 	cobra.CheckErr(stack.AddOptions(stackListCmd, false))
 
 	return stackCmd
+}
+
+func newStack(cmd *cobra.Command, args []string) error {
+	name := ""
+
+	err := survey.AskOne(&survey.Input{
+		Message: "What do you want to call your new stack?",
+	}, &name)
+	if err != nil {
+		return err
+	}
+
+	pName := ""
+
+	err = survey.AskOne(&survey.Select{
+		Message: "Which Cloud do you wish to deploy to?",
+		Default: types.Aws,
+		Options: types.Providers,
+	}, &pName)
+	if err != nil {
+		return err
+	}
+
+	pc, err := project.ConfigFromProjectPath("")
+	if err != nil {
+		return err
+	}
+
+	prov, err := provider.NewProvider(project.New(pc), name, pName, map[string]string{}, &types.ProviderOpts{})
+	if err != nil {
+		return err
+	}
+
+	return prov.AskAndSave()
 }

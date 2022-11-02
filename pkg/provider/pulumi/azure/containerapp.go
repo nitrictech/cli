@@ -188,6 +188,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 			ProjectDir:    a.proj.Dir,
 			Provider:      a.sc.Provider,
 			Compute:       c,
+			SourceImage:   fmt.Sprintf("%s-%s", a.proj.Name, c.Unit().Name),
 			RepositoryUrl: repositoryUrl,
 			Username:      adminUser.Elem(),
 			Password:      adminPass.Elem(),
@@ -290,6 +291,10 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 	}
 
 	env := app.EnvironmentVarArray{
+		app.EnvironmentVarArgs{
+			Name:  pulumi.String("NITRIC_ENVIRONMENT"),
+			Value: pulumi.String("cloud"),
+		},
 		app.EnvironmentVarArgs{
 			Name:  pulumi.String("MIN_WORKERS"),
 			Value: pulumi.String(fmt.Sprint(args.Compute.Workers())),

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/go-getter"
 	"github.com/pkg/errors"
@@ -71,6 +72,10 @@ func (d *downloader) Names() ([]string, error) {
 	if len(d.repo) == 0 {
 		err := d.repository()
 		if err != nil {
+			if strings.Contains(err.Error(), "git must be available and on the PATH") {
+				return nil, errors.WithMessage(err, "please refer to the installation instructions - https://nitric.io/docs/installation")
+			}
+
 			return nil, err
 		}
 	}
@@ -134,7 +139,7 @@ func (d *downloader) repository() error {
 
 	// download file
 	if err := client.Get(); err != nil {
-		return fmt.Errorf("error getting path %s: %w", src, err)
+		return err
 	}
 
 	list, err := d.readTemplatesConfig()
@@ -185,5 +190,9 @@ func (d *downloader) DownloadDirectoryContents(name string, destDir string, forc
 
 	err = client.Get()
 
-	return errors.WithMessagef(err, "error getting path %s", templatesRepoGitURL+"//"+template.Path)
+	if err != nil && strings.Contains(err.Error(), "git must be available and on the PATH") {
+		return errors.WithMessage(err, "please refer to the installation instructions - https://nitric.io/docs/installation")
+	}
+
+	return errors.WithMessagef(err, "error getting path %s//%s", templatesRepoGitURL, template.Path)
 }

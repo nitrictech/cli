@@ -26,9 +26,9 @@ import (
 
 	"github.com/avast/retry-go"
 
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
-	awslambda "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/lambda"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
+	awslambda "github.com/pulumi/pulumi-aws/sdk/v5/go/aws/lambda"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sns"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -38,7 +38,7 @@ import (
 type LambdaArgs struct {
 	Client      lambdaiface.LambdaAPI
 	StackName   string
-	Topics      map[string]*sns.Topic
+	Topics      map[string]*Topic
 	DockerImage *common.Image
 	Compute     project.Compute
 	EnvMap      map[string]string
@@ -102,8 +102,6 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		"Statement": []map[string]interface{}{
 			{
 				"Action": []string{
-					// "sns:ConfirmSubscription",
-					// "sns:Unsubscribe",
 					"sns:ListTopics",
 					"sqs:ListQueues",
 					"dynamodb:ListTables",
@@ -129,9 +127,12 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		return nil, err
 	}
 
+	// allow lambda to execute step function
+
 	envVars := pulumi.StringMap{
-		"NITRIC_STACK": pulumi.String(args.StackName),
-		"MIN_WORKERS":  pulumi.String(fmt.Sprint(args.Compute.Workers())),
+		"NITRIC_ENVIRONMENT": pulumi.String("cloud"),
+		"NITRIC_STACK":       pulumi.String(args.StackName),
+		"MIN_WORKERS":        pulumi.String(fmt.Sprint(args.Compute.Workers())),
 	}
 	for k, v := range args.EnvMap {
 		envVars[k] = pulumi.String(v)
@@ -175,7 +176,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		topic, ok := args.Topics[t]
 		if ok {
 			_, err = awslambda.NewPermission(ctx, name+t+"Permission", &awslambda.PermissionArgs{
-				SourceArn: topic.Arn,
+				SourceArn: topic.Sns.Arn,
 				Function:  res.Function.Name,
 				Principal: pulumi.String("sns.amazonaws.com"),
 				Action:    pulumi.String("lambda:InvokeFunction"),
@@ -187,7 +188,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 			_, err = sns.NewTopicSubscription(ctx, name+t+"Subscription", &sns.TopicSubscriptionArgs{
 				Endpoint: res.Function.Arn,
 				Protocol: pulumi.String("lambda"),
-				Topic:    topic.ID(), // TODO check (was topic.sns)
+				Topic:    topic.Sns.ID(),
 			}, opts...)
 			if err != nil {
 				return nil, err

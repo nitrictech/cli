@@ -13,6 +13,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package run
 
 import (
@@ -37,7 +38,6 @@ type MinioServer struct {
 	dir     string
 	name    string
 	cid     string
-	buckets []string
 	ce      containerengine.ContainerEngine
 	apiPort int // external API port from the minio container
 }
@@ -62,14 +62,6 @@ func (m *MinioServer) Start() error {
 	err = os.MkdirAll(runDir, runPerm)
 	if err != nil {
 		return errors.WithMessage(err, "os.MkdirAll")
-	}
-
-	// create required buckets
-	for _, bName := range m.buckets {
-		err = os.MkdirAll(filepath.Join(runDir, "buckets", bName), runPerm)
-		if err != nil {
-			return errors.WithMessage(err, "os.MkdirAll")
-		}
 	}
 
 	ports, err := utils.Take(2)
@@ -148,7 +140,7 @@ func (m *MinioServer) Stop() error {
 	return m.ce.Stop(m.cid, &timeout)
 }
 
-func NewMinio(dir string, name string, buckets []string) (*MinioServer, error) {
+func NewMinio(dir string, name string) (*MinioServer, error) {
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return nil, err
@@ -164,9 +156,8 @@ func NewMinio(dir string, name string, buckets []string) (*MinioServer, error) {
 	}
 
 	return &MinioServer{
-		ce:      ce,
-		dir:     dir,
-		name:    name,
-		buckets: buckets,
+		ce:   ce,
+		dir:  dir,
+		name: name,
 	}, nil
 }

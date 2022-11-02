@@ -112,6 +112,21 @@ func (mr *MockContainerEngineMockRecorder) ImagePull(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePull", reflect.TypeOf((*MockContainerEngine)(nil).ImagePull), arg0, arg1)
 }
 
+// Inspect mocks base method.
+func (m *MockContainerEngine) Inspect(arg0 string) (types.ImageInspect, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Inspect", arg0)
+	ret0, _ := ret[0].(types.ImageInspect)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Inspect indicates an expected call of Inspect.
+func (mr *MockContainerEngineMockRecorder) Inspect(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Inspect", reflect.TypeOf((*MockContainerEngine)(nil).Inspect), arg0)
+}
+
 // ListImages mocks base method.
 func (m *MockContainerEngine) ListImages(arg0, arg1 string) ([]containerengine.Image, error) {
 	m.ctrl.T.Helper()

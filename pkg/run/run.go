@@ -89,12 +89,7 @@ func (l *localServices) Status() *LocalServicesStatus {
 func (l *localServices) Start(pool worker.WorkerPool) error {
 	var err error
 
-	buckets := make([]string, 0, len(l.s.Buckets))
-	for k := range l.s.Buckets {
-		buckets = append(buckets, k)
-	}
-
-	l.mio, err = NewMinio(l.status.RunDir, l.s.Name, buckets)
+	l.mio, err = NewMinio(l.status.RunDir, l.s.Name)
 	if err != nil {
 		return err
 	}

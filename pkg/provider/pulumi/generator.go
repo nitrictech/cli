@@ -71,7 +71,7 @@ func New(p *project.Project, name, provider string, envMap map[string]string, op
 	err := pv.Run()
 	if err != nil {
 		if strings.Contains(err.Error(), "executable file not found") {
-			return nil, errors.WithMessage(err, "Please install pulumi from https://www.pulumi.com/docs/get-started/install/")
+			return nil, errors.WithMessage(err, "please install pulumi from https://www.pulumi.com/docs/get-started/install/")
 		}
 
 		return nil, err
@@ -120,8 +120,8 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 	ctx := context.Background()
 
 	aboutData, err := exec.Command("pulumi", "about", "-j").Output()
-	if err != nil {
-		return nil, errors.WithMessage(err, "Failed to determine login state of pulumi")
+	if err != nil && strings.Contains(err.Error(), "executable file not found") {
+		return nil, errors.WithMessage(err, "please install pulumi from https://www.pulumi.com/docs/get-started/install/")
 	}
 
 	// Default to local backend if not already logged in
@@ -129,7 +129,7 @@ func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {
 
 	err = json.Unmarshal([]byte(strings.TrimSpace(string(aboutData))), about)
 	if err != nil {
-		return nil, errors.WithMessage(err, "Failed to determine login state of pulumi")
+		return nil, errors.WithMessage(err, "please check your installation - https://nitric.io/docs/installation")
 	}
 
 	upsertOpts := []auto.LocalWorkspaceOption{

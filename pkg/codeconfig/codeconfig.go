@@ -38,7 +38,6 @@ import (
 	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 
-	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/cron"
 	"github.com/nitrictech/cli/pkg/output"
@@ -74,11 +73,6 @@ func New(p *project.Project, envMap map[string]string) (CodeConfig, error) {
 
 func Populate(initial *project.Project, envMap map[string]string) (*project.Project, error) {
 	cc, err := New(initial, envMap)
-	if err != nil {
-		return nil, err
-	}
-
-	err = build.CreateBaseDev(initial)
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +299,6 @@ func useHostInterface(hc *container.HostConfig, iface string, port int) ([]strin
 		return nil, err
 	}
 
-	fmt.Println("dockerInternalAddr ", dockerInternalAddr)
-
 	hc.NetworkMode = "host"
 
 	return []string{
@@ -368,14 +360,12 @@ func (c *codeConfig) collectOne(handler string) error {
 		return errors.WithMessage(err, "error discovering container engine")
 	}
 
-	opts, err := rt.LaunchOptsForFunctionCollect(c.initialProject.Dir)
 	if err != nil {
 		return err
 	}
 
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
-		Mounts:     opts.Mounts,
 	}
 
 	var env []string
@@ -399,11 +389,8 @@ func (c *codeConfig) collectOne(handler string) error {
 	cc := &container.Config{
 		AttachStdout: true,
 		AttachStderr: true,
-		Image:        opts.Image,
+		Image:        fmt.Sprintf("%s-%s", c.initialProject.Name, fun.name),
 		Env:          env,
-		Cmd:          opts.Cmd,
-		Entrypoint:   opts.Entrypoint,
-		WorkingDir:   opts.TargetWD,
 	}
 
 	if output.VerboseLevel > 2 {

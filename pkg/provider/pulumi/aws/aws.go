@@ -34,14 +34,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/dynamodb"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ecr"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/resourcegroups"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/secretsmanager"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sns"
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/sqs"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/dynamodb"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ecr"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/resourcegroups"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/secretsmanager"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"golang.org/x/exp/slices"
@@ -75,7 +74,7 @@ type awsProvider struct {
 
 	// created resources (mostly here for testing)
 	rg          *resourcegroups.Group
-	topics      map[string]*sns.Topic
+	topics      map[string]*Topic
 	buckets     map[string]*s3.Bucket
 	queues      map[string]*sqs.Queue
 	collections map[string]*dynamodb.Table
@@ -111,7 +110,7 @@ func New(p *project.Project, name string, envMap map[string]string) (common.Pulu
 		proj:        p,
 		sc:          asc,
 		envMap:      envMap,
-		topics:      map[string]*sns.Topic{},
+		topics:      map[string]*Topic{},
 		buckets:     map[string]*s3.Bucket{},
 		queues:      map[string]*sqs.Queue{},
 		collections: map[string]*dynamodb.Table{},
@@ -167,6 +166,11 @@ func (a *awsProvider) SupportedRegions() []string {
 
 func (a *awsProvider) Validate() error {
 	errList := &multierror.ErrorList{}
+
+	_, err := session.NewSession()
+	if err != nil {
+		errList.Push(fmt.Errorf("unable to validate AWS credentials - see https://nitric.io/docs/reference/aws for config info"))
+	}
 
 	if a.sc.Region == "" {
 		errList.Push(fmt.Errorf("target %s requires \"region\"", a.sc.Provider))
@@ -278,9 +282,9 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "resource group create")
 	}
 
-	for k := range a.proj.Topics {
-		a.topics[k], err = sns.NewTopic(ctx, k, &sns.TopicArgs{
-			Tags: common.Tags(ctx, k),
+	for k, v := range a.proj.Topics {
+		a.topics[k], err = newTopic(ctx, k, &TopicArgs{
+			Topic: v,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "sns topic "+k)
@@ -345,8 +349,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 			a.schedules[k], err = a.newSchedule(ctx, k, ScheduleArgs{
 				Expression: s.Expression,
-				TopicArn:   topic.Arn,
-				TopicName:  topic.Name,
+				TopicArn:   topic.Sns.Arn,
+				TopicName:  topic.Sns.Name,
 			})
 			if err != nil {
 				return errors.WithMessage(err, "schedule "+k)
@@ -366,7 +370,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		localImageName := c.ImageTagName(a.proj, "")
 
 		repo, err := ecr.NewRepository(ctx, localImageName, &ecr.RepositoryArgs{
-			Tags: common.Tags(ctx, localImageName),
+			ForceDelete: pulumi.BoolPtr(true),
+			Tags:        common.Tags(ctx, localImageName),
 		})
 		if err != nil {
 			return err
@@ -378,6 +383,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 				ProjectDir:    a.proj.Dir,
 				Provider:      a.sc.Provider,
 				Compute:       c,
+				SourceImage:   fmt.Sprintf("%s-%s", a.proj.Name, c.Unit().Name),
 				RepositoryUrl: repo.RepositoryUrl,
 				Server:        pulumi.String(authToken.ProxyEndpoint),
 				Username:      pulumi.String(authToken.UserName),

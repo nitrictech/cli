@@ -1,12 +1,19 @@
-FROM python:3.7-slim
+FROM python:3.10-slim
 
 ARG HANDLER
 
 ENV HANDLER=${HANDLER}
 
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip pipenv
 
-COPY requirements.txt requirements.txt
+# Copy either requirements.txt for Pipfile
+COPY requirements.tx[t] Pipfil[e] Pipfile.loc[k] ./
+
+# Guarantee lock file if we have a Pipfile and no Pipfile.lock
+RUN (stat Pipfile && pipenv lock) || echo "No Pipfile found"
+
+# Output a requirements.txt file for final module install if there is a Pipfile.lock found
+RUN (stat Pipfile.lock && pipenv requirements > requirements.txt) || echo "No Pipfile.lock found"
 
 RUN pip install --no-cache-dir -r requirements.txt
 

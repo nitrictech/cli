@@ -34,7 +34,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	mock_lambdaiface "github.com/nitrictech/cli/mocks/mock_lambda"
-
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
@@ -160,7 +159,7 @@ func TestAWS(t *testing.T) {
 		wg.Add(1)
 		pulumi.All(a.rg.Name, a.rg.ResourceQuery.Query()).ApplyT(func(all []interface{}) error {
 			name := all[0].(string)
-			query := all[1].(string)
+			query := *all[1].(*string)
 			expectQuery := `{"ResourceTypeFilters":["AWS::AllSupported"],"TagFilters":[{"Key":"x-nitric-stack","Values":["atest-deploy"]}]}`
 
 			assert.Equal(t, stackName, name, "resourceGroup has the wrong name %s!=%s", stackName, name)

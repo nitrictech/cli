@@ -59,10 +59,11 @@ type azureStackConfig struct {
 }
 
 type azureProvider struct {
-	proj   *project.Project
-	sc     *azureStackConfig
-	envMap map[string]string
-	tmpDir string
+	proj    *project.Project
+	sc      *azureStackConfig
+	envMap  map[string]string
+	tmpDir  string
+	stackID pulumi.StringInput
 }
 
 var (
@@ -249,6 +250,8 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
+	a.stackID = pulumi.String(ctx.Stack())
+
 	a.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
@@ -261,7 +264,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 
 	rg, err := resources.NewResourceGroup(ctx, resourceName(ctx, "", ResourceGroupRT), &resources.ResourceGroupArgs{
 		Location: pulumi.String(a.sc.Region),
-		Tags:     common.Tags(ctx, ctx.Stack()),
+		Tags:     common.Tags(ctx, a.stackID, ctx.Stack()),
 	})
 	if err != nil {
 		return errors.WithMessage(err, "resource group create")
@@ -291,7 +294,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 			},
 			TenantId: pulumi.String(clientConfig.TenantId),
 		},
-		Tags: common.Tags(ctx, kvName),
+		Tags: common.Tags(ctx, a.stackID, kvName),
 	})
 	if err != nil {
 		return err
@@ -313,7 +316,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		contAppsArgs.Topics[k], err = eventgrid.NewTopic(ctx, resourceName(ctx, k, EventGridRT), &eventgrid.TopicArgs{
 			ResourceGroupName: rg.Name,
 			Location:          rg.Location,
-			Tags:              common.Tags(ctx, k),
+			Tags:              common.Tags(ctx, a.stackID, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "eventgrid topic "+k)

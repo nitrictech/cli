@@ -41,6 +41,7 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/secretsmanager"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sqs"
+	"github.com/pulumi/pulumi-random/sdk/v4/go/random"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"golang.org/x/exp/slices"
@@ -71,6 +72,7 @@ type awsProvider struct {
 	lambdaClient lambdaiface.LambdaAPI
 	envMap       map[string]string
 	tmpDir       string
+	stackID      pulumi.StringInput
 
 	// created resources (mostly here for testing)
 	rg          *resourcegroups.Group
@@ -143,6 +145,10 @@ func (a *awsProvider) Plugins() []common.Plugin {
 		{
 			Name:    "aws",
 			Version: strings.TrimSpace(awsPluginVersion),
+		},
+		{
+			Name:    "random",
+			Version: strings.TrimSpace(common.RandomPluginVersion),
 		},
 	}
 }
@@ -260,31 +266,49 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		a.lambdaClient = lambda.New(sess, &aws.Config{Region: aws.String(a.sc.Region)})
 	}
 
-	rgQueryJSON, err := json.Marshal(map[string]interface{}{
-		"ResourceTypeFilters": []string{"AWS::AllSupported"},
-		"TagFilters": []interface{}{
-			map[string]interface{}{
-				"Key":    "x-nitric-stack",
-				"Values": []string{ctx.Stack()},
-			},
-		},
+	stackRandId, err := random.NewRandomString(ctx, fmt.Sprintf("%s-stack-name", a.sc.Name), &random.RandomStringArgs{
+		Special: pulumi.Bool(false),
+		Length:  pulumi.Int(8),
+		Keepers: pulumi.ToMap(map[string]interface{}{
+			"stack-name": a.sc.Name,
+		}),
 	})
 	if err != nil {
-		return errors.WithMessage(err, "resource group json marshal")
+		return errors.WithMessage(err, "base customRole id")
 	}
 
+	a.stackID = pulumi.Sprintf("%s-%s", ctx.Stack(), stackRandId.ID())
+	rgQueryJSON := stackRandId.ID().ToStringOutput().ApplyT(func(sid string) (string, error) {
+		b, err := json.Marshal(map[string]interface{}{
+			"ResourceTypeFilters": []string{"AWS::AllSupported"},
+			"TagFilters": []interface{}{
+				map[string]interface{}{
+					"Key":    "x-nitric-stack",
+					"Values": []string{ctx.Stack() + "-" + sid},
+				},
+			},
+		})
+		if err != nil {
+			return "", err
+		}
+
+		return string(b), nil
+	}).(pulumi.StringOutput)
+
 	a.rg, err = resourcegroups.NewGroup(ctx, ctx.Stack(), &resourcegroups.GroupArgs{
+		Description: pulumi.Sprintf("Nitric RG for project %s and stack %s", a.proj.Name, a.sc.Name),
 		ResourceQuery: &resourcegroups.GroupResourceQueryArgs{
-			Query: pulumi.String(rgQueryJSON),
+			Query: rgQueryJSON,
 		},
 	})
 	if err != nil {
-		return errors.WithMessage(err, "resource group create")
+		return err
 	}
 
 	for k, v := range a.proj.Topics {
 		a.topics[k], err = newTopic(ctx, k, &TopicArgs{
-			Topic: v,
+			StackID: a.stackID,
+			Topic:   v,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "sns topic "+k)
@@ -293,7 +317,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k := range a.proj.Buckets {
 		a.buckets[k], err = s3.NewBucket(ctx, k, &s3.BucketArgs{
-			Tags: common.Tags(ctx, k),
+			Tags: common.Tags(ctx, a.stackID, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "s3 bucket "+k)
@@ -302,7 +326,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k := range a.proj.Queues {
 		a.queues[k], err = sqs.NewQueue(ctx, k, &sqs.QueueArgs{
-			Tags: common.Tags(ctx, k),
+			Tags: common.Tags(ctx, a.stackID, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "sqs queue "+k)
@@ -324,7 +348,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			HashKey:     pulumi.String("_pk"),
 			RangeKey:    pulumi.String("_sk"),
 			BillingMode: pulumi.String("PAY_PER_REQUEST"),
-			Tags:        common.Tags(ctx, k),
+			Tags:        common.Tags(ctx, a.stackID, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "dynamodb table "+k)
@@ -333,7 +357,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k := range a.proj.Secrets {
 		a.secrets[k], err = secretsmanager.NewSecret(ctx, k, &secretsmanager.SecretArgs{
-			Tags: common.Tags(ctx, k),
+			Tags: common.Tags(ctx, a.stackID, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "secretsmanager secret"+k)
@@ -347,7 +371,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 				return fmt.Errorf("schedule %s does not have a topic %s", k, s.Target.Name)
 			}
 
-			a.schedules[k], err = a.newSchedule(ctx, k, ScheduleArgs{
+			a.schedules[k], err = newSchedule(ctx, k, ScheduleArgs{
+				StackID:    a.stackID,
 				Expression: s.Expression,
 				TopicArn:   topic.Sns.Arn,
 				TopicName:  topic.Sns.Name,
@@ -371,7 +396,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 		repo, err := ecr.NewRepository(ctx, localImageName, &ecr.RepositoryArgs{
 			ForceDelete: pulumi.BoolPtr(true),
-			Tags:        common.Tags(ctx, localImageName),
+			Tags:        common.Tags(ctx, a.stackID, localImageName),
 		})
 		if err != nil {
 			return err
@@ -402,7 +427,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 			Topics:      a.topics,
 			DockerImage: image,
 			Compute:     c,
-			StackName:   ctx.Stack(),
+			StackID:     a.stackID,
 			EnvMap:      a.envMap,
 		})
 		if err != nil {
@@ -414,6 +439,7 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 
 	for k, v := range a.proj.ApiDocs {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
+			StackID:            a.stackID,
 			OpenAPISpec:        v,
 			LambdaFunctions:    a.funcs,
 			SecurityDefintions: a.proj.SecurityDefinitions[k],

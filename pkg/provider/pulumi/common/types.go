@@ -18,10 +18,14 @@ package common
 
 import (
 	"context"
+	_ "embed"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
+
+//go:embed pulumi-random-version.txt
+var RandomPluginVersion string
 
 type Plugin struct {
 	Name    string
@@ -42,11 +46,12 @@ type PulumiProvider interface {
 	SupportedRegions() []string
 }
 
-func Tags(ctx *pulumi.Context, name string) pulumi.StringMap {
+func Tags(ctx *pulumi.Context, stackID pulumi.StringInput, name string) pulumi.StringMap {
 	return pulumi.StringMap{
-		"x-nitric-project": pulumi.String(ctx.Project()),
-		"x-nitric-stack":   pulumi.String(ctx.Stack()),
-		"x-nitric-name":    pulumi.String(name),
+		"x-nitric-project":    pulumi.String(ctx.Project()),
+		"x-nitric-stack":      stackID,
+		"x-nitric-stack-name": pulumi.String(ctx.Stack()),
+		"x-nitric-name":       pulumi.String(name),
 	}
 }
 

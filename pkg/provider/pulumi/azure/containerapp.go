@@ -150,7 +150,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 				CustomerId: aw.CustomerId,
 			},
 		},
-		Tags: common.Tags(ctx, ctx.Stack()+"Kube"),
+		Tags: common.Tags(ctx, a.stackID, ctx.Stack()+"Kube"),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
@@ -364,7 +364,7 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 				},
 			},
 		},
-		Tags: common.Tags(ctx, name),
+		Tags: common.Tags(ctx, a.stackID, name),
 		Template: app.TemplateArgs{
 			Containers: app.ContainerArray{
 				app.ContainerArgs{

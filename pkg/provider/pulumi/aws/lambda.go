@@ -37,7 +37,7 @@ import (
 
 type LambdaArgs struct {
 	Client      lambdaiface.LambdaAPI
-	StackName   string
+	StackID     pulumi.StringInput
 	Topics      map[string]*Topic
 	DockerImage *common.Image
 	Compute     project.Compute
@@ -81,7 +81,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 
 	res.Role, err = iam.NewRole(ctx, name+"LambdaRole", &iam.RoleArgs{
 		AssumeRolePolicy: pulumi.String(tmpJSON),
-		Tags:             common.Tags(ctx, name+"LambdaRole"),
+		Tags:             common.Tags(ctx, args.StackID, name+"LambdaRole"),
 	}, opts...)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 
 	envVars := pulumi.StringMap{
 		"NITRIC_ENVIRONMENT": pulumi.String("cloud"),
-		"NITRIC_STACK":       pulumi.String(args.StackName),
+		"NITRIC_STACK":       args.StackID,
 		"MIN_WORKERS":        pulumi.String(fmt.Sprint(args.Compute.Workers())),
 	}
 	for k, v := range args.EnvMap {
@@ -144,7 +144,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		Timeout:     pulumi.IntPtr(args.Compute.Unit().Timeout),
 		PackageType: pulumi.String("Image"),
 		Role:        res.Role.Arn,
-		Tags:        common.Tags(ctx, name),
+		Tags:        common.Tags(ctx, args.StackID, name),
 		Environment: awslambda.FunctionEnvironmentArgs{Variables: envVars},
 	}, opts...)
 	if err != nil {

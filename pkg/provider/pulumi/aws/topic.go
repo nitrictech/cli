@@ -38,7 +38,8 @@ type Topic struct {
 }
 
 type TopicArgs struct {
-	Topic project.Topic
+	StackID pulumi.StringInput
+	Topic   project.Topic
 }
 
 func newTopic(ctx *pulumi.Context, name string, args *TopicArgs, opts ...pulumi.ResourceOption) (*Topic, error) {
@@ -51,7 +52,7 @@ func newTopic(ctx *pulumi.Context, name string, args *TopicArgs, opts ...pulumi.
 
 	// create the SNS topic
 	res.Sns, err = sns.NewTopic(ctx, name, &sns.TopicArgs{
-		Tags: common.Tags(ctx, name),
+		Tags: common.Tags(ctx, args.StackID, name),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
@@ -138,7 +139,7 @@ func newTopic(ctx *pulumi.Context, name string, args *TopicArgs, opts ...pulumi.
 	res.Sfn, err = sfn.NewStateMachine(ctx, fmt.Sprintf("%s-delay-ctrl", name), &sfn.StateMachineArgs{
 		RoleArn: sfnRole.Arn,
 		// Apply the same name as the topic to the state machine
-		Tags:       common.Tags(ctx, fmt.Sprintf("%s", name)),
+		Tags:       common.Tags(ctx, args.StackID, fmt.Sprintf("%s", name)),
 		Definition: sfnDef,
 	})
 	if err != nil {

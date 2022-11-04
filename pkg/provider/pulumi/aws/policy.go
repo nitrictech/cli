@@ -84,7 +84,7 @@ var awsActionsMap map[v1.Action][]string = map[v1.Action][]string{
 		"sqs:SendMessage",
 	},
 	v1.Action_QueueReceive: {
-		"sqs: ReceiveMessage",
+		"sqs:ReceiveMessage",
 	},
 	// XXX: Cannot be applied to single resources
 	// v1.Action_QueueList: {

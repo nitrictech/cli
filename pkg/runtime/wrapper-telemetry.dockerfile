@@ -23,7 +23,10 @@ COPY ${OTELCOL_CONFIG} /etc/otelcol/config.yaml
 RUN chmod -R a+r /etc/otelcol
 
 ARG NITRIC_TRACE_SAMPLE_PERCENT
+
 ENV NITRIC_TRACE_SAMPLE_PERCENT ${NITRIC_TRACE_SAMPLE_PERCENT}
+ENV OTELCOL_BIN /usr/bin/otelcol-contrib
+ENV OTELCOL_CONFIG /etc/otelcol/config.yaml
 
 CMD [%s]
 ENTRYPOINT ["/bin/membrane"]

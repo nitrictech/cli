@@ -121,7 +121,7 @@ func TestGCP(t *testing.T) {
 		secrets:            map[string]*secretmanager.Secret{},
 	}
 	g.token = &oauth2.Token{AccessToken: "testing-token"}
-	g.projectId = "test-project-id"
+	g.projectID = "test-project-id"
 	g.projectNumber = "test-project-number"
 	g.images = map[string]*common.Image{
 		"runner": {
@@ -149,7 +149,7 @@ func TestGCP(t *testing.T) {
 
 		wg.Add(1)
 		g.topics["sales"].Labels.ApplyT(func(tags map[string]string) error {
-			expectTags := map[string]string{"x-nitric-name": "sales", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
+			expectTags := map[string]string{"x-nitric-name": "sales", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy", "x-nitric-stack-name": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "topic has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
 
@@ -166,7 +166,7 @@ func TestGCP(t *testing.T) {
 
 		wg.Add(1)
 		g.buckets["money"].Labels.ApplyT(func(tags map[string]string) error {
-			expectTags := map[string]string{"x-nitric-name": "money", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
+			expectTags := map[string]string{"x-nitric-name": "money", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy", "x-nitric-stack-name": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "money has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
 
@@ -175,7 +175,7 @@ func TestGCP(t *testing.T) {
 
 		wg.Add(1)
 		g.secrets["hush"].Labels.ApplyT(func(tags map[string]string) error {
-			expectTags := map[string]string{"x-nitric-name": "hush", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
+			expectTags := map[string]string{"x-nitric-name": "hush", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy", "x-nitric-stack-name": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "hush has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
 

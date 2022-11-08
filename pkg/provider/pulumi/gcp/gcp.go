@@ -77,7 +77,8 @@ type gcpProvider struct {
 
 	token         *oauth2.Token
 	projectNumber string
-	projectId     string
+	projectID     string
+	stackID       pulumi.StringInput
 
 	buckets            map[string]*storage.Bucket
 	topics             map[string]*pubsub.Topic
@@ -90,9 +91,6 @@ type gcpProvider struct {
 
 //go:embed pulumi-gcp-version.txt
 var gcpPluginVersion string
-
-//go:embed pulumi-random-version.txt
-var randomPluginVersion string
 
 func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
 	gsc := &gcpStackConfig{
@@ -134,7 +132,7 @@ func (g *gcpProvider) Plugins() []common.Plugin {
 		},
 		{
 			Name:    "random",
-			Version: strings.TrimSpace(randomPluginVersion),
+			Version: strings.TrimSpace(common.RandomPluginVersion),
 		},
 	}
 }
@@ -298,6 +296,8 @@ func (g *gcpProvider) setToken() error {
 func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
+	g.stackID = pulumi.String(ctx.Stack())
+
 	g.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
@@ -307,7 +307,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
-	if g.projectId == "" {
+	if g.projectID == "" {
 		project, err := organizations.LookupProject(ctx, &organizations.LookupProjectArgs{
 			ProjectId: &g.gcpProject,
 		}, nil)
@@ -315,12 +315,12 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			return err
 		}
 
-		g.projectId = *project.ProjectId
+		g.projectID = *project.ProjectId
 		g.projectNumber = project.Number
 	}
 
 	nitricProj, err := newProject(ctx, "project", &ProjectArgs{
-		ProjectId:     g.projectId,
+		ProjectId:     g.projectID,
 		ProjectNumber: g.projectNumber,
 	})
 	if err != nil {
@@ -332,8 +332,8 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for key := range g.proj.Buckets {
 		g.buckets[key], err = storage.NewBucket(ctx, key, &storage.BucketArgs{
 			Location: pulumi.String(g.sc.Region),
-			Project:  pulumi.String(g.projectId),
-			Labels:   common.Tags(ctx, key),
+			Project:  pulumi.String(g.projectID),
+			Labels:   common.Tags(ctx, g.stackID, key),
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -356,7 +356,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for key := range g.proj.Topics {
 		g.topics[key], err = pubsub.NewTopic(ctx, key, &pubsub.TopicArgs{
 			Name:   pulumi.String(key),
-			Labels: common.Tags(ctx, key),
+			Labels: common.Tags(ctx, g.stackID, key),
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -366,7 +366,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for key := range g.proj.Queues {
 		g.queueTopics[key], err = pubsub.NewTopic(ctx, key, &pubsub.TopicArgs{
 			Name:   pulumi.String(key),
-			Labels: common.Tags(ctx, key),
+			Labels: common.Tags(ctx, g.stackID, key),
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -398,7 +398,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 				TimeZone: pulumi.String("UTC"),
 				PubsubTarget: cloudscheduler.JobPubsubTargetArgs{
 					Attributes: pulumi.ToStringMap(map[string]string{"x-nitric-topic": sched.Target.Name}),
-					TopicName:  pulumi.Sprintf("projects/%s/topics/%s", g.projectId, g.topics[sched.Target.Name].Name),
+					TopicName:  pulumi.Sprintf("projects/%s/topics/%s", g.projectID, g.topics[sched.Target.Name].Name),
 					Data:       pulumi.String(payload),
 				},
 				Schedule: pulumi.String(strings.ReplaceAll(sched.Expression, "'", "")),
@@ -418,9 +418,9 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			Replication: secretmanager.SecretReplicationArgs{
 				Automatic: pulumi.Bool(true),
 			},
-			Project:  pulumi.String(g.projectId),
+			Project:  pulumi.String(g.projectID),
 			SecretId: secId,
-			Labels:   common.Tags(ctx, name),
+			Labels:   common.Tags(ctx, g.stackID, name),
 		})
 		if err != nil {
 			return err
@@ -466,7 +466,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 				Provider:      g.sc.Provider,
 				Compute:       c,
 				SourceImage:   fmt.Sprintf("%s-%s", g.proj.Name, c.Unit().Name),
-				RepositoryUrl: pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
+				RepositoryUrl: pulumi.Sprintf("gcr.io/%s/%s", g.projectID, c.ImageTagName(g.proj, g.sc.Provider)),
 				Username:      pulumi.String("oauth2accesstoken"),
 				Password:      pulumi.String(g.token.AccessToken),
 				Server:        pulumi.String("https://gcr.io"),
@@ -487,7 +487,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 
 		// apply basic project level permissions for nitric resource discovery
 		_, err = projects.NewIAMMember(ctx, c.Unit().Name+"-project-member", &projects.IAMMemberArgs{
-			Project: pulumi.String(g.projectId),
+			Project: pulumi.String(g.projectID),
 			Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
 			Role:    baseComputeRole.Name,
 		})
@@ -507,7 +507,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 
 		g.cloudRunners[c.Unit().Name], err = g.newCloudRunner(ctx, c.Unit().Name, &CloudRunnerArgs{
 			Location:       pulumi.String(g.sc.Region),
-			ProjectId:      g.projectId,
+			ProjectId:      g.projectID,
 			Topics:         g.topics,
 			Compute:        c,
 			Image:          g.images[c.Unit().Name],
@@ -531,7 +531,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
 			Functions:           g.cloudRunners,
 			OpenAPISpec:         v2doc,
-			ProjectId:           pulumi.String(g.projectId),
+			ProjectId:           pulumi.String(g.projectID),
 			SecurityDefinitions: g.proj.SecurityDefinitions[k],
 		}, defaultResourceOptions)
 		if err != nil {
@@ -558,7 +558,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for name, p := range uniquePolicies {
 		if _, err := newPolicy(ctx, name, &PolicyArgs{
 			Policy:    p,
-			ProjectID: pulumi.String(g.projectId),
+			ProjectID: pulumi.String(g.projectID),
 			Resources: &StackResources{
 				Topics:        g.topics,
 				Queues:        g.queueTopics,

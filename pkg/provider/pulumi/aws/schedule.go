@@ -33,6 +33,7 @@ type ScheduleArgs struct {
 	Expression string
 	TopicArn   pulumi.StringOutput
 	TopicName  pulumi.StringInput
+	StackID    pulumi.StringInput
 }
 
 type Schedule struct {
@@ -43,7 +44,7 @@ type Schedule struct {
 	EventTarget *cloudwatch.EventTarget
 }
 
-func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args ScheduleArgs, opts ...pulumi.ResourceOption) (*Schedule, error) {
+func newSchedule(ctx *pulumi.Context, name string, args ScheduleArgs, opts ...pulumi.ResourceOption) (*Schedule, error) {
 	res := &Schedule{Name: name}
 
 	err := ctx.RegisterComponentResource("nitric:schedule:AwsSchedule", name, res, opts...)
@@ -60,7 +61,7 @@ func (a *awsProvider) newSchedule(ctx *pulumi.Context, name string, args Schedul
 
 	res.EventRule, err = cloudwatch.NewEventRule(ctx, name+"Schedule", &cloudwatch.EventRuleArgs{
 		ScheduleExpression: pulumi.String(awsCronValue),
-		Tags:               common.Tags(ctx, name+"Schedule"),
+		Tags:               common.Tags(ctx, args.StackID, name+"Schedule"),
 	}, opts...)
 	if err != nil {
 		return nil, err

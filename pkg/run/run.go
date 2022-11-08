@@ -141,6 +141,9 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		return err
 	}
 
+	// create new resources
+	res := NewResources(fmt.Sprintf("http://localhost%s", l.status.GatewayAddress))
+
 	// Start a new gateway plugin
 	gw, err := NewGateway(l.status.GatewayAddress)
 	if err != nil {
@@ -158,6 +161,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		DocumentPlugin:          dp,
 		GatewayPlugin:           gw,
 		EventsPlugin:            ev,
+		ResourcesPlugin:         res,
 		Pool:                    pool,
 		TolerateMissingServices: false,
 	})

@@ -37,6 +37,7 @@ const (
 	RuntimeJavascript RuntimeExt = "js"
 	RuntimePython     RuntimeExt = "py"
 	RuntimeGolang     RuntimeExt = "go"
+	RuntimeCsharp			RuntimeExt = "cs"
 
 	RuntimeUnknown RuntimeExt = ""
 )
@@ -55,6 +56,8 @@ func NewRunTimeFromHandler(handler string) (Runtime, error) {
 		return &python{rte: rt, handler: handler}, nil
 	case RuntimeTypescript:
 		return &typescript{rte: rt, handler: handler}, nil
+	case RuntimeCsharp:
+		return &csharp{rte: rt, handler: handler}, nil
 	default:
 		return nil, errors.New("runtime '" + string(rt) + "' not supported")
 	}

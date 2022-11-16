@@ -48,6 +48,6 @@ func (t *csharp) BaseDockerFile(w io.Writer) error {
 
 func (t *csharp) BuildArgs() map[string]string {
 	return map[string]string{
-		"HANDLER": filepath.ToSlash(t.handler),
+		"HANDLER": strings.ToLower(strings.Split(filepath.Base(t.handler), ".")[0]),
 	}
 }

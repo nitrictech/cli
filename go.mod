@@ -212,6 +212,7 @@ require (
 	github.com/nbutton23/zxcvbn-go v0.0.0-20210217022336-fa2cb2858354 // indirect
 	github.com/nishanths/exhaustive v0.8.3 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
+	github.com/nitrictech/boxygen v0.0.1-rc.9 // indirect
 	github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect

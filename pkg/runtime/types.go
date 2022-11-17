@@ -20,6 +20,7 @@ import (
 	"errors"
 	"io"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -37,6 +38,7 @@ const (
 	RuntimeJavascript RuntimeExt = "js"
 	RuntimePython     RuntimeExt = "py"
 	RuntimeGolang     RuntimeExt = "go"
+	RuntimeCsharp     RuntimeExt = "cs"
 
 	RuntimeUnknown RuntimeExt = ""
 )
@@ -45,6 +47,10 @@ var commonIgnore = []string{".nitric/", ".git/", ".idea/", ".vscode/", ".github/
 
 func NewRunTimeFromHandler(handler string) (Runtime, error) {
 	rt := RuntimeExt(strings.Replace(filepath.Ext(handler), ".", "", -1))
+
+	if strings.Contains(runtime.GOARCH, "arm") && rt == RuntimeCsharp {
+		return nil, errors.New("the .NET runtime is not supported in containers using ARM based architecture. We recommend using nitric start for local development, and a CI/CD pipeline for deployments. For more info on the issue: https://devblogs.microsoft.com/dotnet/announcing-net-6/#docker-on-arm64")
+	}
 
 	switch rt {
 	case RuntimeGolang:
@@ -55,6 +61,8 @@ func NewRunTimeFromHandler(handler string) (Runtime, error) {
 		return &python{rte: rt, handler: handler}, nil
 	case RuntimeTypescript:
 		return &typescript{rte: rt, handler: handler}, nil
+	case RuntimeCsharp:
+		return &csharp{rte: rt, handler: handler}, nil
 	default:
 		return nil, errors.New("runtime '" + string(rt) + "' not supported")
 	}

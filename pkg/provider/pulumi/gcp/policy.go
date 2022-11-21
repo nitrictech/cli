@@ -62,6 +62,7 @@ var gcpListActions []string = []string{
 	"pubsub.snapshots.list",
 	"resourcemanager.projects.get",
 	"secretmanager.secrets.list",
+	"apigateway.gateways.list",
 }
 
 var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{

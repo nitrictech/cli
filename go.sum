@@ -1660,6 +1660,8 @@ github.com/nishanths/predeclared v0.2.2 h1:V2EPdZPliZymNAn79T8RkNApBjMmVKh5XRpLm
 github.com/nishanths/predeclared v0.2.2/go.mod h1:RROzoN6TnGQupbC+lqggsOlcgysk3LMK/HI84Mp280c=
 github.com/nitrictech/nitric v0.21.0-rc.2 h1:MeWyrhuIaPotJ5JVKWlkjThlg8KT8wGkuCAILZOo4kc=
 github.com/nitrictech/nitric v0.21.0-rc.2/go.mod h1:znfsJ8tcBwFBVIPUGz1OA1PfsuyHHgn/3vBTnlqJLI8=
+github.com/nitrictech/go-mods-direct v0.0.0-20221124004415-e2ce7ec20618 h1:nHCmSvLWJUehCabPo+STGUM6cTzCLJsoYuuJEJ9qT84=
+github.com/nitrictech/go-mods-direct v0.0.0-20221124004415-e2ce7ec20618/go.mod h1:jqImBS1Tsk12vV2Gk7yP9+jajhpG+cHXrg7UhVxFruQ=
 github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf h1:8MB8W8ylM8sCM2COGfiO39/tB6BTdiawLszaUGCNL5w=
 github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf/go.mod h1:b2lzk2a4o1bvSrSCE6yvTldHuXCJymuDVhdMJGOSslw=
 github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit v0.0.0-20220905035427-cd9de58e7968 h1:TM8iW11LvAKu1TValz3tGROs3eoSmUiJfIm3H43HXYo=

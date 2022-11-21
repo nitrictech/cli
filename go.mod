@@ -26,6 +26,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/moby/moby v20.10.21+incompatible
+	github.com/nitrictech/go-mods-direct v0.0.0-20221124004415-e2ce7ec20618
 	github.com/nitrictech/nitric v0.21.0-rc.2
 	github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit v0.0.0-20220905035427-cd9de58e7968
 	github.com/pkg/errors v0.9.1
@@ -44,11 +45,18 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/valyala/fasthttp v1.41.0
 	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
-	golang.org/x/mod v0.7.0
+	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/oauth2 v0.2.0
 	google.golang.org/grpc v1.51.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	github.com/aws/aws-sdk-go-v2 v1.17.1
+	github.com/aws/aws-sdk-go-v2/config v1.17.10
+	github.com/aws/aws-sdk-go-v2/credentials v1.12.23
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.1
 )
 
 require (
@@ -96,10 +104,7 @@ require (
 	github.com/asdine/storm v2.1.2+incompatible // indirect
 	github.com/ashanbrown/forbidigo v1.3.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.17.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.9 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.17.10 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.12.23 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
@@ -113,7 +118,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.13.21 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.18.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.19.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.25 // indirect

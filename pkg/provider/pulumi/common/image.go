@@ -17,14 +17,18 @@
 package common
 
 import (
+	_ "embed"
 	"path/filepath"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
-	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit"
+	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.21/dockerbuildkit"
 )
+
+//go:embed pulumi-docker-buildkit-version.txt
+var BuildkitPluginVersion string
 
 type ImageArgs struct {
 	SourceImage   string

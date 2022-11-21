@@ -39,6 +39,7 @@ generate:
 	@go run ./hack/modversion "github.com/pulumi/pulumi-azure-native/" > pkg/provider/pulumi/azure/pulumi-azure-native-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-aws/" > pkg/provider/pulumi/aws/pulumi-aws-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-random/"  > pkg/provider/pulumi/common/pulumi-random-version.txt
+	@go run ./hack/modversion -inpath "github.com/nitrictech/pulumi-docker-buildkit/sdk/"  > pkg/provider/pulumi/common/pulumi-docker-buildkit-version.txt
 	@go run ./hack/readmegen/ README.md
 
 .PHONY: fmt

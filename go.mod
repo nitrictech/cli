@@ -7,7 +7,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v67.1.0+incompatible
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/aws/aws-sdk-go v1.44.142
+	github.com/aws/aws-sdk-go v1.44.143
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.21+incompatible
@@ -18,7 +18,7 @@ require (
 	github.com/golangci/golangci-lint v1.50.0
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/consul/sdk v0.12.0
+	github.com/hashicorp/consul/sdk v0.13.0
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.6.0
 	github.com/imdario/mergo v0.3.13
@@ -44,7 +44,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
 	github.com/valyala/fasthttp v1.41.0
-	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
+	golang.org/x/exp v0.0.0-20221114191408-850992195362
 	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/oauth2 v0.2.0
 	google.golang.org/grpc v1.51.0
@@ -402,7 +402,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/viant/ptrie v0.3.0 // indirect
 	github.com/viant/toolbox v0.33.2 // indirect
-	github.com/xanzy/ssh-agent v0.3.2 // indirect
+	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.1 // indirect
 	github.com/xdg-go/stringprep v1.0.3 // indirect

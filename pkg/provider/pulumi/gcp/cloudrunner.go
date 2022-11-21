@@ -79,6 +79,10 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 			Name:  pulumi.String("SERVICE_ACCOUNT_EMAIL"),
 			Value: args.ServiceAccount.Email,
 		},
+		cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String("GCP_REGION"),
+			Value: args.Location,
+		},
 	}
 
 	// Ensure functions are aware of the delay queue

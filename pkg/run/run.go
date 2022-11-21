@@ -29,7 +29,6 @@ import (
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
 	queue_service "github.com/nitrictech/nitric/pkg/plugins/queue/dev"
 	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
-	minio "github.com/nitrictech/nitric/pkg/plugins/storage/minio"
 	nitric_utils "github.com/nitrictech/nitric/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/worker"
 )
@@ -50,7 +49,7 @@ type LocalServicesStatus struct {
 
 type localServices struct {
 	s      *project.Project
-	mio    *MinioServer
+	mio    *SeaweedServer
 	mem    *membrane.Membrane
 	status *LocalServicesStatus
 }
@@ -89,7 +88,10 @@ func (l *localServices) Status() *LocalServicesStatus {
 func (l *localServices) Start(pool worker.WorkerPool) error {
 	var err error
 
-	l.mio, err = NewMinio(l.status.RunDir, l.s.Name)
+	os.Setenv(MINIO_ACCESS_KEY_ENV, "minioadmin")
+	os.Setenv(MINIO_SECRET_KEY_ENV, "minioadmin")
+
+	l.mio, err = NewSeaweed()
 	if err != nil {
 		return err
 	}
@@ -103,9 +105,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 	l.status.MinioEndpoint = fmt.Sprintf("localhost:%d", l.mio.GetApiPort())
 
 	// Connect dev storage
-	os.Setenv(minio.MINIO_ENDPOINT_ENV, l.status.MinioEndpoint)
-	os.Setenv(minio.MINIO_ACCESS_KEY_ENV, "minioadmin")
-	os.Setenv(minio.MINIO_SECRET_KEY_ENV, "minioadmin")
+	os.Setenv(MINIO_ENDPOINT_ENV, l.status.MinioEndpoint)
 
 	sp, err := NewStorage()
 	if err != nil {

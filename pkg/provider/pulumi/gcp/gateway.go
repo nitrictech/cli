@@ -34,12 +34,14 @@ import (
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type ApiGatewayArgs struct {
 	ProjectId           pulumi.StringInput
+	StackID             pulumi.StringInput
 	OpenAPISpec         *openapi2.T
 	Functions           map[string]*CloudRunner
 	SecurityDefinitions map[string]*v1.ApiSecurityDefinition
@@ -209,7 +211,8 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	}).(pulumi.StringOutput)
 
 	res.Api, err = apigateway.NewApi(ctx, name, &apigateway.ApiArgs{
-		ApiId: pulumi.String(name),
+		ApiId:  pulumi.String(name),
+		Labels: common.Tags(ctx, args.StackID, name),
 	}, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "api "+name)
@@ -256,6 +259,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 				GoogleServiceAccount: invoker.Email,
 			},
 		},
+		Labels: common.Tags(ctx, args.StackID, name),
 	}, append(opts, pulumi.ReplaceOnChanges([]string{"*"}))...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "api config")
@@ -266,6 +270,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		DisplayName: pulumi.String(name + "-gateway"),
 		GatewayId:   pulumi.String(name + "-gateway"),
 		ApiConfig:   pulumi.Sprintf("projects/%s/locations/global/apis/%s/configs/%s", args.ProjectId, res.Api.ApiId, config.ApiConfigId),
+		Labels:      common.Tags(ctx, args.StackID, name),
 	}, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "api gateway")

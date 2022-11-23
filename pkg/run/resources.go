@@ -44,7 +44,7 @@ func (r *RunResourcesService) Details(typ common.ResourceType, name string) (*co
 	case common.ResourceType_Api:
 		return r.getApiDetails(name)
 	default:
-		return nil, fmt.Errorf("unsupported resoruce type %s", typ)
+		return nil, fmt.Errorf("unsupported resource type %s", typ)
 	}
 }
 

@@ -18,6 +18,7 @@ package codeconfig
 
 import (
 	"context"
+	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -86,6 +87,24 @@ func (s *Server) Declare(ctx context.Context, req *pb.ResourceDeclareRequest) (*
 	}
 
 	return &pb.ResourceDeclareResponse{}, nil
+}
+
+func (s *Server) Details(ctx context.Context, req *pb.ResourceDetailsRequest) (*pb.ResourceDetailsResponse, error) {
+	switch req.Resource.Type {
+	case pb.ResourceType_Api:
+		return &pb.ResourceDetailsResponse{
+			Provider: "dev",
+			Service:  "Api",
+			Id:       req.Resource.Name,
+			Details: &pb.ResourceDetailsResponse_Api{
+				Api: &pb.ApiResourceDetails{
+					Url: "http://localhost:50051/apis/" + req.Resource.Name,
+				},
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported resource type %s", req.Resource.Type)
+	}
 }
 
 // NewServer - Creates a new deployment server

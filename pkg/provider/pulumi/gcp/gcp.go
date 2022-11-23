@@ -373,8 +373,9 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		}
 
 		g.queueSubscriptions[key], err = pubsub.NewSubscription(ctx, key+"-sub", &pubsub.SubscriptionArgs{
-			Name:  pulumi.Sprintf("%s-nitricqueue", key),
-			Topic: g.queueTopics[key].Name,
+			Name:   pulumi.Sprintf("%s-nitricqueue", key),
+			Topic:  g.queueTopics[key].Name,
+			Labels: common.Tags(ctx, g.stackID, key+"-sub"),
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -533,6 +534,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			OpenAPISpec:         v2doc,
 			ProjectId:           pulumi.String(g.projectID),
 			SecurityDefinitions: g.proj.SecurityDefinitions[k],
+			StackID:             g.stackID,
 		}, defaultResourceOptions)
 		if err != nil {
 			return err

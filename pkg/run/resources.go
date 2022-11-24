@@ -17,6 +17,7 @@
 package run
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/nitrictech/nitric/pkg/providers/common"
@@ -39,7 +40,7 @@ func (r *RunResourcesService) getApiDetails(name string) (*common.DetailsRespons
 	}, nil
 }
 
-func (r *RunResourcesService) Details(typ common.ResourceType, name string) (*common.DetailsResponse[any], error) {
+func (r *RunResourcesService) Details(ctx context.Context, typ common.ResourceType, name string) (*common.DetailsResponse[any], error) {
 	switch typ {
 	case common.ResourceType_Api:
 		return r.getApiDetails(name)

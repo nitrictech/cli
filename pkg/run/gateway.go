@@ -17,6 +17,7 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -74,7 +75,7 @@ func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	resp, err := worker.HandleHttpRequest(httpReq)
+	resp, err := worker.HandleHttpRequest(context.TODO(), httpReq)
 	if err != nil {
 		ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
 		return
@@ -110,7 +111,7 @@ func (s *BaseHttpGateway) topic(ctx *fasthttp.RequestCtx) {
 	errList := make([]error, 0)
 
 	for _, w := range ws {
-		if err := w.HandleEvent(evt); err != nil {
+		if err := w.HandleEvent(context.TODO(), evt); err != nil {
 			errList = append(errList, err)
 		}
 	}

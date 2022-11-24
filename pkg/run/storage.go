@@ -17,13 +17,15 @@
 package run
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/nitrictech/nitric/pkg/plugins/storage"
 	s3_service "github.com/nitrictech/nitric/pkg/plugins/storage/s3"
@@ -31,16 +33,15 @@ import (
 
 type RunStorageService struct {
 	storage.StorageService
-	client *s3.S3
+	client *s3.Client
 }
 
-func (r *RunStorageService) ensureBucketExists(bucket string) error {
-	_, err := r.client.HeadBucket(&s3.HeadBucketInput{
+func (r *RunStorageService) ensureBucketExists(ctx context.Context, bucket string) error {
+	_, err := r.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	})
-
-	if _, ok := err.(awserr.Error); ok {
-		_, err = r.client.CreateBucket(&s3.CreateBucketInput{
+	if err != nil {
+		_, err = r.client.CreateBucket(ctx, &s3.CreateBucketInput{
 			Bucket:           aws.String(bucket),
 			GrantFullControl: aws.String("*"),
 		})
@@ -53,49 +54,49 @@ func (r *RunStorageService) ensureBucketExists(bucket string) error {
 	return nil
 }
 
-func (r *RunStorageService) Read(bucket string, key string) ([]byte, error) {
-	err := r.ensureBucketExists(bucket)
+func (r *RunStorageService) Read(ctx context.Context, bucket string, key string) ([]byte, error) {
+	err := r.ensureBucketExists(ctx, bucket)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.StorageService.Read(bucket, key)
+	return r.StorageService.Read(ctx, bucket, key)
 }
 
-func (r *RunStorageService) Write(bucket string, key string, object []byte) error {
-	err := r.ensureBucketExists(bucket)
+func (r *RunStorageService) Write(ctx context.Context, bucket string, key string, object []byte) error {
+	err := r.ensureBucketExists(ctx, bucket)
 	if err != nil {
 		return err
 	}
 
-	return r.StorageService.Write(bucket, key, object)
+	return r.StorageService.Write(ctx, bucket, key, object)
 }
 
-func (r *RunStorageService) Delete(bucket string, key string) error {
-	err := r.ensureBucketExists(bucket)
+func (r *RunStorageService) Delete(ctx context.Context, bucket string, key string) error {
+	err := r.ensureBucketExists(ctx, bucket)
 	if err != nil {
 		return err
 	}
 
-	return r.StorageService.Delete(bucket, key)
+	return r.StorageService.Delete(ctx, bucket, key)
 }
 
-func (r *RunStorageService) ListFiles(bucket string) ([]*storage.FileInfo, error) {
-	err := r.ensureBucketExists(bucket)
+func (r *RunStorageService) ListFiles(ctx context.Context, bucket string) ([]*storage.FileInfo, error) {
+	err := r.ensureBucketExists(ctx, bucket)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.StorageService.ListFiles(bucket)
+	return r.StorageService.ListFiles(ctx, bucket)
 }
 
-func (r *RunStorageService) PreSignUrl(bucket string, key string, operation storage.Operation, expiry uint32) (string, error) {
-	err := r.ensureBucketExists(bucket)
+func (r *RunStorageService) PreSignUrl(ctx context.Context, bucket string, key string, operation storage.Operation, expiry uint32) (string, error) {
+	err := r.ensureBucketExists(ctx, bucket)
 	if err != nil {
 		return "", err
 	}
 
-	return r.StorageService.PreSignUrl(bucket, key, operation, expiry)
+	return r.StorageService.PreSignUrl(ctx, bucket, key, operation, expiry)
 }
 
 func nameSelector(nitricName string) (*string, error) {
@@ -109,23 +110,29 @@ type StorageOptions struct {
 }
 
 func NewStorage(opts StorageOptions) (storage.StorageService, error) {
-	// Configure to use MinIO Server
-	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(opts.AccessKey, opts.SecretKey, ""),
-		Endpoint:         aws.String(opts.Endpoint),
-		Region:           aws.String("us-east-1"),
-		DisableSSL:       aws.Bool(true),
-		S3ForcePathStyle: aws.Bool(true),
+	cfg, sessionError := config.LoadDefaultConfig(context.TODO(),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(opts.AccessKey, opts.SecretKey, "")),
+		config.WithRegion("us-east-1"),
+		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{URL: opts.Endpoint}, nil
+		})),
+	)
+	if sessionError != nil {
+		return nil, fmt.Errorf("error creating new AWS session %w", sessionError)
 	}
 
-	newSession, err := session.NewSession(s3Config)
-	if err != nil {
-		return nil, fmt.Errorf("error creating new session")
-	}
+	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+		o.HTTPClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+	})
 
-	s3Client := s3.New(newSession)
+	s3PSClient := s3.NewPresignClient(s3Client)
 
-	s3Service, err := s3_service.NewWithClient(nil, s3Client, s3_service.WithSelector(nameSelector))
+	s3Service, err := s3_service.NewWithClient(nil, s3Client, s3PSClient, s3_service.WithSelector(nameSelector))
 	if err != nil {
 		return nil, err
 	}

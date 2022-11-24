@@ -27,24 +27,11 @@ import (
 
 	"github.com/nitrictech/nitric/pkg/plugins/storage"
 	s3_service "github.com/nitrictech/nitric/pkg/plugins/storage/s3"
-	"github.com/nitrictech/nitric/pkg/utils"
 )
 
 type RunStorageService struct {
 	storage.StorageService
 	client *s3.S3
-}
-
-const (
-	MINIO_ENDPOINT_ENV   = "MINIO_ENDPOINT"
-	MINIO_ACCESS_KEY_ENV = "MINIO_ACCESS_KEY"
-	MINIO_SECRET_KEY_ENV = "MINIO_SECRET_KEY"
-)
-
-type minioConfig struct {
-	endpoint  string
-	accessKey string
-	secretKey string
 }
 
 func (r *RunStorageService) ensureBucketExists(bucket string) error {
@@ -111,50 +98,21 @@ func (r *RunStorageService) PreSignUrl(bucket string, key string, operation stor
 	return r.StorageService.PreSignUrl(bucket, key, operation, expiry)
 }
 
-func configFromEnv() (*minioConfig, error) {
-	endpoint := utils.GetEnv(MINIO_ENDPOINT_ENV, "")
-	accKey := utils.GetEnv(MINIO_ACCESS_KEY_ENV, "")
-	secKey := utils.GetEnv(MINIO_SECRET_KEY_ENV, "")
-
-	configErrors := make([]error, 0)
-
-	if endpoint == "" {
-		configErrors = append(configErrors, fmt.Errorf("%s not configured", MINIO_ENDPOINT_ENV))
-	}
-
-	if accKey == "" {
-		configErrors = append(configErrors, fmt.Errorf("%s not configured", MINIO_ACCESS_KEY_ENV))
-	}
-
-	if secKey == "" {
-		configErrors = append(configErrors, fmt.Errorf("%s not configured", MINIO_SECRET_KEY_ENV))
-	}
-
-	if len(configErrors) > 0 {
-		return nil, fmt.Errorf("configuration errors: %v", configErrors)
-	}
-
-	return &minioConfig{
-		endpoint:  endpoint,
-		accessKey: accKey,
-		secretKey: secKey,
-	}, nil
-}
-
 func nameSelector(nitricName string) (*string, error) {
 	return &nitricName, nil
 }
 
-func NewStorage() (storage.StorageService, error) {
-	conf, err := configFromEnv()
-	if err != nil {
-		return nil, err
-	}
+type StorageOptions struct {
+	AccessKey string
+	SecretKey string
+	Endpoint  string
+}
 
+func NewStorage(opts StorageOptions) (storage.StorageService, error) {
 	// Configure to use MinIO Server
 	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(conf.accessKey, conf.secretKey, ""),
-		Endpoint:         aws.String(conf.endpoint),
+		Credentials:      credentials.NewStaticCredentials(opts.AccessKey, opts.SecretKey, ""),
+		Endpoint:         aws.String(opts.Endpoint),
 		Region:           aws.String("us-east-1"),
 		DisableSSL:       aws.Bool(true),
 		S3ForcePathStyle: aws.Bool(true),

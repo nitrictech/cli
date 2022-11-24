@@ -4,6 +4,10 @@ ARG HANDLER
 
 ENV HANDLER=${HANDLER}
 
+RUN apt-get update -y && \
+    apt-get install -y ca-certificates && \
+    update-ca-certificates
+
 RUN pip install --upgrade pip pipenv
 
 # Copy either requirements.txt for Pipfile

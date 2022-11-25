@@ -75,6 +75,7 @@ func New(p *project.Project, name, provider string, envMap map[string]string, op
 	if err != nil {
 		return nil, err
 	}
+
 	pv := exec.Command("pulumi", "version")
 
 	err = pv.Run()
@@ -148,6 +149,7 @@ func shimPulumi() error {
 
 		// login to pulumi locally
 		cmd := exec.Command("pulumi", "whoami")
+
 		err = cmd.Run()
 		if err != nil {
 			// login to pulumi locally by default

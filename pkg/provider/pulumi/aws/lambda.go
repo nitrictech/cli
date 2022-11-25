@@ -113,6 +113,7 @@ func newLambda(ctx *pulumi.Context, name string, args *LambdaArgs, opts ...pulum
 		"dynamodb:ListTables",
 		"s3:ListAllMyBuckets",
 		"tag:GetResources",
+		"apigateway:GET",
 	}
 
 	// Add resource list permissions

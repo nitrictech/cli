@@ -19,9 +19,14 @@ package run
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"syscall"
+	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -37,21 +42,26 @@ type RunStorageService struct {
 }
 
 func (r *RunStorageService) ensureBucketExists(ctx context.Context, bucket string) error {
-	_, err := r.client.HeadBucket(ctx, &s3.HeadBucketInput{
-		Bucket: aws.String(bucket),
-	})
-	if err != nil {
-		_, err = r.client.CreateBucket(ctx, &s3.CreateBucketInput{
-			Bucket:           aws.String(bucket),
-			GrantFullControl: aws.String("*"),
+	err := retry.Do(func() error {
+		_, err := r.client.HeadBucket(ctx, &s3.HeadBucketInput{
+			Bucket: aws.String(bucket),
 		})
-	}
 
-	if err != nil {
 		return err
+	}, retry.Delay(time.Second), retry.RetryIf(func(err error) bool {
+		// wait for the service to become available
+		return errors.Is(err, syscall.ECONNREFUSED)
+	}))
+	if err != nil {
+		if strings.Contains(err.Error(), "NotFound") {
+			_, err = r.client.CreateBucket(ctx, &s3.CreateBucketInput{
+				Bucket:           aws.String(bucket),
+				GrantFullControl: aws.String("*"),
+			})
+		}
 	}
 
-	return nil
+	return err
 }
 
 func (r *RunStorageService) Read(ctx context.Context, bucket string, key string) ([]byte, error) {

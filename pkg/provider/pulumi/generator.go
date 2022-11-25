@@ -18,9 +18,14 @@ package pulumi
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
+	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -66,9 +71,13 @@ type pulumiAbout struct {
 var _ types.Provider = &pulumiDeployment{}
 
 func New(p *project.Project, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
+	err := shimPulumi()
+	if err != nil {
+		return nil, err
+	}
 	pv := exec.Command("pulumi", "version")
 
-	err := pv.Run()
+	err = pv.Run()
 	if err != nil {
 		if strings.Contains(err.Error(), "executable file not found") {
 			return nil, errors.WithMessage(err, "please install pulumi from https://www.pulumi.com/docs/get-started/install/")
@@ -109,6 +118,52 @@ func (p *pulumiDeployment) AskAndSave() error {
 
 func (p *pulumiDeployment) SupportedRegions() []string {
 	return p.prov.SupportedRegions()
+}
+
+//go:embed pulumi-shim.sh
+var shimScript string
+
+// Check if pulumi exists on path and if not shim it with the docker image
+// this also requires some default setup
+// NOTE: This can be dangerous in some cases and users serious about deploying
+// to production should be educated on how to manage their pulumi stack states
+func shimPulumi() error {
+	// Only shim if pulumi cannot be found on path already
+	_, err := exec.LookPath("pulumi")
+	if err != nil {
+		log.Default().Printf("pulumi not found on path, using pulumi docker image\n")
+		// TODO: Check if pulumi exists on the local install
+		shimDir := fmt.Sprintf("%s/.nitric/shims", os.Getenv("HOME"))
+
+		// TODO: Warn user on what will happen and where there stack states will be stored
+		// augment path to point to our pulumi shimming script
+		// This will substitute any calls to pulumi with docker runs instead and add appropriate volume mounts
+		// for pulumi state files
+		err = os.WriteFile(filepath.Join(shimDir, "pulumi"), []byte(shimScript), fs.ModePerm)
+		if err != nil {
+			return err
+		}
+		// TODO: Test on windows
+		os.Setenv("PATH", fmt.Sprintf("%s:%s", shimDir, os.Getenv("PATH")))
+
+		// login to pulumi locally
+		cmd := exec.Command("pulumi", "whoami")
+		err = cmd.Run()
+		if err != nil {
+			// login to pulumi locally by default
+			// TODO: Provide warning here...
+			cmd = exec.Command("pulumi", "login", "--local")
+
+			err = cmd.Run()
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		log.Default().Printf("pulumi found on path, using local pulumi binary\n")
+	}
+
+	return nil
 }
 
 func (p *pulumiDeployment) load(log output.Progress) (*auto.Stack, error) {

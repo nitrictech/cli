@@ -17,6 +17,7 @@
 package run
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -33,7 +34,7 @@ type WorkerPoolEventService struct {
 	pool worker.WorkerPool
 }
 
-func (s *WorkerPoolEventService) deliverEvent(evt *triggers.Event) {
+func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *triggers.Event) {
 	targets := s.pool.GetWorkers(&worker.GetWorkerOptions{
 		Event: evt,
 	})
@@ -42,7 +43,7 @@ func (s *WorkerPoolEventService) deliverEvent(evt *triggers.Event) {
 
 	for _, target := range targets {
 		go func(target worker.Worker) {
-			err := target.HandleEvent(evt)
+			err := target.HandleEvent(ctx, evt)
 			if err != nil {
 				// this is likely an error in the user's handler, we don't want it to bring the server down.
 				// just log and move on.
@@ -53,7 +54,7 @@ func (s *WorkerPoolEventService) deliverEvent(evt *triggers.Event) {
 }
 
 // Publish a message to a given topic
-func (s *WorkerPoolEventService) Publish(topic string, delay int, event *events.NitricEvent) error {
+func (s *WorkerPoolEventService) Publish(ctx context.Context, topic string, delay int, event *events.NitricEvent) error {
 	newErr := errors.ErrorsWithScope(
 		"WorkerPoolEventService.Publish",
 		map[string]interface{}{
@@ -85,10 +86,10 @@ func (s *WorkerPoolEventService) Publish(topic string, delay int, event *events.
 		go func(evt *triggers.Event) {
 			// Wait to deliver the events
 			time.Sleep(time.Duration(delay) * time.Second)
-			s.deliverEvent(evt)
+			s.deliverEvent(ctx, evt)
 		}(evt)
 	} else {
-		s.deliverEvent(evt)
+		s.deliverEvent(ctx, evt)
 	}
 
 	return nil

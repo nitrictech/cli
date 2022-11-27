@@ -88,18 +88,18 @@ func (l *localServices) Status() *LocalServicesStatus {
 func (l *localServices) Start(pool worker.WorkerPool) error {
 	var err error
 
-	l.storage, err = NewSeaweed()
+	l.storage, err = NewSeaweed(l.status.RunDir)
 	if err != nil {
 		return err
 	}
 
-	// start minio
+	// start seaweed server
 	err = l.storage.Start()
 	if err != nil {
 		return err
 	}
 
-	l.status.StorageEndpoint = fmt.Sprintf("localhost:%d", l.storage.GetApiPort())
+	l.status.StorageEndpoint = fmt.Sprintf("http://localhost:%d", l.storage.GetApiPort())
 
 	sp, err := NewStorage(StorageOptions{
 		AccessKey: "dummykey",

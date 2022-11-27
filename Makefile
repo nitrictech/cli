@@ -32,7 +32,6 @@ generate:
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/utils GetterClient > mocks/mock_utils/mock_getter.go
 	@go run github.com/golang/mock/mockgen github.com/aws/aws-sdk-go/service/lambda/lambdaiface LambdaAPI > mocks/mock_lambda/mock_lambda.go
-	@go run ./hack/github_release open-telemetry opentelemetry-collector-releases > pkg/project/otel-collector-version.txt
 	@go run ./hack/modversion "github.com/nitrictech/nitric" > pkg/project/membraneversion.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-gcp/" > pkg/provider/pulumi/gcp/pulumi-gcp-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-azuread/" > pkg/provider/pulumi/azure/pulumi-azuread-version.txt
@@ -72,5 +71,6 @@ check: lint test generate_check
 
 .PHONY: go-mod-update
 go-mod-update:
+	go run ./hack/github_release open-telemetry opentelemetry-collector-releases > pkg/project/otel-collector-version.txt
 	go get -u $$(go run ./hack/allmods)
 	go mod tidy

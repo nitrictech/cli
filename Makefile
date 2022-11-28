@@ -39,6 +39,7 @@ generate:
 	@go run ./hack/modversion "github.com/pulumi/pulumi-azure-native-sdk/" > pkg/provider/pulumi/azure/pulumi-azure-native-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-aws/" > pkg/provider/pulumi/aws/pulumi-aws-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-random/"  > pkg/provider/pulumi/common/pulumi-random-version.txt
+	@go run ./hack/modversion -inpath "github.com/nitrictech/pulumi-docker-buildkit/sdk/"  > pkg/provider/pulumi/common/pulumi-docker-buildkit-version.txt
 	@go run ./hack/readmegen/ README.md
 
 .PHONY: fmt
@@ -72,5 +73,5 @@ check: lint test generate_check
 .PHONY: go-mod-update
 go-mod-update:
 	go run ./hack/github_release open-telemetry opentelemetry-collector-releases > pkg/project/otel-collector-version.txt
-	go get -u $$(go run ./hack/allmods)
+	go get -u $$(go run github.com/nitrictech/go-mods-direct)
 	go mod tidy

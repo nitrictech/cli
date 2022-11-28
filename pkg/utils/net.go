@@ -31,8 +31,8 @@ type getNextListenerOption = func(opts *getNextListenerOptions)
 func defaultGetNextListenerOptions() *getNextListenerOptions {
 	// Defaults to IANA recommended ephemeral port range of 49152–65535
 	return &getNextListenerOptions{
-		minPort: 49152,
-		maxPort: 65535,
+		minPort: 4000,
+		maxPort: 6000,
 	}
 }
 

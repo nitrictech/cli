@@ -103,7 +103,13 @@ var startCmd = &cobra.Command{
 			defer lck.Unlock()
 			// area.Clear()
 
-			stackState.UpdateFromWorkerEvent(we)
+			err := ls.Refresh()
+			if err != nil {
+				cobra.CheckErr(err)
+			}
+
+			area.Update(err)
+			stackState.Update(pool, ls)
 
 			tables := []string{}
 			table, rows := stackState.ApiTable(9001)

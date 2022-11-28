@@ -21,6 +21,63 @@ import (
 	"net"
 )
 
+type getNextListenerOptions struct {
+	minPort int
+	maxPort int
+}
+
+type getNextListenerOption = func(opts *getNextListenerOptions)
+
+func defaultGetNextListenerOptions() *getNextListenerOptions {
+	// Defaults to IANA recommended ephemeral port range of 49152–65535
+	return &getNextListenerOptions{
+		minPort: 49152,
+		maxPort: 65535,
+	}
+}
+
+func MaxPort(maxPort int) getNextListenerOption {
+	return func(opts *getNextListenerOptions) {
+		opts.maxPort = maxPort
+	}
+}
+
+func MinPort(minPort int) getNextListenerOption {
+	return func(opts *getNextListenerOptions) {
+		opts.minPort = minPort
+	}
+}
+
+// GetNextListener - Gets the next available free port starting from a predefined minimum port
+// Up to a pre-defined maximum port
+func GetNextListener(opts ...getNextListenerOption) (net.Listener, error) {
+	// default and apply options
+	// this allows the use of single or default options
+	// without having to include parameters
+	options := defaultGetNextListenerOptions()
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	currentPort := options.minPort
+
+	for currentPort < options.maxPort {
+		// attempt to get listener for port
+		lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", currentPort))
+
+		if err != nil {
+			// increment the port and continue
+			currentPort = currentPort + 1
+			continue
+		}
+
+		// return the listener
+		return lis, nil
+	}
+
+	return nil, fmt.Errorf("no ports available in range [%d-%d]", options.minPort, options.maxPort)
+}
+
 func GetInterfaceIpv4Addr(interfaceName string) (string, error) {
 	ief, err := net.InterfaceByName(interfaceName)
 	if err != nil {

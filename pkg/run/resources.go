@@ -24,18 +24,24 @@ import (
 )
 
 type RunResourcesService struct {
-	gatewayUri string
+	// gatewayUri string
+	gatewayUris map[string]string
 }
 
 var _ common.ResourceService = &RunResourcesService{}
 
 func (r *RunResourcesService) getApiDetails(name string) (*common.DetailsResponse[any], error) {
+	gatewayUri, ok := r.gatewayUris[name]
+	if !ok {
+		return nil, fmt.Errorf("api %s does not exist", name)
+	}
+
 	return &common.DetailsResponse[any]{
 		Id:       name,
 		Provider: "dev",
 		Service:  "Api",
 		Detail: common.ApiDetails{
-			URL: fmt.Sprintf("%s/apis/%s", r.gatewayUri, name),
+			URL: gatewayUri,
 		},
 	}, nil
 }
@@ -49,8 +55,8 @@ func (r *RunResourcesService) Details(ctx context.Context, typ common.ResourceTy
 	}
 }
 
-func NewResources(gatewayUri string) common.ResourceService {
+func NewResources(gatewayUris map[string]string) common.ResourceService {
 	return &RunResourcesService{
-		gatewayUri: gatewayUri,
+		gatewayUris: gatewayUris,
 	}
 }

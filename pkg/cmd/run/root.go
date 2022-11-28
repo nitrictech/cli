@@ -145,7 +145,7 @@ var runCmd = &cobra.Command{
 
 		pterm.DefaultBasicText.Println("Application running, use ctrl-C to stop")
 
-		stackState := run.StateFromPool(pool)
+		stackState := run.NewStackState()
 
 		area, _ := pterm.DefaultArea.Start()
 		area.Update(stackState.Tables(9001))
@@ -157,7 +157,9 @@ var runCmd = &cobra.Command{
 			defer lck.Unlock()
 			// area.Clear()
 
-			stackState.UpdateFromWorkerEvent(we)
+			ls.Refresh()
+
+			stackState.Update(pool, ls)
 			area.Update(stackState.Tables(9001))
 		})
 

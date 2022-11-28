@@ -46,6 +46,8 @@ jobs:
         run: |
           cd ${{ github.workspace }}/test-app
           make test
+        env:
+          BASE_URL: http://localhost:49153
 
       - name: Archive logfile
         uses: actions/upload-artifact@v3

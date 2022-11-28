@@ -22,8 +22,8 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/pkg/errors"
-	apimanagement "github.com/pulumi/pulumi-azure-native/sdk/go/azure/apimanagement/v20201201"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
+	apimanagement "github.com/pulumi/pulumi-azure-native-sdk/apimanagement/v20201201"
+	"github.com/pulumi/pulumi-azure-native-sdk/managedidentity"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"

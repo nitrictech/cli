@@ -18,7 +18,7 @@ package azure
 
 import (
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/storage"
+	"github.com/pulumi/pulumi-azure-native-sdk/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"

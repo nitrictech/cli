@@ -31,7 +31,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.49
 	github.com/pulumi/pulumi-aws/sdk/v5 v5.21.1
-	github.com/pulumi/pulumi-azure-native/sdk v1.86.0
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.31.0
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.43.0
@@ -49,6 +48,24 @@ require (
 	google.golang.org/grpc v1.51.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	github.com/aws/aws-sdk-go-v2 v1.17.1
+	github.com/aws/aws-sdk-go-v2/config v1.17.10
+	github.com/aws/aws-sdk-go-v2/credentials v1.12.23
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.1
+	github.com/pulumi/pulumi-azure-native-sdk/apimanagement v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/app v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/authorization v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/containerregistry v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/documentdb v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/eventgrid v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/keyvault v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/managedidentity v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/operationalinsights v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/resources v1.87.0
+	github.com/pulumi/pulumi-azure-native-sdk/storage v1.87.0
 )
 
 require (
@@ -96,10 +113,7 @@ require (
 	github.com/asdine/storm v2.1.2+incompatible // indirect
 	github.com/ashanbrown/forbidigo v1.3.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.17.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.9 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.17.10 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.12.23 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
@@ -113,7 +127,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.13.21 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.18.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.19.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.25 // indirect
@@ -331,6 +344,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/pulumi/pulumi-azure-native-sdk v1.87.0 // indirect
 	github.com/quasilyte/go-ruleguard v0.3.18 // indirect
 	github.com/quasilyte/gogrep v0.0.0-20220828223005-86e4605de09f // indirect
 	github.com/quasilyte/regex/syntax v0.0.0-20200407221936-30656e2c4a95 // indirect

@@ -20,11 +20,11 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	app "github.com/pulumi/pulumi-azure-native/sdk/go/azure/app"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/containerregistry"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/operationalinsights"
+	app "github.com/pulumi/pulumi-azure-native-sdk/app"
+	"github.com/pulumi/pulumi-azure-native-sdk/authorization"
+	"github.com/pulumi/pulumi-azure-native-sdk/containerregistry"
+	"github.com/pulumi/pulumi-azure-native-sdk/eventgrid"
+	"github.com/pulumi/pulumi-azure-native-sdk/operationalinsights"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"

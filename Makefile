@@ -36,7 +36,7 @@ generate:
 	@go run ./hack/modversion "github.com/pulumi/pulumi-gcp/" > pkg/provider/pulumi/gcp/pulumi-gcp-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-azuread/" > pkg/provider/pulumi/azure/pulumi-azuread-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-azure/" > pkg/provider/pulumi/azure/pulumi-azure-version.txt
-	@go run ./hack/modversion "github.com/pulumi/pulumi-azure-native/" > pkg/provider/pulumi/azure/pulumi-azure-native-version.txt
+	@go run ./hack/modversion "github.com/pulumi/pulumi-azure-native-sdk/" > pkg/provider/pulumi/azure/pulumi-azure-native-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-aws/" > pkg/provider/pulumi/aws/pulumi-aws-version.txt
 	@go run ./hack/modversion "github.com/pulumi/pulumi-random/"  > pkg/provider/pulumi/common/pulumi-random-version.txt
 	@go run ./hack/readmegen/ README.md

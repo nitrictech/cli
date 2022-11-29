@@ -74,6 +74,7 @@ func (s *BaseHttpGateway) GetTriggerAddress() string {
 
 func (s *BaseHttpGateway) GetApiAdresses() map[string]string {
 	addresses := make(map[string]string)
+
 	for api, srv := range s.apiServer {
 		if srv.workerCount > 0 {
 			srvAddress := strings.Replace(srv.lis.Addr().String(), "127.0.0.1", "localhost", 1)
@@ -226,7 +227,7 @@ func (s *BaseHttpGateway) Start(pool worker.WorkerPool) error {
 	}
 
 	go func() {
-		s.serviceServer.Serve(s.serviceListener)
+		_ = s.serviceServer.Serve(s.serviceListener)
 	}()
 
 	// block on a stop signal
@@ -239,10 +240,11 @@ func (s *BaseHttpGateway) Stop() error {
 	for _, s := range s.apiServer {
 		// shutdown all the servers
 		// this will allow Start to exit
-		s.srv.Shutdown()
+		_ = s.srv.Shutdown()
 	}
 
 	s.stop <- true
+
 	return nil
 }
 

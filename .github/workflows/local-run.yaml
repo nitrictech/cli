@@ -48,6 +48,7 @@ jobs:
           make test
         env:
           BASE_URL: http://localhost:4001
+          TOPIC_BASE_URL: "http://localhost:4000/topic"
 
       - name: Archive logfile
         uses: actions/upload-artifact@v3

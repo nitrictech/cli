@@ -31,6 +31,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/codeconfig"
+	"github.com/nitrictech/cli/pkg/command"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/preferences"
 	"github.com/nitrictech/cli/pkg/project"
@@ -294,12 +295,12 @@ nitric stack list -s aws
 func RootCommand() *cobra.Command {
 	stackCmd.AddCommand(newStackCmd)
 
-	stackCmd.AddCommand(stackUpdateCmd)
+	stackCmd.AddCommand(command.AddDependencyCheck(stackUpdateCmd, command.Pulumi, command.Docker))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&force, "force", "f", false, "force override previous deployment")
 	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
-	stackCmd.AddCommand(stackDeleteCmd)
+	stackCmd.AddCommand(command.AddDependencyCheck(stackDeleteCmd, command.Pulumi))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
 	cobra.CheckErr(stack.AddOptions(stackDeleteCmd, false))
 

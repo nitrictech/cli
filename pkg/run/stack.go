@@ -45,10 +45,10 @@ func (r *RunStackState) Update(pool worker.WorkerPool, ls LocalServices) {
 	for _, wrkr := range pool.GetWorkers(&worker.GetWorkerOptions{}) {
 		switch w := wrkr.(type) {
 		case *worker.SubscriptionWorker:
-			r.subs[w.Topic()] = fmt.Sprintf("http://%s/topics/%s", ls.TriggerAddress(), w.Topic())
+			r.subs[w.Topic()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), w.Topic())
 		case *worker.ScheduleWorker:
 			topicKey := strings.ToLower(strings.ReplaceAll(w.Key(), " ", "-"))
-			r.subs[w.Key()] = fmt.Sprintf("http://%s/topics/%s", ls.TriggerAddress(), topicKey)
+			r.subs[w.Key()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), topicKey)
 		}
 	}
 }

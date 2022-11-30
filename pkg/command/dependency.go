@@ -54,11 +54,7 @@ var Pulumi = &Dependency{
 		var installErr error
 		platform := runtime.GOOS
 		switch platform {
-		case "darwin":
-			cmd := exec.Command("sh", "-c", "curl -fsSL https://get.pulumi.com | sh")
-			cmd.Stdout = os.Stdout
-			installErr = cmd.Run()
-		case "linux":
+		case "darwin", "linux":
 			cmd := exec.Command("sh", "-c", "curl -fsSL https://get.pulumi.com | sh")
 			cmd.Stdout = os.Stdout
 			installErr = cmd.Run()

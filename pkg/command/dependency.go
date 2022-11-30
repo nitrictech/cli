@@ -48,7 +48,7 @@ var Pulumi = &Dependency{
 		}, &resp)
 
 		if !resp {
-			return fmt.Errorf("pulumi is required to run %s. For installation instructions see: %s", "command", "<insert website>")
+			return fmt.Errorf("pulumi is required to run this command. For installation instructions see: https://www.pulumi.com/docs/get-started/install/")
 		}
 
 		var installErr error

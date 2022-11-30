@@ -73,11 +73,15 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 		},
 		cloudrun.ServiceTemplateSpecContainerEnvArgs{
 			Name:  pulumi.String("NITRIC_STACK"),
-			Value: pulumi.String(ctx.Stack()),
+			Value: g.stackID,
 		},
 		cloudrun.ServiceTemplateSpecContainerEnvArgs{
 			Name:  pulumi.String("SERVICE_ACCOUNT_EMAIL"),
 			Value: args.ServiceAccount.Email,
+		},
+		cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String("GCP_REGION"),
+			Value: args.Location,
 		},
 	}
 

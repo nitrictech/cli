@@ -38,7 +38,7 @@ import (
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
-	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit"
+	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.21/dockerbuildkit"
 )
 
 type mocks int
@@ -160,7 +160,7 @@ func TestAWS(t *testing.T) {
 		pulumi.All(a.rg.Name, a.rg.ResourceQuery.Query()).ApplyT(func(all []interface{}) error {
 			name := all[0].(string)
 			query := *all[1].(*string)
-			expectQuery := `{"ResourceTypeFilters":["AWS::AllSupported"],"TagFilters":[{"Key":"x-nitric-stack","Values":["atest-deploy"]}]}`
+			expectQuery := `{"ResourceTypeFilters":["AWS::AllSupported"],"TagFilters":[{"Key":"x-nitric-stack","Values":["atest-deploy--stack-name_id"]}]}`
 
 			assert.Equal(t, stackName, name, "resourceGroup has the wrong name %s!=%s", stackName, name)
 			assert.Equal(t, expectQuery, query, "resourceGroup has the wrong query %s!=%s", expectQuery, query)
@@ -180,7 +180,7 @@ func TestAWS(t *testing.T) {
 
 		wg.Add(1)
 		a.topics["sales"].Sns.Tags.ApplyT(func(tags map[string]string) error {
-			expectTags := map[string]string{"x-nitric-name": "sales", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
+			expectTags := map[string]string{"x-nitric-name": "sales", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy--stack-name_id", "x-nitric-stack-name": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "topic has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
 
@@ -197,7 +197,7 @@ func TestAWS(t *testing.T) {
 
 		wg.Add(1)
 		a.buckets["money"].Tags.ApplyT(func(tags map[string]string) error {
-			expectTags := map[string]string{"x-nitric-name": "money", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
+			expectTags := map[string]string{"x-nitric-name": "money", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy--stack-name_id", "x-nitric-stack-name": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "money has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
 
@@ -214,7 +214,7 @@ func TestAWS(t *testing.T) {
 
 		wg.Add(1)
 		a.queues["checkout"].Tags.ApplyT(func(tags map[string]string) error {
-			expectTags := map[string]string{"x-nitric-name": "checkout", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
+			expectTags := map[string]string{"x-nitric-name": "checkout", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy--stack-name_id", "x-nitric-stack-name": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "checkout has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
 
@@ -223,7 +223,7 @@ func TestAWS(t *testing.T) {
 
 		wg.Add(1)
 		a.collections["customer"].Tags.ApplyT(func(tags map[string]string) error {
-			expectTags := map[string]string{"x-nitric-name": "customer", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy"}
+			expectTags := map[string]string{"x-nitric-name": "customer", "x-nitric-project": "atest", "x-nitric-stack": "atest-deploy--stack-name_id", "x-nitric-stack-name": "atest-deploy"}
 			assert.Equal(t, expectTags, tags, "customer has the wrong tags %s!=%s", expectTags, tags)
 			wg.Done()
 

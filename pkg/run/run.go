@@ -29,7 +29,6 @@ import (
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
 	queue_service "github.com/nitrictech/nitric/pkg/plugins/queue/dev"
 	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
-	minio "github.com/nitrictech/nitric/pkg/plugins/storage/minio"
 	nitric_utils "github.com/nitrictech/nitric/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/worker"
 )
@@ -45,14 +44,14 @@ type LocalServicesStatus struct {
 	RunDir          string `yaml:"runDir"`
 	GatewayAddress  string `yaml:"gatewayAddress"`
 	MembraneAddress string `yaml:"membraneAddress"`
-	MinioEndpoint   string `yaml:"minioEndpoint"`
+	StorageEndpoint string `yaml:"storageEndpoint"`
 }
 
 type localServices struct {
-	s      *project.Project
-	mio    *MinioServer
-	mem    *membrane.Membrane
-	status *LocalServicesStatus
+	s       *project.Project
+	storage *SeaweedServer
+	mem     *membrane.Membrane
+	status  *LocalServicesStatus
 }
 
 func NewLocalServices(s *project.Project) LocalServices {
@@ -68,7 +67,7 @@ func NewLocalServices(s *project.Project) LocalServices {
 
 func (l *localServices) Stop() error {
 	l.mem.Stop()
-	return l.mio.Stop()
+	return l.storage.Stop()
 }
 
 func (l *localServices) Running() bool {
@@ -89,25 +88,24 @@ func (l *localServices) Status() *LocalServicesStatus {
 func (l *localServices) Start(pool worker.WorkerPool) error {
 	var err error
 
-	l.mio, err = NewMinio(l.status.RunDir, l.s.Name)
+	l.storage, err = NewSeaweed(l.status.RunDir)
 	if err != nil {
 		return err
 	}
 
-	// start minio
-	err = l.mio.Start()
+	// start seaweed server
+	err = l.storage.Start()
 	if err != nil {
 		return err
 	}
 
-	l.status.MinioEndpoint = fmt.Sprintf("localhost:%d", l.mio.GetApiPort())
+	l.status.StorageEndpoint = fmt.Sprintf("http://localhost:%d", l.storage.GetApiPort())
 
-	// Connect dev storage
-	os.Setenv(minio.MINIO_ENDPOINT_ENV, l.status.MinioEndpoint)
-	os.Setenv(minio.MINIO_ACCESS_KEY_ENV, "minioadmin")
-	os.Setenv(minio.MINIO_SECRET_KEY_ENV, "minioadmin")
-
-	sp, err := NewStorage()
+	sp, err := NewStorage(StorageOptions{
+		AccessKey: "dummykey",
+		SecretKey: "dummysecret",
+		Endpoint:  l.status.StorageEndpoint,
+	})
 	if err != nil {
 		return err
 	}
@@ -141,6 +139,9 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		return err
 	}
 
+	// create new resources
+	res := NewResources(fmt.Sprintf("http://localhost%s", l.status.GatewayAddress))
+
 	// Start a new gateway plugin
 	gw, err := NewGateway(l.status.GatewayAddress)
 	if err != nil {
@@ -158,6 +159,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		DocumentPlugin:          dp,
 		GatewayPlugin:           gw,
 		EventsPlugin:            ev,
+		ResourcesPlugin:         res,
 		Pool:                    pool,
 		TolerateMissingServices: false,
 	})

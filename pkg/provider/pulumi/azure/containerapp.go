@@ -20,11 +20,11 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	app "github.com/pulumi/pulumi-azure-native/sdk/go/azure/app"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/containerregistry"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/operationalinsights"
+	app "github.com/pulumi/pulumi-azure-native-sdk/app"
+	"github.com/pulumi/pulumi-azure-native-sdk/authorization"
+	"github.com/pulumi/pulumi-azure-native-sdk/containerregistry"
+	"github.com/pulumi/pulumi-azure-native-sdk/eventgrid"
+	"github.com/pulumi/pulumi-azure-native-sdk/operationalinsights"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -150,7 +150,7 @@ func (a *azureProvider) newContainerApps(ctx *pulumi.Context, name string, args 
 				CustomerId: aw.CustomerId,
 			},
 		},
-		Tags: common.Tags(ctx, ctx.Stack()+"Kube"),
+		Tags: common.Tags(ctx, a.stackID, ctx.Stack()+"Kube"),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err
@@ -364,7 +364,7 @@ func (a *azureProvider) newContainerApp(ctx *pulumi.Context, name string, args *
 				},
 			},
 		},
-		Tags: common.Tags(ctx, name),
+		Tags: common.Tags(ctx, a.stackID, name),
 		Template: app.TemplateArgs{
 			Containers: app.ContainerArray{
 				app.ContainerArgs{

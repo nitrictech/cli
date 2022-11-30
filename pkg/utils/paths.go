@@ -131,3 +131,17 @@ func GoPath() (string, error) {
 
 	return goPath, nil
 }
+
+func DirWritable(path string) bool {
+	f, err := os.Create(filepath.Join(path, "test.txt"))
+	if err != nil {
+		return false
+	}
+
+	defer func() {
+		f.Close()
+		os.Remove(f.Name())
+	}()
+
+	return true
+}

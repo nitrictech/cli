@@ -17,14 +17,18 @@
 package common
 
 import (
+	_ "embed"
 	"path/filepath"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
-	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.17/dockerbuildkit"
+	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.21/dockerbuildkit"
 )
+
+//go:embed pulumi-docker-buildkit-version.txt
+var BuildkitPluginVersion string
 
 type ImageArgs struct {
 	SourceImage   string
@@ -53,7 +57,15 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 		return nil, err
 	}
 
-	buildArgs, err := runtime.WrapperBuildArgs(args.SourceImage, args.Provider, project.DefaultMembraneVersion)
+	buildArgs, err := runtime.WrapperBuildArgs(
+		&runtime.WrapperBuildArgsConfig{
+			ProjectDir:           args.ProjectDir,
+			ImageName:            args.SourceImage,
+			Provider:             args.Provider,
+			MembraneVersion:      project.DefaultMembraneVersion,
+			OtelCollectorVersion: project.DefaultOTELCollectorVersion,
+			Telemetry:            args.Compute.Unit().Telemetry,
+		})
 	if err != nil {
 		return nil, err
 	}

@@ -18,13 +18,22 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/hashicorp/go-version"
 )
 
 func main() {
+	inpath := flag.Bool("inpath", false, "")
+
+	flag.Parse()
+
+	prefix := flag.Arg(0)
+
 	file, err := os.Open("go.sum")
 	if err != nil {
 		panic(err)
@@ -45,9 +54,25 @@ func main() {
 
 		words := strings.Split(string(line), " ")
 
-		if len(words) == 3 && strings.HasPrefix(words[0], os.Args[1]) {
+		if !strings.HasPrefix(words[0], prefix) {
+			continue
+		}
+
+		if *inpath {
+			for _, seg := range strings.Split(strings.TrimPrefix(words[0], prefix), "/") {
+				v, err := version.NewSemver(seg)
+				if err != nil {
+					continue
+				}
+
+				fmt.Println(v.Original())
+
+				return
+			}
+		} else if len(words) == 3 {
 			fmt.Print(words[1])
-			break
+
+			return
 		}
 	}
 }

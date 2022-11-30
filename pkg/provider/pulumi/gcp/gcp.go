@@ -56,8 +56,9 @@ import (
 )
 
 type gcpFunctionConfig struct {
-	Memory  *int `yaml:"memory,omitempty"`
-	Timeout *int `yaml:"timeout,omitempty"`
+	Memory    *int `yaml:"memory,omitempty"`
+	Timeout   *int `yaml:"timeout,omitempty"`
+	Telemetry *int `yaml:"telemetry,omitempty"`
 }
 
 type gcpStackConfig struct {
@@ -77,7 +78,8 @@ type gcpProvider struct {
 
 	token         *oauth2.Token
 	projectNumber string
-	projectId     string
+	projectID     string
+	stackID       pulumi.StringInput
 
 	buckets            map[string]*storage.Bucket
 	topics             map[string]*pubsub.Topic
@@ -90,9 +92,6 @@ type gcpProvider struct {
 
 //go:embed pulumi-gcp-version.txt
 var gcpPluginVersion string
-
-//go:embed pulumi-random-version.txt
-var randomPluginVersion string
 
 func New(p *project.Project, name string, envMap map[string]string) (common.PulumiProvider, error) {
 	gsc := &gcpStackConfig{
@@ -134,7 +133,7 @@ func (g *gcpProvider) Plugins() []common.Plugin {
 		},
 		{
 			Name:    "random",
-			Version: strings.TrimSpace(randomPluginVersion),
+			Version: strings.TrimSpace(common.RandomPluginVersion),
 		},
 	}
 }
@@ -231,6 +230,10 @@ func (g *gcpProvider) Validate() error {
 		if fc.Timeout != nil && *fc.Timeout < 15 {
 			errList.Push(fmt.Errorf("function config %s requires \"timeout\" to be greater than 15 seconds", fn))
 		}
+
+		if fc.Telemetry != nil && (*fc.Telemetry < 0 && *fc.Telemetry > 100) {
+			errList.Push(fmt.Errorf("function config %s requires \"telemetry\" to be between 0 and 100 (a percentage)", fn))
+		}
 	}
 
 	return errList.Err()
@@ -242,6 +245,7 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 	for fn, f := range g.proj.Functions {
 		f.ComputeUnit.Memory = 512
 		f.ComputeUnit.Timeout = 15
+		f.ComputeUnit.Telemetry = 0
 
 		if dok {
 			if dc.Memory != nil {
@@ -250,6 +254,10 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 
 			if dc.Timeout != nil {
 				f.ComputeUnit.Timeout = *dc.Timeout
+			}
+
+			if dc.Telemetry != nil {
+				f.ComputeUnit.Telemetry = *dc.Telemetry
 			}
 		}
 
@@ -261,6 +269,10 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 
 			if fc.Timeout != nil {
 				f.ComputeUnit.Timeout = *fc.Timeout
+			}
+
+			if fc.Telemetry != nil {
+				f.ComputeUnit.Telemetry = *fc.Telemetry
 			}
 		}
 
@@ -280,6 +292,7 @@ func (g *gcpProvider) setToken() error {
 		creds, err := google.FindDefaultCredentialsWithParams(context.Background(), google.CredentialsParams{
 			Scopes: []string{
 				"https://www.googleapis.com/auth/cloud-platform",
+				"https://www.googleapis.com/auth/trace.append",
 			},
 		})
 		if err != nil {
@@ -298,6 +311,8 @@ func (g *gcpProvider) setToken() error {
 func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
+	g.stackID = pulumi.String(ctx.Stack())
+
 	g.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
@@ -307,7 +322,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
-	if g.projectId == "" {
+	if g.projectID == "" {
 		project, err := organizations.LookupProject(ctx, &organizations.LookupProjectArgs{
 			ProjectId: &g.gcpProject,
 		}, nil)
@@ -315,12 +330,12 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			return err
 		}
 
-		g.projectId = *project.ProjectId
+		g.projectID = *project.ProjectId
 		g.projectNumber = project.Number
 	}
 
 	nitricProj, err := newProject(ctx, "project", &ProjectArgs{
-		ProjectId:     g.projectId,
+		ProjectId:     g.projectID,
 		ProjectNumber: g.projectNumber,
 	})
 	if err != nil {
@@ -332,8 +347,8 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for key := range g.proj.Buckets {
 		g.buckets[key], err = storage.NewBucket(ctx, key, &storage.BucketArgs{
 			Location: pulumi.String(g.sc.Region),
-			Project:  pulumi.String(g.projectId),
-			Labels:   common.Tags(ctx, key),
+			Project:  pulumi.String(g.projectID),
+			Labels:   common.Tags(ctx, g.stackID, key),
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -356,7 +371,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for key := range g.proj.Topics {
 		g.topics[key], err = pubsub.NewTopic(ctx, key, &pubsub.TopicArgs{
 			Name:   pulumi.String(key),
-			Labels: common.Tags(ctx, key),
+			Labels: common.Tags(ctx, g.stackID, key),
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -366,15 +381,16 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for key := range g.proj.Queues {
 		g.queueTopics[key], err = pubsub.NewTopic(ctx, key, &pubsub.TopicArgs{
 			Name:   pulumi.String(key),
-			Labels: common.Tags(ctx, key),
+			Labels: common.Tags(ctx, g.stackID, key),
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
 		}
 
 		g.queueSubscriptions[key], err = pubsub.NewSubscription(ctx, key+"-sub", &pubsub.SubscriptionArgs{
-			Name:  pulumi.Sprintf("%s-nitricqueue", key),
-			Topic: g.queueTopics[key].Name,
+			Name:   pulumi.Sprintf("%s-nitricqueue", key),
+			Topic:  g.queueTopics[key].Name,
+			Labels: common.Tags(ctx, g.stackID, key+"-sub"),
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -398,7 +414,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 				TimeZone: pulumi.String("UTC"),
 				PubsubTarget: cloudscheduler.JobPubsubTargetArgs{
 					Attributes: pulumi.ToStringMap(map[string]string{"x-nitric-topic": sched.Target.Name}),
-					TopicName:  pulumi.Sprintf("projects/%s/topics/%s", g.projectId, g.topics[sched.Target.Name].Name),
+					TopicName:  pulumi.Sprintf("projects/%s/topics/%s", g.projectID, g.topics[sched.Target.Name].Name),
 					Data:       pulumi.String(payload),
 				},
 				Schedule: pulumi.String(strings.ReplaceAll(sched.Expression, "'", "")),
@@ -418,9 +434,9 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 			Replication: secretmanager.SecretReplicationArgs{
 				Automatic: pulumi.Bool(true),
 			},
-			Project:  pulumi.String(g.projectId),
+			Project:  pulumi.String(g.projectID),
 			SecretId: secId,
-			Labels:   common.Tags(ctx, name),
+			Labels:   common.Tags(ctx, g.stackID, name),
 		})
 		if err != nil {
 			return err
@@ -441,19 +457,38 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		return errors.WithMessage(err, "base customRole id")
 	}
 
+	perms := []string{
+		"storage.buckets.list",
+		"storage.buckets.get",
+		"cloudtasks.queues.get",
+		"cloudtasks.tasks.create",
+		"cloudtrace.traces.patch",
+		"monitoring.timeSeries.create",
+		// permission for blob signing
+		// this is safe as only permissions this account has are delegated
+		"iam.serviceAccounts.signBlob",
+	}
+
+	for _, fc := range g.sc.Config {
+		if fc.Telemetry != nil && *fc.Telemetry > 0 {
+			perms = append(perms, []string{
+				"monitoring.metricDescriptors.create",
+				"monitoring.metricDescriptors.get",
+				"monitoring.metricDescriptors.list",
+				"monitoring.monitoredResourceDescriptors.get",
+				"monitoring.monitoredResourceDescriptors.list",
+				"monitoring.timeSeries.create",
+			}...)
+
+			break
+		}
+	}
+
 	// setup a basic IAM role for general access and resource discovery
 	baseComputeRole, err := projects.NewIAMCustomRole(ctx, "base-role", &projects.IAMCustomRoleArgs{
-		Title: pulumi.String(g.sc.Name + "-functions-base-role"),
-		Permissions: pulumi.ToStringArray([]string{
-			"storage.buckets.list",
-			"storage.buckets.get",
-			"cloudtasks.queues.get",
-			"cloudtasks.tasks.create",
-			// permission for blob signing
-			// this is safe as only permissions this account has are delegated
-			"iam.serviceAccounts.signBlob",
-		}),
-		RoleId: baseCustomRoleId.ID(),
+		Title:       pulumi.String(g.sc.Name + "-functions-base-role"),
+		Permissions: pulumi.ToStringArray(perms),
+		RoleId:      baseCustomRoleId.ID(),
 	})
 	if err != nil {
 		return errors.WithMessage(err, "base customRole")
@@ -466,7 +501,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 				Provider:      g.sc.Provider,
 				Compute:       c,
 				SourceImage:   fmt.Sprintf("%s-%s", g.proj.Name, c.Unit().Name),
-				RepositoryUrl: pulumi.Sprintf("gcr.io/%s/%s", g.projectId, c.ImageTagName(g.proj, g.sc.Provider)),
+				RepositoryUrl: pulumi.Sprintf("gcr.io/%s/%s", g.projectID, c.ImageTagName(g.proj, g.sc.Provider)),
 				Username:      pulumi.String("oauth2accesstoken"),
 				Password:      pulumi.String(g.token.AccessToken),
 				Server:        pulumi.String("https://gcr.io"),
@@ -487,7 +522,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 
 		// apply basic project level permissions for nitric resource discovery
 		_, err = projects.NewIAMMember(ctx, c.Unit().Name+"-project-member", &projects.IAMMemberArgs{
-			Project: pulumi.String(g.projectId),
+			Project: pulumi.String(g.projectID),
 			Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
 			Role:    baseComputeRole.Name,
 		})
@@ -507,7 +542,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 
 		g.cloudRunners[c.Unit().Name], err = g.newCloudRunner(ctx, c.Unit().Name, &CloudRunnerArgs{
 			Location:       pulumi.String(g.sc.Region),
-			ProjectId:      g.projectId,
+			ProjectId:      g.projectID,
 			Topics:         g.topics,
 			Compute:        c,
 			Image:          g.images[c.Unit().Name],
@@ -531,8 +566,9 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		_, err = newApiGateway(ctx, k, &ApiGatewayArgs{
 			Functions:           g.cloudRunners,
 			OpenAPISpec:         v2doc,
-			ProjectId:           pulumi.String(g.projectId),
+			ProjectId:           pulumi.String(g.projectID),
 			SecurityDefinitions: g.proj.SecurityDefinitions[k],
+			StackID:             g.stackID,
 		}, defaultResourceOptions)
 		if err != nil {
 			return err
@@ -558,7 +594,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 	for name, p := range uniquePolicies {
 		if _, err := newPolicy(ctx, name, &PolicyArgs{
 			Policy:    p,
-			ProjectID: pulumi.String(g.projectId),
+			ProjectID: pulumi.String(g.projectID),
 			Resources: &StackResources{
 				Topics:        g.topics,
 				Queues:        g.queueTopics,

@@ -66,7 +66,7 @@ func newServicePrincipal(ctx *pulumi.Context, name string, args *ServicePrincipa
 				Value:       pulumi.String("4962773b-9cdb-44cf-a8bf-237846a00ab7"),
 			},
 		},
-		// Tags:        common.Tags(ctx, name+"App"),
+		// Tags:        common.Tags(ctx, a.stackID, name+"App"),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, err

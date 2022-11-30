@@ -27,11 +27,11 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/authorization"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/eventgrid"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/keyvault"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/managedidentity"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
+	"github.com/pulumi/pulumi-azure-native-sdk/authorization"
+	"github.com/pulumi/pulumi-azure-native-sdk/eventgrid"
+	"github.com/pulumi/pulumi-azure-native-sdk/keyvault"
+	"github.com/pulumi/pulumi-azure-native-sdk/managedidentity"
+	"github.com/pulumi/pulumi-azure-native-sdk/resources"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"golang.org/x/exp/slices"
@@ -44,8 +44,9 @@ import (
 )
 
 type azureFunctionConfig struct {
-	Memory  *int `yaml:"memory,omitempty"`
-	Timeout *int `yaml:"timeout,omitempty"`
+	Memory    *int `yaml:"memory,omitempty"`
+	Timeout   *int `yaml:"timeout,omitempty"`
+	Telemetry *int `yaml:"telemetry,omitempty"`
 }
 
 type azureStackConfig struct {
@@ -59,10 +60,11 @@ type azureStackConfig struct {
 }
 
 type azureProvider struct {
-	proj   *project.Project
-	sc     *azureStackConfig
-	envMap map[string]string
-	tmpDir string
+	proj    *project.Project
+	sc      *azureStackConfig
+	envMap  map[string]string
+	tmpDir  string
+	stackID pulumi.StringInput
 }
 
 var (
@@ -202,6 +204,10 @@ func (a *azureProvider) Validate() error {
 		if fc.Timeout != nil && *fc.Timeout < 15 {
 			errList.Push(fmt.Errorf("function config %s requires \"timeout\" to be greater than 15 seconds", fn))
 		}
+
+		if fc.Telemetry != nil {
+			errList.Push(fmt.Errorf("function config %s telemetry is not supported on azure yet", fn))
+		}
 	}
 
 	return errList.Err()
@@ -249,6 +255,8 @@ func (a *azureProvider) Configure(ctx context.Context, autoStack *auto.Stack) er
 func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 	var err error
 
+	a.stackID = pulumi.String(ctx.Stack())
+
 	a.tmpDir, err = os.MkdirTemp("", ctx.Stack()+"-*")
 	if err != nil {
 		return err
@@ -261,7 +269,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 
 	rg, err := resources.NewResourceGroup(ctx, resourceName(ctx, "", ResourceGroupRT), &resources.ResourceGroupArgs{
 		Location: pulumi.String(a.sc.Region),
-		Tags:     common.Tags(ctx, ctx.Stack()),
+		Tags:     common.Tags(ctx, a.stackID, ctx.Stack()),
 	})
 	if err != nil {
 		return errors.WithMessage(err, "resource group create")
@@ -291,7 +299,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 			},
 			TenantId: pulumi.String(clientConfig.TenantId),
 		},
-		Tags: common.Tags(ctx, kvName),
+		Tags: common.Tags(ctx, a.stackID, kvName),
 	})
 	if err != nil {
 		return err
@@ -313,7 +321,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 		contAppsArgs.Topics[k], err = eventgrid.NewTopic(ctx, resourceName(ctx, k, EventGridRT), &eventgrid.TopicArgs{
 			ResourceGroupName: rg.Name,
 			Location:          rg.Location,
-			Tags:              common.Tags(ctx, k),
+			Tags:              common.Tags(ctx, a.stackID, k),
 		})
 		if err != nil {
 			return errors.WithMessage(err, "eventgrid topic "+k)

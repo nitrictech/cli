@@ -36,6 +36,7 @@ type ApiGatewayArgs struct {
 	SecurityDefintions map[string]*v1.ApiSecurityDefinition
 	OpenAPISpec        *openapi3.T
 	LambdaFunctions    map[string]*Lambda
+	StackID            pulumi.StringInput
 }
 
 type ApiGateway struct {
@@ -147,7 +148,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 	res.Api, err = apigatewayv2.NewApi(ctx, name, &apigatewayv2.ApiArgs{
 		Body:         doc,
 		ProtocolType: pulumi.String("HTTP"),
-		Tags:         common.Tags(ctx, name),
+		Tags:         common.Tags(ctx, args.StackID, name),
 	}, opts...)
 	if err != nil {
 		return nil, err
@@ -157,7 +158,7 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 		AutoDeploy: pulumi.BoolPtr(true),
 		Name:       pulumi.String("$default"),
 		ApiId:      res.Api.ID(),
-		Tags:       common.Tags(ctx, name+"DefaultStage"),
+		Tags:       common.Tags(ctx, args.StackID, name+"DefaultStage"),
 	}, opts...)
 	if err != nil {
 		return nil, err

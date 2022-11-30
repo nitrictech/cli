@@ -18,7 +18,7 @@ package azure
 
 import (
 	"github.com/pkg/errors"
-	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/storage"
+	"github.com/pulumi/pulumi-azure-native-sdk/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
@@ -58,7 +58,7 @@ func (a *azureProvider) newStorageResources(ctx *pulumi.Context, name string, ar
 		Sku: storage.SkuArgs{
 			Name: pulumi.String(storage.SkuName_Standard_LRS),
 		},
-		Tags: common.Tags(ctx, accName),
+		Tags: common.Tags(ctx, a.stackID, accName),
 	}, pulumi.Parent(res))
 	if err != nil {
 		return nil, errors.WithMessage(err, "account create")

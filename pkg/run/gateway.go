@@ -66,18 +66,18 @@ func apiWorkerFilter(apiName string) func(w worker.Worker) bool {
 // this can be used to publishing messages to topics or triggering schedules
 func (s *BaseHttpGateway) GetTriggerAddress() string {
 	if s.serviceListener != nil {
-		return strings.Replace(s.serviceListener.Addr().String(), "127.0.0.1", "localhost", 1)
+		return strings.Replace(s.serviceListener.Addr().String(), "[::]", "localhost", 1)
 	}
 
 	return ""
 }
 
-func (s *BaseHttpGateway) GetApiAdresses() map[string]string {
+func (s *BaseHttpGateway) GetApiAddresses() map[string]string {
 	addresses := make(map[string]string)
 
 	for api, srv := range s.apiServer {
 		if srv.workerCount > 0 {
-			srvAddress := strings.Replace(srv.lis.Addr().String(), "127.0.0.1", "localhost", 1)
+			srvAddress := strings.Replace(srv.lis.Addr().String(), "[::]", "localhost", 1)
 			addresses[api] = srvAddress
 		}
 	}

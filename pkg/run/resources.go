@@ -19,21 +19,26 @@ package run
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/nitrictech/nitric/pkg/providers/common"
 )
 
 type RunResourcesService struct {
-	// gatewayUri string
-	gatewayUris map[string]string
+	gw      *BaseHttpGateway
+	isStart bool
 }
 
 var _ common.ResourceService = &RunResourcesService{}
 
 func (r *RunResourcesService) getApiDetails(name string) (*common.DetailsResponse[any], error) {
-	gatewayUri, ok := r.gatewayUris[name]
+	gatewayUri, ok := r.gw.GetApiAddresses()[name]
 	if !ok {
 		return nil, fmt.Errorf("api %s does not exist", name)
+	}
+
+	if !r.isStart {
+		gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
 	}
 
 	return &common.DetailsResponse[any]{
@@ -55,8 +60,9 @@ func (r *RunResourcesService) Details(ctx context.Context, typ common.ResourceTy
 	}
 }
 
-func NewResources(gatewayUris map[string]string) common.ResourceService {
+func NewResources(gw *BaseHttpGateway, isStart bool) common.ResourceService {
 	return &RunResourcesService{
-		gatewayUris: gatewayUris,
+		gw:      gw,
+		isStart: isStart,
 	}
 }

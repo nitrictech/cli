@@ -19,27 +19,38 @@ package run
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 
+	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/plugins/gateway"
 	"github.com/nitrictech/nitric/pkg/triggers"
-	nitric_utils "github.com/nitrictech/nitric/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/worker"
 )
 
 type HttpMiddleware func(*fasthttp.RequestCtx, worker.WorkerPool) bool
 
-type BaseHttpGateway struct {
-	address string
-	server  *fasthttp.Server
-	gateway.UnimplementedGatewayPlugin
+type apiServer struct {
+	lis net.Listener
+	srv *fasthttp.Server
 
+	workerCount int
+}
+
+type BaseHttpGateway struct {
+	apiServer       map[string]*apiServer
+	serviceServer   *fasthttp.Server
+	serviceListener net.Listener
+	gateway.UnimplementedGatewayPlugin
+	stop chan bool
 	pool worker.WorkerPool
 }
+
+var _ gateway.GatewayService = &BaseHttpGateway{}
 
 func apiWorkerFilter(apiName string) func(w worker.Worker) bool {
 	return func(w worker.Worker) bool {
@@ -51,44 +62,55 @@ func apiWorkerFilter(apiName string) func(w worker.Worker) bool {
 	}
 }
 
-func (s *BaseHttpGateway) api(ctx *fasthttp.RequestCtx) {
-	apiName := ctx.UserValue("name").(string)
-	// Rewrite the URL of the request to remove the /api/{name} subroute
-	pathParts := nitric_utils.SplitPath(string(ctx.URI().PathOriginal()))
-
-	// remove first two path parts
-	newPathParts := pathParts[2:]
-
-	newPath := strings.Join(newPathParts, "/")
-
-	// Rewrite the path
-	ctx.URI().SetPath(newPath)
-
-	httpReq := triggers.FromHttpRequest(ctx)
-
-	worker, err := s.pool.GetWorker(&worker.GetWorkerOptions{
-		Http:   httpReq,
-		Filter: apiWorkerFilter(apiName),
-	})
-	if err != nil {
-		ctx.Error("No workers found for provided API route", 404)
-		return
+// GetTriggerAddress - Returns the address built-in nitric services
+// this can be used to publishing messages to topics or triggering schedules
+func (s *BaseHttpGateway) GetTriggerAddress() string {
+	if s.serviceListener != nil {
+		return strings.Replace(s.serviceListener.Addr().String(), "127.0.0.1", "localhost", 1)
 	}
 
-	resp, err := worker.HandleHttpRequest(context.TODO(), httpReq)
-	if err != nil {
-		ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
-		return
+	return ""
+}
+
+func (s *BaseHttpGateway) GetApiAdresses() map[string]string {
+	addresses := make(map[string]string)
+
+	for api, srv := range s.apiServer {
+		if srv.workerCount > 0 {
+			srvAddress := strings.Replace(srv.lis.Addr().String(), "127.0.0.1", "localhost", 1)
+			addresses[api] = srvAddress
+		}
 	}
 
-	if resp.Header != nil {
-		resp.Header.CopyTo(&ctx.Response.Header)
-	}
+	return addresses
+}
 
-	// Avoid content length header duplication
-	ctx.Response.Header.Del("Content-Length")
-	ctx.Response.SetStatusCode(resp.StatusCode)
-	ctx.Response.SetBody(resp.Body)
+func (s *BaseHttpGateway) api(apiName string) func(ctx *fasthttp.RequestCtx) {
+	return func(ctx *fasthttp.RequestCtx) {
+		httpReq := triggers.FromHttpRequest(ctx)
+
+		worker, err := s.pool.GetWorker(&worker.GetWorkerOptions{
+			Http:   httpReq,
+			Filter: apiWorkerFilter(apiName),
+		})
+		if err != nil {
+			ctx.Error("No workers found for provided API route", 404)
+			return
+		}
+
+		resp, err := worker.HandleHttpRequest(context.TODO(), httpReq)
+		if err != nil {
+			ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
+			return
+		}
+
+		if resp.Header != nil {
+			resp.Header.CopyTo(&ctx.Response.Header)
+		}
+
+		ctx.Response.SetBody(resp.Body)
+		ctx.Response.SetStatusCode(resp.StatusCode)
+	}
 }
 
 func (s *BaseHttpGateway) topic(ctx *fasthttp.RequestCtx) {
@@ -119,38 +141,115 @@ func (s *BaseHttpGateway) topic(ctx *fasthttp.RequestCtx) {
 	ctx.Success("text/plain", []byte(fmt.Sprintf("%d successful & %d failed deliveries", len(ws)-len(errList), len(errList))))
 }
 
+// Update the gateway and API based on the worker pool
+func (s *BaseHttpGateway) Refresh() error {
+	// instansiate servers if not already done
+	if s.apiServer == nil {
+		s.apiServer = make(map[string]*apiServer)
+	}
+
+	for _, srv := range s.apiServer {
+		// reset all server worker counts
+		srv.workerCount = 0
+	}
+
+	for _, w := range s.pool.GetWorkers(&worker.GetWorkerOptions{}) {
+		if api, ok := w.(*worker.RouteWorker); ok {
+			currApi, ok := s.apiServer[api.Api()]
+
+			if !ok {
+				fhttp := &fasthttp.Server{
+					ReadTimeout:     time.Second * 1,
+					IdleTimeout:     time.Second * 1,
+					CloseOnShutdown: true,
+					Handler:         s.api(api.Api()),
+				}
+
+				lis, err := utils.GetNextListener()
+				if err != nil {
+					return err
+				}
+
+				srv := &apiServer{
+					lis:         lis,
+					srv:         fhttp,
+					workerCount: 0,
+				}
+
+				// get a free port and listen on that for this API
+				go func(srv *apiServer) {
+					err := srv.srv.Serve(srv.lis)
+					if err != nil {
+						fmt.Println(err)
+					}
+				}(srv)
+
+				currApi = srv
+				// append to the server collection
+				s.apiServer[api.Api()] = currApi
+
+				// this is a brand new server we need to start up
+				// lets start it and add it to the active list of servers
+				// we can then filter the servers by their active worker count
+				currApi.workerCount = 0
+			}
+
+			// Increment this APIs worker count
+			// this will be used to filter displayed APIs
+			currApi.workerCount = currApi.workerCount + 1
+		}
+	}
+
+	return nil
+}
+
 func (s *BaseHttpGateway) Start(pool worker.WorkerPool) error {
+	var err error
+	// Assign the pool and block
 	s.pool = pool
+	s.stop = make(chan bool)
 
 	// Setup routes
 	r := router.New()
-	// Make a request to an API gateway
-	r.ANY("/apis/{name}/{any?:*}", s.api)
 	// Publish to a topic
 	r.POST("/topic/{name}", s.topic)
 
-	s.server = &fasthttp.Server{
+	s.serviceServer = &fasthttp.Server{
 		ReadTimeout:     time.Second * 1,
 		IdleTimeout:     time.Second * 1,
 		CloseOnShutdown: true,
 		Handler:         r.Handler,
 	}
 
-	return s.server.ListenAndServe(s.address)
+	s.serviceListener, err = utils.GetNextListener()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		_ = s.serviceServer.Serve(s.serviceListener)
+	}()
+
+	// block on a stop signal
+	<-s.stop
+
+	return nil
 }
 
 func (s *BaseHttpGateway) Stop() error {
-	if s.server != nil {
-		return s.server.Shutdown()
+	for _, s := range s.apiServer {
+		// shutdown all the servers
+		// this will allow Start to exit
+		_ = s.srv.Shutdown()
 	}
+
+	s.stop <- true
 
 	return nil
 }
 
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
-func NewGateway(address string) (gateway.GatewayService, error) {
-	return &BaseHttpGateway{
-		address: address,
-	}, nil
+func NewGateway() (*BaseHttpGateway, error) {
+	return &BaseHttpGateway{}, nil
 }

@@ -55,11 +55,13 @@ type localServices struct {
 	mem     *membrane.Membrane
 	status  *LocalServicesStatus
 	gw      *BaseHttpGateway
+	isStart bool
 }
 
-func NewLocalServices(s *project.Project) LocalServices {
+func NewLocalServices(s *project.Project, isStart bool) LocalServices {
 	return &localServices{
-		s: s,
+		s:       s,
+		isStart: isStart,
 		status: &LocalServicesStatus{
 			RunDir:          filepath.Join(utils.NitricRunDir(), s.Name),
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
@@ -101,7 +103,7 @@ func (l *localServices) Running() bool {
 
 func (l *localServices) Apis() map[string]string {
 	if l.gw != nil {
-		return l.gw.GetApiAdresses()
+		return l.gw.GetApiAddresses()
 	}
 
 	return nil
@@ -171,9 +173,6 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		return err
 	}
 
-	// create new resources
-	res := NewResources(l.gw.GetApiAdresses())
-
 	// Prepare development membrane to start
 	// This will start a single membrane that all
 	// running functions will connect to
@@ -185,7 +184,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		DocumentPlugin:          dp,
 		GatewayPlugin:           l.gw,
 		EventsPlugin:            ev,
-		ResourcesPlugin:         res,
+		ResourcesPlugin:         NewResources(l.gw, l.isStart),
 		Pool:                    pool,
 		TolerateMissingServices: false,
 	})

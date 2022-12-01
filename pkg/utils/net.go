@@ -63,7 +63,7 @@ func GetNextListener(opts ...getNextListenerOption) (net.Listener, error) {
 
 	for currentPort < options.maxPort {
 		// attempt to get listener for port
-		lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", currentPort))
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", currentPort))
 		if err != nil {
 			// increment the port and continue
 			currentPort = currentPort + 1

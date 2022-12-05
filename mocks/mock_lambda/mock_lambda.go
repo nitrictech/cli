@@ -3713,3 +3713,36 @@ func (mr *MockLambdaAPIMockRecorder) WaitUntilFunctionUpdatedWithContext(arg0, a
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilFunctionUpdatedWithContext", reflect.TypeOf((*MockLambdaAPI)(nil).WaitUntilFunctionUpdatedWithContext), varargs...)
 }
+
+// WaitUntilPublishedVersionActive mocks base method.
+func (m *MockLambdaAPI) WaitUntilPublishedVersionActive(arg0 *lambda.GetFunctionConfigurationInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitUntilPublishedVersionActive", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilPublishedVersionActive indicates an expected call of WaitUntilPublishedVersionActive.
+func (mr *MockLambdaAPIMockRecorder) WaitUntilPublishedVersionActive(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilPublishedVersionActive", reflect.TypeOf((*MockLambdaAPI)(nil).WaitUntilPublishedVersionActive), arg0)
+}
+
+// WaitUntilPublishedVersionActiveWithContext mocks base method.
+func (m *MockLambdaAPI) WaitUntilPublishedVersionActiveWithContext(arg0 context.Context, arg1 *lambda.GetFunctionConfigurationInput, arg2 ...request.WaiterOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "WaitUntilPublishedVersionActiveWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilPublishedVersionActiveWithContext indicates an expected call of WaitUntilPublishedVersionActiveWithContext.
+func (mr *MockLambdaAPIMockRecorder) WaitUntilPublishedVersionActiveWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilPublishedVersionActiveWithContext", reflect.TypeOf((*MockLambdaAPI)(nil).WaitUntilPublishedVersionActiveWithContext), varargs...)
+}

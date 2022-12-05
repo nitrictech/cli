@@ -31,7 +31,7 @@ require (
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/moby/moby v20.10.21+incompatible
 	github.com/nitrictech/go-mods-direct v0.0.0-20221124004415-e2ce7ec20618
-	github.com/nitrictech/nitric v0.21.0-rc.2
+	github.com/nitrictech/nitric v0.21.0
 	github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.21/dockerbuildkit v0.0.0-20221128004642-afea0486c727
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.49
@@ -56,10 +56,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.17.1
-	github.com/aws/aws-sdk-go-v2/config v1.17.10
-	github.com/aws/aws-sdk-go-v2/credentials v1.12.23
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.1
 	github.com/pulumi/pulumi-azure-native-sdk/apimanagement v1.87.0
 	github.com/pulumi/pulumi-azure-native-sdk/app v1.87.0
 	github.com/pulumi/pulumi-azure-native-sdk/authorization v1.87.0

@@ -26,10 +26,12 @@ import (
 	"github.com/pulumi/pulumi-azure-native-sdk/managedidentity"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
+	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
 )
 
 type AzureApiManagementArgs struct {
+	StackID             pulumi.StringInput
 	ResourceGroupName   pulumi.StringInput
 	OrgName             pulumi.StringInput
 	AdminEmail          pulumi.StringInput
@@ -110,6 +112,7 @@ func newAzureApiManagement(ctx *pulumi.Context, name string, args *AzureApiManag
 			Type:                   pulumi.String("UserAssigned"),
 			UserAssignedIdentities: managedIdentities,
 		},
+		Tags: common.Tags(ctx, args.StackID, name),
 	})
 	if err != nil {
 		return nil, err

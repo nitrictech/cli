@@ -384,6 +384,7 @@ func (a *azureProvider) Deploy(ctx *pulumi.Context) error {
 			Apps:                apps.Apps,
 			SecurityDefinitions: a.proj.SecurityDefinitions[k],
 			ManagedIdentity:     managedUser,
+			StackID:             a.stackID,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "gateway "+k)

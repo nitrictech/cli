@@ -68,7 +68,7 @@ var runCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
-		ls := run.NewLocalServices(proj)
+		ls := run.NewLocalServices(proj, false)
 		if ls.Running() {
 			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")
 			os.Exit(2)
@@ -145,7 +145,14 @@ var runCmd = &cobra.Command{
 
 		pterm.DefaultBasicText.Println("Application running, use ctrl-C to stop")
 
-		stackState := run.StateFromPool(pool)
+		stackState := run.NewStackState()
+
+		err = ls.Refresh()
+		if err != nil {
+			cobra.CheckErr(err)
+		}
+
+		stackState.Update(pool, ls)
 
 		area, _ := pterm.DefaultArea.Start()
 		area.Update(stackState.Tables(9001))
@@ -155,9 +162,14 @@ var runCmd = &cobra.Command{
 		pool.Listen(func(we run.WorkerEvent) {
 			lck.Lock()
 			defer lck.Unlock()
-			// area.Clear()
 
-			stackState.UpdateFromWorkerEvent(we)
+			err := ls.Refresh()
+			if err != nil {
+				cobra.CheckErr(err)
+			}
+
+			stackState.Update(pool, ls)
+
 			area.Update(stackState.Tables(9001))
 		})
 

@@ -26,104 +26,29 @@ import (
 )
 
 type RunStackState struct {
-	apis      map[string]int
-	subs      map[string]int
-	schedules map[string]int
+	apis      map[string]string
+	subs      map[string]string
+	schedules map[string]string
 }
 
-func StateFromPool(pool worker.WorkerPool) *RunStackState {
-	r := NewStackState()
-	wrkrs := pool.GetWorkers(&worker.GetWorkerOptions{})
+func (r *RunStackState) Update(pool worker.WorkerPool, ls LocalServices) {
+	// reset state maps
+	r.apis = make(map[string]string)
+	r.subs = make(map[string]string)
+	r.schedules = make(map[string]string)
 
-	for _, wrkr := range wrkrs {
-		switch wrkr.(type) {
-		case *worker.RouteWorker:
-			w := wrkr.(*worker.RouteWorker)
-
-			if _, ok := r.apis[w.Api()]; !ok {
-				r.apis[w.Api()] = 1
-			} else {
-				r.apis[w.Api()] = r.apis[w.Api()] + 1
-			}
-		case *worker.SubscriptionWorker:
-			w := wrkr.(*worker.SubscriptionWorker)
-
-			if _, ok := r.subs[w.Topic()]; !ok {
-				r.subs[w.Topic()] = 1
-			} else {
-				r.subs[w.Topic()] = r.subs[w.Topic()] + 1
-			}
-		case *worker.ScheduleWorker:
-			w := wrkr.(*worker.ScheduleWorker)
-
-			if _, ok := r.schedules[w.Key()]; !ok {
-				r.schedules[w.Key()] = 1
-			} else {
-				r.schedules[w.Key()] = r.schedules[w.Key()] + 1
-			}
-		}
+	for name, address := range ls.Apis() {
+		r.apis[name] = address
 	}
 
-	return r
-}
-
-func (r *RunStackState) UpdateFromWorkerEvent(evt WorkerEvent) {
-	if evt.Type == WorkerEventType_Add {
-		switch evt.Worker.(type) {
-		case *worker.RouteWorker:
-			w := evt.Worker.(*worker.RouteWorker)
-
-			if _, ok := r.apis[w.Api()]; !ok {
-				r.apis[w.Api()] = 1
-			} else {
-				r.apis[w.Api()] = r.apis[w.Api()] + 1
-			}
+	// TODO: We can probably move this directly into local service state
+	for _, wrkr := range pool.GetWorkers(&worker.GetWorkerOptions{}) {
+		switch w := wrkr.(type) {
 		case *worker.SubscriptionWorker:
-			w := evt.Worker.(*worker.SubscriptionWorker)
-
-			if _, ok := r.subs[w.Topic()]; !ok {
-				r.subs[w.Topic()] = 1
-			} else {
-				r.subs[w.Topic()] = r.subs[w.Topic()] + 1
-			}
+			r.subs[w.Topic()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), w.Topic())
 		case *worker.ScheduleWorker:
-			w := evt.Worker.(*worker.ScheduleWorker)
-
-			if _, ok := r.schedules[w.Key()]; !ok {
-				r.schedules[w.Key()] = 1
-			} else {
-				r.schedules[w.Key()] = r.schedules[w.Key()] + 1
-			}
-		}
-	} else if evt.Type == WorkerEventType_Remove {
-		switch evt.Worker.(type) {
-		case *worker.RouteWorker:
-			w := evt.Worker.(*worker.RouteWorker)
-
-			r.apis[w.Api()] = r.apis[w.Api()] - 1
-
-			if r.apis[w.Api()] <= 0 {
-				// Remove the key if the reference count is 0 or less
-				delete(r.apis, w.Api())
-			}
-		case *worker.SubscriptionWorker:
-			w := evt.Worker.(*worker.SubscriptionWorker)
-
-			r.subs[w.Topic()] = r.subs[w.Topic()] - 1
-
-			if r.subs[w.Topic()] <= 0 {
-				// Remove the key if the reference count is 0 or less
-				delete(r.subs, w.Topic())
-			}
-		case *worker.ScheduleWorker:
-			w := evt.Worker.(*worker.ScheduleWorker)
-
-			r.schedules[w.Key()] = r.schedules[w.Key()] - 1
-
-			if r.schedules[w.Key()] <= 0 {
-				// Remove the key if the reference count is 0 or less
-				delete(r.schedules, w.Key())
-			}
+			topicKey := strings.ToLower(strings.ReplaceAll(w.Key(), " ", "-"))
+			r.subs[w.Key()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), topicKey)
 		}
 	}
 }
@@ -152,9 +77,9 @@ func (r *RunStackState) Tables(port int) string {
 func (r *RunStackState) ApiTable(port int) (string, int) {
 	tableData := pterm.TableData{{"Api", "Endpoint"}}
 
-	for k := range r.apis {
+	for name, address := range r.apis {
 		tableData = append(tableData, []string{
-			k, fmt.Sprintf("http://localhost:%d/apis/%s", port, k),
+			name, fmt.Sprintf("http://%s", address),
 		})
 	}
 
@@ -166,9 +91,9 @@ func (r *RunStackState) ApiTable(port int) (string, int) {
 func (r *RunStackState) TopicTable(port int) (string, int) {
 	tableData := pterm.TableData{{"Topic", "Endpoint"}}
 
-	for k := range r.subs {
+	for k, address := range r.subs {
 		tableData = append(tableData, []string{
-			k, fmt.Sprintf("http://localhost:%d/topic/%s", port, k),
+			k, address,
 		})
 	}
 
@@ -180,10 +105,9 @@ func (r *RunStackState) TopicTable(port int) (string, int) {
 func (r *RunStackState) SchedulesTable(port int) (string, int) {
 	tableData := pterm.TableData{{"Schedule", "Endpoint"}}
 
-	for k := range r.schedules {
-		nKey := strings.ToLower(strings.ReplaceAll(k, " ", "-"))
+	for k, address := range r.schedules {
 		tableData = append(tableData, []string{
-			k, fmt.Sprintf("http://localhost:%d/topic/%s", port, nKey),
+			k, address,
 		})
 	}
 
@@ -194,8 +118,8 @@ func (r *RunStackState) SchedulesTable(port int) (string, int) {
 
 func NewStackState() *RunStackState {
 	return &RunStackState{
-		apis:      map[string]int{},
-		subs:      map[string]int{},
-		schedules: map[string]int{},
+		apis:      map[string]string{},
+		subs:      map[string]string{},
+		schedules: map[string]string{},
 	}
 }

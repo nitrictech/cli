@@ -29,7 +29,6 @@ import (
 	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
 	queue_service "github.com/nitrictech/nitric/pkg/plugins/queue/dev"
 	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
-	nitric_utils "github.com/nitrictech/nitric/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/worker"
 )
 
@@ -38,11 +37,14 @@ type LocalServices interface {
 	Stop() error
 	Running() bool
 	Status() *LocalServicesStatus
+	Refresh() error
+	Apis() map[string]string
+	TriggerAddress() string
 }
 
 type LocalServicesStatus struct {
-	RunDir          string `yaml:"runDir"`
-	GatewayAddress  string `yaml:"gatewayAddress"`
+	RunDir string `yaml:"runDir"`
+	// GatewayAddress  string `yaml:"gatewayAddress"`
 	MembraneAddress string `yaml:"membraneAddress"`
 	StorageEndpoint string `yaml:"storageEndpoint"`
 }
@@ -52,17 +54,35 @@ type localServices struct {
 	storage *SeaweedServer
 	mem     *membrane.Membrane
 	status  *LocalServicesStatus
+	gw      *BaseHttpGateway
+	isStart bool
 }
 
-func NewLocalServices(s *project.Project) LocalServices {
+func NewLocalServices(s *project.Project, isStart bool) LocalServices {
 	return &localServices{
-		s: s,
+		s:       s,
+		isStart: isStart,
 		status: &LocalServicesStatus{
 			RunDir:          filepath.Join(utils.NitricRunDir(), s.Name),
-			GatewayAddress:  nitric_utils.GetEnv("GATEWAY_ADDRESS", ":9001"),
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
 		},
 	}
+}
+
+func (l *localServices) TriggerAddress() string {
+	if l.gw != nil {
+		return l.gw.GetTriggerAddress()
+	}
+
+	return ""
+}
+
+func (l *localServices) Refresh() error {
+	if l.gw != nil {
+		return l.gw.Refresh()
+	}
+
+	return nil
 }
 
 func (l *localServices) Stop() error {
@@ -79,6 +99,14 @@ func (l *localServices) Running() bool {
 	}
 
 	return false
+}
+
+func (l *localServices) Apis() map[string]string {
+	if l.gw != nil {
+		return l.gw.GetApiAddresses()
+	}
+
+	return nil
 }
 
 func (l *localServices) Status() *LocalServicesStatus {
@@ -139,11 +167,8 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		return err
 	}
 
-	// create new resources
-	res := NewResources(fmt.Sprintf("http://localhost%s", l.status.GatewayAddress))
-
 	// Start a new gateway plugin
-	gw, err := NewGateway(l.status.GatewayAddress)
+	l.gw, err = NewGateway()
 	if err != nil {
 		return err
 	}
@@ -157,9 +182,9 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		QueuePlugin:             qp,
 		StoragePlugin:           sp,
 		DocumentPlugin:          dp,
-		GatewayPlugin:           gw,
+		GatewayPlugin:           l.gw,
 		EventsPlugin:            ev,
-		ResourcesPlugin:         res,
+		ResourcesPlugin:         NewResources(l.gw, l.isStart),
 		Pool:                    pool,
 		TolerateMissingServices: false,
 	})

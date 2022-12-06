@@ -463,6 +463,8 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		}
 	}
 
+	uniquePolicies := make(map[string]bool)
+
 	for _, p := range a.proj.Policies {
 		if len(p.Actions) == 0 {
 			// note Topic receiving does not require an action.
@@ -474,6 +476,14 @@ func (a *awsProvider) Deploy(ctx *pulumi.Context) error {
 		if err != nil {
 			return err
 		}
+
+		_, ok := uniquePolicies[policyName]
+		if ok {
+			// no point creating multiple policies with the same content.
+			continue
+		}
+
+		uniquePolicies[policyName] = true
 
 		if _, err := newPolicy(ctx, policyName, &PolicyArgs{
 			Policy: p,

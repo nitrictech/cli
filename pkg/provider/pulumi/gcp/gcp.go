@@ -287,13 +287,31 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 	return autoStack.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: g.gcpProject})
 }
 
-func (g *gcpProvider) setToken() error {
+func (g *gcpProvider) setToken(ctx *pulumi.Context) error {
+	// The access token scopes
+	scopes := []string{
+		"https://www.googleapis.com/auth/cloud-platform",
+		"https://www.googleapis.com/auth/trace.append",
+	}
+
+	// If the user is attempting to impersonate a gcp service account using pulumi using the GOOGLE_IMPERSONATE_SERVICE_ACCOUNT env var
+	// Read more: (https://www.pulumi.com/registry/packages/gcp/installation-configuration/#configuration-reference)
+	targetSA := os.Getenv("GOOGLE_IMPERSONATE_SERVICE_ACCOUNT")
+	if targetSA != "" {
+		token, err := serviceaccount.GetAccountAccessToken(ctx, &serviceaccount.GetAccountAccessTokenArgs{
+			TargetServiceAccount: targetSA,
+			Scopes: scopes,
+		})
+		if err != nil {
+			return errors.WithMessage(err, fmt.Sprintf("Unable to impersonate service account: %s", targetSA))
+		}		
+
+		g.token = &oauth2.Token{ AccessToken: token.AccessToken }
+	}
+
 	if g.token == nil { // for unit testing
-		creds, err := google.FindDefaultCredentialsWithParams(context.Background(), google.CredentialsParams{
-			Scopes: []string{
-				"https://www.googleapis.com/auth/cloud-platform",
-				"https://www.googleapis.com/auth/trace.append",
-			},
+		creds, err := google.FindDefaultCredentialsWithParams(ctx.Context(), google.CredentialsParams{
+			Scopes: scopes,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "Unable to find credentials, try 'gcloud auth application-default login'")
@@ -318,7 +336,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
-	if err := g.setToken(); err != nil {
+	if err := g.setToken(ctx); err != nil {
 		return err
 	}
 

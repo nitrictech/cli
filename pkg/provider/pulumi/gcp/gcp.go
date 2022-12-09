@@ -46,6 +46,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iamcredentials/v1"
 	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -288,30 +289,31 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 }
 
 func (g *gcpProvider) setToken(ctx *pulumi.Context) error {
-	// The access token scopes
-	scopes := []string{
-		"https://www.googleapis.com/auth/cloud-platform",
-		"https://www.googleapis.com/auth/trace.append",
-	}
-
 	// If the user is attempting to impersonate a gcp service account using pulumi using the GOOGLE_IMPERSONATE_SERVICE_ACCOUNT env var
 	// Read more: (https://www.pulumi.com/registry/packages/gcp/installation-configuration/#configuration-reference)
 	targetSA := os.Getenv("GOOGLE_IMPERSONATE_SERVICE_ACCOUNT")
 	if targetSA != "" {
-		token, err := serviceaccount.GetAccountAccessToken(ctx, &serviceaccount.GetAccountAccessTokenArgs{
-			TargetServiceAccount: targetSA,
-			Scopes: scopes,
-		})
+		service, err := iamcredentials.NewService(ctx.Context())
 		if err != nil {
 			return errors.WithMessage(err, fmt.Sprintf("Unable to impersonate service account: %s", targetSA))
-		}		
+		}
 
+		token, err := service.Projects.ServiceAccounts.GenerateAccessToken(fmt.Sprintf("projects/-/serviceAccounts/%s", targetSA), &iamcredentials.GenerateAccessTokenRequest{
+			Scope: []string{
+				"https://www.googleapis.com/auth/cloud-platform",
+				"https://www.googleapis.com/auth/trace.append",
+			},
+		}).Do()
+ 
 		g.token = &oauth2.Token{ AccessToken: token.AccessToken }
 	}
 
 	if g.token == nil { // for unit testing
 		creds, err := google.FindDefaultCredentialsWithParams(ctx.Context(), google.CredentialsParams{
-			Scopes: scopes,
+			Scopes: []string{
+				"https://www.googleapis.com/auth/cloud-platform",
+				"https://www.googleapis.com/auth/trace.append",
+			},
 		})
 		if err != nil {
 			return errors.WithMessage(err, "Unable to find credentials, try 'gcloud auth application-default login'")

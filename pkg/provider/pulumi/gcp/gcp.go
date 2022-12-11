@@ -304,8 +304,15 @@ func (g *gcpProvider) setToken(ctx *pulumi.Context) error {
 				"https://www.googleapis.com/auth/trace.append",
 			},
 		}).Do()
- 
-		g.token = &oauth2.Token{ AccessToken: token.AccessToken }
+		if err != nil {
+			return errors.WithMessage(err, fmt.Sprintf("Unable to impersonate service account: %s", targetSA))
+		}
+
+		if token == nil {
+			return fmt.Errorf("Unable to impersonate service account.")
+		}
+
+		g.token = &oauth2.Token{AccessToken: token.AccessToken}
 	}
 
 	if g.token == nil { // for unit testing

@@ -7,7 +7,7 @@ GOLANGCI_LINT ?= GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) go run github.com/go
 
 ifeq ($(OS), Windows_NT)
     OS=Windows
-    BUILD_ENV=
+    BUILD_ENV=CGO_ENABLED=0
     EXECUTABLE_EXT=.exe
 else
     OS=$(shell uname -s)

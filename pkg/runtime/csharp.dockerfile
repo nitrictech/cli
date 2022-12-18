@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . ./
 
 # Build and publish a release
-RUN dotnet publish -c Release -o out --self-contained --runtime linux-musl-amd64 -p:PublishSingleFile=true -p:PublishTrimmed=true
+RUN dotnet publish -c Release -o out --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=true
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/runtime-deps:7.0

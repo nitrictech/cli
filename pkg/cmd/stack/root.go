@@ -277,7 +277,7 @@ var stackPreviewCmd = &cobra.Command{
 			Runner: func(progress output.Progress) error {
 				summary, err := p.Preview(progress)
 				// Write the digest regardless of deployment errors if available
-				if summary != "" {		
+				if summary != "" {
 					fmt.Println("\n" + summary)
 				}
 
@@ -285,7 +285,8 @@ var stackPreviewCmd = &cobra.Command{
 			},
 			StopMsg: "Stack",
 		}
-		tasklet.MustRun(deploy, tasklet.Opts{SuccessPrefix: "Preview"})	},
+		tasklet.MustRun(deploy, tasklet.Opts{SuccessPrefix: "Preview"})
+	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"preview"},
 }

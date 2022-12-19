@@ -291,9 +291,9 @@ func (a *pulumiDeployment) Down(log output.Progress) (*types.Summary, error) {
 
 const (
 	colorYellow = "\033[33m"
-	colorGreen = "\033[32m"
-	colorRed = "\033[31m"
-	colorWhite = "\033[97m"
+	colorGreen  = "\033[32m"
+	colorRed    = "\033[31m"
+	colorWhite  = "\033[97m"
 )
 
 func (a *pulumiDeployment) Preview(log output.Progress) (string, error) {
@@ -301,16 +301,17 @@ func (a *pulumiDeployment) Preview(log output.Progress) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	pLog := &pulumiLogger{
 		Progress: log,
 	}
 
 	res, err := s.Preview(context.Background(), previewLoggingOpts(pLog)...)
-	
+
 	// Filter out pulumi creations and colourise specific information
 	lines := strings.Split(res.StdOut, "\n")
 	summary := []string{}
+
 	for _, line := range lines {
 		if !strings.Contains(line, "pulumi:") { // Remove pulumi specific resources
 			color := colorWhite
@@ -322,7 +323,7 @@ func (a *pulumiDeployment) Preview(log output.Progress) (string, error) {
 				color = colorYellow
 			}
 
-			summary = append(summary, string(color) + line)
+			summary = append(summary, color+line)
 		}
 	}
 

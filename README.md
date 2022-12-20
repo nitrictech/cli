@@ -26,7 +26,6 @@ The Nitric CLI performs 3 main tasks:
 Common commands in the CLI that you’ll be using:
 
 - nitric down : Undeploy a previously deployed stack, deleting resources
-- nitric preview : Preview a stack deployment
 - nitric run : Run your project locally for development and testing
 - nitric stack new : Create a new Nitric stack
 - nitric start : Run nitric services locally for development and testing
@@ -56,8 +55,6 @@ Documentation for all available commands:
 - nitric stack list [-s stack] : List all project stacks and their status
   (alias: nitric list)
 - nitric stack new : Create a new Nitric stack
-- nitric stack preview [-s stack] : Preview a stack deployment
-  (alias: nitric preview)
 - nitric stack update [-s stack] : Create or update a deployed stack
   (alias: nitric up)
 - nitric start : Run nitric services locally for development and testing

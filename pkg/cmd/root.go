@@ -106,6 +106,7 @@ func init() {
 	rootCmd.AddCommand(start.RootCommand())
 	addAlias("stack update", "up", true)
 	addAlias("stack down", "down", true)
+	addAlias("stack preview", "preview", true)
 	addAlias("stack list", "list", false)
 
 	rootCmd.Long = usageString()

@@ -206,6 +206,91 @@ var stackUpdateCmd = &cobra.Command{
 	Aliases: []string{"up"},
 }
 
+var stackPreviewCmd = &cobra.Command{
+	Use:     "preview [-s stack]",
+	Short:   "Preview a stack deployment",
+	Long:    `Preview a stack deployment`,
+	Example: `nitric stack preview -s aws`,
+	Run: func(cmd *cobra.Command, args []string) {
+		s, err := stack.ConfigFromOptions()
+
+		if err != nil && strings.Contains(err.Error(), "No nitric stacks found") {
+			confirm := ""
+			err = survey.AskOne(&survey.Select{
+				Message: "A stack is required to deploy your project, create one now?",
+				Default: "Yes",
+				Options: []string{"Yes", "No"},
+			}, &confirm)
+			cobra.CheckErr(err)
+			if confirm != "Yes" {
+				pterm.Info.Println("You can run `nitric stack new` to create a new stack.")
+				os.Exit(0)
+			}
+			err = newStack(cmd, args)
+			cobra.CheckErr(err)
+
+			s, err = stack.ConfigFromOptions()
+			cobra.CheckErr(err)
+		}
+
+		config, err := project.ConfigFromProjectPath("")
+		cobra.CheckErr(err)
+
+		proj, err := project.FromConfig(config)
+		cobra.CheckErr(err)
+
+		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
+
+		envFiles := utils.FilesExisting(".env", ".env.production", envFile)
+		envMap := map[string]string{}
+		if len(envFiles) > 0 {
+			envMap, err = godotenv.Read(envFiles...)
+			cobra.CheckErr(err)
+		}
+
+		// build base images on updates
+		createBaseImage := tasklet.Runner{
+			StartMsg: "Building Images",
+			Runner: func(_ output.Progress) error {
+				return build.BuildBaseImages(proj)
+			},
+			StopMsg: "Images Built",
+		}
+		tasklet.MustRun(createBaseImage, tasklet.Opts{})
+
+		codeAsConfig := tasklet.Runner{
+			StartMsg: "Gathering configuration from code..",
+			Runner: func(_ output.Progress) error {
+				proj, err = codeconfig.Populate(proj, envMap)
+				return err
+			},
+			StopMsg: "Configuration gathered",
+		}
+		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
+
+		p, err := provider.NewProvider(proj, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true})
+		cobra.CheckErr(err)
+
+		deploy := tasklet.Runner{
+			StartMsg: "Previewing..",
+			Runner: func(progress output.Progress) error {
+				summary, err := p.Preview(progress)
+				// Write the digest regardless of deployment errors if available
+				if summary != "" {
+					fmt.Println("\n" + summary)
+				}
+
+				return err
+			},
+			StopMsg: "Stack",
+		}
+		tasklet.MustRun(deploy, tasklet.Opts{SuccessPrefix: "Preview"})
+	},
+	Args:    cobra.MinimumNArgs(0),
+	Aliases: []string{"preview"},
+}
+
 var stackDeleteCmd = &cobra.Command{
 	Use:   "down [-s stack]",
 	Short: "Undeploy a previously deployed stack, deleting resources",
@@ -306,6 +391,10 @@ func RootCommand() *cobra.Command {
 
 	stackCmd.AddCommand(stackListCmd)
 	cobra.CheckErr(stack.AddOptions(stackListCmd, false))
+
+	stackCmd.AddCommand(command.AddDependencyCheck(stackPreviewCmd, command.Pulumi, command.Docker))
+	stackPreviewCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
+	cobra.CheckErr(stack.AddOptions(stackPreviewCmd, false))
 
 	return stackCmd
 }

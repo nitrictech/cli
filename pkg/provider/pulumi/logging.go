@@ -25,6 +25,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/debug"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/events"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optdestroy"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optpreview"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optup"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 
@@ -79,6 +80,34 @@ func destroyLoggingOpts(log *pulumiLogger) []optdestroy.Option {
 		var loglevel uint = uint(output.VerboseLevel)
 
 		opts = append(opts, optdestroy.DebugLogging(debug.LoggingOptions{
+			LogLevel:      &loglevel,
+			LogToStdErr:   true,
+			FlowToPlugins: true,
+		}))
+	}
+
+	return opts
+}
+
+func previewLoggingOpts(log *pulumiLogger) []optpreview.Option {
+	upChannel := make(chan events.EngineEvent)
+	opts := []optpreview.Option{
+		optpreview.EventStreams(upChannel),
+	}
+
+	go collectEvents(log, upChannel, "Previewing.. ")
+
+	if output.VerboseLevel >= 2 {
+		piper, pipew := io.Pipe()
+		go output.StdoutToPtermDebug(piper, log, "Previewing.. ")
+
+		opts = append(opts, optpreview.ProgressStreams(pipew))
+	}
+
+	if output.VerboseLevel > 2 {
+		var loglevel uint = uint(output.VerboseLevel)
+
+		opts = append(opts, optpreview.DebugLogging(debug.LoggingOptions{
 			LogLevel:      &loglevel,
 			LogToStdErr:   true,
 			FlowToPlugins: true,

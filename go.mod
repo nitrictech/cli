@@ -7,11 +7,11 @@ require (
 	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/aws/aws-sdk-go v1.44.171
+	github.com/aws/aws-sdk-go v1.44.175
 	github.com/aws/aws-sdk-go-v2 v1.17.3
-	github.com/aws/aws-sdk-go-v2/config v1.18.7
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.7
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.6
+	github.com/aws/aws-sdk-go-v2/config v1.18.8
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.8
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.0
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.22+incompatible
@@ -34,21 +34,21 @@ require (
 	github.com/nitrictech/nitric v0.21.0
 	github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.21/dockerbuildkit v0.0.0-20221128004642-afea0486c727
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.51
-	github.com/pulumi/pulumi-aws/sdk/v5 v5.25.0
+	github.com/pterm/pterm v0.12.53
+	github.com/pulumi/pulumi-aws/sdk/v5 v5.26.0
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
 	github.com/pulumi/pulumi-azuread/sdk/v5 v5.32.0
 	github.com/pulumi/pulumi-gcp/sdk/v6 v6.45.0
 	github.com/pulumi/pulumi-random/sdk/v4 v4.8.2
-	github.com/pulumi/pulumi/sdk/v3 v3.50.2
+	github.com/pulumi/pulumi/sdk/v3 v3.51.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/segmentio/encoding v0.3.6
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
 	github.com/valyala/fasthttp v1.43.0
-	golang.org/x/exp v0.0.0-20221230185412-738e83a70c30
+	golang.org/x/exp v0.0.0-20230108222341-4b8118a2686a
 	golang.org/x/mod v0.7.0 // indirect
-	golang.org/x/oauth2 v0.3.0
+	golang.org/x/oauth2 v0.4.0
 	google.golang.org/grpc v1.51.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -66,18 +66,18 @@ require (
 	github.com/pulumi/pulumi-azure-native-sdk/operationalinsights v1.90.0
 	github.com/pulumi/pulumi-azure-native-sdk/resources v1.90.0
 	github.com/pulumi/pulumi-azure-native-sdk/storage v1.90.0
-	github.com/seaweedfs/seaweedfs v0.0.0-20230101130753-c7c9d22f37de
-	google.golang.org/api v0.105.0
+	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
+	google.golang.org/api v0.106.0
 )
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect
 	atomicgo.dev/cursor v0.1.1 // indirect
 	atomicgo.dev/keyboard v0.2.8 // indirect
-	cloud.google.com/go v0.107.0 // indirect
-	cloud.google.com/go/compute v1.14.0 // indirect
+	cloud.google.com/go v0.108.0 // indirect
+	cloud.google.com/go/compute v1.15.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v0.9.0 // indirect
+	cloud.google.com/go/iam v0.10.0 // indirect
 	cloud.google.com/go/pubsub v1.28.0 // indirect
 	cloud.google.com/go/storage v1.28.1 // indirect
 	github.com/Abirdcfly/dupword v0.0.7 // indirect
@@ -131,9 +131,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.13.21 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.18.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.19.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.11.28 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.17.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.12.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.18.0 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -184,7 +184,7 @@ require (
 	github.com/go-errors/errors v1.1.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.4.0 // indirect
-	github.com/go-git/go-git/v5 v5.5.1 // indirect
+	github.com/go-git/go-git/v5 v5.5.2 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/errors v0.20.3 // indirect
@@ -274,7 +274,7 @@ require (
 	github.com/kisielk/errcheck v1.6.2 // indirect
 	github.com/kisielk/gotool v1.0.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.3 // indirect
-	github.com/klauspost/compress v1.15.13 // indirect
+	github.com/klauspost/compress v1.15.14 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.0 // indirect
 	github.com/klauspost/reedsolomon v1.11.3 // indirect
 	github.com/kulti/thelper v0.6.3 // indirect
@@ -427,7 +427,7 @@ require (
 	github.com/yandex-cloud/go-genproto v0.0.0-20211115083454-9ca41db5ed9e // indirect
 	github.com/ydb-platform/ydb-go-genproto v0.0.0-20221215182650-986f9d10542f // indirect
 	github.com/ydb-platform/ydb-go-sdk-auth-environ v0.1.2 // indirect
-	github.com/ydb-platform/ydb-go-sdk/v3 v3.41.0 // indirect
+	github.com/ydb-platform/ydb-go-sdk/v3 v3.42.1 // indirect
 	github.com/ydb-platform/ydb-go-yc v0.8.3 // indirect
 	github.com/ydb-platform/ydb-go-yc-metadata v0.5.2 // indirect
 	github.com/yeya24/promlinter v0.2.0 // indirect
@@ -450,18 +450,18 @@ require (
 	gocloud.dev v0.27.0 // indirect
 	gocloud.dev/pubsub/natspubsub v0.27.0 // indirect
 	gocloud.dev/pubsub/rabbitpubsub v0.27.0 // indirect
-	golang.org/x/crypto v0.4.0 // indirect
+	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220827204233-334a2380cb91 // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
-	golang.org/x/net v0.4.0 // indirect
+	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/term v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
-	golang.org/x/tools v0.4.0 // indirect
+	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/term v0.4.0 // indirect
+	golang.org/x/text v0.6.0 // indirect
+	golang.org/x/tools v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20221227171554-f9683d7f8bef // indirect
+	google.golang.org/genproto v0.0.0-20230106154932-a12b697841d9 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20220622233350-5cdb09fa29c1 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -476,11 +476,11 @@ require (
 	modernc.org/b v1.0.0 // indirect
 	modernc.org/cc/v3 v3.40.0 // indirect
 	modernc.org/ccgo/v3 v3.16.13 // indirect
-	modernc.org/libc v1.21.5 // indirect
+	modernc.org/libc v1.22.2 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.4.0 // indirect
 	modernc.org/opt v0.1.3 // indirect
-	modernc.org/sqlite v1.20.0 // indirect
+	modernc.org/sqlite v1.20.1 // indirect
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.0.1 // indirect
 	mvdan.cc/gofumpt v0.4.0 // indirect

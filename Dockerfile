@@ -22,7 +22,7 @@ ENV DOCKER_PASS_CH v0.6.4
 
 # Install deps all in one step
 RUN apt-get update -y && \
-  apt-get install -y \
+  apt-get install --no-install-recommends -y \
   apt-transport-https \
   build-essential \
   ca-certificates \
@@ -45,10 +45,10 @@ RUN apt-get update -y && \
   ./aws/install && \
   rm -rf aws && \
   # Add additional apt repos all at once
-  echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"      | tee /etc/apt/sources.list.d/docker.list           && \
+  echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"      | tee /etc/apt/sources.list.d/docker.list && \
   # Install second wave of dependencies
   apt-get update -y && \
-  apt-get install -y docker-ce && \
+  apt-get install --no-install-recommends -y docker-ce && \
   # Clean up the lists work
   rm -rf /var/lib/apt/lists/*
 

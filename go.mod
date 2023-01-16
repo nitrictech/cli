@@ -4,10 +4,10 @@ go 1.18
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible
+	github.com/Azure/azure-sdk-for-go v67.3.0+incompatible
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/aws/aws-sdk-go v1.44.175
+	github.com/aws/aws-sdk-go v1.44.180
 	github.com/aws/aws-sdk-go-v2 v1.17.3
 	github.com/aws/aws-sdk-go-v2/config v1.18.8
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.8
@@ -35,47 +35,47 @@ require (
 	github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.21/dockerbuildkit v0.0.0-20221128004642-afea0486c727
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.53
-	github.com/pulumi/pulumi-aws/sdk/v5 v5.26.0
+	github.com/pulumi/pulumi-aws/sdk/v5 v5.27.0
 	github.com/pulumi/pulumi-azure/sdk/v4 v4.42.0
-	github.com/pulumi/pulumi-azuread/sdk/v5 v5.32.0
-	github.com/pulumi/pulumi-gcp/sdk/v6 v6.45.0
+	github.com/pulumi/pulumi-azuread/sdk/v5 v5.33.0
+	github.com/pulumi/pulumi-gcp/sdk/v6 v6.46.0
 	github.com/pulumi/pulumi-random/sdk/v4 v4.8.2
-	github.com/pulumi/pulumi/sdk/v3 v3.51.0
+	github.com/pulumi/pulumi/sdk/v3 v3.51.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/segmentio/encoding v0.3.6
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
-	github.com/valyala/fasthttp v1.43.0
-	golang.org/x/exp v0.0.0-20230108222341-4b8118a2686a
+	github.com/valyala/fasthttp v1.44.0
+	golang.org/x/exp v0.0.0-20230113213754-f9f960f08ad4
 	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/oauth2 v0.4.0
-	google.golang.org/grpc v1.51.0
+	google.golang.org/grpc v1.52.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
-	github.com/pulumi/pulumi-azure-native-sdk/apimanagement v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/app v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/authorization v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/containerregistry v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/documentdb v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/eventgrid v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/keyvault v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/managedidentity v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/operationalinsights v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/resources v1.90.0
-	github.com/pulumi/pulumi-azure-native-sdk/storage v1.90.0
-	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
-	google.golang.org/api v0.106.0
+	github.com/pulumi/pulumi-azure-native-sdk/apimanagement v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/app v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/authorization v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/containerregistry v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/documentdb v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/eventgrid v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/keyvault v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/managedidentity v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/operationalinsights v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/resources v1.92.0
+	github.com/pulumi/pulumi-azure-native-sdk/storage v1.92.0
+	github.com/seaweedfs/seaweedfs v0.0.0-20230116053955-a3060c11dfe8
+	google.golang.org/api v0.107.0
 )
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect
 	atomicgo.dev/cursor v0.1.1 // indirect
-	atomicgo.dev/keyboard v0.2.8 // indirect
+	atomicgo.dev/keyboard v0.2.9 // indirect
 	cloud.google.com/go v0.108.0 // indirect
-	cloud.google.com/go/compute v1.15.0 // indirect
+	cloud.google.com/go/compute v1.15.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.10.0 // indirect
 	cloud.google.com/go/pubsub v1.28.0 // indirect
@@ -101,7 +101,7 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/OpenPeeDeeP/depguard v1.1.1 // indirect
-	github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4 // indirect
+	github.com/ProtonMail/go-crypto v0.0.0-20230113180642-068501e20d67 // indirect
 	github.com/Shopify/sarama v1.37.2 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da // indirect
@@ -348,7 +348,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/pulumi/pulumi-azure-native-sdk v1.90.0 // indirect
+	github.com/pulumi/pulumi-azure-native-sdk v1.92.0 // indirect
 	github.com/quasilyte/go-ruleguard v0.3.18 // indirect
 	github.com/quasilyte/gogrep v0.0.0-20220828223005-86e4605de09f // indirect
 	github.com/quasilyte/regex/syntax v0.0.0-20200407221936-30656e2c4a95 // indirect
@@ -372,7 +372,7 @@ require (
 	github.com/seaweedfs/raft v1.1.0 // indirect
 	github.com/securego/gosec/v2 v2.13.1 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
-	github.com/sergi/go-diff v1.2.0 // indirect
+	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/sivchari/containedctx v1.0.2 // indirect
@@ -395,10 +395,11 @@ require (
 	github.com/tdakkota/asciicheck v0.1.1 // indirect
 	github.com/tetafro/godot v1.4.11 // indirect
 	github.com/texttheater/golang-levenshtein v1.0.1 // indirect
+	github.com/tiancaiamao/gp v0.0.0-20221230034425-4025bc8a4d4a // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/tikv/client-go/v2 v2.0.3 // indirect
+	github.com/tikv/client-go/v2 v2.0.4 // indirect
 	github.com/tikv/pd/client v0.0.0-20221031025758-80f0d8ca4d07 // indirect
 	github.com/timakin/bodyclose v0.0.0-20210704033933-f49887972144 // indirect
 	github.com/timonwong/loggercheck v0.9.3 // indirect
@@ -461,7 +462,7 @@ require (
 	golang.org/x/tools v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230106154932-a12b697841d9 // indirect
+	google.golang.org/genproto v0.0.0-20230113154510-dbe35b8444a5 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20220622233350-5cdb09fa29c1 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

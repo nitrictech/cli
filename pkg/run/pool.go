@@ -16,7 +16,7 @@
 
 package run
 
-import "github.com/nitrictech/nitric/pkg/worker"
+import "github.com/nitrictech/nitric/core/pkg/worker"
 
 type WorkerEventType string
 

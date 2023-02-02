@@ -22,7 +22,7 @@ import (
 
 	"github.com/pterm/pterm"
 
-	"github.com/nitrictech/nitric/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/worker"
 )
 
 type RunStackState struct {

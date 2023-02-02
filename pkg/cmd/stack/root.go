@@ -167,17 +167,19 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{})
 
+		cc, err := codeconfig.New(proj, envMap)
+		cobra.CheckErr(err)
+
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
 			Runner: func(_ output.Progress) error {
-				proj, err = codeconfig.Populate(proj, envMap)
-				return err
+				return cc.Collect()
 			},
 			StopMsg: "Configuration gathered",
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		p, err := provider.NewProvider(proj, s.Name, s.Provider, envMap, &types.ProviderOpts{Force: force})
+		p, err := provider.NewProvider(cc, s.Name, s.Provider, envMap, &types.ProviderOpts{Force: force})
 		cobra.CheckErr(err)
 
 		d := &types.Deployment{}
@@ -187,7 +189,7 @@ var stackUpdateCmd = &cobra.Command{
 				d, err = p.Up(progress)
 				// Write the digest regardless of deployment errors if available
 				if d != nil {
-					writeDigest(proj.Name, s.Name, progress, d.Summary)
+					writeDigest(cc.ProjectName(), s.Name, progress, d.Summary)
 				}
 
 				return err
@@ -259,17 +261,19 @@ var stackPreviewCmd = &cobra.Command{
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{})
 
+		cc, err := codeconfig.New(proj, envMap)
+		cobra.CheckErr(err)
+
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
 			Runner: func(_ output.Progress) error {
-				proj, err = codeconfig.Populate(proj, envMap)
-				return err
+				return cc.Collect()
 			},
 			StopMsg: "Configuration gathered",
 		}
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
-		p, err := provider.NewProvider(proj, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true})
+		p, err := provider.NewProvider(cc, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true})
 		cobra.CheckErr(err)
 
 		deploy := tasklet.Runner{
@@ -326,7 +330,10 @@ nitric stack down -e aws -y`,
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true})
+		cc, err := codeconfig.New(proj, map[string]string{})
+		cobra.CheckErr(err)
+
+		p, err := provider.NewProvider(cc, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true})
 		cobra.CheckErr(err)
 
 		deploy := tasklet.Runner{
@@ -365,7 +372,10 @@ nitric stack list -s aws
 		proj, err := project.FromConfig(config)
 		cobra.CheckErr(err)
 
-		p, err := provider.NewProvider(proj, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{})
+		cc, err := codeconfig.New(proj, map[string]string{})
+		cobra.CheckErr(err)
+
+		p, err := provider.NewProvider(cc, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{})
 		cobra.CheckErr(err)
 
 		deps, err := p.List()
@@ -425,7 +435,10 @@ func newStack(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	prov, err := provider.NewProvider(project.New(pc), name, pName, map[string]string{}, &types.ProviderOpts{})
+	cc, err := codeconfig.New(project.New(pc), map[string]string{})
+	cobra.CheckErr(err)
+
+	prov, err := provider.NewProvider(cc, name, pName, map[string]string{}, &types.ProviderOpts{})
 	if err != nil {
 		return err
 	}

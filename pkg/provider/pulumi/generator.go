@@ -65,10 +65,15 @@ type pulumiAbout struct {
 
 var _ types.Provider = &pulumiDeployment{}
 
-func New(p *project.Project, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
+func New(cfc types.ConfigFromCode, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
 	pv := exec.Command("pulumi", "version")
 
-	err := pv.Run()
+	p, err := cfc.ToProject()
+	if err != nil {
+		return nil, err
+	}
+
+	err = pv.Run()
 	if err != nil {
 		if strings.Contains(err.Error(), "executable file not found") {
 			return nil, errors.WithMessage(err, "please install pulumi from https://www.pulumi.com/docs/get-started/install/")

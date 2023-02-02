@@ -27,7 +27,7 @@ import (
 	random "github.com/pulumi/pulumi-random/sdk/v4/go/random"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 )
 
 type Policy struct {

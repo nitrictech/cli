@@ -27,7 +27,7 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sqs"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 )
 
 type Policy struct {

@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nitrictech/nitric/pkg/plugins/errors"
-	"github.com/nitrictech/nitric/pkg/plugins/errors/codes"
-	"github.com/nitrictech/nitric/pkg/plugins/events"
-	"github.com/nitrictech/nitric/pkg/triggers"
-	"github.com/nitrictech/nitric/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/plugins/errors"
+	"github.com/nitrictech/nitric/core/pkg/plugins/errors/codes"
+	"github.com/nitrictech/nitric/core/pkg/plugins/events"
+	"github.com/nitrictech/nitric/core/pkg/triggers"
+	"github.com/nitrictech/nitric/core/pkg/worker"
 )
 
 type WorkerPoolEventService struct {

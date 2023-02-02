@@ -14,19 +14,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package remote
 
 import (
-	"github.com/nitrictech/cli/pkg/provider/pulumi"
-	"github.com/nitrictech/cli/pkg/provider/remote"
-	"github.com/nitrictech/cli/pkg/provider/types"
+	"os"
+	"path/filepath"
+
+	"gopkg.in/yaml.v2"
 )
 
-func NewProvider(cfc types.ConfigFromCode, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
-	switch provider {
-	case types.Aws, types.Azure, types.Gcp:
-		return pulumi.New(cfc, name, provider, envMap, opts)
-	default:
-		return remote.New(cfc, name, provider, envMap, opts)
+func stackConfig(dir, name, providerName string) (map[string]any, error) {
+	cfg := map[string]any{}
+
+	// Hydrate from file if already exists
+	b, err := os.ReadFile(filepath.Join(dir, "nitric-"+name+".yaml"))
+	if err != nil {
+		return nil, err
 	}
+
+	err = yaml.Unmarshal(b, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
 }

@@ -37,7 +37,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
 	"github.com/nitrictech/cli/pkg/provider/types"
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.21/dockerbuildkit"
 )
 

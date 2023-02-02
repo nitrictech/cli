@@ -29,7 +29,7 @@ import (
 	"github.com/segmentio/encoding/json"
 
 	"github.com/nitrictech/cli/pkg/provider/pulumi/common"
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 )
 
 type ApiGatewayArgs struct {

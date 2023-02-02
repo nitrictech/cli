@@ -25,8 +25,8 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
-	"github.com/nitrictech/nitric/pkg/membrane"
-	"github.com/nitrictech/nitric/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/membrane"
+	"github.com/nitrictech/nitric/core/pkg/worker"
 )
 
 type LocalServices interface {

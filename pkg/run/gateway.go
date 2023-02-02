@@ -27,9 +27,9 @@ import (
 	"github.com/valyala/fasthttp"
 
 	"github.com/nitrictech/cli/pkg/utils"
-	"github.com/nitrictech/nitric/pkg/plugins/gateway"
-	"github.com/nitrictech/nitric/pkg/triggers"
-	"github.com/nitrictech/nitric/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/plugins/gateway"
+	"github.com/nitrictech/nitric/core/pkg/triggers"
+	"github.com/nitrictech/nitric/core/pkg/worker"
 )
 
 type HttpMiddleware func(*fasthttp.RequestCtx, worker.WorkerPool) bool

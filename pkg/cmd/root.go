@@ -24,6 +24,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/cli/pkg/cmd/provider"
 	"github.com/nitrictech/cli/pkg/cmd/run"
 	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
 	"github.com/nitrictech/cli/pkg/cmd/start"
@@ -104,6 +105,7 @@ func init() {
 	rootCmd.AddCommand(feedbackCmd)
 	rootCmd.AddCommand(infoCmd)
 	rootCmd.AddCommand(start.RootCommand())
+	rootCmd.AddCommand(provider.RootCommand())
 	addAlias("stack update", "up", true)
 	addAlias("stack down", "down", true)
 	addAlias("stack preview", "preview", true)

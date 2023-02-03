@@ -49,6 +49,10 @@ Documentation for all available commands:
 - nitric feedback : Provide feedback on your experience with nitric
 - nitric info : Gather information about Nitric and the environment
 - nitric new [projectName] [templateName] : Create a new project
+- nitric provider : Manange providers (install, list, rm)
+- nitric provider install [NAME] [flags] : Install a provider
+- nitric provider list : List all providers
+- nitric provider rm [NAME] : remove a previously installed provider
 - nitric run : Run your project locally for development and testing
 - nitric stack : Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)
 - nitric stack down [-s stack] : Undeploy a previously deployed stack, deleting resources
@@ -76,3 +80,4 @@ Documentation for all available commands:
 ## Get Started
 
 Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.
+//nitric.io/docs) to see how to get started using Nitric.

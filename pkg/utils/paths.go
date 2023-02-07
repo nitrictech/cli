@@ -54,6 +54,11 @@ func NitricHomeDir() string {
 }
 
 // NitricRunDir returns the directory to place runtime data.
+func NitricProviderDir() string {
+	return filepath.Join(NitricHomeDir(), "providers")
+}
+
+// NitricRunDir returns the directory to place runtime data.
 func NitricRunDir() string {
 	return filepath.Join(NitricHomeDir(), "run")
 }

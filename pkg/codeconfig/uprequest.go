@@ -17,9 +17,10 @@
 package codeconfig
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/imdario/mergo"
 	multierror "github.com/missionMeteora/toolkit/errors"
@@ -31,45 +32,65 @@ import (
 
 type upRequestBuilder struct {
 	projName  string
-	resources []*deploy.Resource
-	idx       map[v1.ResourceType]map[string]int
+	resources map[v1.ResourceType]map[string]*deploy.Resource
 }
 
 func (b *upRequestBuilder) set(r *deploy.Resource) {
-	if _, ok := b.idx[r.Type]; !ok {
-		b.idx[r.Type] = map[string]int{}
+	if _, ok := b.resources[r.Type]; !ok {
+		b.resources[r.Type] = map[string]*deploy.Resource{}
 	}
 
-	if _, ok := b.idx[r.Type][r.Name]; !ok {
-		b.idx[r.Type][r.Name] = 0
-		b.resources = append(b.resources, r)
+	if _, ok := b.resources[r.Type][r.Name]; !ok {
+		b.resources[r.Type][r.Name] = r
 	} else {
-		current := b.resources[b.idx[r.Type][r.Name]]
-
-		if err := mergo.Merge(&current, r); err != nil {
+		current := b.resources[r.Type][r.Name]
+		if err := mergo.Merge(current, r, mergo.WithAppendSlice); err != nil {
 			current = r
 		}
 
-		b.resources[b.idx[r.Type][r.Name]] = current
+		b.resources[r.Type][r.Name] = current
 	}
 }
 
 func (b *upRequestBuilder) Output() *deploy.DeployUpRequest {
+	res := []*deploy.Resource{}
+
+	for _, resMap := range b.resources {
+		for _, r := range resMap {
+			res = append(res, r)
+		}
+	}
+
 	return &deploy.DeployUpRequest{
 		Spec: &deploy.Spec{
-			Resources: b.resources,
+			Resources: res,
 		},
 		Attributes: map[string]string{
-			"x-nitric-project": b.projName,
+			"project": b.projName,
 		},
 	}
+}
+
+func md5Hash(b []byte) string {
+	hasher := md5.New()
+	hasher.Write(b)
+
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func policyResourceName(policy *v1.PolicyResource) (string, error) {
+	policyDoc, err := json.Marshal(policy)
+	if err != nil {
+		return "", err
+	}
+
+	return md5Hash(policyDoc), nil
 }
 
 func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 	builder := &upRequestBuilder{
 		projName:  c.initialProject.Name,
-		resources: []*deploy.Resource{},
-		idx:       map[v1.ResourceType]map[string]int{},
+		resources: map[v1.ResourceType]map[string]*deploy.Resource{},
 	}
 	errs := multierror.ErrorList{}
 
@@ -105,13 +126,28 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		}
 
 		for k := range f.topics {
-			builder.set(&deploy.Resource{
+			subs := []*deploy.SubscriptionTarget{}
+			for k, v := range f.subscriptions {
+				if v.Topic == k {
+					subs = append(subs, &deploy.SubscriptionTarget{
+						Target: &deploy.SubscriptionTarget_ExecutionUnit{
+							ExecutionUnit: f.name,
+						},
+					})
+				}
+			}
+
+			res := &deploy.Resource{
 				Name: k,
 				Type: v1.ResourceType_Topic,
 				Config: &deploy.Resource_Topic{
-					Topic: &deploy.Topic{},
+					Topic: &deploy.Topic{
+						// TODO: Determine if this will sucessfully merge between multiple functions
+						Subscriptions: subs,
+					},
 				},
-			})
+			}
+			builder.set(res)
 		}
 
 		for k := range f.secrets {
@@ -162,7 +198,13 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 				})
 			}
 
+			policyName, err := policyResourceName(v)
+			if err != nil {
+				return nil, err
+			}
+
 			builder.set(&deploy.Resource{
+				Name: policyName,
 				Type: v1.ResourceType_Policy,
 				Config: &deploy.Resource_Policy{
 					Policy: &deploy.Policy{
@@ -175,18 +217,6 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		}
 
 		for k, v := range f.schedules {
-			// Create a new topic target
-			// replace spaced with hyphens
-			topicName := strings.ToLower(strings.ReplaceAll(k, " ", "-"))
-
-			builder.set(&deploy.Resource{
-				Name: topicName,
-				Type: v1.ResourceType_Topic,
-				Config: &deploy.Resource_Topic{
-					Topic: &deploy.Topic{},
-				},
-			})
-
 			var exp string
 			switch v.Cadence.(type) {
 			case *v1.ScheduleWorker_Cron:
@@ -209,7 +239,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 						Cron: exp,
 						Target: &deploy.ScheduleTarget{
 							Target: &deploy.ScheduleTarget_ExecutionUnit{
-								ExecutionUnit: k,
+								ExecutionUnit: f.name,
 							},
 						},
 					},

@@ -20,109 +20,22 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
-	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/provider/types"
 	deploy "github.com/nitrictech/nitric/core/pkg/api/nitric/deploy/v1"
 )
 
 type remoteDeployment struct {
-	cfc       types.ConfigFromCode
-	stackName string
-	provider  string
-	conn      *grpc.ClientConn
-	ce        containerengine.ContainerEngine
-	// Container id populated after a call to Start
-	cid string
+	cfc types.ConfigFromCode
+	sfc *StackConfig
 }
 
 var _ types.Provider = &remoteDeployment{}
-
-func New(cfc types.ConfigFromCode, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
-	ce, err := containerengine.Discover()
-	if err != nil {
-		return nil, err
-	}
-
-	return &remoteDeployment{
-		ce:        ce,
-		cfc:       cfc,
-		stackName: name,
-		provider:  provider,
-	}, nil
-}
-
-func (p *remoteDeployment) start() error {
-	pterm.Info.Println("Starting remote deployment server")
-
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
-	hc := &container.HostConfig{
-		AutoRemove: true,
-		Mounts: []mount.Mount{
-			{
-				Type:   mount.TypeBind,
-				Source: "/var/run/docker.sock",
-				Target: "/var/run/docker.sock",
-			},
-			{
-				Type:   mount.TypeBind,
-				Source: filepath.Join(homedir, ".aws"),
-				Target: "/root/.aws",
-			},
-		},
-		PortBindings: map[nat.Port][]nat.PortBinding{
-			"50051/tcp": {},
-		},
-	}
-
-	cc := &container.Config{
-		Image: p.provider,
-		Env: []string{
-			"PULUMI_CONFIG_PASSPHRASE=set-to-this",
-			"PULUMI_BACKEND_URL=file://~",
-		},
-	}
-
-	pterm.Debug.Print(containerengine.Cli(cc, hc))
-
-	cID, err := p.ce.ContainerCreate(cc, hc, nil, "deployment-server")
-	if err != nil {
-		return err
-	}
-
-	p.cid = cID
-
-	err = p.ce.Start(cID)
-	if err != nil {
-		return err
-	}
-
-	pterm.Info.Println("Connecting to deployment server")
-	p.conn, err = grpc.Dial("172.17.0.2:50051", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-
-	return err
-}
-
-func (p *remoteDeployment) stop() error {
-	timeout := time.Second * 5
-	return p.ce.Stop(p.cid, &timeout)
-}
 
 func (p *remoteDeployment) AskAndSave() error {
 	return errors.New("not supported on remote deployment servers")
@@ -140,34 +53,34 @@ func (a *remoteDeployment) Preview(log output.Progress) (string, error) {
 	return "", errors.New("not supported for remote deployments")
 }
 
+func (p *remoteDeployment) dialConnection() (*grpc.ClientConn, error) {
+	// TODO: Make address configurable
+	conn, err := grpc.Dial("127.0.0.1:50051", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
 func (p *remoteDeployment) Up(log output.Progress) (*types.Deployment, error) {
-	err := p.start()
+	conn, err := p.dialConnection()
 	if err != nil {
 		return nil, err
 	}
-
-	defer p.stop()
-
-	sc, err := stackConfig(p.cfc.ProjectDir(), p.stackName, p.provider)
-	if err != nil {
-		return nil, err
-	}
+	defer conn.Close()
 
 	req, err := p.cfc.ToUpRequest()
 	if err != nil {
 		return nil, err
 	}
 
-	for k, v := range sc {
-		switch k {
-		case "name":
-			req.Attributes["x-nitric-stack"] = v.(string)
-		default:
-			req.Attributes[k] = fmt.Sprintf("%v", v)
-		}
+	req.Attributes["stack"] = p.sfc.Name
+
+	for k, v := range p.sfc.Props {
+		req.Attributes[k] = fmt.Sprintf("%v", v)
 	}
 
-	client := deploy.NewDeployServiceClient(p.conn)
+	client := deploy.NewDeployServiceClient(conn)
 
 	op, err := client.Up(context.Background(), req)
 	if err != nil {
@@ -209,34 +122,24 @@ func (p *remoteDeployment) Up(log output.Progress) (*types.Deployment, error) {
 }
 
 func (p *remoteDeployment) Down(log output.Progress) (*types.Summary, error) {
-	err := p.start()
+	conn, err := p.dialConnection()
 	if err != nil {
 		return nil, err
 	}
-
-	defer p.stop()
-
-	sc, err := stackConfig(p.cfc.ProjectDir(), p.stackName, p.provider)
-	if err != nil {
-		return nil, err
-	}
+	defer conn.Close()
 
 	req := &deploy.DeployDownRequest{
 		Attributes: map[string]string{
-			"x-nitric-project": p.cfc.ProjectName(),
+			"project": p.cfc.ProjectName(),
+			"stack":   p.sfc.Name,
 		},
 	}
 
-	for k, v := range sc {
-		switch k {
-		case "name":
-			req.Attributes["x-nitric-stack"] = v.(string)
-		default:
-			req.Attributes[k] = fmt.Sprintf("%v", v)
-		}
+	for k, v := range p.sfc.Props {
+		req.Attributes[k] = fmt.Sprintf("%v", v)
 	}
 
-	client := deploy.NewDeployServiceClient(p.conn)
+	client := deploy.NewDeployServiceClient(conn)
 
 	op, err := client.Down(context.Background(), req)
 	if err != nil {

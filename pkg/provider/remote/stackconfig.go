@@ -18,16 +18,21 @@ package remote
 
 import (
 	"os"
-	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 )
 
-func stackConfig(dir, name, providerName string) (map[string]any, error) {
-	cfg := map[string]any{}
+type StackConfig struct {
+	Name     string         `yaml:"name"`
+	Provider string         `yaml:"provider"`
+	Props    map[string]any `yaml:",inline"`
+}
+
+func StackConfigFromFile(file string) (*StackConfig, error) {
+	cfg := &StackConfig{}
 
 	// Hydrate from file if already exists
-	b, err := os.ReadFile(filepath.Join(dir, "nitric-"+name+".yaml"))
+	b, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}

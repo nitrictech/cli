@@ -135,7 +135,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 			Version: "v1",
 		},
 		OpenAPI: "3.0.1",
-		Components: openapi3.Components{
+		Components: &openapi3.Components{
 			SecuritySchemes: make(openapi3.SecuritySchemes),
 		},
 	}
@@ -233,10 +233,8 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 			pathItem.SetOperation(m, &openapi3.Operation{
 				OperationID: strings.ToLower(alphanumeric.ReplaceAllString(normalizedPath+m, "")),
 				Responses:   openapi3.NewResponses(),
-				ExtensionProps: openapi3.ExtensionProps{
-					Extensions: exts,
-				},
-				Security: sr,
+				Extensions:  exts,
+				Security:    sr,
 			})
 		}
 	}

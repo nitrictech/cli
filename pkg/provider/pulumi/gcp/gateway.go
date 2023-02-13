@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi2"
-	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/apigateway"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
@@ -125,12 +124,10 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 				Type:             "oauth2",
 				Flow:             "implicit",
 				AuthorizationURL: oidConf.AuthEndpoint,
-				ExtensionProps: openapi3.ExtensionProps{
-					Extensions: map[string]interface{}{
-						"x-google-issuer":    sd.GetJwt().Issuer,
-						"x-google-jwks_uri":  oidConf.JwksUri,
-						"x-google-audiences": strings.Join(sd.GetJwt().GetAudiences(), ","),
-					},
+				Extensions: map[string]interface{}{
+					"x-google-issuer":    sd.GetJwt().Issuer,
+					"x-google-jwks_uri":  oidConf.JwksUri,
+					"x-google-audiences": strings.Join(sd.GetJwt().GetAudiences(), ","),
 				},
 			}
 		} else {

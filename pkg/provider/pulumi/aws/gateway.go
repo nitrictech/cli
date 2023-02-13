@@ -83,15 +83,13 @@ func newApiGateway(ctx *pulumi.Context, name string, args *ApiGatewayArgs, opts 
 				Value: &openapi3.SecurityScheme{
 					Type:             "openIdConnect",
 					OpenIdConnectUrl: issuerUrl.String(),
-					ExtensionProps: openapi3.ExtensionProps{
-						Extensions: map[string]interface{}{
-							"x-amazon-apigateway-authorizer": map[string]interface{}{
-								"type": "jwt",
-								"jwtConfiguration": map[string]interface{}{
-									"audience": sd.GetJwt().Audiences,
-								},
-								"identitySource": "$request.header.Authorization",
+					Extensions: map[string]interface{}{
+						"x-amazon-apigateway-authorizer": map[string]interface{}{
+							"type": "jwt",
+							"jwtConfiguration": map[string]interface{}{
+								"audience": sd.GetJwt().Audiences,
 							},
+							"identitySource": "$request.header.Authorization",
 						},
 					},
 				},

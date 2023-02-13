@@ -16,7 +16,10 @@
 
 package run
 
-import "github.com/nitrictech/nitric/core/pkg/worker"
+import (
+	"github.com/nitrictech/nitric/core/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/worker/pool"
+)
 
 type WorkerEventType string
 
@@ -33,7 +36,7 @@ type WorkerEvent struct {
 type WorkerListener = func(WorkerEvent)
 
 type RunProcessPool struct {
-	worker.WorkerPool
+	pool.WorkerPool
 	listeners []WorkerListener
 }
 
@@ -78,7 +81,7 @@ func (r *RunProcessPool) Listen(l WorkerListener) {
 func NewRunProcessPool() *RunProcessPool {
 	return &RunProcessPool{
 		listeners: make([]WorkerListener, 0),
-		WorkerPool: worker.NewProcessPool(&worker.ProcessPoolOptions{
+		WorkerPool: pool.NewProcessPool(&pool.ProcessPoolOptions{
 			MinWorkers: 0,
 			MaxWorkers: 100,
 		}),

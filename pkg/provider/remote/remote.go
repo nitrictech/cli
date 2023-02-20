@@ -59,6 +59,7 @@ func (p *remoteDeployment) dialConnection() (*grpc.ClientConn, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return conn, nil
 }
 

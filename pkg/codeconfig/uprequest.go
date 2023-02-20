@@ -127,6 +127,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 
 		for k := range f.topics {
 			subs := []*deploy.SubscriptionTarget{}
+
 			for k, v := range f.subscriptions {
 				if v.Topic == k {
 					subs = append(subs, &deploy.SubscriptionTarget{
@@ -142,7 +143,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 				Type: v1.ResourceType_Topic,
 				Config: &deploy.Resource_Topic{
 					Topic: &deploy.Topic{
-						// TODO: Determine if this will sucessfully merge between multiple functions
+						// TODO: Determine if this will successfully merge between multiple functions
 						Subscriptions: subs,
 					},
 				},

@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pterm/pterm"
+
 	"github.com/nitrictech/nitric/core/pkg/worker"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
-	"github.com/pterm/pterm"
 )
 
 type RunStackState struct {

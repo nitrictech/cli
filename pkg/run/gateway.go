@@ -97,6 +97,7 @@ func (s *BaseHttpGateway) api(apiName string) func(ctx *fasthttp.RequestCtx) {
 		}
 
 		query := map[string]*v1.QueryValue{}
+
 		ctx.QueryArgs().VisitAll(func(key []byte, val []byte) {
 			k := string(key)
 

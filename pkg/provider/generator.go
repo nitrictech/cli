@@ -19,10 +19,11 @@ package provider
 import (
 	"fmt"
 
+	"github.com/pterm/pterm"
+
 	"github.com/nitrictech/cli/pkg/provider/pulumi"
 	"github.com/nitrictech/cli/pkg/provider/remote"
 	"github.com/nitrictech/cli/pkg/provider/types"
-	"github.com/pterm/pterm"
 )
 
 func NewProvider(cfc types.ConfigFromCode, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
@@ -31,6 +32,7 @@ func NewProvider(cfc types.ConfigFromCode, name, provider string, envMap map[str
 		pterm.Warning.Print(fmt.Sprintf(`Provider %s has been deprecated and may be unavailable in future releases.
 Provider should be updated to nitric/%s@0.22.0 for more information see: https://nitric.io/blog/new-providers
 		`, provider, provider))
+
 		return pulumi.New(cfc, name, provider, envMap, opts)
 	default:
 		return remote.New(cfc, name, provider, envMap, opts)

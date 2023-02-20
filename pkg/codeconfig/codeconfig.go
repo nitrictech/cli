@@ -166,16 +166,17 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 					})
 				}
 
-				if f.apis[api].securityDefinitions != nil && f.apis[api].securityDefinitions[api] != nil {
-					oidSec := openapi3.NewOIDCSecurityScheme(f.apis[api].securityDefinitions[api].GetJwt().GetIssuer())
-					oidSec.Extensions = map[string]interface{}{
-						"x-nitric-audiences": f.apis[api].securityDefinitions[api].GetJwt().GetAudiences(),
-					}
-					oidSec.Name = api
+				if f.apis[api].securityDefinitions != nil {
+					for sn, sd := range f.apis[api].securityDefinitions {
+						oidSec := openapi3.NewOIDCSecurityScheme(sd.GetJwt().GetIssuer())
+						oidSec.Extensions = map[string]interface{}{
+							"x-nitric-audiences": sd.GetJwt().GetAudiences(),
+						}
+						oidSec.Name = sn
 
-					doc.Components.SecuritySchemes[api] = &openapi3.SecuritySchemeRef{
-						Ref:   api,
-						Value: oidSec,
+						doc.Components.SecuritySchemes[sn] = &openapi3.SecuritySchemeRef{
+							Value: oidSec,
+						}
 					}
 				}
 			}

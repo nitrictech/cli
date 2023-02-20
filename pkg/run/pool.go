@@ -19,9 +19,10 @@ package run
 import (
 	"strconv"
 
+	"github.com/spf13/cobra"
+
 	"github.com/nitrictech/nitric/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/worker"
-	"github.com/spf13/cobra"
 )
 
 type WorkerEventType string

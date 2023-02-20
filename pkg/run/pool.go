@@ -16,7 +16,13 @@
 
 package run
 
-import "github.com/nitrictech/nitric/pkg/worker"
+import (
+	"strconv"
+
+	"github.com/nitrictech/nitric/pkg/utils"
+	"github.com/nitrictech/nitric/pkg/worker"
+	"github.com/spf13/cobra"
+)
 
 type WorkerEventType string
 
@@ -76,11 +82,14 @@ func (r *RunProcessPool) Listen(l WorkerListener) {
 }
 
 func NewRunProcessPool() *RunProcessPool {
+	maxWorkers, err := strconv.Atoi(utils.GetEnv("MAX_WORKERS", "300"))
+	cobra.CheckErr(err)
+
 	return &RunProcessPool{
 		listeners: make([]WorkerListener, 0),
 		WorkerPool: worker.NewProcessPool(&worker.ProcessPoolOptions{
 			MinWorkers: 0,
-			MaxWorkers: 100,
+			MaxWorkers: maxWorkers,
 		}),
 	}
 }

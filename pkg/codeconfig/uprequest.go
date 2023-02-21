@@ -152,7 +152,12 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		}
 
 		for k := range f.secrets {
-			errs.Push(fmt.Errorf("secrets are not supported in code config (%s)", k))
+			res := &deploy.Resource{
+				Name:   k,
+				Type:   v1.ResourceType_Secret,
+				Config: &deploy.Resource_Secret{},
+			}
+			builder.set(res)
 		}
 
 		for k := range f.apis {

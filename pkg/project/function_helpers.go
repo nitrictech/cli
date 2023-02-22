@@ -22,8 +22,10 @@ import (
 	"path/filepath"
 )
 
-//go:embed membraneversion.txt
-var DefaultMembraneVersion string
+// //go:embed membraneversion.txt
+// var DefaultMembraneVersion string
+// TODO delete this later
+const DefaultMembraneVersion = "v0.22.0"
 
 //go:embed otel-collector-version.txt
 var DefaultOTELCollectorVersion string

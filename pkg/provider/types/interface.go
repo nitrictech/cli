@@ -51,7 +51,6 @@ type ProviderOpts struct {
 type Provider interface {
 	Up(log output.Progress) (*Deployment, error)
 	Down(log output.Progress) (*Summary, error)
-	Preview(log output.Progress) (string, error)
 	List() (interface{}, error)
 	AskAndSave() error
 	SupportedRegions() []string

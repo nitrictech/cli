@@ -48,14 +48,14 @@ RUN apt-get update -y && \
   echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"      | tee /etc/apt/sources.list.d/docker.list && \
   # Install second wave of dependencies
   apt-get update -y && \
-  apt-get install --no-install-recommends -y docker-ce docker-buildx-plugin && \
+  apt-get install -y docker-ce docker-buildx-plugin && \
   # Clean up the lists work
   rm -rf /var/lib/apt/lists/*
 
 # Passing --build-arg PULUMI_VERSION=vX.Y.Z will use that version
 # of the SDK. Otherwise, we use whatever get.pulumi.com thinks is
 # the latest
-ARG PULUMI_VERSION
+ARG PULUMI_VERSION=3.49.0
 
 # Install the Pulumi SDK, including the CLI and language runtimes.
 RUN curl -fsSL https://get.pulumi.com/ | bash -s -- --version $PULUMI_VERSION && \

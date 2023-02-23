@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/url"
 	"os"
+	"path"
 	"regexp"
 	osruntime "runtime"
 	"strings"
@@ -168,7 +170,18 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 
 				if f.apis[api].securityDefinitions != nil {
 					for sn, sd := range f.apis[api].securityDefinitions {
-						oidSec := openapi3.NewOIDCSecurityScheme(sd.GetJwt().GetIssuer())
+						sd.GetJwt().GetIssuer()
+
+						issuerUrl, err := url.Parse(sd.GetJwt().GetIssuer())
+						if err != nil {
+							return nil, err
+						}
+		
+						if issuerUrl.Path == "" || issuerUrl.Path == "/" {
+							issuerUrl.Path = path.Join(issuerUrl.Path, ".well-known/openid-configuration")
+						}
+
+						oidSec := openapi3.NewOIDCSecurityScheme(issuerUrl.String())
 						oidSec.Extensions = map[string]interface{}{
 							"x-nitric-audiences": sd.GetJwt().GetAudiences(),
 						}

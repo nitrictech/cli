@@ -115,6 +115,9 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 
 	cmd := exec.Command("docker", args...)
 	cmd.Stderr = output.NewPtermWriter(pterm.Debug)
+	cmd.Stdout = output.NewPtermWriter(pterm.Debug)
+
+	pterm.Debug.Println("running command: " + cmd.String())
 
 	return cmd.Run()
 }

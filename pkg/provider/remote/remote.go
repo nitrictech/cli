@@ -22,6 +22,7 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -110,6 +111,9 @@ func (p *remoteDeployment) Up(log output.Progress) (*types.Deployment, error) {
 			if !t.Result.Success {
 				return res, errors.New("failed to deploy")
 			}
+
+			// Print the deployment output
+			pterm.Success.Print(t.Result.Result.GetStringResult())
 			/*	for k, v := range res.Outputs {
 					if strings.HasPrefix(k, "api:") {
 						d.ApiEndpoints[strings.TrimPrefix(k, "api:")] = fmt.Sprint(v.Value)

@@ -34,7 +34,7 @@ require (
 	github.com/moby/moby v20.10.22+incompatible
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
 	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230213031554-d8ff7f3013b8
-	github.com/nitrictech/nitric/core v0.0.0-20230221231951-136120ede685
+	github.com/nitrictech/nitric/core v0.0.0-20230224021545-147bbffad2fa
 	github.com/nitrictech/pulumi-docker-buildkit/sdk/v0.1.21/dockerbuildkit v0.0.0-20221128004642-afea0486c727
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.53

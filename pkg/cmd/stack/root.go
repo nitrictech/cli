@@ -198,11 +198,14 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(deploy, tasklet.Opts{SuccessPrefix: "Deployed"})
 
-		rows := [][]string{{"API", "Endpoint"}}
-		for k, v := range d.ApiEndpoints {
-			rows = append(rows, []string{k, v})
+		// Print callable APIs if any were deployed
+		if len(d.ApiEndpoints) > 0 {
+			rows := [][]string{{"API", "Endpoint"}}
+			for k, v := range d.ApiEndpoints {
+				rows = append(rows, []string{k, v})
+			}
+			_ = pterm.DefaultTable.WithBoxed().WithData(rows).Render()
 		}
-		_ = pterm.DefaultTable.WithBoxed().WithData(rows).Render()
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},

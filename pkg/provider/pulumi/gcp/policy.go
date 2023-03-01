@@ -211,28 +211,12 @@ func newPolicy(ctx *pulumi.Context, name string, args *PolicyArgs, opts ...pulum
 		return nil, err
 	}
 
-	// for project level listings
-	listRolePolicy, err := newCustomRole(ctx, name+"list", gcpListActions, pulumi.Parent(res))
-	if err != nil {
-		return nil, err
-	}
-
 	for _, principal := range args.Policy.Principals {
 		sa := args.Principals[v1.ResourceType_Function][principal.Name]
 
 		for _, resource := range args.Policy.Resources {
 			memberName := fmt.Sprintf("%s-%s", principal.Name, resource.Name)
 			memberId := pulumi.Sprintf("serviceAccount:%s", sa.Email)
-
-			// for project level listings
-			_, err = projects.NewIAMMember(ctx, memberName+"list", &projects.IAMMemberArgs{
-				Member:  memberId,
-				Project: args.ProjectID,
-				Role:    listRolePolicy.Name,
-			}, pulumi.Parent(res))
-			if err != nil {
-				return nil, err
-			}
 
 			switch resource.Type {
 			case v1.ResourceType_Bucket:

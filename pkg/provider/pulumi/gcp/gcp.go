@@ -494,6 +494,11 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		// permission for blob signing
 		// this is safe as only permissions this account has are delegated
 		"iam.serviceAccounts.signBlob",
+		"pubsub.topics.list",
+		"pubsub.snapshots.list",
+		"resourcemanager.projects.get",
+		"secretmanager.secrets.list",
+		"apigateway.gateways.list",
 	}
 
 	for _, fc := range g.sc.Config {

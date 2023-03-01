@@ -57,14 +57,6 @@ type PolicyArgs struct {
 	ProjectID pulumi.StringInput
 }
 
-var gcpListActions []string = []string{
-	"pubsub.topics.list",
-	"pubsub.snapshots.list",
-	"resourcemanager.projects.get",
-	"secretmanager.secrets.list",
-	"apigateway.gateways.list",
-}
-
 var gcpActionsMap map[v1.Action][]string = map[v1.Action][]string{
 	v1.Action_BucketFileList: {
 		"storage.objects.list",

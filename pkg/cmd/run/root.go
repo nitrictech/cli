@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/build"
+	"github.com/nitrictech/cli/pkg/command"
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
@@ -196,5 +197,5 @@ var runCmd = &cobra.Command{
 
 func RootCommand() *cobra.Command {
 	runCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
-	return runCmd
+	return command.AddDependencyCheck(runCmd, command.Docker)
 }

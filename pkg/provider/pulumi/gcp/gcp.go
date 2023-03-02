@@ -46,6 +46,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iamcredentials/v1"
 	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -287,9 +288,35 @@ func (g *gcpProvider) Configure(ctx context.Context, autoStack *auto.Stack) erro
 	return autoStack.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: g.gcpProject})
 }
 
-func (g *gcpProvider) setToken() error {
+func (g *gcpProvider) setToken(ctx *pulumi.Context) error {
+	// If the user is attempting to impersonate a gcp service account using pulumi using the GOOGLE_IMPERSONATE_SERVICE_ACCOUNT env var
+	// Read more: (https://www.pulumi.com/registry/packages/gcp/installation-configuration/#configuration-reference)
+	targetSA := os.Getenv("GOOGLE_IMPERSONATE_SERVICE_ACCOUNT")
+	if targetSA != "" {
+		service, err := iamcredentials.NewService(ctx.Context())
+		if err != nil {
+			return errors.WithMessage(err, fmt.Sprintf("Unable to impersonate service account: %s", targetSA))
+		}
+
+		token, err := service.Projects.ServiceAccounts.GenerateAccessToken(fmt.Sprintf("projects/-/serviceAccounts/%s", targetSA), &iamcredentials.GenerateAccessTokenRequest{
+			Scope: []string{
+				"https://www.googleapis.com/auth/cloud-platform",
+				"https://www.googleapis.com/auth/trace.append",
+			},
+		}).Do()
+		if err != nil {
+			return errors.WithMessage(err, fmt.Sprintf("Unable to impersonate service account: %s", targetSA))
+		}
+
+		if token == nil {
+			return fmt.Errorf("Unable to impersonate service account.")
+		}
+
+		g.token = &oauth2.Token{AccessToken: token.AccessToken}
+	}
+
 	if g.token == nil { // for unit testing
-		creds, err := google.FindDefaultCredentialsWithParams(context.Background(), google.CredentialsParams{
+		creds, err := google.FindDefaultCredentialsWithParams(ctx.Context(), google.CredentialsParams{
 			Scopes: []string{
 				"https://www.googleapis.com/auth/cloud-platform",
 				"https://www.googleapis.com/auth/trace.append",
@@ -318,7 +345,7 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		return err
 	}
 
-	if err := g.setToken(); err != nil {
+	if err := g.setToken(ctx); err != nil {
 		return err
 	}
 
@@ -467,6 +494,11 @@ func (g *gcpProvider) Deploy(ctx *pulumi.Context) error {
 		// permission for blob signing
 		// this is safe as only permissions this account has are delegated
 		"iam.serviceAccounts.signBlob",
+		"pubsub.topics.list",
+		"pubsub.snapshots.list",
+		"resourcemanager.projects.get",
+		"secretmanager.secrets.list",
+		"apigateway.gateways.list",
 	}
 
 	for _, fc := range g.sc.Config {

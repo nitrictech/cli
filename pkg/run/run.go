@@ -26,9 +26,6 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/pkg/membrane"
-	boltdb_service "github.com/nitrictech/nitric/pkg/plugins/document/boltdb"
-	queue_service "github.com/nitrictech/nitric/pkg/plugins/queue/dev"
-	secret_service "github.com/nitrictech/nitric/pkg/plugins/secret/dev"
 	"github.com/nitrictech/nitric/pkg/worker"
 )
 
@@ -141,7 +138,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 	// Connect dev documents
 	os.Setenv("LOCAL_DB_DIR", l.status.RunDir)
 
-	dp, err := boltdb_service.New()
+	dp, err := NewBoltService()
 	if err != nil {
 		return err
 	}
@@ -149,7 +146,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 	// Connect secrets plugin
 	os.Setenv("LOCAL_SEC_DIR", l.status.RunDir)
 
-	secp, err := secret_service.New()
+	secp, err := NewSecretService()
 	if err != nil {
 		return err
 	}
@@ -157,7 +154,7 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 	// Connect queue plugin
 	os.Setenv("LOCAL_QUEUE_DIR", l.status.RunDir)
 
-	qp, err := queue_service.New()
+	qp, err := NewQueueService()
 	if err != nil {
 		return err
 	}

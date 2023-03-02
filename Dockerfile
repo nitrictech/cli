@@ -1,4 +1,4 @@
-FROM golang:buster as build
+FROM golang:1.19.4-buster as build
 
 WORKDIR /app/
 
@@ -20,9 +20,11 @@ ENV GOLANG_VERSION 1.17.3
 ENV GOLANG_SHA256 550f9845451c0c94be679faf116291e7807a8d78b43149f9506c1b15eb89008c
 ENV DOCKER_PASS_CH v0.6.4
 
+ARG DOCKER_VERSION=5:20.10.22~3-0~debian-bullseye
+
 # Install deps all in one step
 RUN apt-get update -y && \
-  apt-get install -y \
+  apt-get install --no-install-recommends -y \
   apt-transport-https \
   build-essential \
   ca-certificates \
@@ -45,17 +47,17 @@ RUN apt-get update -y && \
   ./aws/install && \
   rm -rf aws && \
   # Add additional apt repos all at once
-  echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"      | tee /etc/apt/sources.list.d/docker.list           && \
+  echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"      | tee /etc/apt/sources.list.d/docker.list && \
   # Install second wave of dependencies
   apt-get update -y && \
-  apt-get install -y docker-ce && \
+  apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION && \
   # Clean up the lists work
   rm -rf /var/lib/apt/lists/*
 
 # Passing --build-arg PULUMI_VERSION=vX.Y.Z will use that version
 # of the SDK. Otherwise, we use whatever get.pulumi.com thinks is
 # the latest
-ARG PULUMI_VERSION
+ARG PULUMI_VERSION=3.49.0
 
 # Install the Pulumi SDK, including the CLI and language runtimes.
 RUN curl -fsSL https://get.pulumi.com/ | bash -s -- --version $PULUMI_VERSION && \

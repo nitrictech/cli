@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pterm/pterm"
+
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
@@ -58,6 +60,8 @@ func BuildBaseImages(s *project.Project) error {
 		if err := rt.BaseDockerFile(f); err != nil {
 			return err
 		}
+
+		pterm.Debug.Println("Building image for" + f.Name())
 
 		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), rt.BuildIgnore()); err != nil {
 			return err

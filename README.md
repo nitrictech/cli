@@ -1,9 +1,19 @@
-# Nitric CLI
+<p align="center">
+  <a href="https://nitric.io">
+    <img src="docs/assets/nitric-logo.svg" width="120" alt="Nitric Logo"/>
+  </a>
+</p>
 
-![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/nitrictech/cli/Tests/develop?label=tests)
-![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nitrictech/cli)
-![GitHub all releases](https://img.shields.io/github/downloads/nitrictech/cli/total)
-  <a href="https://discord.gg/Webemece5C"><img alt="Discord" src="https://img.shields.io/discord/955259353043173427?label=discord"></a>
+<p align="center">
+  CLI for building and deploying <a href="https://nitric.io">nitric</a> apps
+</p>
+
+<p align="center">
+  <img alt="GitHub Workflow Status (branch)" src="https://img.shields.io/github/actions/workflow/status/nitrictech/cli/cli-test.yaml?style=for-the-badge&branch=develop">
+  <img alt="GitHub release (latest SemVer)" src="https://img.shields.io/github/v/release/nitrictech/cli?style=for-the-badge">
+  <img alt="GitHub all releases downloads" src="https://img.shields.io/github/downloads/nitrictech/cli/total?style=for-the-badge">
+  <a href="https://discord.gg/Webemece5C"><img alt="Discord" src="https://img.shields.io/discord/955259353043173427?label=discord&style=for-the-badge"></a>
+</p>
 
 ## Overview
 

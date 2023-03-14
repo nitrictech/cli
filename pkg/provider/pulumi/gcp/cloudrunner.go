@@ -118,6 +118,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 			Spec: cloudrun.ServiceTemplateSpecArgs{
 				ServiceAccountName:   args.ServiceAccount.Email,
 				ContainerConcurrency: pulumi.Int(defaultConcurrency),
+				TimeoutSeconds:       pulumi.Int(600),
 				Containers: cloudrun.ServiceTemplateSpecContainerArray{
 					cloudrun.ServiceTemplateSpecContainerArgs{
 						Envs:  env,
@@ -176,7 +177,7 @@ func (g *gcpProvider) newCloudRunner(ctx *pulumi.Context, name string, args *Clo
 			if ok {
 				_, err = pubsub.NewSubscription(ctx, name+"-"+t+"-sub", &pubsub.SubscriptionArgs{
 					Topic:              topic.Name,
-					AckDeadlineSeconds: pulumi.Int(300),
+					AckDeadlineSeconds: pulumi.Int(600),
 					RetryPolicy: pubsub.SubscriptionRetryPolicyArgs{
 						MinimumBackoff: pulumi.String("15s"),
 						MaximumBackoff: pulumi.String("600s"),

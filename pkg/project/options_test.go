@@ -42,7 +42,7 @@ func TestFromConfig(t *testing.T) {
 					},
 					Match: "*.go",
 				}},
-				BaseConfig: &BaseConfig{
+				BaseConfig: BaseConfig{
 					Name:     "project",
 					Dir:      ".",
 					Handlers: []any{"*.go"},
@@ -77,7 +77,7 @@ func TestFromConfig(t *testing.T) {
 					},
 					Match: "stack/options.go",
 				}},
-				BaseConfig: &BaseConfig{
+				BaseConfig: BaseConfig{
 					Name:     "pkg",
 					Dir:      "../../pkg",
 					Handlers: []any{"stack/types.go", "stack/options.go"},
@@ -102,7 +102,7 @@ func TestFromConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			want := New(&BaseConfig{})
+			want := New(BaseConfig{})
 
 			err := mergo.Merge(want, tt.want, mergo.WithOverrideEmptySlice, mergo.WithOverride)
 			if err != nil {

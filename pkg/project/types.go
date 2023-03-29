@@ -131,7 +131,7 @@ type Project struct {
 	Secrets  map[string]Secret    `yaml:"secrets,omitempty"`
 }
 
-func New(config *BaseConfig) *Project {
+func New(config BaseConfig) *Project {
 	return &Project{
 		Name:                config.Name,
 		Dir:                 config.Dir,

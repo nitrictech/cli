@@ -48,8 +48,8 @@ type BaseConfig struct {
 }
 
 type Config struct {
-	*BaseConfig
-	ConcreteHandlers []*HandlerConfig
+	BaseConfig       `yaml:",inline"`
+	ConcreteHandlers []*HandlerConfig `yaml:"-"`
 }
 
 func (p *Config) ToFile() error {
@@ -66,7 +66,7 @@ func (p *Config) ToFile() error {
 }
 
 // configFromBaseConfig - Unwraps Generic configs (e.g. Handler) and populates missing defaults (e.g. Type)
-func configFromBaseConfig(base *BaseConfig) (*Config, error) {
+func configFromBaseConfig(base BaseConfig) (*Config, error) {
 	newConfig := &Config{
 		BaseConfig:       base,
 		ConcreteHandlers: make([]*HandlerConfig, 0),
@@ -114,7 +114,7 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 		return nil, err
 	}
 
-	p := &BaseConfig{
+	p := BaseConfig{
 		Dir: absDir,
 	}
 
@@ -123,7 +123,7 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 		return nil, errors.WithMessage(err, "No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
 	}
 
-	err = yaml.Unmarshal(yamlFile, p)
+	err = yaml.Unmarshal(yamlFile, &p)
 	if err != nil {
 		return nil, err
 	}

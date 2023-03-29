@@ -155,7 +155,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 			cobra.CheckErr(err)
 
 			p = &project.Config{
-				BaseConfig: &project.BaseConfig{
+				BaseConfig: project.BaseConfig{
 					Dir:      path.Join(cd, answers.ProjectName),
 					Name:     answers.ProjectName,
 					Handlers: []any{globA.Handlers},

@@ -32,8 +32,9 @@ import (
 )
 
 type remoteDeployment struct {
-	cfc types.ConfigFromCode
-	sfc *StackConfig
+	cfc     types.ConfigFromCode
+	sfc     *StackConfig
+	address string
 }
 
 var _ types.Provider = &remoteDeployment{}
@@ -55,8 +56,11 @@ func (a *remoteDeployment) Preview(log output.Progress) (string, error) {
 }
 
 func (p *remoteDeployment) dialConnection() (*grpc.ClientConn, error) {
-	// TODO: Make address configurable
-	conn, err := grpc.Dial("127.0.0.1:50051", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	if p.address == "" {
+		p.address = "127.0.0.1:50051"
+	}
+
+	conn, err := grpc.Dial(p.address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		return nil, err
 	}

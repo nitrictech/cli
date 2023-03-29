@@ -18,6 +18,7 @@ package remote
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,10 +51,26 @@ func (p *binaryRemoteDeployment) startProcess() (*os.Process, error) {
 		cmd.Env = env
 	}
 
+	lis, err := utils.GetNextListener()
+	if err != nil {
+		return nil, err
+	}
+
+	tcpAddr := lis.Addr().(*net.TCPAddr)
+
+	// Set a random available port
+	p.remoteDeployment.address = lis.Addr().String()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("PORT=%d", tcpAddr.Port))
+
+	err = lis.Close()
+	if err != nil {
+		return nil, err
+	}
+
 	cmd.Stderr = output.NewPtermWriter(pterm.Debug)
 	cmd.Stdout = output.NewPtermWriter(pterm.Debug)
 
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		return nil, err
 	}

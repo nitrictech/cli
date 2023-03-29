@@ -41,14 +41,8 @@ type binaryRemoteDeployment struct {
 func (p *binaryRemoteDeployment) startProcess() (*os.Process, error) {
 	cmd := exec.Command(p.providerPath)
 
-	if len(p.envMap) > 0 {
-		env := os.Environ()
-
-		for k, v := range p.envMap {
-			env = append(env, k+"="+v)
-		}
-
-		cmd.Env = env
+	if p.envMap == nil {
+		p.envMap = map[string]string{}
 	}
 
 	lis, err := utils.GetNextListener()
@@ -60,7 +54,18 @@ func (p *binaryRemoteDeployment) startProcess() (*os.Process, error) {
 
 	// Set a random available port
 	p.remoteDeployment.address = lis.Addr().String()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("PORT=%d", tcpAddr.Port))
+
+	p.envMap["PORT"] = fmt.Sprint(tcpAddr.Port)
+
+	if len(p.envMap) > 0 {
+		env := os.Environ()
+
+		for k, v := range p.envMap {
+			env = append(env, k+"="+v)
+		}
+
+		cmd.Env = env
+	}
 
 	err = lis.Close()
 	if err != nil {

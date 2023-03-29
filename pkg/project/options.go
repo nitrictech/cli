@@ -25,6 +25,8 @@ import (
 
 	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/utils"
+
+	"github.com/docker/distribution/reference"
 )
 
 var stackPath string
@@ -67,6 +69,11 @@ func FromConfig(c *Config) (*Project, error) {
 }
 
 func FunctionFromHandler(h string, t string) (Function, error) {
+	_, err := reference.Parse(h)
+	if err != nil {
+		return Function{}, fmt.Errorf("handler filepath \"%s\" is invalid, must be valid ASCII containing lowercase and uppercase letters, digits, underscores, periods and hyphens", h)
+	}
+
 	pterm.Debug.Println("Using function from " + h)
 
 	rt, err := runtime.NewRunTimeFromHandler(h)

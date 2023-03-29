@@ -29,6 +29,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
+	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
@@ -90,6 +91,24 @@ var startCmd = &cobra.Command{
 			Signal: term,
 		})
 
+		var dashPort *int
+
+		startDashboard := tasklet.Runner{
+			StartMsg: "Starting dashboard",
+			Runner: func(_ output.Progress) error {
+				var err error
+
+				dashPort, err = dashboard.Serve()
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+			StopMsg: "Dashboard running",
+		}
+		tasklet.MustRun(startDashboard, tasklet.Opts{Signal: term})
+
 		pterm.DefaultBasicText.Println("Local running, use ctrl-C to stop")
 
 		stackState := run.NewStackState()
@@ -109,7 +128,7 @@ var startCmd = &cobra.Command{
 
 			stackState.Update(pool, ls)
 
-			area.Update(stackState.Tables(9001))
+			area.Update(stackState.Tables(9001, *dashPort))
 		})
 
 		select {

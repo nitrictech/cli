@@ -33,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/command"
 	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
@@ -144,6 +145,22 @@ var runCmd = &cobra.Command{
 		}
 		tasklet.MustRun(startFunctions, tasklet.Opts{Signal: term})
 
+		var dashPort *int
+
+		startDashboard := tasklet.Runner{
+			StartMsg: "Starting dashboard",
+			Runner: func(_ output.Progress) error {
+				dashPort, err = dashboard.Serve()
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+			StopMsg: "Dashboard running",
+		}
+		tasklet.MustRun(startDashboard, tasklet.Opts{Signal: term})
+
 		pterm.DefaultBasicText.Println("Application running, use ctrl-C to stop")
 
 		stackState := run.NewStackState()
@@ -156,7 +173,7 @@ var runCmd = &cobra.Command{
 		stackState.Update(pool, ls)
 
 		area, _ := pterm.DefaultArea.Start()
-		area.Update(stackState.Tables(9001))
+		area.Update(stackState.Tables(9001, *dashPort))
 
 		lck := sync.Mutex{}
 		// React to worker pool state and update services table
@@ -171,7 +188,7 @@ var runCmd = &cobra.Command{
 
 			stackState.Update(pool, ls)
 
-			area.Update(stackState.Tables(9001))
+			area.Update(stackState.Tables(9001, *dashPort))
 		})
 
 		select {

@@ -47,6 +47,7 @@ require (
 
 require (
 	github.com/docker/distribution v2.7.1+incompatible
+	github.com/go-playground/validator/v10 v10.11.2
 	github.com/nitrictech/nitric/cloud/common v0.0.0-20230213031554-d8ff7f3013b8
 	github.com/olahol/melody v1.1.3
 	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
@@ -158,6 +159,8 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/strfmt v0.21.3 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-redsync/redsync/v4 v4.7.1 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
@@ -247,6 +250,7 @@ require (
 	github.com/kyoh86/exportloopref v0.1.11 // indirect
 	github.com/ldez/gomoddirectives v0.2.3 // indirect
 	github.com/ldez/tagliatelle v0.4.0 // indirect
+	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/leonklingele/grouper v1.1.1 // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/linxGnu/grocksdb v1.7.10 // indirect

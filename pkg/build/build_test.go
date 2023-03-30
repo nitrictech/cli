@@ -17,7 +17,11 @@
 package build
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -27,7 +31,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 )
 
-func TestBuildBaseImages(t *testing.T) {
+func TestBuildBaseImagesWithHandlers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	me := mock_containerengine.NewMockContainerEngine(ctrl)
 
@@ -44,6 +48,49 @@ func TestBuildBaseImages(t *testing.T) {
 	me.EXPECT().Build(gomock.Any(), dir, "-foo", gomock.Any(), []string{
 		".nitric/", "!.nitric/*.yaml", ".git/", ".idea/", ".vscode/", ".github/", "*.dockerfile", "*.dockerignore", "node_modules/",
 	})
+
+	containerengine.DiscoveredEngine = me
+
+	if err := BuildBaseImages(s); err != nil {
+		t.Errorf("CreateBaseDev() error = %v", err)
+	}
+}
+
+func TestBuildBaseImagesWithContainers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	me := mock_containerengine.NewMockContainerEngine(ctrl)
+
+	dir, err := os.MkdirTemp("", "test-nitric-build-container")
+	if err != nil {
+		t.Error(err)
+	}
+
+	dockerfile := "FROM node:alpine"
+
+	fh, err := os.Create(filepath.Join(dir, "test.dockerfile"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = fh.Write([]byte(dockerfile))
+	if err != nil {
+		t.Error(err)
+	}
+
+	fh.Close()
+
+	defer os.RemoveAll(dir)
+
+	hash := sha256.Sum256([]byte(dockerfile))
+	hashValue := hex.EncodeToString(hash[:])
+	imageName := fmt.Sprintf("%s-%s", "test.dockerfile", hashValue)
+
+	s := project.New(project.BaseConfig{Name: "", Dir: dir})
+	s.Functions = map[string]project.Function{imageName: {Dockerfile: "test.dockerfile", Context: dir, ComputeUnit: project.ComputeUnit{Name: imageName}}}
+
+	me.EXPECT().Build(gomock.Any(), dir, "-"+imageName, gomock.Any(), []string{})
+
+	me.EXPECT().TagImageToNitricName("-"+imageName, "")
 
 	containerengine.DiscoveredEngine = me
 

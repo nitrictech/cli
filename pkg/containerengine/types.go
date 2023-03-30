@@ -47,6 +47,9 @@ type ContainerEngine interface {
 	Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error
 	ListImages(stackName, containerName string) ([]Image, error)
 	Inspect(imageName string) (types.ImageInspect, error)
+	GetLabel(imageName string, key string) (string, error)
+	TagImageToNitricName(imageName string, projectName string) (string, error)
+	ImageTag(source string, target string) error
 	ImagePull(rawImage string, opts types.ImagePullOptions) error
 	ContainerCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, name string) (string, error)
 	Start(nameOrID string) error

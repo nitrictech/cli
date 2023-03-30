@@ -98,6 +98,21 @@ func (mr *MockContainerEngineMockRecorder) ContainerWait(arg0, arg1 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerWait", reflect.TypeOf((*MockContainerEngine)(nil).ContainerWait), arg0, arg1)
 }
 
+// GetLabel mocks base method.
+func (m *MockContainerEngine) GetLabel(arg0, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLabel", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLabel indicates an expected call of GetLabel.
+func (mr *MockContainerEngineMockRecorder) GetLabel(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLabel", reflect.TypeOf((*MockContainerEngine)(nil).GetLabel), arg0, arg1)
+}
+
 // ImagePull mocks base method.
 func (m *MockContainerEngine) ImagePull(arg0 string, arg1 types.ImagePullOptions) error {
 	m.ctrl.T.Helper()
@@ -110,6 +125,20 @@ func (m *MockContainerEngine) ImagePull(arg0 string, arg1 types.ImagePullOptions
 func (mr *MockContainerEngineMockRecorder) ImagePull(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePull", reflect.TypeOf((*MockContainerEngine)(nil).ImagePull), arg0, arg1)
+}
+
+// ImageTag mocks base method.
+func (m *MockContainerEngine) ImageTag(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ImageTag", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ImageTag indicates an expected call of ImageTag.
+func (mr *MockContainerEngineMockRecorder) ImageTag(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImageTag", reflect.TypeOf((*MockContainerEngine)(nil).ImageTag), arg0, arg1)
 }
 
 // Inspect mocks base method.
@@ -196,6 +225,21 @@ func (m *MockContainerEngine) Stop(arg0 string, arg1 *time.Duration) error {
 func (mr *MockContainerEngineMockRecorder) Stop(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockContainerEngine)(nil).Stop), arg0, arg1)
+}
+
+// TagImageToNitricName mocks base method.
+func (m *MockContainerEngine) TagImageToNitricName(arg0, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TagImageToNitricName", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TagImageToNitricName indicates an expected call of TagImageToNitricName.
+func (mr *MockContainerEngineMockRecorder) TagImageToNitricName(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagImageToNitricName", reflect.TypeOf((*MockContainerEngine)(nil).TagImageToNitricName), arg0, arg1)
 }
 
 // Type mocks base method.

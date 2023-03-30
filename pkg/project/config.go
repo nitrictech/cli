@@ -22,6 +22,9 @@ import (
 	"path/filepath"
 	"reflect"
 
+	"github.com/nitrictech/cli/pkg/utils"
+
+	"github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -42,14 +45,84 @@ type HandlerConfig struct {
 // }
 
 type BaseConfig struct {
-	Name     string `yaml:"name"`
-	Dir      string `yaml:"-"`
-	Handlers []any  `yaml:"handlers"`
+	Name       string         `yaml:"name"`
+	Dir        string         `yaml:"-"`
+	Handlers   []any          `yaml:"handlers"`
+	Containers []DockerConfig `yaml:"containers" validate:"handlers_containers_required,validate_docker_object,dive"`
+}
+
+type DockerConfig struct {
+	Dockerfile string            `yaml:"dockerfile"`
+	Image      string            `yaml:"image" validate:"omitempty,validate_docker_image"`
+	Context    string            `yaml:"context"`
+	Args       map[string]string `yaml:"args"`
+	Nitric     bool              `yaml:"nitric"`
 }
 
 type Config struct {
 	BaseConfig       `yaml:",inline"`
 	ConcreteHandlers []*HandlerConfig `yaml:"-"`
+}
+
+func validateConfig(config *Config) error {
+	validate := validator.New()
+
+	err := validate.RegisterValidation("handlers_containers_required", func(fl validator.FieldLevel) bool {
+		return len(config.Handlers) > 0 || len(config.Containers) > 0
+	})
+	if err != nil {
+		return err
+	}
+
+	err = validate.RegisterValidation("validate_docker_object", func(fl validator.FieldLevel) bool {
+		for _, dc := range config.Containers {
+			// a dockerfile or image must be set
+			if dc.Dockerfile == "" && dc.Image == "" {
+				return false
+			}
+
+			// a dockerfile cannot be set with an image
+			if dc.Dockerfile != "" && dc.Image != "" {
+				return false
+			}
+		}
+
+		return true
+	})
+	if err != nil {
+		return err
+	}
+
+	err = validate.RegisterValidation("validate_docker_image", func(fl validator.FieldLevel) bool {
+		image, err := utils.ParseDockerImage(fl.Field().String())
+		if err != nil {
+			return false
+		}
+
+		return image.Name != ""
+	})
+	if err != nil {
+		return err
+	}
+
+	err = validate.Struct(config)
+	if err != nil {
+		valErrors := err.(validator.ValidationErrors)
+		for _, ve := range valErrors {
+			switch ve.Tag() {
+			case "handlers_containers_required":
+				return errors.New("handlers or containers must be provided")
+			case "validate_docker_object":
+				return errors.New("container must have a dockerfile or image key")
+			case "required":
+				return errors.Errorf(`field %s must be provided`, ve.Field())
+			}
+		}
+
+		return errors.WithMessage(valErrors, "there was an error validating the nitric config")
+	}
+
+	return nil
 }
 
 func (p *Config) ToFile() error {
@@ -128,5 +201,15 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 		return nil, err
 	}
 
-	return configFromBaseConfig(p)
+	config, err := configFromBaseConfig(p)
+	if err != nil {
+		return nil, err
+	}
+
+	err = validateConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
 }

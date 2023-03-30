@@ -82,26 +82,80 @@ func (d *docker) Inspect(imageName string) (types.ImageInspect, error) {
 	return ii, err
 }
 
+func (d *docker) GetLabel(imageName string, key string) (string, error) {
+	ii, err := d.Inspect(imageName)
+
+	for k, v := range ii.Config.Labels {
+		if k == key {
+			return v, nil
+		}
+	}
+
+	return "", err
+}
+
+func (d *docker) ImageTag(source string, target string) error {
+	return d.cli.ImageTag(context.Background(), source, target)
+}
+
+func (d *docker) TagImageToNitricName(imageName string, projectName string) (string, error) {
+	var label string
+
+	ii, err := d.Inspect(imageName)
+	if err != nil {
+		return "", err
+	}
+
+	for k, v := range ii.Config.Labels {
+		if k == "io.nitric.name" {
+			label = v
+			break
+		}
+	}
+
+	if label == "" {
+		return "", fmt.Errorf("image %s must contain a io.nitric.name label", imageName)
+	}
+
+	newImageName := fmt.Sprintf("%s-%s", projectName, label)
+
+	// tag the name
+	err = d.cli.ImageTag(context.Background(), imageName, newImageName)
+	if err != nil {
+		return "", err
+	}
+
+	// remove old tag
+	_, err = d.cli.ImageRemove(context.Background(), imageName, types.ImageRemoveOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	return label, nil
+}
+
 func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string) error {
-	// write a temporary dockerignore file
-	ignoreFile, err := os.Create(fmt.Sprintf("%s.dockerignore", dockerfile))
-	if err != nil {
-		return err
-	}
+	if len(excludes) > 0 {
+		// write a temporary dockerignore file
+		ignoreFile, err := os.Create(fmt.Sprintf("%s.dockerignore", dockerfile))
+		if err != nil {
+			return err
+		}
 
-	_, err = ignoreFile.Write([]byte(strings.Join(excludes, "\n")))
-	if err != nil {
-		return err
-	}
+		_, err = ignoreFile.Write([]byte(strings.Join(excludes, "\n")))
+		if err != nil {
+			return err
+		}
 
-	err = ignoreFile.Close()
-	if err != nil {
-		return err
-	}
+		err = ignoreFile.Close()
+		if err != nil {
+			return err
+		}
 
-	defer func() {
-		os.Remove(ignoreFile.Name())
-	}()
+		defer func() {
+			os.Remove(ignoreFile.Name())
+		}()
+	}
 
 	buildArgsCmd := make([]string, 0)
 	for k, v := range buildArgs {
@@ -114,6 +168,7 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	args = append(args, buildArgsCmd...)
 
 	cmd := exec.Command("docker", args...)
+	cmd.Dir = srcPath
 	cmd.Stderr = output.NewPtermWriter(pterm.Debug)
 	cmd.Stdout = output.NewPtermWriter(pterm.Debug)
 

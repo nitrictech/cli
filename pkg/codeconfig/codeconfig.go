@@ -109,14 +109,18 @@ func (c *codeConfig) Collect() error {
 		go func(fn project.Function) {
 			defer wg.Done()
 
-			rel, err := fn.RelativeHandlerPath(c.initialProject)
-			if err != nil {
-				errList.Push(err)
+			if fn.Handler != "" {
+				rel, err := fn.RelativeHandlerPath(c.initialProject)
+				if err != nil {
+					errList.Push(err)
 
-				return
+					return
+				}
+
+				fn.Handler = rel
 			}
 
-			err = c.collectOne(rel)
+			err := c.collectOneFromFunction(fn)
 			if err != nil {
 				errList.Push(err)
 
@@ -436,15 +440,22 @@ func useDockerInternal(hc *container.HostConfig, port int) []string {
 	}
 }
 
-// collectOne - Collects information about a function for a nitric stack
-// handler - the specific handler for the application
-func (c *codeConfig) collectOne(handler string) error {
-	rt, err := runtime.NewRunTimeFromHandler(handler)
-	if err != nil {
-		return errors.WithMessage(err, "error getting the runtime from handler "+handler)
+// collectOneFromFunction - Collects information about a function for a nitric stack
+// fn - the specific project function for the application
+func (c *codeConfig) collectOneFromFunction(fn project.Function) error {
+	var name string
+
+	if fn.Handler != "" {
+		rt, err := runtime.NewRunTimeFromHandler(fn.Handler)
+		if err != nil {
+			return errors.WithMessage(err, "error getting the runtime from handler "+fn.Handler)
+		}
+
+		name = rt.ContainerName()
+	} else {
+		name = fn.Name
 	}
 
-	name := rt.ContainerName()
 	fun := NewFunction(name)
 
 	srv := NewServer(name, fun)
@@ -511,7 +522,7 @@ func (c *codeConfig) collectOne(handler string) error {
 		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
 	}
 
-	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")
+	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", name}, "-")
 
 	cID, err := ce.ContainerCreate(cc, hostConfig, &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{},
@@ -584,7 +595,7 @@ func (c *codeConfig) collectOne(handler string) error {
 	}
 
 	// Add the function
-	c.addFunction(fun, handler)
+	c.addFunction(fun, name)
 
 	return errs.Err()
 }

@@ -47,8 +47,10 @@ func GlobInDir(dir, pattern string) ([]string, error) {
 	}
 
 	final := []string{}
+
 	for _, f := range files {
-		final = append(final, strings.TrimPrefix(strings.TrimPrefix(f, dir), "/"))
+		cleanedDir := filepath.Clean(dir)
+		final = append(final, strings.TrimPrefix(strings.TrimPrefix(f, cleanedDir), "/"))
 	}
 
 	return final, nil

@@ -57,6 +57,14 @@ type ComputeUnit struct {
 type Function struct {
 	// The location of the function handler
 	Handler string `yaml:"handler"`
+	// If the function has a dockerfile this will be the location
+	Dockerfile string `yaml:"dockerfile"`
+	// If the function has a dockerfile this will be the args
+	Args map[string]string `yaml:"args,omitempty"`
+	// The context to which the docker container will run in
+	Context string `yaml:"context,default:."`
+	// If the function is using an image this will be the uri
+	Image string `yaml:"image"`
 
 	ComputeUnit `yaml:",inline"`
 

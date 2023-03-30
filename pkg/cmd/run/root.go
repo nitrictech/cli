@@ -139,7 +139,7 @@ var runCmd = &cobra.Command{
 		startFunctions := tasklet.Runner{
 			StartMsg: "Starting functions",
 			Runner: func(_ output.Progress) error {
-				functions, err = run.FunctionsFromHandlers(proj)
+				functions, err = run.FunctionsFromConfig(proj)
 				if err != nil {
 					return err
 				}

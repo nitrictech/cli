@@ -41,32 +41,66 @@ func BuildBaseImages(s *project.Project) error {
 		return err
 	}
 
-	for _, fun := range s.Functions {
-		rt, err := runtime.NewRunTimeFromHandler(fun.Handler)
-		if err != nil {
-			return err
-		}
+	finalFunctions := make(map[string]project.Function)
 
-		f, err := dynamicDockerfile(s.Dir, fun.Name)
-		if err != nil {
-			return err
-		}
+	for key, fun := range s.Functions {
+		if fun.Image != "" {
+			newImageName := fmt.Sprintf("%s-%s", s.Name, fun.Name)
 
-		defer func() {
-			f.Close()
-			os.Remove(f.Name())
-		}()
+			// tag the name
+			err = ce.ImageTag(fun.Image, newImageName)
+			if err != nil {
+				return err
+			}
 
-		if err := rt.BaseDockerFile(f); err != nil {
-			return err
-		}
+			finalFunctions[fun.Name] = fun
+		} else if fun.Dockerfile != "" {
+			pterm.Debug.Println("Building image for dockerfile " + fun.Dockerfile)
 
-		pterm.Debug.Println("Building image for" + f.Name())
+			originalImageName := fmt.Sprintf("%s-%s", s.Name, fun.Name)
 
-		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), rt.BuildIgnore()); err != nil {
-			return err
+			if err := ce.Build(fun.Dockerfile, fun.Context, originalImageName, fun.Args, []string{}); err != nil {
+				return err
+			}
+
+			name, err := ce.TagImageToNitricName(originalImageName, s.Name)
+			if err != nil {
+				return err
+			}
+
+			fun.Name = name
+			finalFunctions[name] = fun
+		} else {
+			rt, err := runtime.NewRunTimeFromHandler(fun.Handler)
+			if err != nil {
+				return err
+			}
+
+			f, err := dynamicDockerfile(s.Dir, fun.Name)
+			if err != nil {
+				return err
+			}
+
+			defer func() {
+				f.Close()
+				os.Remove(f.Name())
+			}()
+
+			if err := rt.BaseDockerFile(f); err != nil {
+				return err
+			}
+
+			pterm.Debug.Println("Building image for" + f.Name())
+
+			if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), rt.BuildIgnore()); err != nil {
+				return err
+			}
+
+			finalFunctions[key] = fun
 		}
 	}
+
+	s.Functions = finalFunctions
 
 	return nil
 }

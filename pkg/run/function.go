@@ -32,6 +32,7 @@ import (
 
 type Function struct {
 	projectName string
+	imageName   string
 	handler     string
 	name        string
 	runCtx      string
@@ -68,8 +69,14 @@ func (f *Function) Start(envMap map[string]string) error {
 		env = append(env, k+"="+v)
 	}
 
+	imageName := f.imageName
+
+	if imageName == "" {
+		imageName = fmt.Sprintf("%s-%s", f.projectName, f.Name()) // Select an image to use based on the handler
+	}
+
 	cc := &container.Config{
-		Image: fmt.Sprintf("%s-%s", f.projectName, f.Name()), // Select an image to use based on the handler
+		Image: imageName,
 		// Set the address to the bound port
 		Env: env,
 	}
@@ -115,7 +122,7 @@ func newFunction(opts FunctionOpts) (*Function, error) {
 	}, nil
 }
 
-func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
+func FunctionsFromConfig(p *project.Project) ([]*Function, error) {
 	funcs := make([]*Function, 0, len(p.Functions))
 
 	ce, err := containerengine.Discover()
@@ -124,21 +131,42 @@ func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
 	}
 
 	for _, f := range p.Functions {
-		relativeHandlerPath, err := f.RelativeHandlerPath(p)
-		if err != nil {
-			return nil, err
-		}
+		if f.Image != "" {
+			f := &Function{
+				name:        f.Name,
+				imageName:   f.Image,
+				projectName: p.Name,
+				runCtx:      p.Dir,
+				ce:          ce,
+			}
 
-		if f, err := newFunction(FunctionOpts{
-			Name:            f.Name,
-			RunCtx:          p.Dir,
-			Handler:         relativeHandlerPath,
-			ContainerEngine: ce,
-			ProjectName:     p.Name,
-		}); err != nil {
-			return nil, err
-		} else {
 			funcs = append(funcs, f)
+		} else if f.Dockerfile != "" {
+			f := &Function{
+				name:        f.Name,
+				projectName: p.Name,
+				runCtx:      f.Context,
+				ce:          ce,
+			}
+
+			funcs = append(funcs, f)
+		} else {
+			relativeHandlerPath, err := f.RelativeHandlerPath(p)
+			if err != nil {
+				return nil, err
+			}
+
+			if f, err := newFunction(FunctionOpts{
+				Name:            f.Name,
+				RunCtx:          p.Dir,
+				Handler:         relativeHandlerPath,
+				ContainerEngine: ce,
+				ProjectName:     p.Name,
+			}); err != nil {
+				return nil, err
+			} else {
+				funcs = append(funcs, f)
+			}
 		}
 	}
 

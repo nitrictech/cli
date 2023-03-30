@@ -18,6 +18,8 @@ package utils
 
 import (
 	"bytes"
+
+	"github.com/docker/distribution/reference"
 )
 
 func StringTrunc(s string, max int) string {
@@ -38,4 +40,38 @@ func JoinCamelCase(ss []string) string {
 	}
 
 	return res
+}
+
+type DockerImageMeta struct {
+	Name string
+	Tag  string
+}
+
+type ParsedDocker interface {
+	String() string
+	Name() string
+	Tag() string
+}
+
+func ParseDockerImage(image string) (DockerImageMeta, error) {
+	meta := DockerImageMeta{}
+
+	imageRef, err := reference.Parse(image)
+	if err != nil {
+		return meta, err
+	}
+
+	namedRef, ok := imageRef.(reference.Named)
+	if !ok {
+		return meta, err
+	}
+
+	meta.Name = reference.Path(namedRef)
+
+	taggedRef, ok := imageRef.(reference.Tagged)
+	if ok {
+		meta.Tag = taggedRef.Tag()
+	}
+
+	return meta, nil
 }

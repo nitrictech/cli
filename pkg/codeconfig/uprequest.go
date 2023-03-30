@@ -184,6 +184,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		}
 
 		dedupedPolicies := map[string]*v1.PolicyResource{}
+
 		for _, v := range f.policies {
 			policyName, err := policyResourceName(v)
 			if err != nil {

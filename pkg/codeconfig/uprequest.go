@@ -122,11 +122,11 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 			})
 		}
 
-		for k := range f.topics {
+		for topicName := range f.topics {
 			subs := []*deploy.SubscriptionTarget{}
 
-			for k, v := range f.subscriptions {
-				if v.Topic == k {
+			for _, v := range f.subscriptions {
+				if v.Topic == topicName {
 					subs = append(subs, &deploy.SubscriptionTarget{
 						Target: &deploy.SubscriptionTarget_ExecutionUnit{
 							ExecutionUnit: f.name,
@@ -136,7 +136,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 			}
 
 			res := &deploy.Resource{
-				Name: k,
+				Name: topicName,
 				Type: v1.ResourceType_Topic,
 				Config: &deploy.Resource_Topic{
 					Topic: &deploy.Topic{

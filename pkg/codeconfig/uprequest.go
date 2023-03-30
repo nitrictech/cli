@@ -183,7 +183,18 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 			})
 		}
 
+		dedupedPolicies := map[string]*v1.PolicyResource{}
+
 		for _, v := range f.policies {
+			policyName, err := policyResourceName(v)
+			if err != nil {
+				return nil, err
+			}
+
+			dedupedPolicies[policyName] = v
+		}
+
+		for policyName, v := range dedupedPolicies {
 			principals := []*deploy.Resource{}
 			resources := []*deploy.Resource{}
 
@@ -199,11 +210,6 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 					Name: p.Name,
 					Type: p.Type,
 				})
-			}
-
-			policyName, err := policyResourceName(v)
-			if err != nil {
-				return nil, err
 			}
 
 			builder.set(&deploy.Resource{

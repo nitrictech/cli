@@ -140,20 +140,28 @@ func NewNitricDeployment(cfc types.ConfigFromCode, sc *StackConfig, prov *provid
 
 	baseNitricDeployment := &nitricDeployment{binaryRemoteDeployment: baseBinaryDeployment}
 
-	switch prov.name {
-	case "aws":
-		return &awsProvider{
-			nitricDeployment: baseNitricDeployment,
-		}, nil
-	case "gcp":
-		return &gcpProvider{
-			nitricDeployment: baseNitricDeployment,
-		}, nil
-	case "azure":
-		return &azureProvider{
-			nitricDeployment: baseNitricDeployment,
-		}, nil
-	default:
-		return nil, fmt.Errorf("unsupported nitric provider %s", prov.name)
+	// Handle the nitric providers
+	if prov.org == "nitric" {
+		switch prov.name {
+		case "aws":
+			return &awsProvider{
+				nitricDeployment: baseNitricDeployment,
+			}, nil
+		case "gcp":
+			return &gcpProvider{
+				nitricDeployment: baseNitricDeployment,
+			}, nil
+		case "azure":
+			return &azureProvider{
+				nitricDeployment: baseNitricDeployment,
+			}, nil			
+		default:
+			return nil, fmt.Errorf("unsupported nitric provider %s", prov.name)
+		}
 	}
+
+	// If its not part of the nitric org its assumed to be custom
+	return &customProvider{
+		nitricDeployment: baseNitricDeployment,
+	}, nil
 }

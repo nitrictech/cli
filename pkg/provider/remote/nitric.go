@@ -154,7 +154,7 @@ func NewNitricDeployment(cfc types.ConfigFromCode, sc *StackConfig, prov *provid
 		case "azure":
 			return &azureProvider{
 				nitricDeployment: baseNitricDeployment,
-			}, nil			
+			}, nil
 		default:
 			return nil, fmt.Errorf("unsupported nitric provider %s", prov.name)
 		}

@@ -50,9 +50,25 @@ var startCmd = &cobra.Command{
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
 		log.SetFlags(0)
 
+		config, err := project.ConfigFromProjectPath("")
+		cobra.CheckErr(err)
+
+		proj, err := project.FromConfig(config)
+		cobra.CheckErr(err)
+
+		dash, err := dashboard.New(proj, map[string]string{})
+		if err != nil {
+			cobra.CheckErr(err)
+		}
+
+		dashPort, err := dash.Serve()
+		if err != nil {
+			cobra.CheckErr(err)
+		}
+
 		ls := run.NewLocalServices(&project.Project{
 			Name: "local",
-		}, true)
+		}, true, dashPort)
 		if ls.Running() {
 			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")
 			os.Exit(2)
@@ -91,23 +107,10 @@ var startCmd = &cobra.Command{
 			Signal: term,
 		})
 
-		var dashPort *int
-
-		startDashboard := tasklet.Runner{
-			StartMsg: "Starting dashboard",
-			Runner: func(_ output.Progress) error {
-				var err error
-
-				dashPort, err = dashboard.Serve()
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			StopMsg: "Dashboard running",
+		err = dash.Refresh(ls)
+		if err != nil {
+			cobra.CheckErr(err)
 		}
-		tasklet.MustRun(startDashboard, tasklet.Opts{Signal: term})
 
 		pterm.DefaultBasicText.Println("Local running, use ctrl-C to stop")
 
@@ -122,6 +125,11 @@ var startCmd = &cobra.Command{
 			// area.Clear()
 
 			err := ls.Refresh()
+			if err != nil {
+				cobra.CheckErr(err)
+			}
+
+			err = dash.Refresh(ls)
 			if err != nil {
 				cobra.CheckErr(err)
 			}

@@ -48,8 +48,9 @@ type BaseHttpGateway struct {
 	serviceServer   *fasthttp.Server
 	serviceListener net.Listener
 	gateway.UnimplementedGatewayPlugin
-	stop chan bool
-	pool pool.WorkerPool
+	stop     chan bool
+	pool     pool.WorkerPool
+	dashPort int
 }
 
 var _ gateway.GatewayService = &BaseHttpGateway{}
@@ -125,7 +126,7 @@ func (s *BaseHttpGateway) api(apiName string) func(ctx *fasthttp.RequestCtx) {
 			Filter:  apiWorkerFilter(apiName),
 		})
 		if err != nil {
-			ctx.Error("No workers found for provided API route", 404)
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dashPort), fasthttp.StatusTemporaryRedirect)
 			return
 		}
 
@@ -258,6 +259,14 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 	r := router.New()
 	// Publish to a topic
 	r.POST("/topic/{name}", s.topic)
+
+	r.NotFound = func(ctx *fasthttp.RequestCtx) {
+		if string(ctx.Path()) == "/" {
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v", s.dashPort), fasthttp.StatusMovedPermanently)
+		} else {
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dashPort), fasthttp.StatusTemporaryRedirect)
+		}
+	}
 
 	s.serviceServer = &fasthttp.Server{
 		ReadTimeout:     time.Second * 1,

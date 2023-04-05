@@ -18,26 +18,166 @@ package dashboard
 
 import (
 	"embed"
+	"encoding/json"
+	"io"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"strings"
 
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/olahol/melody"
+
+	"github.com/nitrictech/cli/pkg/codeconfig"
+	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/utils"
 )
+
+type dashboard struct {
+	project *project.Project
+	apis    []*openapi3.T
+	envMap  map[string]string
+	melody  *melody.Melody
+}
+
+type Api struct {
+	Name    string                 `json:"name,omitempty"`
+	OpenApi map[string]interface{} `json:"spec,omitempty"` // not sure which spec version yet
+}
+
+type DashResponse struct {
+	Apis        []*openapi3.T `json:"apis,omitempty"`
+	ProjectName string        `json:"projectName,omitempty"`
+}
 
 //go:embed dist/*
 var content embed.FS
 
-func Serve() (*int, error) {
+func New(p *project.Project, envMap map[string]string) (*dashboard, error) {
+	m := melody.New()
+
+	return &dashboard{
+		project: p,
+		apis:    []*openapi3.T{},
+		envMap:  envMap,
+		melody:  m,
+	}, nil
+}
+
+func (d *dashboard) Refresh(ls run.LocalServices) error {
+	cc, err := codeconfig.New(d.project, d.envMap)
+	if err != nil {
+		return err
+	}
+
+	pool := ls.GetWorkerPool()
+
+	apis, err := cc.ApiSpecFromWorkerPool(pool)
+	if err != nil {
+		return err
+	}
+
+	d.apis = apis
+
+	err = d.sendUpdate()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type Message struct {
+	Text string `json:"text"`
+}
+
+func (d *dashboard) Serve() (*int, error) {
 	// Get the embedded files from the 'dist' directory
 	staticFiles, err := fs.Sub(content, "dist")
 	if err != nil {
 		return nil, err
 	}
 
+	fs := http.FileServer(http.FS(staticFiles))
+
 	// Serve the files using the http package
-	http.Handle("/", http.FileServer(http.FS(staticFiles)))
+	http.Handle("/", fs)
+
+	// handle websocket
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		err := d.melody.HandleRequest(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	// Register a handler for when a client connects
+	d.melody.HandleConnect(func(s *melody.Session) {
+		// Send a welcome message to the client
+		err := d.sendUpdate()
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
+
+	d.melody.HandleMessage(func(s *melody.Session, msg []byte) {
+		err := d.melody.Broadcast(msg)
+		if err != nil {
+			log.Print(err)
+		}
+	})
+
+	// Define an API route under /call to proxy communication between app and apis
+	http.HandleFunc("/call/", func(w http.ResponseWriter, r *http.Request) {
+		// Set CORs headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Create a new request object
+		path := strings.TrimPrefix(r.URL.Path, "/call")
+		req, err := http.NewRequest(r.Method, "http://localhost:4001"+path, r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Copy the headers from the original request to the new request
+		for key, value := range r.Header {
+			req.Header.Set(key, value[0])
+		}
+
+		// Send the new request and handle the response
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Copy the headers from the response to the response writer
+		for key, value := range resp.Header {
+			w.Header().Set(key, value[0])
+		}
+
+		// Copy the status code from the response to the response writer
+		w.WriteHeader(resp.StatusCode)
+
+		// Copy the response body to the response writer
+		_, err = io.Copy(w, resp.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
 
 	// using ephemeral ports, we will redirect to the dashboard on main api 4000
 	dashListener, err := utils.GetNextListener(utils.MinPort(49152), utils.MaxPort(65535))
@@ -56,4 +196,26 @@ func Serve() (*int, error) {
 	port := dashListener.Addr().(*net.TCPAddr).Port
 
 	return &port, nil
+}
+
+func (d *dashboard) sendUpdate() error {
+	// ignore if no apis
+	if len(d.apis) == 0 {
+		return nil
+	}
+
+	response := &DashResponse{
+		Apis:        d.apis,
+		ProjectName: d.project.Name,
+	}
+
+	// Encode the response as JSON
+	jsonData, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+
+	err = d.melody.Broadcast(jsonData)
+
+	return err
 }

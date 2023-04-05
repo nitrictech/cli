@@ -1,6 +1,4 @@
 ---
-import AppLayout from "../components/AppLayout";
-
 export interface Props {
   title: string;
 }
@@ -18,9 +16,7 @@ const { title } = Astro.props;
     <title>{title}</title>
   </head>
   <body class='h-full'>
-    <AppLayout client:load>
-      <slot />
-    </AppLayout>
+    <slot />
   </body>
 </html>
 <style is:global>

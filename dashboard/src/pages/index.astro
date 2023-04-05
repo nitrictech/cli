@@ -1,9 +1,12 @@
 ---
+import AppLayout from "../components/AppLayout";
 import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout title='Dev Dashboard | Nitric'>
-  <main>
-    <h1>Welcome to <span class='text-gradient'>Nitric</span></h1>
-  </main>
+  <AppLayout client:load>
+    <main>
+      <h1>Welcome to <span class='text-gradient'>Nitric</span></h1>
+    </main>
+  </AppLayout>
 </Layout>

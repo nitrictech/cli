@@ -15,12 +15,10 @@ import {
 import classNames from "classnames";
 
 const navigation = [
-  { name: "Dashboard", href: "#", icon: HomeIcon, current: true },
   {
     name: "API Explorer",
-    href: "#",
+    href: "/",
     icon: MagnifyingGlassIcon,
-    current: false,
   },
   // { name: "Schedules", href: "#", icon: ClockIcon, current: false },
   // { name: "Storage", href: "#", icon: CircleStackIcon, current: false },
@@ -45,6 +43,12 @@ const helpLinks = [
 
 const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  let currentPath = "/";
+
+  if (typeof window !== "undefined") {
+    currentPath = window.location.pathname;
+  }
 
   return (
     <>
@@ -118,7 +122,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                               <a
                                 href={item.href}
                                 className={classNames(
-                                  item.current
+                                  item.href === currentPath
                                     ? "bg-gray-50 text-blue-600"
                                     : "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
                                   "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
@@ -126,7 +130,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                               >
                                 <item.icon
                                   className={classNames(
-                                    item.current
+                                    item.href === currentPath
                                       ? "text-blue-600"
                                       : "text-gray-400 group-hover:text-blue-600",
                                     "h-6 w-6 shrink-0"
@@ -188,7 +192,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                       <a
                         href={item.href}
                         className={classNames(
-                          item.current
+                          item.href === currentPath
                             ? "bg-gray-50 text-blue-600"
                             : "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
                           "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
@@ -196,7 +200,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                       >
                         <item.icon
                           className={classNames(
-                            item.current
+                            item.href === currentPath
                               ? "text-blue-600"
                               : "text-gray-400 group-hover:text-blue-600",
                             "h-6 w-6 shrink-0"

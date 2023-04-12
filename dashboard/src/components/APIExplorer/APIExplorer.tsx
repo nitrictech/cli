@@ -25,12 +25,12 @@ const JSONEditor = lazy(() => import("../shared/JSONEditor")); // Lazy-loaded
 
 const getTabCount = (rows: FieldRow[]) => rows.filter((r) => !!r.key).length;
 
-const LOCAL_STORAGE_KEY = "nitric-local-dash";
+// const LOCAL_STORAGE_KEY = "nitric-local-dash";
 
-const MAX_HISTORY_LENGTH = 50;
+// const MAX_HISTORY_LENGTH = 50;
 
 const APIExplorer = () => {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  //const [history, setHistory] = useState<HistoryItem[]>([]);
   const { data } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
 
@@ -61,6 +61,7 @@ const APIExplorer = () => {
 
   const [selectedApiEndpoint, setSelectedApiEndpoint] = useState<Endpoint>();
   const [currentTabIndex, setCurrentTabIndex] = useState(0);
+  const [responseTabIndex, setResponseTabIndex] = useState(0);
 
   const paths = useMemo(
     () => data?.apis.map((doc) => flattenPaths(doc)).flat(),
@@ -400,8 +401,70 @@ const APIExplorer = () => {
                   )}
                 </div>
 
-                <div className='mt-8 max-w-full text-sm text-gray-500'>
-                  <CodeBlock>{response?.data || ""}</CodeBlock>
+                <div className='my-4 max-w-full text-sm'>
+                  {response?.data ? (
+                    <div className='flex flex-col gap-4'>
+                      <Tabs
+                        tabs={[
+                          {
+                            name: "Response",
+                          },
+                          {
+                            name: "Headers",
+                            count: Object.keys(response.headers || {}).length,
+                          },
+                        ]}
+                        round
+                        index={responseTabIndex}
+                        setIndex={setResponseTabIndex}
+                      />
+                      {responseTabIndex === 0 && (
+                        <CodeBlock>{response?.data || ""}</CodeBlock>
+                      )}
+                      {responseTabIndex === 1 && (
+                        <div className='overflow-x-auto'>
+                          <div className='inline-block min-w-full py-2 align-middle'>
+                            <table className='min-w-full divide-y divide-gray-300'>
+                              <thead>
+                                <tr>
+                                  <th
+                                    scope='col'
+                                    className='py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8'
+                                  >
+                                    Header
+                                  </th>
+                                  <th
+                                    scope='col'
+                                    className='px-3 py-3.5 text-left text-sm font-semibold text-gray-900'
+                                  >
+                                    Value
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className='divide-y divide-gray-200 bg-white'>
+                                {Object.entries(response.headers || {}).map(
+                                  ([key, value]) => (
+                                    <tr key={key}>
+                                      <td className='whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8'>
+                                        {key}
+                                      </td>
+                                      <td className='whitespace-nowrap px-3 py-4 text-sm text-gray-500'>
+                                        {value}
+                                      </td>
+                                    </tr>
+                                  )
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className='text-gray-500 text-lg'>
+                      Send a request to get a response.
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

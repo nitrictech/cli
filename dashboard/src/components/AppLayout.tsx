@@ -3,29 +3,12 @@ import { Dialog, Transition } from "@headlessui/react";
 import {
   ArrowTopRightOnSquareIcon,
   Bars3Icon,
-  CircleStackIcon,
-  ClockIcon,
-  FolderIcon,
-  HomeIcon,
-  LockClosedIcon,
   MagnifyingGlassIcon,
-  MegaphoneIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
+import { useWebSocket } from "../lib/use-web-socket";
 
-const navigation = [
-  {
-    name: "API Explorer",
-    href: "/",
-    icon: MagnifyingGlassIcon,
-  },
-  // { name: "Schedules", href: "#", icon: ClockIcon, current: false },
-  // { name: "Storage", href: "#", icon: CircleStackIcon, current: false },
-  // { name: "Collections", href: "#", icon: FolderIcon, current: false },
-  // { name: "Messages", href: "#", icon: MegaphoneIcon, current: false },
-  // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
-];
 const helpLinks = [
   {
     name: "Nitric Docs",
@@ -41,7 +24,12 @@ const helpLinks = [
   },
 ];
 
-const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
+interface Props extends PropsWithChildren {
+  title: string;
+}
+
+const AppLayout: React.FC<Props> = ({ title = "Dev Dashboard", children }) => {
+  const { data } = useWebSocket();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   let currentPath = "/";
@@ -49,6 +37,20 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   if (typeof window !== "undefined") {
     currentPath = window.location.pathname;
   }
+
+  const navigation = [
+    {
+      name: "API Explorer",
+      href: "/",
+      icon: MagnifyingGlassIcon,
+      count: data?.apis.length,
+    },
+    // { name: "Schedules", href: "#", icon: ClockIcon, current: false },
+    // { name: "Storage", href: "#", icon: CircleStackIcon, current: false },
+    // { name: "Collections", href: "#", icon: FolderIcon, current: false },
+    // { name: "Messages", href: "#", icon: MegaphoneIcon, current: false },
+    // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
+  ];
 
   return (
     <>
@@ -195,7 +197,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                           item.href === currentPath
                             ? "bg-gray-50 text-blue-600"
                             : "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
-                          "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
+                          "group flex gap-x-3 tracking-wide rounded-md p-2 text-sm leading-6 font-semibold"
                         )}
                       >
                         <item.icon
@@ -208,13 +210,25 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                           aria-hidden='true'
                         />
                         {item.name}
+                        {item.count ? (
+                          <span
+                            className={classNames(
+                              item.href === currentPath
+                                ? "bg-white"
+                                : "bg-gray-100 text-gray-600 group-hover:bg-gray-200",
+                              "ml-auto inline-block rounded-full py-0.5 px-3 text-xs"
+                            )}
+                          >
+                            {item.count}
+                          </span>
+                        ) : null}
                       </a>
                     </li>
                   ))}
                 </ul>
               </li>
               <li>
-                <div className='text-xs font-semibold leading-6 text-gray-400'>
+                <div className='text-sm font-semibold leading-6 text-gray-400'>
                   Resources
                 </div>
                 <ul role='list' className='-mx-2 mt-2 space-y-1'>
@@ -226,7 +240,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                         rel='noreferrer'
                         className={classNames(
                           "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
-                          "group flex gap-x-2 rounded-md p-2 items-center text-sm leading-6 font-semibold"
+                          "group flex gap-x-2 leading-6 rounded-md p-2 items-center text-sm font-semibold"
                         )}
                       >
                         <span className='truncate'>{link.name}</span>
@@ -251,12 +265,15 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           <Bars3Icon className='h-6 w-6' aria-hidden='true' />
         </button>
         <div className='flex-1 text-sm font-semibold leading-6 text-gray-900'>
-          Dev Dashboard
+          {title}
         </div>
       </div>
 
       <main className='py-10 lg:pl-72'>
-        <div className='px-4 sm:px-6 lg:px-8'>{children}</div>
+        <div className='px-4 sm:px-6 lg:px-8'>
+          <h1 className='text-4xl text-blue-900 font-bold mb-12'>{title}</h1>
+          {children}
+        </div>
       </main>
     </>
   );

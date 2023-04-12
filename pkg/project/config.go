@@ -52,11 +52,12 @@ type BaseConfig struct {
 }
 
 type DockerConfig struct {
-	Dockerfile string            `yaml:"dockerfile"`
-	Image      string            `yaml:"image" validate:"omitempty,validate_docker_image"`
-	Context    string            `yaml:"context"`
-	Args       map[string]string `yaml:"args"`
-	Nitric     bool              `yaml:"nitric"`
+	BaseComputeConfig `yaml:",inline"`
+	Dockerfile        string            `yaml:"dockerfile"`
+	Image             string            `yaml:"image" validate:"omitempty,validate_docker_image"`
+	Context           string            `yaml:"context"`
+	Args              map[string]string `yaml:"args"`
+	Nitric            bool              `yaml:"nitric"`
 }
 
 type Config struct {

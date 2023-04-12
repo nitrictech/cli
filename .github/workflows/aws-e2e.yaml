@@ -37,6 +37,7 @@ jobs:
       - name: Build Nitric
         run: |
           cd ${{ github.workspace }}/cli
+          make build-dashboard
           make build
           mv bin/nitric $(go env GOPATH)/bin/nitric
 

@@ -8,6 +8,7 @@ before:
   hooks:
     - go mod tidy
     - make generate
+    - make build-dashboard
 builds:
   - env:
       - CGO_ENABLED=0
@@ -47,8 +48,7 @@ scoop:
   license: Apache 2.0
 
 brews:
-  -
-    name: nitric
+  - name: nitric
     tap:
       owner: nitrictech
       name: homebrew-tap
@@ -61,5 +61,5 @@ brews:
     license: "Apache 2.0"
     dependencies:
       - name: git
-      - name: pulumi  # needed for certain provider deployments
+      - name: pulumi # needed for certain provider deployments
         type: optional

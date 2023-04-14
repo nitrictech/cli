@@ -1,14 +1,7 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWebSocket } from "../../lib/use-web-socket";
 import Select from "../shared/Select";
-import type {
-  APIRequest,
-  APIResponse,
-  Endpoint,
-  HistoryItem,
-  Method,
-} from "../../types";
-import { CodeBlock } from "../shared/CodeBlock";
+import type { APIRequest, APIResponse, Endpoint, Method } from "../../types";
 import Badge from "../shared/Badge";
 import {
   fieldRowArrToHeaders,
@@ -18,10 +11,11 @@ import {
 import Spinner from "../shared/Spinner";
 import Tabs from "../layout/Tabs";
 import FieldRows, { FieldRow } from "../shared/FieldRows";
-import type { JSONEditorProps } from "../shared/JSONEditor";
 import { flattenPaths } from "./flatten-paths";
 import { generatePath } from "./generate-path";
-const JSONEditor = lazy(() => import("../shared/JSONEditor")); // Lazy-loaded
+import APIResponseContent from "./APIResponseContent";
+import { formatFileSize } from "./format-file-size";
+import CodeEditor from "./CodeEditor";
 
 const getTabCount = (rows: FieldRow[]) => rows.filter((r) => !!r.key).length;
 
@@ -34,9 +28,7 @@ const APIExplorer = () => {
   const { data } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
 
-  const [JSONBody, setJSONBody] = useState<JSONEditorProps["content"]>({
-    text: "",
-  });
+  const [JSONBody, setJSONBody] = useState<string>("");
 
   const [request, setRequest] = useState<APIRequest>({
     pathParams: [],
@@ -142,7 +134,7 @@ const APIExplorer = () => {
     }
   }, [selectedApiEndpoint, request.pathParams, request.queryParams]);
 
-  console.log("request", request);
+  console.log("response", response);
 
   // Add item to history and persist to localStorage
   // const addToHistory = (item: HistoryItem) => {
@@ -173,26 +165,36 @@ const APIExplorer = () => {
       headers: fieldRowArrToHeaders(headers),
     };
 
-    const jsonBody = (JSONBody as { text: string }).text;
-
-    if (method !== "GET" && method !== "HEAD" && jsonBody) {
-      requestOptions.body = JSON.stringify(
-        JSONBody ? JSON.parse(jsonBody) : {}
-      );
+    if (method !== "GET" && method !== "HEAD" && JSONBody.trim()) {
+      requestOptions.body = JSONBody;
     }
     const startTime = window.performance.now();
     const res = await fetch(url, requestOptions);
+    const contentType = res.headers.get("Content-Type");
 
-    const data =
-      res.headers.get("Content-Type") === "application/json"
-        ? await res.json()
-        : await res.text();
+    let data;
+
+    if (contentType === "application/json") {
+      data = JSON.stringify(await res.json(), null, 2);
+    } else if (
+      contentType?.startsWith("image/") ||
+      contentType?.startsWith("video/") ||
+      contentType?.startsWith("audio/") ||
+      contentType?.startsWith("application")
+    ) {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      data = url;
+    } else {
+      data = await res.text();
+    }
 
     const endTime = window.performance.now();
     const responseSize = res.headers.get("Content-Length");
 
     const callResponse = {
-      data: JSON.stringify(data, null, 2),
+      data,
       time: endTime - startTime,
       status: res.status,
       size: responseSize ? parseInt(responseSize) : 0,
@@ -210,10 +212,6 @@ const APIExplorer = () => {
     //   });
     setTimeout(() => setCallLoading(false), 300);
   };
-
-  //console.log("request", request);
-
-  //console.log("response", response);
 
   const tabs = [
     {
@@ -362,9 +360,14 @@ const APIExplorer = () => {
                 )}
                 {currentTabName === "Body" && (
                   <div className='my-4'>
-                    <Suspense>
-                      <JSONEditor content={JSONBody} onChange={setJSONBody} />
-                    </Suspense>
+                    <CodeEditor
+                      contentType={"application/json"}
+                      value={JSONBody}
+                      includeLinters
+                      onChange={(value) => {
+                        setJSONBody(value);
+                      }}
+                    />
                   </div>
                 )}
               </div>
@@ -397,7 +400,9 @@ const APIExplorer = () => {
                     <Badge status={"green"}>Time: {response.time} ms</Badge>
                   )}
                   {response?.size && (
-                    <Badge status={"green"}>Size: {response.size} bytes</Badge>
+                    <Badge status={"green"}>
+                      Size: {formatFileSize(response.size)}
+                    </Badge>
                   )}
                 </div>
 
@@ -419,7 +424,7 @@ const APIExplorer = () => {
                         setIndex={setResponseTabIndex}
                       />
                       {responseTabIndex === 0 && (
-                        <CodeBlock>{response?.data || ""}</CodeBlock>
+                        <APIResponseContent response={response} />
                       )}
                       {responseTabIndex === 1 && (
                         <div className='overflow-x-auto'>

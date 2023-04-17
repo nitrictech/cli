@@ -29,6 +29,7 @@ export interface Endpoint {
   path: string;
   methods: Method[];
   params?: Param[];
+  doc: OpenAPIV3.Document<{}>;
 }
 
 export interface APIRequest {
@@ -49,7 +50,6 @@ export interface APIResponse {
 }
 
 export interface HistoryItem {
-  time: number;
   request: APIRequest;
-  response: APIResponse;
+  JSONBody: string;
 }

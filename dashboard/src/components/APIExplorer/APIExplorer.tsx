@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useWebSocket } from "../../lib/use-web-socket";
 import Select from "../shared/Select";
-import type { APIRequest, APIResponse, Endpoint, Method } from "../../types";
+import type {
+  APIRequest,
+  APIResponse,
+  Endpoint,
+  HistoryItem,
+  Method,
+} from "../../types";
 import Badge from "../shared/Badge";
 import {
   fieldRowArrToHeaders,
@@ -16,39 +22,40 @@ import { generatePath } from "./generate-path";
 import APIResponseContent from "./APIResponseContent";
 import { formatFileSize } from "./format-file-size";
 import CodeEditor from "./CodeEditor";
+import APIMenu from "./APIMenu";
+import { generatePathParams } from "./generate-path-params";
 
 const getTabCount = (rows: FieldRow[]) => rows.filter((r) => !!r.key).length;
 
-// const LOCAL_STORAGE_KEY = "nitric-local-dash";
+export const LOCAL_STORAGE_KEY = "nitric-local-dash-history";
 
-// const MAX_HISTORY_LENGTH = 50;
+const requestDefault = {
+  pathParams: [],
+  queryParams: [
+    {
+      key: "",
+      value: "",
+    },
+  ],
+  headers: [
+    {
+      key: "Accept",
+      value: "*/*",
+    },
+    {
+      key: "User-Agent",
+      value: "Nitric Client (https://www.nitric.io)",
+    },
+  ],
+};
 
 const APIExplorer = () => {
-  //const [history, setHistory] = useState<HistoryItem[]>([]);
   const { data } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
 
   const [JSONBody, setJSONBody] = useState<string>("");
 
-  const [request, setRequest] = useState<APIRequest>({
-    pathParams: [],
-    queryParams: [
-      {
-        key: "",
-        value: "",
-      },
-    ],
-    headers: [
-      {
-        key: "Accept",
-        value: "*/*",
-      },
-      {
-        key: "User-Agent",
-        value: "Nitric Client (https://www.nitric.io)",
-      },
-    ],
-  });
+  const [request, setRequest] = useState<APIRequest>(requestDefault);
   const [response, setResponse] = useState<APIResponse>();
 
   const [selectedApiEndpoint, setSelectedApiEndpoint] = useState<Endpoint>();
@@ -61,63 +68,83 @@ const APIExplorer = () => {
   );
 
   // Load history from localStorage on mount
-  // useEffect(() => {
-  //   const storedHistory = localStorage.getItem(
-  //     `${LOCAL_STORAGE_KEY}-call-history`
-  //   );
-  //   if (storedHistory) {
-  //     setHistory(JSON.parse(storedHistory));
-  //   }
-  // }, []);
+  useEffect(() => {
+    if (selectedApiEndpoint) {
+      const storedHistory = localStorage.getItem(
+        `${LOCAL_STORAGE_KEY}-${selectedApiEndpoint.id}`
+      );
+
+      if (storedHistory) {
+        const history: HistoryItem = JSON.parse(storedHistory);
+        setJSONBody(history.JSONBody);
+        setRequest({
+          ...history.request,
+          pathParams: generatePathParams(selectedApiEndpoint, history.request),
+        });
+      } else {
+        // clear
+        setJSONBody("");
+        setRequest({
+          ...requestDefault,
+          method: selectedApiEndpoint.methods[0],
+          pathParams: generatePathParams(selectedApiEndpoint, requestDefault),
+        });
+      }
+
+      // set history
+      localStorage.setItem(
+        `${LOCAL_STORAGE_KEY}-last-path-id`,
+        selectedApiEndpoint.id
+      );
+    }
+  }, [selectedApiEndpoint]);
 
   useEffect(() => {
     if (paths?.length) {
-      setSelectedApiEndpoint(paths[0]);
-      setRequest((prev) => ({
-        ...prev,
-        method: paths[0].methods[0],
-      }));
+      // restore history or select first if not selected
+      if (!selectedApiEndpoint) {
+        const previousId = localStorage.getItem(
+          `${LOCAL_STORAGE_KEY}-last-path-id`
+        );
+
+        const path =
+          (previousId && paths.find((p) => p.id === previousId)) || paths[0];
+
+        setSelectedApiEndpoint(path);
+        setRequest((prev) => ({
+          ...prev,
+          method: path.methods[0],
+        }));
+      } else {
+        // could be a refresh from ws, so update the selected endpoint
+        const latest = paths.find((p) => p.id === selectedApiEndpoint.id);
+
+        if (latest) {
+          setSelectedApiEndpoint(latest);
+
+          if (request.method && !latest.methods.includes(request.method)) {
+            setRequest((prev) => ({
+              ...prev,
+              method: latest?.methods[0],
+            }));
+          }
+        }
+      }
     }
   }, [paths]);
 
   useEffect(() => {
-    if (request.method && selectedApiEndpoint) {
-      const propsToMerge: Record<string, any> = {};
-      // Save state to local storage
-      //console.log("saving", selectedApiEndpoint);
-
-      if (!selectedApiEndpoint.methods.includes(request.method)) {
-        propsToMerge.method = selectedApiEndpoint.methods[0];
-      }
-
-      if (selectedApiEndpoint.params?.length) {
-        const pathParams: FieldRow[] = [];
-
-        selectedApiEndpoint.params.forEach((p) => {
-          p.value.forEach((v) => {
-            if (v.in === "path") {
-              pathParams.push({
-                key: v.name,
-                value: "",
-              });
-            }
-          });
-        });
-
-        propsToMerge.pathParams = pathParams;
-      }
-
-      console.count("hi");
-      console.log(propsToMerge, Object.keys(propsToMerge).length);
-
-      if (Object.keys(propsToMerge).length) {
-        setRequest((prev) => ({
-          ...prev,
-          ...propsToMerge,
-        }));
-      }
+    if (
+      request.method &&
+      selectedApiEndpoint &&
+      !selectedApiEndpoint.methods.includes(request.method)
+    ) {
+      setRequest((prev) => ({
+        ...prev,
+        method: selectedApiEndpoint.methods[0],
+      }));
     }
-  }, [selectedApiEndpoint, request.method]);
+  }, [request.method]);
 
   useEffect(() => {
     if (selectedApiEndpoint) {
@@ -134,19 +161,20 @@ const APIExplorer = () => {
     }
   }, [selectedApiEndpoint, request.pathParams, request.queryParams]);
 
-  console.log("response", response);
+  // Save state to local storage whenever it changes
+  useEffect(() => {
+    if (selectedApiEndpoint) {
+      localStorage.setItem(
+        `${LOCAL_STORAGE_KEY}-${selectedApiEndpoint.id}`,
+        JSON.stringify({
+          request,
+          JSONBody,
+        })
+      );
+    }
+  }, [request, JSONBody]);
 
-  // Add item to history and persist to localStorage
-  // const addToHistory = (item: HistoryItem) => {
-  //   const updatedHistory = [...history, item].slice(-MAX_HISTORY_LENGTH);
-  //   setHistory(updatedHistory);
-  //   localStorage.setItem(
-  //     `${LOCAL_STORAGE_KEY}-call-history`,
-  //     JSON.stringify(updatedHistory)
-  //   );
-  // };
-
-  if (!paths || !selectedApiEndpoint) {
+  if (!paths || !selectedApiEndpoint || !request?.method) {
     return null;
   }
 
@@ -225,68 +253,87 @@ const APIExplorer = () => {
   const currentTabName = tabs[currentTabIndex].name;
 
   return (
-    <div className='flex flex-col md:flex-row gap-8 pr-8'>
-      <div className='md:w-1/2 flex flex-col gap-8'>
-        <nav className='flex items-end gap-4' aria-label='Breadcrumb'>
-          <ol role='list' className='flex w-11/12 items-center gap-4'>
-            <li className='w-9/12'>
-              <Select<Endpoint>
-                items={paths}
-                label='API Endpoint'
-                selected={selectedApiEndpoint}
-                setSelected={setSelectedApiEndpoint}
-                display={(v) => (
-                  <div className='flex items-center p-0.5 text-lg gap-4'>
-                    <span>{v?.api}</span>
-                    <span>{v?.path}</span>
-                    <span className='ml-auto px-2 text-sm'>
-                      {v?.methods.length} methods
-                    </span>
-                  </div>
-                )}
-              />
-            </li>
-            <li className='w-3/12'>
-              <Select<Method>
-                items={selectedApiEndpoint?.methods || []}
-                label='Method'
-                selected={request.method}
-                setSelected={(m) => {
-                  setRequest((prev) => ({
-                    ...prev,
-                    method: m,
-                  }));
-                }}
-                display={(method) => (
-                  <Badge
-                    status={
-                      (
-                        {
-                          DELETE: "red",
-                          POST: "green",
-                          PUT: "yellow",
-                          GET: "blue",
-                        } as any
-                      )[method]
-                    }
-                    className='!text-lg'
-                  >
-                    {method}
-                  </Badge>
-                )}
-              />
-            </li>
-          </ol>
-          <div className='ml-auto'>
-            <button
-              type='button'
-              onClick={handleSend}
-              className='inline-flex items-center rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
-            >
-              Send
-            </button>
+    <div className='flex max-w-7xl flex-col md:flex-row gap-8 md:pr-8'>
+      <div className='w-full md:w-7/12 flex flex-col gap-8'>
+        <div>
+          <div className='flex'>
+            <h2 className='text-2xl font-medium text-blue-900'>
+              API - {selectedApiEndpoint.api}
+            </h2>
+            <APIMenu
+              selected={selectedApiEndpoint}
+              onAfterClear={() => {
+                setJSONBody("");
+                setRequest({
+                  ...requestDefault,
+                  method: selectedApiEndpoint.methods[0],
+                  path: generatePath(selectedApiEndpoint, [], []),
+                });
+              }}
+            />
           </div>
-        </nav>
+          <nav className='flex items-end gap-4' aria-label='Breadcrumb'>
+            <ol role='list' className='flex w-11/12 items-center gap-4'>
+              <li className='w-9/12'>
+                <Select<Endpoint>
+                  items={paths}
+                  label='Endpoint'
+                  selected={selectedApiEndpoint}
+                  setSelected={setSelectedApiEndpoint}
+                  display={(v) => (
+                    <div className='flex items-center p-0.5 text-lg gap-4'>
+                      <span>{v?.api}</span>
+                      <span>{v?.path}</span>
+                      <span className='ml-auto px-2 text-sm'>
+                        {v?.methods.length} methods
+                      </span>
+                    </div>
+                  )}
+                />
+              </li>
+              <li className='w-3/12'>
+                <Select<Method>
+                  items={selectedApiEndpoint?.methods || []}
+                  label='Method'
+                  selected={request.method}
+                  setSelected={(m) => {
+                    setRequest((prev) => ({
+                      ...prev,
+                      method: m,
+                    }));
+                  }}
+                  display={(method) => (
+                    <Badge
+                      status={
+                        (
+                          {
+                            DELETE: "red",
+                            POST: "green",
+                            PUT: "yellow",
+                            GET: "blue",
+                          } as any
+                        )[method]
+                      }
+                      className='!text-lg'
+                    >
+                      {method}
+                    </Badge>
+                  )}
+                />
+              </li>
+            </ol>
+            <div className='ml-auto'>
+              <button
+                type='button'
+                onClick={handleSend}
+                className='inline-flex items-center rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+              >
+                Send
+              </button>
+            </div>
+          </nav>
+        </div>
+
         <div className='bg-white shadow sm:rounded-lg'>
           <Tabs
             tabs={tabs}
@@ -399,7 +446,7 @@ const APIExplorer = () => {
                   {response?.time && (
                     <Badge status={"green"}>Time: {response.time} ms</Badge>
                   )}
-                  {response?.size && (
+                  {typeof response?.size === "number" && (
                     <Badge status={"green"}>
                       Size: {formatFileSize(response.size)}
                     </Badge>
@@ -465,6 +512,10 @@ const APIExplorer = () => {
                         </div>
                       )}
                     </div>
+                  ) : response ? (
+                    <span className='text-gray-500 text-lg'>
+                      No response data available for this request.
+                    </span>
                   ) : (
                     <span className='text-gray-500 text-lg'>
                       Send a request to get a response.
@@ -476,9 +527,9 @@ const APIExplorer = () => {
           </div>
         </div>
       </div>
-      <div className='w-1/2 flex flex-col gap-12 px-8'>
-        <h3 className='text-2xl font-semibold leading-6 text-gray-900'>
-          History
+      <div className='w-5/12 flex flex-col gap-12 px-8'>
+        <h3 className='text-2xl font-semibold opacity-70 leading-6 text-gray-900'>
+          History (Coming soon)
         </h3>
         {/* <APIHistory history={history} /> */}
       </div>

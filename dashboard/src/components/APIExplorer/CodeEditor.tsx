@@ -1,12 +1,17 @@
-import { langs } from "@uiw/codemirror-extensions-langs";
 import CodeMirror, {
   ReactCodeMirrorProps,
   ReactCodeMirrorRef,
 } from "@uiw/react-codemirror";
+import { StreamLanguage } from "@codemirror/language";
 import { parse } from "@prantlf/jsonlint";
 import { linter, Diagnostic } from "@codemirror/lint";
 import { useMemo, useRef, useState } from "react";
 import { XCircleIcon } from "@heroicons/react/20/solid";
+import { json } from "@codemirror/lang-json";
+import { html } from "@codemirror/lang-html";
+import { css } from "@codemirror/lang-css";
+import { xml } from "@codemirror/lang-xml";
+import { spreadsheet } from "@codemirror/legacy-modes/mode/spreadsheet";
 import type { EditorView } from "@codemirror/view";
 
 interface Props extends ReactCodeMirrorProps {
@@ -49,14 +54,11 @@ const jsonLinter = (view: EditorView): Diagnostic[] => {
       allowSingleQuotedStrings: false,
     });
   } catch (e: any) {
-    console.log(e.reason);
     const errorLocation = e.message.match(/line (\d+), column (\d+)/);
     const lineNum = parseInt(errorLocation[1], 10);
     const colNum = parseInt(errorLocation[2], 10);
-
-    console.log(lineNum, colNum);
     const pos = getErrorPosition(value, lineNum, colNum);
-    console.log(pos);
+
     return [
       {
         from: pos,
@@ -84,17 +86,15 @@ const CodeEditor: React.FC<Props> = ({
   const extensions = useMemo(() => {
     switch (contentType) {
       case "text/html":
-        return [langs.html()];
+        return [html()];
       case "text/csv":
-        return [langs.spreadsheet()];
+        return [StreamLanguage.define(spreadsheet)];
       case "text/css":
-        return [langs.css()];
+        return [css()];
       case "text/xml":
-        return [langs.xml()];
+        return [xml()];
       case "application/json":
-        return includeLinters
-          ? [langs.json(), linter(jsonLinter)]
-          : [langs.json()];
+        return includeLinters ? [json(), linter(jsonLinter)] : [json()];
     }
 
     return [];

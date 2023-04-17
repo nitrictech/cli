@@ -22,6 +22,7 @@ export function flattenPaths(doc: OpenAPIV3.Document): Endpoint[] {
         api: doc.info.title,
         path,
         methods: [method.toUpperCase() as Method],
+        doc,
       };
 
       if (!uniquePaths[key]) {

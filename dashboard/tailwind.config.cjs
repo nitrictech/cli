@@ -9,6 +9,9 @@ module.exports = {
         body: ["Archivo", ...defaultTheme.fontFamily.sans],
         display: ["Sora", ...defaultTheme.fontFamily.serif],
       },
+      maxWidth: {
+        "7xl": "90rem", // Set your desired max width value here
+      },
     },
   },
   plugins: [require("@tailwindcss/forms")],

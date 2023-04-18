@@ -98,6 +98,9 @@ const APIExplorer = () => {
         `${LOCAL_STORAGE_KEY}-last-path-id`,
         selectedApiEndpoint.id
       );
+
+      // clear response
+      setResponse(undefined);
     }
   }, [selectedApiEndpoint]);
 

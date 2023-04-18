@@ -38,6 +38,9 @@ const AppLayout: React.FC<Props> = ({
   const { data } = useWebSocket();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // remove trailing slash
+  routePath = routePath !== "/" ? routePath.replace(/\/$/, "") : routePath;
+
   const navigation = [
     {
       name: "API Explorer",
@@ -49,7 +52,7 @@ const AppLayout: React.FC<Props> = ({
       name: "Schedules",
       href: "/schedules",
       icon: ClockIcon,
-      count: data?.schedules.length,
+      count: data?.schedules?.length || 0,
     },
     // { name: "Storage", href: "#", icon: CircleStackIcon, current: false },
     // { name: "Collections", href: "#", icon: FolderIcon, current: false },

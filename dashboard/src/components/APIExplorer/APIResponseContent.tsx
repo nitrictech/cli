@@ -10,22 +10,22 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
 
   if (contentType.startsWith("image/")) {
     return (
-      <img src={response.data} className='w-full max-h-96 object-contain' />
+      <img src={response.data} className="w-full max-h-96 object-contain" />
     );
   } else if (contentType.startsWith("video/")) {
     return <video src={response.data} controls />;
   } else if (contentType.startsWith("audio/")) {
     return <audio src={response.data} controls />;
   } else if (contentType === "application/pdf") {
-    return <iframe className='h-96' src={response.data} />;
+    return <iframe className="h-96" src={response.data} />;
   } else if (
     contentType.startsWith("application/") &&
     contentType !== "application/json"
   ) {
     return (
-      <div className='my-4'>
+      <div className="my-4">
         The response is binary, you can{" "}
-        <a href={response.data} className='underline'>
+        <a href={response.data} className="underline">
           download the file here
         </a>
         .
@@ -34,7 +34,12 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
   }
 
   return (
-    <CodeEditor contentType={contentType} value={response.data} readOnly />
+    <CodeEditor
+      enableCopy
+      contentType={contentType}
+      value={response.data}
+      readOnly
+    />
   );
 };
 

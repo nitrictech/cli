@@ -6,7 +6,11 @@ import { StreamLanguage } from "@codemirror/language";
 import { parse } from "@prantlf/jsonlint";
 import { linter, Diagnostic } from "@codemirror/lint";
 import { useMemo, useRef, useState } from "react";
-import { XCircleIcon } from "@heroicons/react/20/solid";
+import {
+  ClipboardDocumentCheckIcon,
+  ClipboardIcon,
+  XCircleIcon,
+} from "@heroicons/react/20/solid";
 import { json } from "@codemirror/lang-json";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
@@ -17,6 +21,7 @@ import type { EditorView } from "@codemirror/view";
 interface Props extends ReactCodeMirrorProps {
   contentType: string;
   includeLinters?: boolean;
+  enableCopy?: boolean;
 }
 
 function getLineNumber(str: string, index: number) {
@@ -73,15 +78,44 @@ const jsonLinter = (view: EditorView): Diagnostic[] => {
   return errors;
 };
 
+const copyToClipboard = (str: string, callback = () => {}) => {
+  const focused = window.document.hasFocus();
+  if (focused) {
+    window.navigator?.clipboard?.writeText(str).then(() => {
+      callback();
+    });
+  } else {
+    console.warn("Unable to copy to clipboard");
+  }
+};
+
 const CodeEditor: React.FC<Props> = ({
   contentType,
   readOnly,
   includeLinters,
   onChange,
+  enableCopy,
   ...props
 }) => {
   const editor = useRef<ReactCodeMirrorRef>(null);
   const [errors, setErrors] = useState<Diagnostic[]>([]);
+
+  const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<any>();
+
+  const handleCopyCode = () => {
+    copyToClipboard(`${props.value}`.trim());
+    setCopied(true);
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      setCopied(false);
+      timeoutRef.current = null;
+    }, 1000);
+  };
 
   const extensions = useMemo(() => {
     switch (contentType) {
@@ -139,14 +173,23 @@ const CodeEditor: React.FC<Props> = ({
   };
 
   return (
-    <div className='rounded-lg relative overflow-hidden'>
+    <div className="rounded-lg relative overflow-hidden">
+      {enableCopy ? (
+        <button
+          aria-label="Copy Code"
+          className="w-4 h-4 absolute z-50 m-4 top-0 text-white right-0"
+          onClick={handleCopyCode}
+        >
+          {copied ? <ClipboardDocumentCheckIcon /> : <ClipboardIcon />}
+        </button>
+      ) : null}
       {!readOnly && contentType === "application/json" && (
-        <div className='flex mb-2'>
-          <h4 className='text-lg font-medium text-gray-900'>JSON Content</h4>
+        <div className="flex mb-2">
+          <h4 className="text-lg font-medium text-gray-900">JSON Content</h4>
           <button
             onClick={handleFormat}
-            type='button'
-            className='rounded ml-auto bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+            type="button"
+            className="rounded ml-auto bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
             Format
           </button>
@@ -154,8 +197,8 @@ const CodeEditor: React.FC<Props> = ({
       )}
       <CodeMirror
         ref={editor}
-        height='350px'
-        theme='dark'
+        height="350px"
+        theme="dark"
         basicSetup={{
           foldGutter: true,
           lineNumbers: true,
@@ -167,16 +210,16 @@ const CodeEditor: React.FC<Props> = ({
         {...props}
       />
       {errors.length > 0 && (
-        <div className='rounded-md bottom-0 right-0 m-2 absolute bg-red-50 p-2.5'>
-          <div className='flex items-center'>
-            <div className='flex-shrink-0'>
+        <div className="rounded-md bottom-0 right-0 m-2 absolute bg-red-50 p-2.5">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
               <XCircleIcon
-                className='h-5 w-5 text-red-400'
-                aria-hidden='true'
+                className="h-5 w-5 text-red-400"
+                aria-hidden="true"
               />
             </div>
-            <div className='ml-1'>
-              <div className='text-sm text-red-700'>
+            <div className="ml-1">
+              <div className="text-sm text-red-700">
                 Error Invalid JSON at line{" "}
                 {getLineNumber(
                   editor.current?.view?.state.doc.toString() || "",

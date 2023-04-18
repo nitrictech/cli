@@ -13,9 +13,17 @@ export type Method =
   | "PATCH"
   | "TRACE";
 
+export interface Schedule {
+  workerKey: string;
+  topicKey: string;
+}
+
 export interface WebSocketResponse {
   projectName: string;
   apis: APIDoc[];
+  schedules: Schedule[];
+  triggerAddress: string;
+  apiAddresses: Record<string, string>;
 }
 
 export interface Param {

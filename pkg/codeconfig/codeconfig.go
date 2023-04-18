@@ -58,6 +58,28 @@ type codeConfig struct {
 	lock           sync.RWMutex
 }
 
+type TopicResult struct {
+	WorkerKey string `json:"workerKey,omitempty"`
+	TopicKey  string `json:"topicKey,omitempty"`
+}
+type SpecResult struct {
+	Apis     []*openapi3.T
+	Shedules []*TopicResult
+}
+
+// type SpecResultInterface interface {
+//     GetAPIs() []*openapi3.T
+// 	GetSchedules() []*TopicResult
+// }
+
+// func (s *SpecResult) GetAPIs() []*openapi3.T {
+//     return s.apis
+// }
+
+// func (s *SpecResult) GetSchedules() []*TopicResult {
+//     return s.shedules
+// }
+
 func New(p *project.Project, envMap map[string]string) (*codeConfig, error) {
 	return &codeConfig{
 		initialProject: p,
@@ -114,8 +136,9 @@ type apiHandler struct {
 
 var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 
-func (c *codeConfig) ApiSpecFromWorkerPool(pool pool.WorkerPool) ([]*openapi3.T, error) {
+func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, error) {
 	apis := map[string][]*apiHandler{}
+	schedules := []*TopicResult{}
 
 	// transform worker pool into apiHandlers
 	for _, wrkr := range pool.GetWorkers(nil) {
@@ -144,9 +167,15 @@ func (c *codeConfig) ApiSpecFromWorkerPool(pool pool.WorkerPool) ([]*openapi3.T,
 			}
 
 			apis[api] = append(apis[api], &handler)
+		case *worker.ScheduleWorker:
+			topicKey := strings.ToLower(strings.ReplaceAll(w.Key(), " ", "-"))
+
+			schedules = append(schedules, &TopicResult{
+				TopicKey:  topicKey,
+				WorkerKey: w.Key(),
+			})
 		}
 	}
-
 	// Convert the map of unique API specs to an array
 	apiSpecs := []*openapi3.T{}
 
@@ -159,7 +188,10 @@ func (c *codeConfig) ApiSpecFromWorkerPool(pool pool.WorkerPool) ([]*openapi3.T,
 		apiSpecs = append(apiSpecs, spec)
 	}
 
-	return apiSpecs, nil
+	return &SpecResult{
+		Apis:     apiSpecs,
+		Shedules: schedules,
+	}, nil
 }
 
 // apiSpec produces an open api v3 spec for the requests API name

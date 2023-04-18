@@ -15,15 +15,15 @@ interface Props {
 const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round }) => {
   return (
     <div>
-      <div className='sm:hidden'>
-        <label htmlFor='tabs' className='sr-only'>
+      <div className="sm:hidden">
+        <label htmlFor="tabs" className="sr-only">
           Select a tab
         </label>
         {/* Use an "onChange" listener to redirect the user to the selected tab URL. */}
         <select
-          id='tabs'
-          name='tabs'
-          className='block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+          id="tabs"
+          name="tabs"
+          className="block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
           defaultValue={tabs[index].name}
           onChange={(e) => setIndex(parseInt(e.target.value))}
         >
@@ -34,13 +34,13 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round }) => {
           ))}
         </select>
       </div>
-      <div className='hidden sm:block'>
+      <div className="hidden sm:block">
         <nav
           className={classNames(
             "isolate flex divide-x divide-gray-200 shadow",
             round && "rounded-lg"
           )}
-          aria-label='Tabs'
+          aria-label="Tabs"
         >
           {tabs.map((tab, tabIdx) => (
             <button
@@ -74,7 +74,7 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round }) => {
                 </span>
               ) : null}
               <span
-                aria-hidden='true'
+                aria-hidden="true"
                 className={classNames(
                   tabIdx === index ? "bg-blue-500" : "bg-transparent",
                   "absolute inset-x-0 bottom-0 h-0.5"

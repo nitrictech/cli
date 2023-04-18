@@ -21,6 +21,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"sort"
+	"strings"
 
 	"github.com/imdario/mergo"
 	multierror "github.com/missionMeteora/toolkit/errors"
@@ -92,14 +95,34 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 	errs := multierror.ErrorList{}
 
 	for _, f := range c.functions {
-		for k := range f.buckets {
-			builder.set(&deploy.Resource{
-				Name: k,
+		for bucketName := range f.buckets {
+			notifications := []*deploy.BucketNotificationTarget{}
+
+			if err := checkDuplicateBucketNotifications(f.bucketNotifications[bucketName]); err != nil {
+				errs.Push(fmt.Errorf("failed to create bucket %s: %v", bucketName, err))
+				continue
+			}
+
+			for _, v := range f.bucketNotifications[bucketName] {
+				notifications = append(notifications, &deploy.BucketNotificationTarget{
+					Config: v.Config,
+					Target: &deploy.BucketNotificationTarget_ExecutionUnit{
+						ExecutionUnit: f.name,
+					},
+				})
+			}
+
+			res := &deploy.Resource{
+				Name: bucketName,
 				Type: v1.ResourceType_Bucket,
 				Config: &deploy.Resource_Bucket{
-					Bucket: &deploy.Bucket{},
+					Bucket: &deploy.Bucket{
+						Notifications: notifications,
+					},
 				},
-			})
+			}
+
+			builder.set(res)
 		}
 
 		for k := range f.collections {
@@ -278,4 +301,42 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 	}
 
 	return builder.Output(), errs.Err()
+}
+
+
+func checkDuplicateBucketNotifications(notifications []*v1.BucketNotificationWorker) error {
+	notificationByEventType := make(map[v1.EventType][]string)
+
+	// Separate the notifications by event type
+	for _, n := range notifications {
+		eventFilter := n.Config.EventFilter
+		if eventFilter == "*" {
+			eventFilter = ""
+		}
+		
+		notificationByEventType[n.Config.EventType] = append(notificationByEventType[n.Config.EventType], eventFilter)
+	}
+
+	for _, eventType := range []v1.EventType{v1.EventType_Created, v1.EventType_Deleted} {
+		// Sort by the path
+		events := notificationByEventType[eventType]
+		sort.Strings(events)
+
+		for idx, n := range events {
+			if (n == events[len(events)-1]) {
+				break
+			}			
+
+			match, err := regexp.MatchString(fmt.Sprintf("^(%s)", strings.ReplaceAll(n, "/", "\\/")), events[idx+1])
+			if err != nil {
+				return err
+			}
+
+			if match {
+				return fmt.Errorf("overlapping prefixes in notifications for bucket")
+			}
+		}
+	}
+
+	return nil
 }

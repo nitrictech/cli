@@ -2,6 +2,11 @@ module github.com/nitrictech/cli
 
 go 1.19
 
+replace (
+	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230213031554-d8ff7f3013b8 => ../nitric/cloud/aws
+	github.com/nitrictech/nitric/core v0.0.0-20230327032749-a67f53bf20d6 => ../nitric/core
+)
+
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible
@@ -24,7 +29,7 @@ require (
 	github.com/hashicorp/consul/sdk v0.13.0
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.6.0
-	github.com/imdario/mergo v0.3.13
+	github.com/imdario/mergo v0.3.15
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/joho/godotenv v1.4.0
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc

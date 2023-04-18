@@ -120,6 +120,7 @@ type FunctionDependencies struct {
 	queues        map[string]*v1.QueueResource
 	policies      []*v1.PolicyResource
 	secrets       map[string]*v1.SecretResource
+	bucketNotifications map[string][]*v1.BucketNotificationWorker 
 	lock          sync.RWMutex
 }
 
@@ -199,7 +200,7 @@ func (a *FunctionDependencies) WorkerCount() int {
 		workerCount = workerCount + len(v.workers)
 	}
 
-	workerCount = workerCount + len(a.subscriptions) + len(a.schedules)
+	workerCount = workerCount + len(a.subscriptions) + len(a.schedules) + len(a.bucketNotifications)
 
 	return workerCount
 }
@@ -214,6 +215,15 @@ func (a *FunctionDependencies) AddScheduleHandler(sw *v1.ScheduleWorker) error {
 	}
 
 	a.schedules[sw.GetKey()] = sw
+
+	return nil
+}
+
+func (a *FunctionDependencies) AddBucketNotificationHandler(nw *v1.BucketNotificationWorker) error {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	a.bucketNotifications[nw.GetBucket()] = append(a.bucketNotifications[nw.GetBucket()], nw) 
 
 	return nil
 }
@@ -268,6 +278,7 @@ func NewFunction(name string) *FunctionDependencies {
 		collections:   make(map[string]*v1.CollectionResource),
 		queues:        make(map[string]*v1.QueueResource),
 		secrets:       make(map[string]*v1.SecretResource),
+		bucketNotifications: make(map[string][]*v1.BucketNotificationWorker),
 		policies:      make([]*v1.PolicyResource, 0),
 	}
 }

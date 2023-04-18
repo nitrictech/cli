@@ -33,11 +33,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	s3_service "github.com/nitrictech/nitric/cloud/aws/runtime/storage"
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
+	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
 type RunStorageService struct {
 	storage.StorageService
+	pool pool.WorkerPool
 	client *s3.Client
 }
 
@@ -64,6 +67,34 @@ func (r *RunStorageService) ensureBucketExists(ctx context.Context, bucket strin
 	return err
 }
 
+func (r *RunStorageService) triggerBucketNotification(ctx context.Context, bucket, key, eventType string) error {
+	evt := &v1.TriggerRequest{
+		Context: &v1.TriggerRequest_Notification{
+			Notification: &v1.NotificationTriggerContext{
+				Type:     v1.NotificationType_Bucket,
+				Resource: bucket,
+				Attributes: map[string]string{
+					"key": key,
+					"type": eventType,
+				},
+			},
+		},
+	}
+
+	worker, err := r.pool.GetWorker(&pool.GetWorkerOptions{
+		Trigger: evt,
+	})
+	if err != nil {
+		return fmt.Errorf("error occured getting bucket notification worker: %v", err)
+	}
+
+	if _, err := worker.HandleTrigger(ctx, evt); err != nil {
+		return fmt.Errorf("error occcured triggering bucket notification: %v", err)
+	}
+
+	return nil
+}
+
 func (r *RunStorageService) Read(ctx context.Context, bucket string, key string) ([]byte, error) {
 	err := r.ensureBucketExists(ctx, bucket)
 	if err != nil {
@@ -79,7 +110,17 @@ func (r *RunStorageService) Write(ctx context.Context, bucket string, key string
 		return err
 	}
 
-	return r.StorageService.Write(ctx, bucket, key, object)
+	err = r.StorageService.Write(ctx, bucket, key, object)
+	if err != nil {
+		return err
+	}
+
+	// err = r.triggerBucketNotification(ctx, bucket, key, "created")
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// }
+
+	return nil
 }
 
 func (r *RunStorageService) Delete(ctx context.Context, bucket string, key string) error {
@@ -88,7 +129,17 @@ func (r *RunStorageService) Delete(ctx context.Context, bucket string, key strin
 		return err
 	}
 
-	return r.StorageService.Delete(ctx, bucket, key)
+	err = r.StorageService.Delete(ctx, bucket, key)
+	if err != nil {
+		return err
+	}
+
+	// err = r.triggerBucketNotification(ctx, bucket, key, "deleted")
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// }
+
+	return nil
 }
 
 func (r *RunStorageService) ListFiles(ctx context.Context, bucket string) ([]*storage.FileInfo, error) {
@@ -119,7 +170,7 @@ type StorageOptions struct {
 	Endpoint  string
 }
 
-func NewStorage(opts StorageOptions) (storage.StorageService, error) {
+func NewStorage(pool pool.WorkerPool, opts StorageOptions) (storage.StorageService, error) {
 	cfg, sessionError := config.LoadDefaultConfig(context.TODO(),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(opts.AccessKey, opts.SecretKey, "")),
 		config.WithRegion("us-east-1"),
@@ -149,6 +200,7 @@ func NewStorage(opts StorageOptions) (storage.StorageService, error) {
 
 	return &RunStorageService{
 		StorageService: s3Service,
+		pool: pool,
 		client:         s3Client,
 	}, nil
 }

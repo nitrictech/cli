@@ -26,10 +26,17 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
+type BucketNotification struct {
+	Bucket string
+	EventType string
+	EventFilter string
+}
+
 type RunStackState struct {
 	apis      map[string]string
 	subs      map[string]string
 	schedules map[string]string
+	bucketNotifications []*BucketNotification
 }
 
 func (r *RunStackState) Update(pool pool.WorkerPool, ls LocalServices) {
@@ -37,6 +44,7 @@ func (r *RunStackState) Update(pool pool.WorkerPool, ls LocalServices) {
 	r.apis = make(map[string]string)
 	r.subs = make(map[string]string)
 	r.schedules = make(map[string]string)
+	r.bucketNotifications = []*BucketNotification{}
 
 	for name, address := range ls.Apis() {
 		r.apis[name] = address
@@ -50,6 +58,12 @@ func (r *RunStackState) Update(pool pool.WorkerPool, ls LocalServices) {
 		case *worker.ScheduleWorker:
 			topicKey := strings.ToLower(strings.ReplaceAll(w.Key(), " ", "-"))
 			r.subs[w.Key()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), topicKey)
+		case *worker.BucketNotificationWorker:
+			r.bucketNotifications = append(r.bucketNotifications, &BucketNotification{
+				Bucket: w.Bucket(),
+				EventType: w.EventType(),
+				EventFilter: w.EventFilter(),
+			})
 		}
 	}
 }
@@ -68,6 +82,11 @@ func (r *RunStackState) Tables(port int, dashPort int) string {
 	}
 
 	table, rows = r.SchedulesTable(9001)
+	if rows > 0 {
+		tables = append(tables, table)
+	}
+
+	table, rows = r.BucketNotificationsTable(9001)
 	if rows > 0 {
 		tables = append(tables, table)
 	}
@@ -119,6 +138,20 @@ func (r *RunStackState) SchedulesTable(port int) (string, int) {
 	return str, len(r.schedules)
 }
 
+func (r *RunStackState) BucketNotificationsTable(port int) (string, int) {
+	tableData := pterm.TableData{{"Bucket", "Event Type", "Event Filter"}}
+
+	for _, notification := range r.bucketNotifications {
+		tableData = append(tableData, []string{
+			notification.Bucket, notification.EventType, notification.EventFilter,
+		})
+	}
+
+	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+
+	return str, len(r.bucketNotifications)
+}
+
 func (r *RunStackState) DashboardTable(port int) string {
 	tableData := pterm.TableData{{pterm.LightCyan("Dev Dashboard"), fmt.Sprintf("http://localhost:%v", port)}}
 
@@ -132,5 +165,6 @@ func NewStackState() *RunStackState {
 		apis:      map[string]string{},
 		subs:      map[string]string{},
 		schedules: map[string]string{},
+		bucketNotifications: []*BucketNotification{},
 	}
 }

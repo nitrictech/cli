@@ -5,6 +5,7 @@ import {
   Bars3Icon,
   MagnifyingGlassIcon,
   XMarkIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
 import { useWebSocket } from "../lib/use-web-socket";
@@ -26,17 +27,16 @@ const helpLinks = [
 
 interface Props extends PropsWithChildren {
   title: string;
+  routePath: string;
 }
 
-const AppLayout: React.FC<Props> = ({ title = "Dev Dashboard", children }) => {
+const AppLayout: React.FC<Props> = ({
+  title = "Dev Dashboard",
+  children,
+  routePath = "/",
+}) => {
   const { data } = useWebSocket();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  let currentPath = "/";
-
-  if (typeof window !== "undefined") {
-    currentPath = window.location.pathname;
-  }
 
   const navigation = [
     {
@@ -45,7 +45,12 @@ const AppLayout: React.FC<Props> = ({ title = "Dev Dashboard", children }) => {
       icon: MagnifyingGlassIcon,
       count: data?.apis.length,
     },
-    // { name: "Schedules", href: "#", icon: ClockIcon, current: false },
+    {
+      name: "Schedules",
+      href: "/schedules",
+      icon: ClockIcon,
+      count: data?.schedules.length,
+    },
     // { name: "Storage", href: "#", icon: CircleStackIcon, current: false },
     // { name: "Collections", href: "#", icon: FolderIcon, current: false },
     // { name: "Messages", href: "#", icon: MegaphoneIcon, current: false },
@@ -124,7 +129,7 @@ const AppLayout: React.FC<Props> = ({ title = "Dev Dashboard", children }) => {
                               <a
                                 href={item.href}
                                 className={classNames(
-                                  item.href === currentPath
+                                  item.href === routePath
                                     ? "bg-gray-50 text-blue-600"
                                     : "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
                                   "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
@@ -132,7 +137,7 @@ const AppLayout: React.FC<Props> = ({ title = "Dev Dashboard", children }) => {
                               >
                                 <item.icon
                                   className={classNames(
-                                    item.href === currentPath
+                                    item.href === routePath
                                       ? "text-blue-600"
                                       : "text-gray-400 group-hover:text-blue-600",
                                     "h-6 w-6 shrink-0"
@@ -194,7 +199,7 @@ const AppLayout: React.FC<Props> = ({ title = "Dev Dashboard", children }) => {
                       <a
                         href={item.href}
                         className={classNames(
-                          item.href === currentPath
+                          item.href === routePath
                             ? "bg-gray-50 text-blue-600"
                             : "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
                           "group flex gap-x-3 tracking-wide rounded-md p-2 text-sm leading-6 font-semibold"
@@ -202,7 +207,7 @@ const AppLayout: React.FC<Props> = ({ title = "Dev Dashboard", children }) => {
                       >
                         <item.icon
                           className={classNames(
-                            item.href === currentPath
+                            item.href === routePath
                               ? "text-blue-600"
                               : "text-gray-400 group-hover:text-blue-600",
                             "h-6 w-6 shrink-0"
@@ -213,7 +218,7 @@ const AppLayout: React.FC<Props> = ({ title = "Dev Dashboard", children }) => {
                         {item.count ? (
                           <span
                             className={classNames(
-                              item.href === currentPath
+                              item.href === routePath
                                 ? "bg-white"
                                 : "bg-gray-100 text-gray-600 group-hover:bg-gray-200",
                               "ml-auto inline-block rounded-full py-0.5 px-3 text-xs"

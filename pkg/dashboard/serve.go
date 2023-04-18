@@ -19,6 +19,7 @@ package dashboard
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -36,10 +37,13 @@ import (
 )
 
 type dashboard struct {
-	project *project.Project
-	apis    []*openapi3.T
-	envMap  map[string]string
-	melody  *melody.Melody
+	project        *project.Project
+	apis           []*openapi3.T
+	schedules      []*codeconfig.TopicResult
+	envMap         map[string]string
+	melody         *melody.Melody
+	triggerAddress string
+	apiAddresses   map[string]string
 }
 
 type Api struct {
@@ -48,8 +52,11 @@ type Api struct {
 }
 
 type DashResponse struct {
-	Apis        []*openapi3.T `json:"apis,omitempty"`
-	ProjectName string        `json:"projectName,omitempty"`
+	Apis           []*openapi3.T             `json:"apis,omitempty"`
+	Schedules      []*codeconfig.TopicResult `json:"schedules,omitempty"`
+	ProjectName    string                    `json:"projectName,omitempty"`
+	ApiAddresses   map[string]string         `json:"apiAddresses,omitempty"`
+	TriggerAddress string                    `json:"triggerAddress,omitempty"`
 }
 
 //go:embed dist/*
@@ -74,12 +81,15 @@ func (d *dashboard) Refresh(ls run.LocalServices) error {
 
 	pool := ls.GetWorkerPool()
 
-	apis, err := cc.ApiSpecFromWorkerPool(pool)
+	spec, err := cc.SpecFromWorkerPool(pool)
 	if err != nil {
 		return err
 	}
 
-	d.apis = apis
+	d.triggerAddress = ls.TriggerAddress()
+	d.apiAddresses = ls.Apis()
+	d.apis = spec.Apis
+	d.schedules = spec.Shedules
 
 	err = d.sendUpdate()
 	if err != nil {
@@ -141,9 +151,12 @@ func (d *dashboard) Serve() (*int, error) {
 			return
 		}
 
+		// find call callAddress
+		callAddress := r.Header.Get("X-Nitric-Local-Call-Address")
+
 		// Create a new request object
 		path := strings.TrimPrefix(r.URL.Path, "/call")
-		req, err := http.NewRequest(r.Method, "http://localhost:4001"+path, r.Body)
+		req, err := http.NewRequest(r.Method, fmt.Sprintf("http://%s/%s", callAddress, path), r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -205,8 +218,11 @@ func (d *dashboard) sendUpdate() error {
 	}
 
 	response := &DashResponse{
-		Apis:        d.apis,
-		ProjectName: d.project.Name,
+		Apis:           d.apis,
+		Schedules:      d.schedules,
+		ProjectName:    d.project.Name,
+		ApiAddresses:   d.apiAddresses,
+		TriggerAddress: d.triggerAddress,
 	}
 
 	// Encode the response as JSON

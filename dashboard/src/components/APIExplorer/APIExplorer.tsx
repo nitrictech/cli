@@ -24,10 +24,12 @@ import { formatFileSize } from "./format-file-size";
 import CodeEditor from "./CodeEditor";
 import APIMenu from "./APIMenu";
 import { generatePathParams } from "./generate-path-params";
+import { generateResponse } from "../../lib/generate-response";
+import { formatResponseTime } from "./format-response-time";
 
 const getTabCount = (rows: FieldRow[]) => rows.filter((r) => !!r.key).length;
 
-export const LOCAL_STORAGE_KEY = "nitric-local-dash-history";
+export const LOCAL_STORAGE_KEY = "nitric-local-dash-api-history";
 
 const requestDefault = {
   pathParams: [],
@@ -178,6 +180,8 @@ const APIExplorer = () => {
     return null;
   }
 
+  const apiAddress = data?.apiAddresses[selectedApiEndpoint.api];
+
   const handleSend = async (
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
@@ -190,7 +194,13 @@ const APIExplorer = () => {
     const url = `http://${getHost()}/call` + path;
     const requestOptions: RequestInit = {
       method,
-      headers: fieldRowArrToHeaders(headers),
+      headers: fieldRowArrToHeaders([
+        ...headers,
+        {
+          key: "X-Nitric-Local-Call-Address",
+          value: apiAddress || "localhost:4001",
+        },
+      ]),
     };
 
     if (method !== "GET" && method !== "HEAD" && JSONBody.trim()) {
@@ -198,46 +208,10 @@ const APIExplorer = () => {
     }
     const startTime = window.performance.now();
     const res = await fetch(url, requestOptions);
-    const contentType = res.headers.get("Content-Type");
 
-    let data;
-
-    if (contentType === "application/json") {
-      data = JSON.stringify(await res.json(), null, 2);
-    } else if (
-      contentType?.startsWith("image/") ||
-      contentType?.startsWith("video/") ||
-      contentType?.startsWith("audio/") ||
-      contentType?.startsWith("application")
-    ) {
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      data = url;
-    } else {
-      data = await res.text();
-    }
-
-    const endTime = window.performance.now();
-    const responseSize = res.headers.get("Content-Length");
-
-    const callResponse = {
-      data,
-      time: endTime - startTime,
-      status: res.status,
-      size: responseSize ? parseInt(responseSize) : 0,
-      headers: headersToObject(res.headers),
-    };
-
+    const callResponse = await generateResponse(res, startTime);
     setResponse(callResponse);
-    //   addToHistory({
-    //     request: {
-    //       ...request,
-    //       body: requestOptions.body,
-    //     },
-    //     response: callResponse,
-    //     time: new Date().getTime(),
-    //   });
+
     setTimeout(() => setCallLoading(false), 300);
   };
 
@@ -349,10 +323,10 @@ const APIExplorer = () => {
                   </h3>
                   <p className='absolute text-gray-500 text-sm top-0 right-0'>
                     <a
-                      href={`http://localhost:4001${request.path}`}
+                      href={`http://${apiAddress}${request.path}`}
                       target='_blank'
                     >
-                      http://localhost:4001
+                      http://{apiAddress}
                       {request.path}
                     </a>
                   </p>
@@ -444,7 +418,9 @@ const APIExplorer = () => {
                     </Badge>
                   )}
                   {response?.time && (
-                    <Badge status={"green"}>Time: {response.time} ms</Badge>
+                    <Badge status={"green"}>
+                      Time: {formatResponseTime(response.time)}
+                    </Badge>
                   )}
                   {typeof response?.size === "number" && (
                     <Badge status={"green"}>

@@ -3,6 +3,10 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
+    "cypress:open": "cypress open",
+    "cypress:headless": "cypress run",
+    "test-app:install": "yarn --cwd test-app install",
+    "test-app:dev": "yarn --cwd test-app dev:functions",
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",
@@ -32,6 +36,9 @@
     "tailwindcss": "^3.3.1"
   },
   "devDependencies": {
+    "axe-core": "^4.7.0",
+    "cypress": "^12.10.0",
+    "cypress-axe": "^1.4.0",
     "openapi-types": "^12.1.0",
     "prettier": "^2.8.7",
     "prettier-plugin-astro": "^0.8.0"

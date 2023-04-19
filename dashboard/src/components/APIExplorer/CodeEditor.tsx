@@ -126,6 +126,7 @@ const CodeEditor: React.FC<Props> = ({
       case "text/css":
         return [css()];
       case "text/xml":
+      case "application/xml":
         return [xml()];
       case "application/json":
         return includeLinters ? [json(), linter(jsonLinter)] : [json()];
@@ -173,10 +174,14 @@ const CodeEditor: React.FC<Props> = ({
   };
 
   return (
-    <div className="rounded-lg relative overflow-hidden">
+    <div
+      data-testid="code-editor"
+      className="rounded-lg relative overflow-hidden"
+    >
       {enableCopy ? (
         <button
           aria-label="Copy Code"
+          data-testid="copy-code"
           className="w-4 h-4 absolute z-50 m-4 top-0 text-white right-0"
           onClick={handleCopyCode}
         >

@@ -1,13 +1,13 @@
 export function formatResponseTime(milliseconds: number): string {
   if (milliseconds < 1000) {
-    return milliseconds + " ms";
+    return milliseconds.toFixed(2) + " ms";
   } else if (milliseconds < 60 * 1000) {
-    return Math.floor(milliseconds / 1000) + " s";
+    return (milliseconds / 1000).toFixed(2) + " s";
   } else if (milliseconds < 60 * 60 * 1000) {
-    return Math.floor(milliseconds / (60 * 1000)) + " m";
+    return (milliseconds / (60 * 1000)).toFixed(2) + " m";
   } else if (milliseconds < 24 * 60 * 60 * 1000) {
-    return Math.floor(milliseconds / (60 * 60 * 1000)) + " h";
+    return (milliseconds / (60 * 60 * 1000)).toFixed(2) + " h";
   } else {
-    return Math.floor(milliseconds / (24 * 60 * 60 * 1000)) + " d";
+    return (milliseconds / (24 * 60 * 60 * 1000)).toFixed(2) + " d";
   }
 }

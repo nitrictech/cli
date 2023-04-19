@@ -10,7 +10,11 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
 
   if (contentType.startsWith("image/")) {
     return (
-      <img src={response.data} className="w-full max-h-96 object-contain" />
+      <img
+        data-testid="response-image"
+        src={response.data}
+        className="w-full max-h-96 object-contain"
+      />
     );
   } else if (contentType.startsWith("video/")) {
     return <video src={response.data} controls />;
@@ -25,7 +29,12 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
     return (
       <div className="my-4">
         The response is binary, you can{" "}
-        <a href={response.data} className="underline">
+        <a
+          href={response.data}
+          data-testid="response-binary-link"
+          className="underline"
+          download
+        >
           download the file here
         </a>
         .

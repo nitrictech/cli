@@ -4,6 +4,7 @@ import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
 import classNames from "classnames";
 
 interface Props<T> {
+  id: string;
   label: string;
   selected: T | undefined;
   items: T[];
@@ -12,6 +13,7 @@ interface Props<T> {
 }
 
 const Select = <T extends Record<string, any> | string>({
+  id,
   items,
   selected,
   setSelected,
@@ -21,7 +23,7 @@ const Select = <T extends Record<string, any> | string>({
   return (
     <Listbox value={selected} onChange={setSelected}>
       {({ open }) => (
-        <div>
+        <div data-testid={id}>
           <Listbox.Label className="block text-lg font-medium leading-6 text-gray-900">
             {label}
           </Listbox.Label>
@@ -43,7 +45,10 @@ const Select = <T extends Record<string, any> | string>({
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
             >
-              <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-lg">
+              <Listbox.Options
+                data-testid={`${id}-options`}
+                className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-lg"
+              >
                 {items.map((item, i) => (
                   <Listbox.Option
                     key={i}

@@ -1,0 +1,59 @@
+---
+name: Dashboard Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+env:
+  GOPROXY: https://proxy.golang.org
+
+jobs:
+  nitric-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: cli
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Build Nitric
+        run: |
+          cd ${{ github.workspace }}/cli
+          make build-dashboard
+          make build
+          mv bin/nitric $(go env GOPATH)/bin/nitric
+
+      - name: Run nitric start with test-app in the background
+        run: |
+          cd ${{ github.workspace }}/cli/dashboard/test-app
+          yarn install
+          nitric start &
+          yarn dev:functions &
+
+      - name: Run Tests
+        uses: cypress-io/github-action@v5
+        with:
+          install: false
+          wait-on: "http://localhost:49152"
+          working-directory: cli/dashboard
+
+      - uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cli/dashboard/cypress/screenshots
+
+      - uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-videos
+          path: cli/dashboard/cypress/videos

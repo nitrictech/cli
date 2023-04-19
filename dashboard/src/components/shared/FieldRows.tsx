@@ -8,12 +8,13 @@ export interface FieldRow {
 }
 
 interface Props {
+  testId: string;
   rows: FieldRow[];
   lockKeys?: boolean;
   setRows: (value: FieldRow[]) => void;
 }
 
-const FieldRows: React.FC<Props> = ({ rows, lockKeys, setRows }) => {
+const FieldRows: React.FC<Props> = ({ testId, rows, lockKeys, setRows }) => {
   const id = useId();
 
   useEffect(() => {
@@ -49,6 +50,7 @@ const FieldRows: React.FC<Props> = ({ rows, lockKeys, setRows }) => {
               <div className="mt-2 sm:col-span-2 sm:mt-0">
                 <input
                   type="text"
+                  data-testid={`${testId}-${i}-key`}
                   readOnly={lockKeys}
                   placeholder="Key"
                   onChange={(e) => {
@@ -74,6 +76,7 @@ const FieldRows: React.FC<Props> = ({ rows, lockKeys, setRows }) => {
                 <input
                   type="text"
                   placeholder="Value"
+                  data-testid={`${testId}-${i}-value`}
                   onChange={(e) => {
                     const updatedRow: FieldRow = {
                       ...r,

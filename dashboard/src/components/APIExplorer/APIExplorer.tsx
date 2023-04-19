@@ -255,6 +255,7 @@ const APIExplorer = () => {
                 <Select<Endpoint>
                   items={paths}
                   label="Endpoint"
+                  id="endpoint-select"
                   selected={selectedApiEndpoint}
                   setSelected={setSelectedApiEndpoint}
                   display={(v) => (
@@ -271,6 +272,7 @@ const APIExplorer = () => {
               <li className="w-3/12">
                 <Select<Method>
                   items={selectedApiEndpoint?.methods || []}
+                  id="method-select"
                   label="Method"
                   selected={request.method}
                   setSelected={(m) => {
@@ -302,6 +304,7 @@ const APIExplorer = () => {
             <div className="ml-auto">
               <button
                 type="button"
+                data-testid="send-api-btn"
                 onClick={handleSend}
                 className="inline-flex items-center rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
@@ -326,6 +329,7 @@ const APIExplorer = () => {
                   </h3>
                   <p className="absolute text-gray-500 text-sm top-0 right-0">
                     <a
+                      data-testid="generated-request-path"
                       href={`http://${apiAddress}${request.path}`}
                       target="_blank"
                     >
@@ -342,6 +346,7 @@ const APIExplorer = () => {
                       </h4>
                       <FieldRows
                         rows={request.queryParams}
+                        testId="query"
                         setRows={(rows) => {
                           setRequest((prev) => ({
                             ...prev,
@@ -357,6 +362,7 @@ const APIExplorer = () => {
                         </h4>
                         <FieldRows
                           lockKeys
+                          testId="path"
                           rows={request.pathParams}
                           setRows={(rows) => {
                             setRequest((prev) => ({
@@ -373,6 +379,7 @@ const APIExplorer = () => {
                   <div className="my-4">
                     <FieldRows
                       rows={request.headers}
+                      testId="header"
                       setRows={(rows) => {
                         setRequest((prev) => ({
                           ...prev,
@@ -416,17 +423,20 @@ const APIExplorer = () => {
                 </div>
                 <div className="absolute right-0 top-0 flex gap-2">
                   {response?.status && (
-                    <Badge status={response.status >= 400 ? "red" : "green"}>
+                    <Badge
+                      data-testid="response-status"
+                      status={response.status >= 400 ? "red" : "green"}
+                    >
                       Status: {response.status}
                     </Badge>
                   )}
                   {response?.time && (
-                    <Badge status={"green"}>
+                    <Badge data-testid="response-time" status={"green"}>
                       Time: {formatResponseTime(response.time)}
                     </Badge>
                   )}
                   {typeof response?.size === "number" && (
-                    <Badge status={"green"}>
+                    <Badge data-testid="response-size" status={"green"}>
                       Size: {formatFileSize(response.size)}
                     </Badge>
                   )}

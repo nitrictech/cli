@@ -46,6 +46,7 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round }) => {
             <button
               key={tab.name}
               onClick={() => setIndex(tabIdx)}
+              data-testid={`${tab.name}-tab-btn`}
               className={classNames(
                 tabIdx === index
                   ? "text-gray-900"

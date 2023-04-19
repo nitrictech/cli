@@ -1,3 +1,4 @@
+import { getFileExtension } from "../../lib/get-file-extension";
 import type { APIResponse } from "../../types";
 import CodeEditor from "./CodeEditor";
 
@@ -26,6 +27,10 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
     contentType.startsWith("application/") &&
     contentType !== "application/json"
   ) {
+    const ext = getFileExtension(contentType);
+
+    const fileName = response.data.split("/")[3] + ext;
+
     return (
       <div className="my-4">
         The response is binary, you can{" "}
@@ -33,7 +38,7 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
           href={response.data}
           data-testid="response-binary-link"
           className="underline"
-          download
+          download={fileName}
         >
           download the file here
         </a>

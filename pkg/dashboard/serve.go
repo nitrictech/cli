@@ -143,7 +143,7 @@ func (d *dashboard) Serve() (*int, error) {
 	http.HandleFunc("/call/", func(w http.ResponseWriter, r *http.Request) {
 		// Set CORs headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "*")
 
 		if r.Method == "OPTIONS" {
@@ -154,9 +154,18 @@ func (d *dashboard) Serve() (*int, error) {
 		// find call callAddress
 		callAddress := r.Header.Get("X-Nitric-Local-Call-Address")
 
+		// Remove "/call" prefix from URL path
+		path := strings.TrimPrefix(r.URL.Path, "/call/")
+
+		// Build proxy request URL with query parameters
+		query := r.URL.RawQuery
+		if query != "" {
+			query = "?" + query
+		}
+		url := fmt.Sprintf("http://%s/%s%s", callAddress, path, query)
+
 		// Create a new request object
-		path := strings.TrimPrefix(r.URL.Path, "/call")
-		req, err := http.NewRequest(r.Method, fmt.Sprintf("http://%s/%s", callAddress, path), r.Body)
+		req, err := http.NewRequest(r.Method, url, r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -85,7 +85,8 @@ func (r *RunStorageService) triggerBucketNotification(ctx context.Context, bucke
 		Trigger: evt,
 	})
 	if err != nil {
-		return fmt.Errorf("error occured getting bucket notification worker: %v", err)
+		// There is no worker for this notification
+		return nil
 	}
 
 	if _, err := worker.HandleTrigger(ctx, evt); err != nil {
@@ -115,10 +116,10 @@ func (r *RunStorageService) Write(ctx context.Context, bucket string, key string
 		return err
 	}
 
-	// err = r.triggerBucketNotification(ctx, bucket, key, "created")
-	// if err != nil {
-	// 	fmt.Println(err.Error())
-	// }
+	err = r.triggerBucketNotification(ctx, bucket, key, "created")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	return nil
 }
@@ -134,10 +135,10 @@ func (r *RunStorageService) Delete(ctx context.Context, bucket string, key strin
 		return err
 	}
 
-	// err = r.triggerBucketNotification(ctx, bucket, key, "deleted")
-	// if err != nil {
-	// 	fmt.Println(err.Error())
-	// }
+	err = r.triggerBucketNotification(ctx, bucket, key, "deleted")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	return nil
 }

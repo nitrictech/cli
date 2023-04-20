@@ -39,7 +39,7 @@ type RunStackState struct {
 	bucketNotifications []*BucketNotification
 }
 
-func (r *RunStackState) Update(pool pool.WorkerPool, ls LocalServices) {
+func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
 	// reset state maps
 	r.apis = make(map[string]string)
 	r.subs = make(map[string]string)
@@ -50,8 +50,8 @@ func (r *RunStackState) Update(pool pool.WorkerPool, ls LocalServices) {
 		r.apis[name] = address
 	}
 
-	// TODO: We can probably move this directly into local service state
-	for _, wrkr := range pool.GetWorkers(nil) {
+	// TODO: We can probably move this directly into local service state	
+	for _, wrkr := range workerPool.GetWorkers(&pool.GetWorkerOptions{}) {
 		switch w := wrkr.(type) {
 		case *worker.SubscriptionWorker:
 			r.subs[w.Topic()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), w.Topic())

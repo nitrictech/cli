@@ -1,6 +1,7 @@
 {
   "name": "dashboard",
   "type": "module",
+  "license": "Apache-2.0",
   "version": "0.0.1",
   "scripts": {
     "cypress:open": "cypress open",

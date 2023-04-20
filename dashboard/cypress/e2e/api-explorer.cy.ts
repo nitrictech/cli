@@ -15,6 +15,7 @@ describe("API Explorer spec", () => {
       "first-api/json-test1 methods",
       "first-api/path-test/{name}1 methods",
       "first-api/query-test1 methods",
+      "first-api/schedule-count1 methods",
       "second-api/content-type-binary1 methods",
       "second-api/content-type-css1 methods",
       "second-api/content-type-html1 methods",

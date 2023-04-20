@@ -52,13 +52,19 @@ Cypress.Commands.add("getTestEl", (id: string, timeout = 3000) => {
 
 Cypress.Commands.add("getCodeEditorElement", () => {
   return cy.get(
-    '[data-testid="code-editor"] .cm-content[contenteditable="false"]'
+    '[data-testid="code-editor"] .cm-content[contenteditable="false"]',
+    {
+      timeout: 5000,
+    }
   );
 });
 
 Cypress.Commands.add("getJSONCodeEditorElement", () => {
   return cy.get(
-    '[data-testid="code-editor"] .cm-content[contenteditable="true"]'
+    '[data-testid="code-editor"] .cm-content[contenteditable="true"]',
+    {
+      timeout: 5000,
+    }
   );
 });
 

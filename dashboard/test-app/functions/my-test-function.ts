@@ -1,7 +1,27 @@
-import { api, schedule } from "@nitric/sdk";
+import { api, collection, schedule } from "@nitric/sdk";
 
 const firstApi = api("first-api");
 const secondApi = api("second-api");
+
+interface Doc {
+  firstCount: number;
+  secondCount: number;
+}
+
+const col = collection<Doc>("test-collection").for("writing", "reading");
+
+firstApi.get("/schedule-count", async (ctx) => {
+  try {
+    const data = await col.doc("schedule-count").get();
+
+    return ctx.res.json(data);
+  } catch (e) {
+    return ctx.res.json({
+      firstCount: 0,
+      secondCount: 0,
+    } as Doc);
+  }
+});
 
 // test all methods
 firstApi.post("/all-methods", async (ctx) => ctx);
@@ -135,10 +155,34 @@ secondApi.get("/content-type-binary", (ctx) => {
   return ctx;
 });
 
-schedule("process-tests").every("5 minutes", (ctx) => {
-  console.log("nice test");
+schedule("process-tests").every("5 minutes", async (ctx) => {
+  try {
+    const data = await col.doc("schedule-count").get();
+
+    await col.doc("schedule-count").set({
+      ...data,
+      firstCount: data.firstCount + 1,
+    });
+  } catch (e) {
+    await col.doc("schedule-count").set({
+      firstCount: 1,
+      secondCount: 0,
+    });
+  }
 });
 
-schedule("process-tests-2").every("5 minutes", (ctx) => {
-  console.log("nice test 2");
+schedule("process-tests-2").every("5 minutes", async (ctx) => {
+  try {
+    const data = await col.doc("schedule-count").get();
+
+    await col.doc("schedule-count").set({
+      ...data,
+      secondCount: data.secondCount + 1,
+    });
+  } catch (e) {
+    await col.doc("schedule-count").set({
+      firstCount: 0,
+      secondCount: 1,
+    });
+  }
 });

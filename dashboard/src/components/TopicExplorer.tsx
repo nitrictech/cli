@@ -112,6 +112,7 @@ const ScheduleExplorer = () => {
             <ol role="list" className="flex w-11/12 items-center gap-4">
               <li className="w-full">
                 <Select<Schedule>
+                  id="topic-select"
                   items={data.schedules}
                   label="Topic"
                   selected={selectedSchedule}
@@ -127,6 +128,7 @@ const ScheduleExplorer = () => {
             <div className="ml-auto">
               <button
                 type="button"
+                data-testid="trigger-topic-btn"
                 onClick={handleSend}
                 className="inline-flex items-center rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
@@ -144,6 +146,7 @@ const ScheduleExplorer = () => {
                   <p className="text-gray-500 text-sm">
                     To initiate a POST request to{" "}
                     <a
+                      data-testid="generated-request-path"
                       href={`http://${data.triggerAddress}/topic/${selectedSchedule?.topicKey}`}
                       target="_blank"
                     >

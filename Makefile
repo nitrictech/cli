@@ -24,7 +24,7 @@ export LDFLAGS="-X $(VERSION_URI).Version=${BUILD_VERSION} \
                 -X $(VERSION_URI).BuildTime=$(shell date +%Y-%m-%dT%H:%M:%S%z)"
 
 .PHONY: build
-build: generate
+build: generate build-dashboard
 	$(BUILD_ENV) go build -ldflags $(LDFLAGS) -o bin/nitric$(EXECUTABLE_EXT) ./main.go
 
 .PHONY: build-dashboard
@@ -36,12 +36,7 @@ build-dashboard:
 generate:
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/utils GetterClient > mocks/mock_utils/mock_getter.go
-	@echo SKIP go run ./hack/modversion "github.com/nitrictech/nitric/cloud" \> pkg/project/membraneversion.txt
 	@go run ./hack/readmegen/ README.md
-
-.PHONY: generate_membrane
-generate_membrane:
-	@go run ./hack/modversion "github.com/nitrictech/nitric/cloud" > pkg/project/membraneversion.txt
 
 .PHONY: fmt
 fmt:

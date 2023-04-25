@@ -54,7 +54,7 @@ func (r *RunStackState) Update(pool pool.WorkerPool, ls LocalServices) {
 	}
 }
 
-func (r *RunStackState) Tables(port int) string {
+func (r *RunStackState) Tables(port int, dashPort int) string {
 	tables := []string{}
 
 	table, rows := r.ApiTable(9001)
@@ -71,6 +71,8 @@ func (r *RunStackState) Tables(port int) string {
 	if rows > 0 {
 		tables = append(tables, table)
 	}
+
+	tables = append(tables, r.DashboardTable(dashPort))
 
 	return strings.Join(tables, "\n\n")
 }
@@ -115,6 +117,14 @@ func (r *RunStackState) SchedulesTable(port int) (string, int) {
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
 
 	return str, len(r.schedules)
+}
+
+func (r *RunStackState) DashboardTable(port int) string {
+	tableData := pterm.TableData{{pterm.LightCyan("Dev Dashboard"), fmt.Sprintf("http://localhost:%v", port)}}
+
+	str, _ := pterm.DefaultTable.WithData(tableData).Srender()
+
+	return str
 }
 
 func NewStackState() *RunStackState {

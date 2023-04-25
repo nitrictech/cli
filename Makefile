@@ -27,6 +27,11 @@ export LDFLAGS="-X $(VERSION_URI).Version=${BUILD_VERSION} \
 build: generate
 	$(BUILD_ENV) go build -ldflags $(LDFLAGS) -o bin/nitric$(EXECUTABLE_EXT) ./main.go
 
+.PHONY: build-dashboard
+build-dashboard: 
+	yarn --cwd ./dashboard install
+	yarn --cwd ./dashboard build
+
 .PHONY: generate
 generate:
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go

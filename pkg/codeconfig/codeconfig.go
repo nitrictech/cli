@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	osruntime "runtime"
 	"strings"
@@ -45,6 +46,8 @@ import (
 	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
+	"github.com/nitrictech/nitric/core/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
 type codeConfig struct {
@@ -54,6 +57,28 @@ type codeConfig struct {
 	envMap         map[string]string
 	lock           sync.RWMutex
 }
+
+type TopicResult struct {
+	WorkerKey string `json:"workerKey,omitempty"`
+	TopicKey  string `json:"topicKey,omitempty"`
+}
+type SpecResult struct {
+	Apis     []*openapi3.T
+	Shedules []*TopicResult
+}
+
+// type SpecResultInterface interface {
+//     GetAPIs() []*openapi3.T
+// 	GetSchedules() []*TopicResult
+// }
+
+// func (s *SpecResult) GetAPIs() []*openapi3.T {
+//     return s.apis
+// }
+
+// func (s *SpecResult) GetSchedules() []*TopicResult {
+//     return s.shedules
+// }
 
 func New(p *project.Project, envMap map[string]string) (*codeConfig, error) {
 	return &codeConfig{
@@ -111,8 +136,66 @@ type apiHandler struct {
 
 var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 
+func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, error) {
+	apis := map[string][]*apiHandler{}
+	schedules := []*TopicResult{}
+
+	// transform worker pool into apiHandlers
+	for _, wrkr := range pool.GetWorkers(nil) {
+		switch w := wrkr.(type) {
+		case *worker.RouteWorker:
+			api := w.Api()
+			reflectedValue := reflect.ValueOf(w).Elem()
+			path := reflectedValue.FieldByName("path").String()
+			privateMethods := reflectedValue.FieldByName("methods")
+			methods := []string{}
+
+			for i := 0; i < privateMethods.Len(); i++ {
+				elementValue := privateMethods.Index(i)
+
+				methods = append(methods, elementValue.String())
+			}
+
+			handler := apiHandler{
+				worker: &v1.ApiWorker{
+					Api:     api,
+					Path:    path,
+					Methods: methods,
+					Options: &v1.ApiWorkerOptions{},
+				},
+				target: "", // TODO need to get from handler
+			}
+
+			apis[api] = append(apis[api], &handler)
+		case *worker.ScheduleWorker:
+			topicKey := strings.ToLower(strings.ReplaceAll(w.Key(), " ", "-"))
+
+			schedules = append(schedules, &TopicResult{
+				TopicKey:  topicKey,
+				WorkerKey: w.Key(),
+			})
+		}
+	}
+	// Convert the map of unique API specs to an array
+	apiSpecs := []*openapi3.T{}
+
+	for api, apiHandlers := range apis {
+		spec, err := c.apiSpec(api, apiHandlers)
+		if err != nil {
+			return nil, err
+		}
+
+		apiSpecs = append(apiSpecs, spec)
+	}
+
+	return &SpecResult{
+		Apis:     apiSpecs,
+		Shedules: schedules,
+	}, nil
+}
+
 // apiSpec produces an open api v3 spec for the requests API name
-func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
+func (c *codeConfig) apiSpec(api string, workers []*apiHandler) (*openapi3.T, error) {
 	doc := &openapi3.T{
 		Paths: make(openapi3.Paths),
 		Info: &openapi3.Info{
@@ -125,53 +208,55 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 		},
 	}
 
-	// Compile an API specification from the functions in the stack for the given API name
-	workers := make([]*apiHandler, 0)
+	if workers == nil {
+		// Compile an API specification from the functions in the stack for the given API name
+		workers = make([]*apiHandler, 0)
 
-	// Collect all workers
-	for handler, f := range c.functions {
-		rt, err := runtime.NewRunTimeFromHandler(handler)
-		if err != nil {
-			return nil, err
-		}
-
-		if f.apis[api] != nil {
-			for _, w := range f.apis[api].workers {
-				workers = append(workers, &apiHandler{
-					target: rt.ContainerName(),
-					worker: w,
-				})
+		// Collect all workers
+		for handler, f := range c.functions {
+			rt, err := runtime.NewRunTimeFromHandler(handler)
+			if err != nil {
+				return nil, err
 			}
 
-			// Apply top level security rules to the API
-			if len(f.apis[api].security) > 0 {
-				for n, scopes := range f.apis[api].security {
-					doc.Security.With(openapi3.SecurityRequirement{
-						n: scopes,
+			if f.apis[api] != nil {
+				for _, w := range f.apis[api].workers {
+					workers = append(workers, &apiHandler{
+						target: rt.ContainerName(),
+						worker: w,
 					})
 				}
 
-				if f.apis[api].securityDefinitions != nil {
-					for sn, sd := range f.apis[api].securityDefinitions {
-						sd.GetJwt().GetIssuer()
+				// Apply top level security rules to the API
+				if len(f.apis[api].security) > 0 {
+					for n, scopes := range f.apis[api].security {
+						doc.Security.With(openapi3.SecurityRequirement{
+							n: scopes,
+						})
+					}
 
-						issuerUrl, err := url.Parse(sd.GetJwt().GetIssuer())
-						if err != nil {
-							return nil, err
-						}
+					if f.apis[api].securityDefinitions != nil {
+						for sn, sd := range f.apis[api].securityDefinitions {
+							sd.GetJwt().GetIssuer()
 
-						if issuerUrl.Path == "" || issuerUrl.Path == "/" {
-							issuerUrl.Path = path.Join(issuerUrl.Path, ".well-known/openid-configuration")
-						}
+							issuerUrl, err := url.Parse(sd.GetJwt().GetIssuer())
+							if err != nil {
+								return nil, err
+							}
 
-						oidSec := openapi3.NewOIDCSecurityScheme(issuerUrl.String())
-						oidSec.Extensions = map[string]interface{}{
-							"x-nitric-audiences": sd.GetJwt().GetAudiences(),
-						}
-						oidSec.Name = sn
+							if issuerUrl.Path == "" || issuerUrl.Path == "/" {
+								issuerUrl.Path = path.Join(issuerUrl.Path, ".well-known/openid-configuration")
+							}
 
-						doc.Components.SecuritySchemes[sn] = &openapi3.SecuritySchemeRef{
-							Value: oidSec,
+							oidSec := openapi3.NewOIDCSecurityScheme(issuerUrl.String())
+							oidSec.Extensions = map[string]interface{}{
+								"x-nitric-audiences": sd.GetJwt().GetAudiences(),
+							}
+							oidSec.Name = sn
+
+							doc.Components.SecuritySchemes[sn] = &openapi3.SecuritySchemeRef{
+								Value: oidSec,
+							}
 						}
 					}
 				}
@@ -196,6 +281,7 @@ func (c *codeConfig) apiSpec(api string) (*openapi3.T, error) {
 		}
 
 		for _, m := range w.worker.Methods {
+			// TODO FIX
 			if pathItem.Operations() != nil && pathItem.Operations()[m] != nil {
 				// If the operation already exists we should fail
 				// NOTE: This should not happen as operations are stored in a map

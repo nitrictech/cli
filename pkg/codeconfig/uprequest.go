@@ -158,7 +158,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		}
 
 		for k := range f.apis {
-			spec, err := c.apiSpec(k)
+			spec, err := c.apiSpec(k, nil)
 			if err != nil {
 				errs.Push(fmt.Errorf("could not build spec for api: %s; %w", k, err))
 				continue

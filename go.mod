@@ -46,7 +46,9 @@ require (
 )
 
 require (
+	github.com/docker/distribution v2.7.1+incompatible
 	github.com/nitrictech/nitric/cloud/common v0.0.0-20230213031554-d8ff7f3013b8
+	github.com/olahol/melody v1.1.3
 	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
 	go.etcd.io/bbolt v1.3.6
 	google.golang.org/protobuf v1.28.1
@@ -132,7 +134,6 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
@@ -195,6 +196,7 @@ require (
 	github.com/gookit/color v1.5.2 // indirect
 	github.com/gordonklaus/ineffassign v0.0.0-20230107090616-13ace0543b28 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect

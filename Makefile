@@ -33,26 +33,21 @@ build-dashboard:
 	yarn --cwd ./dashboard build
 
 .PHONY: generate
-generate:
+generate: build-dashboard
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/utils GetterClient > mocks/mock_utils/mock_getter.go
-	@echo SKIP go run ./hack/modversion "github.com/nitrictech/nitric/cloud" \> pkg/project/membraneversion.txt
 	@go run ./hack/readmegen/ README.md
-
-.PHONY: generate_membrane
-generate_membrane:
-	@go run ./hack/modversion "github.com/nitrictech/nitric/cloud" > pkg/project/membraneversion.txt
 
 .PHONY: fmt
 fmt:
 	$(GOLANGCI_LINT) run --fix
 
 .PHONY: lint
-lint:
+lint: build-dashboard
 	$(GOLANGCI_LINT) run --timeout=10m
 
 .PHONY: test
-test:
+test: build-dashboard
 	go test ./pkg/...
 
 test-coverage:

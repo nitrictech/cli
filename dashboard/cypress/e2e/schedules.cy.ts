@@ -38,7 +38,7 @@ describe("Schedules Spec", () => {
 
       cy.getTestEl("trigger-topic-btn").click();
 
-      cy.getCodeEditorElement().should(
+      cy.getAPIResponseCodeEditor().should(
         "have.text",
         "1 successful & 0 failed deliveries"
       );
@@ -55,7 +55,7 @@ describe("Schedules Spec", () => {
 
     cy.getTestEl("send-api-btn").click();
 
-    cy.getCodeEditorElement()
+    cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
         expect(JSON.parse(text)).to.deep.equal({

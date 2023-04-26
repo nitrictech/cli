@@ -44,6 +44,7 @@ jobs:
           install: false
           wait-on: "http://localhost:49152"
           working-directory: cli/dashboard
+          browser: chrome
 
       - uses: actions/upload-artifact@v3
         if: failure()

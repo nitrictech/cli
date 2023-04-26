@@ -39,7 +39,7 @@ declare global {
   namespace Cypress {
     interface Chainable {
       getTestEl(id: string, timeout?: number): Chainable<JQuery<HTMLElement>>;
-      getCodeEditorElement(): Chainable<JQuery<HTMLElement>>;
+      getAPIResponseCodeEditor(): Chainable<JQuery<HTMLElement>>;
       getJSONCodeEditorElement(): Chainable<JQuery<HTMLElement>>;
     }
   }
@@ -50,22 +50,16 @@ Cypress.Commands.add("getTestEl", (id: string, timeout = 3000) => {
   return cy.get(`[data-testid='${id}']`, { timeout: timeout });
 });
 
-Cypress.Commands.add("getCodeEditorElement", () => {
-  return cy.get(
-    '[data-testid="code-editor"] .cm-content[contenteditable="false"]',
-    {
-      timeout: 5000,
-    }
-  );
+Cypress.Commands.add("getAPIResponseCodeEditor", () => {
+  return cy.get("#api-response .cm-content", {
+    timeout: 5000,
+  });
 });
 
 Cypress.Commands.add("getJSONCodeEditorElement", () => {
-  return cy.get(
-    '[data-testid="code-editor"] .cm-content[contenteditable="true"]',
-    {
-      timeout: 5000,
-    }
-  );
+  return cy.get("#json-editor .cm-content", {
+    timeout: 5000,
+  });
 });
 
 export {};

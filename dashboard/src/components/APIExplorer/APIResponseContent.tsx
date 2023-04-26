@@ -49,6 +49,7 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
 
   return (
     <CodeEditor
+      id="api-response"
       enableCopy
       contentType={contentType}
       value={response.data}

@@ -174,10 +174,7 @@ const CodeEditor: React.FC<Props> = ({
   };
 
   return (
-    <div
-      data-testid="code-editor"
-      className="rounded-lg relative overflow-hidden"
-    >
+    <div className="rounded-lg relative overflow-hidden">
       {enableCopy ? (
         <button
           aria-label="Copy Code"

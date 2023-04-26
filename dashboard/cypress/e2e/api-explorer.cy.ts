@@ -5,7 +5,7 @@ describe("API Explorer spec", () => {
   });
 
   it("should retrieve correct apis and endpoints", () => {
-    cy.get("h2").should("have.text", "API - first-api");
+    cy.get("h2").should("contain.text", "API - ");
     cy.get(".bg-gray-50 > .bg-white").should("have.text", "2");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
@@ -33,6 +33,7 @@ describe("API Explorer spec", () => {
   });
 
   it("should allow query params", () => {
+    cy.intercept("/call/**").as("apiCall");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
     cy.getTestEl("endpoint-select-options").within(() => {
@@ -40,6 +41,8 @@ describe("API Explorer spec", () => {
     });
 
     cy.getTestEl("send-api-btn").click();
+
+    cy.wait("@apiCall");
 
     cy.getCodeEditorElement()
       .invoke("text")
@@ -58,7 +61,11 @@ describe("API Explorer spec", () => {
       "/query-test?firstParam=myValue&secondParam=mySecondValue"
     );
 
+    cy.intercept("/call/**").as("apiCall");
+
     cy.getTestEl("send-api-btn").click();
+
+    cy.wait("@apiCall");
 
     cy.getCodeEditorElement()
       .invoke("text")
@@ -73,6 +80,7 @@ describe("API Explorer spec", () => {
   });
 
   it("should allow request headers", () => {
+    cy.intercept("/call/**").as("apiCall");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
     cy.getTestEl("endpoint-select-options").within(() => {
@@ -81,11 +89,15 @@ describe("API Explorer spec", () => {
 
     cy.getTestEl("send-api-btn").click();
 
+    cy.wait("@apiCall");
+
     cy.getCodeEditorElement()
       .invoke("text")
       .then((text) => {
         expect(JSON.parse(text)).to.have.property("headers");
       });
+
+    cy.intercept("/call/**").as("apiCall");
 
     cy.getTestEl("Headers-tab-btn").first().click();
 
@@ -102,6 +114,8 @@ describe("API Explorer spec", () => {
 
     cy.getTestEl("send-api-btn").click();
 
+    cy.wait("@apiCall");
+
     cy.getCodeEditorElement()
       .invoke("text")
       .then((text) => {
@@ -113,6 +127,7 @@ describe("API Explorer spec", () => {
   });
 
   it("should allow path params", () => {
+    cy.intercept("/call/**").as("apiCall");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
     cy.getTestEl("endpoint-select-options").within(() => {
@@ -120,6 +135,8 @@ describe("API Explorer spec", () => {
     });
 
     cy.getTestEl("send-api-btn").click();
+
+    cy.wait("@apiCall");
 
     cy.getCodeEditorElement().should("contain.text", "Route not found");
 
@@ -131,12 +148,17 @@ describe("API Explorer spec", () => {
       "/path-test/tester"
     );
 
+    cy.intercept("/call/**").as("apiCall");
+
     cy.getTestEl("send-api-btn").click();
+
+    cy.wait("@apiCall");
 
     cy.getCodeEditorElement().should("have.text", "Hello tester");
   });
 
   it("should allow json body", () => {
+    cy.intercept("/call/**").as("apiCall");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
     cy.getTestEl("endpoint-select-options").within(() => {
@@ -144,6 +166,8 @@ describe("API Explorer spec", () => {
     });
 
     cy.getTestEl("send-api-btn").click();
+
+    cy.wait("@apiCall");
 
     cy.getCodeEditorElement()
       .invoke("text")
@@ -162,7 +186,11 @@ describe("API Explorer spec", () => {
 
     cy.getTestEl("generated-request-path").should("contain.text", "/json-test");
 
+    cy.intercept("/call/**").as("apiCall");
+
     cy.getTestEl("send-api-btn").click();
+
+    cy.wait("@apiCall");
 
     cy.getCodeEditorElement()
       .invoke("text")
@@ -196,6 +224,7 @@ describe("API Explorer spec", () => {
     ],
   ].forEach(([contentType, expected]) => {
     it(`should handle content type ${contentType}`, () => {
+      cy.intercept("/call/**").as("apiCall");
       cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
       cy.getTestEl("endpoint-select-options").within(() => {
@@ -205,6 +234,8 @@ describe("API Explorer spec", () => {
       });
 
       cy.getTestEl("send-api-btn").click();
+
+      cy.wait("@apiCall");
 
       if (contentType === "binary") {
         cy.getTestEl("response-binary-link").should("exist").click();

@@ -24,7 +24,7 @@ export LDFLAGS="-X $(VERSION_URI).Version=${BUILD_VERSION} \
                 -X $(VERSION_URI).BuildTime=$(shell date +%Y-%m-%dT%H:%M:%S%z)"
 
 .PHONY: build
-build: generate build-dashboard
+build: generate
 	$(BUILD_ENV) go build -ldflags $(LDFLAGS) -o bin/nitric$(EXECUTABLE_EXT) ./main.go
 
 .PHONY: build-dashboard

@@ -47,7 +47,7 @@ lint: build-dashboard
 	$(GOLANGCI_LINT) run --timeout=10m
 
 .PHONY: test
-test:
+test: build-dashboard
 	go test ./pkg/...
 
 test-coverage:

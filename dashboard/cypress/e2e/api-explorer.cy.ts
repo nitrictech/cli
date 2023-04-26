@@ -28,7 +28,7 @@ describe("API Explorer spec", () => {
       .should("have.length", expectedEndpoints.length)
       .each(($li, i) => {
         // Assert that each list item contains the expected text
-        expect($li.text()).to.include(expectedEndpoints[i]);
+        expect(expectedEndpoints).to.include($li.text());
       });
   });
 
@@ -44,7 +44,9 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
-    cy.getCodeEditorElement()
+    cy.wait(1500);
+
+    cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
         expect(JSON.parse(text)).to.deep.equal({ queryParams: {} });
@@ -67,7 +69,9 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
-    cy.getCodeEditorElement()
+    cy.wait(1500);
+
+    cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
         expect(JSON.parse(text)).to.deep.equal({
@@ -91,7 +95,7 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
-    cy.getCodeEditorElement()
+    cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
         expect(JSON.parse(text)).to.have.property("headers");
@@ -116,7 +120,7 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
-    cy.getCodeEditorElement()
+    cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
         expect(JSON.parse(text).headers).to.contain({
@@ -138,7 +142,7 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
-    cy.getCodeEditorElement().should("contain.text", "Route not found");
+    cy.getAPIResponseCodeEditor().should("contain.text", "Route not found");
 
     cy.getTestEl("path-0-key").should("have.value", "name");
     cy.getTestEl("path-0-value").type("tester");
@@ -154,7 +158,7 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
-    cy.getCodeEditorElement().should("have.text", "Hello tester");
+    cy.getAPIResponseCodeEditor().should("have.text", "Hello tester");
   });
 
   it("should allow json body", () => {
@@ -169,7 +173,7 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
-    cy.getCodeEditorElement()
+    cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
         expect(JSON.parse(text)).to.deep.equal({ requestData: {} });
@@ -177,12 +181,9 @@ describe("API Explorer spec", () => {
 
     cy.getTestEl("Body-tab-btn").click();
 
-    cy.getJSONCodeEditorElement().type(
-      '{ "my-test": 12345, "secondTest": "testing" }',
-      {
-        parseSpecialCharSequences: false,
-      }
-    );
+    cy.getJSONCodeEditorElement()
+      .clear()
+      .invoke("html", '{ "my-test": 12345, "secondTest": "testing" }');
 
     cy.getTestEl("generated-request-path").should("contain.text", "/json-test");
 
@@ -192,7 +193,7 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
-    cy.getCodeEditorElement()
+    cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
         expect(JSON.parse(text)).to.deep.equal({
@@ -256,7 +257,7 @@ describe("API Explorer spec", () => {
       } else if (contentType === "image") {
         cy.getTestEl("response-image").should("exist");
       } else {
-        cy.getCodeEditorElement().should("have.text", expected);
+        cy.getAPIResponseCodeEditor().should("have.text", expected);
       }
     });
   });

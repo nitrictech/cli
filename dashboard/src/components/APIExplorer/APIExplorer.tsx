@@ -392,6 +392,7 @@ const APIExplorer = () => {
                 {currentTabName === "Body" && (
                   <div className="my-4">
                     <CodeEditor
+                      id="json-editor"
                       contentType={"application/json"}
                       value={JSONBody}
                       includeLinters

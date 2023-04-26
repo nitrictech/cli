@@ -43,7 +43,7 @@ fmt:
 	$(GOLANGCI_LINT) run --fix
 
 .PHONY: lint
-lint:
+lint: build-dashboard
 	$(GOLANGCI_LINT) run --timeout=10m
 
 .PHONY: test

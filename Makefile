@@ -33,7 +33,7 @@ build-dashboard:
 	yarn --cwd ./dashboard build
 
 .PHONY: generate
-generate:
+generate: build-dashboard
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/utils GetterClient > mocks/mock_utils/mock_getter.go
 	@go run ./hack/readmegen/ README.md

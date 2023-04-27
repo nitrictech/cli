@@ -6,23 +6,32 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
   ClockIcon,
+  ChatBubbleLeftIcon,
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
 import { useWebSocket } from "../lib/use-web-socket";
 import { Toaster } from "react-hot-toast";
 
-const helpLinks = [
+const resourceLinks = [
   {
     name: "Nitric Docs",
     href: "https://nitric.io/docs",
+    icon: ArrowTopRightOnSquareIcon,
   },
   {
     name: "GitHub",
     href: "https://github.com/nitrictech/nitric",
+    icon: ArrowTopRightOnSquareIcon,
   },
   {
     name: "Join us on Discord",
     href: "https://discord.gg/Webemece5C",
+    icon: ArrowTopRightOnSquareIcon,
+  },
+  {
+    name: "Send Feedback",
+    href: "https://github.com/nitrictech/nitric/discussions/new?category=general&title=Local%20Dashboard%20Feedback",
+    icon: ChatBubbleLeftIcon,
   },
 ];
 
@@ -157,19 +166,20 @@ const AppLayout: React.FC<Props> = ({
                       </li>
                       <li>
                         <div className="text-xs font-semibold leading-6 text-gray-400">
-                          Resources
+                          Resources & Feedback
                         </div>
                         <ul role="list" className="-mx-2 mt-2 space-y-1">
-                          {helpLinks.map((link) => (
+                          {resourceLinks.map((link) => (
                             <li key={link.name}>
                               <a
                                 href={link.href}
                                 className={classNames(
-                                  "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
+                                  "text-gray-700 hover:text-blue-600 items-center hover:bg-gray-50",
                                   "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
                                 )}
                               >
                                 <span className="truncate">{link.name}</span>
+                                <link.icon className="w-4 h-4" />
                               </a>
                             </li>
                           ))}
@@ -239,13 +249,13 @@ const AppLayout: React.FC<Props> = ({
               </li>
               <li>
                 <div className="text-sm font-semibold leading-6 text-gray-400">
-                  Resources
+                  Resources & Feedback
                 </div>
                 <ul role="list" className="-mx-2 mt-2 space-y-1">
-                  {helpLinks.map((link) => (
-                    <li key={link.name}>
+                  {resourceLinks.map(({ icon: Icon, name, href }) => (
+                    <li key={name}>
                       <a
-                        href={link.href}
+                        href={href}
                         target="_blank"
                         rel="noreferrer"
                         className={classNames(
@@ -253,8 +263,8 @@ const AppLayout: React.FC<Props> = ({
                           "group flex gap-x-2 leading-6 rounded-md p-2 items-center text-sm font-semibold"
                         )}
                       >
-                        <span className="truncate">{link.name}</span>
-                        <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                        <span className="truncate">{name}</span>
+                        <Icon className="w-4 h-4" />
                       </a>
                     </li>
                   ))}
@@ -275,7 +285,7 @@ const AppLayout: React.FC<Props> = ({
           <Bars3Icon className="h-6 w-6" aria-hidden="true" />
         </button>
         <div className="flex-1 text-sm font-semibold leading-6 text-gray-900">
-          {title}
+          Nitric Dashboard / {title}
         </div>
       </div>
 

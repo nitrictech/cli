@@ -9,6 +9,7 @@ import {
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
 import { useWebSocket } from "../lib/use-web-socket";
+import { Toaster } from "react-hot-toast";
 
 const helpLinks = [
   {
@@ -62,6 +63,7 @@ const AppLayout: React.FC<Props> = ({
 
   return (
     <>
+      <Toaster position="top-right" />
       <Transition.Root show={sidebarOpen} as={Fragment}>
         <Dialog
           as="div"
@@ -277,8 +279,8 @@ const AppLayout: React.FC<Props> = ({
         </div>
       </div>
 
-      <main className="py-10 lg:pl-72">
-        <div className="px-4 sm:px-6 lg:px-8">
+      <main className="py-10 lg:pl-72 h-screen">
+        <div className="px-4 h-full sm:px-6 lg:px-8">
           <h1 className="text-4xl text-blue-900 font-bold mb-12">{title}</h1>
           {children}
         </div>

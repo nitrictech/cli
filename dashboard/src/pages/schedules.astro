@@ -6,6 +6,6 @@ import Layout from "../layouts/Layout.astro";
 
 <Layout title="Schedules | Dev Dashboard | Nitric">
   <AppLayout client:load title="Schedules" routePath={Astro.url.pathname}>
-    <TopicExplorer client:load />
+    <TopicExplorer client:only />
   </AppLayout>
 </Layout>

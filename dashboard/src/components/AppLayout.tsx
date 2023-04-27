@@ -135,9 +135,9 @@ const AppLayout: React.FC<Props> = ({
                     />
                   </div>
                   <nav className="flex flex-1 flex-col">
-                    <ul role="list" className="flex flex-1 flex-col gap-y-7">
+                    <ul className="flex flex-1 flex-col gap-y-7">
                       <li>
-                        <ul role="list" className="-mx-2 space-y-1">
+                        <ul className="-mx-2 space-y-1">
                           {navigation.map((item) => (
                             <li key={item.name}>
                               <a
@@ -168,7 +168,7 @@ const AppLayout: React.FC<Props> = ({
                         <div className="text-xs font-semibold leading-6 text-gray-400">
                           Resources & Feedback
                         </div>
-                        <ul role="list" className="-mx-2 mt-2 space-y-1">
+                        <ul className="-mx-2 mt-2 space-y-1">
                           {resourceLinks.map((link) => (
                             <li key={link.name}>
                               <a
@@ -206,9 +206,9 @@ const AppLayout: React.FC<Props> = ({
             />
           </div>
           <nav className="flex flex-1 flex-col">
-            <ul role="list" className="flex flex-1 flex-col gap-y-7">
+            <ul className="flex flex-1 flex-col gap-y-7">
               <li>
-                <ul role="list" className="-mx-2 space-y-1">
+                <ul className="-mx-2 space-y-1">
                   {navigation.map((item) => (
                     <li key={item.name}>
                       <a
@@ -251,7 +251,7 @@ const AppLayout: React.FC<Props> = ({
                 <div className="text-sm font-semibold leading-6 text-gray-400">
                   Resources & Feedback
                 </div>
-                <ul role="list" className="-mx-2 mt-2 space-y-1">
+                <ul className="-mx-2 mt-2 space-y-1">
                   {resourceLinks.map(({ icon: Icon, name, href }) => (
                     <li key={name}>
                       <a

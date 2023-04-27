@@ -14,6 +14,7 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
       <img
         data-testid="response-image"
         src={response.data}
+        alt={"response content"}
         className="w-full max-h-96 object-contain"
       />
     );
@@ -22,7 +23,7 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
   } else if (contentType.startsWith("audio/")) {
     return <audio src={response.data} controls />;
   } else if (contentType === "application/pdf") {
-    return <iframe className="h-96" src={response.data} />;
+    return <iframe title="Response PDF" className="h-96" src={response.data} />;
   } else if (
     contentType.startsWith("application/") &&
     contentType !== "application/json"

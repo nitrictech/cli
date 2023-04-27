@@ -37,7 +37,7 @@ export interface Endpoint {
   path: string;
   methods: Method[];
   params?: Param[];
-  doc: OpenAPIV3.Document<{}>;
+  doc: OpenAPIV3.Document<Record<string, any>>;
 }
 
 export interface APIRequest {

@@ -40,25 +40,10 @@ export const useWebSocket = () => {
         prevDataRef.current = message;
       });
 
-      // @ts-ignore
-      socket.addEventListener("error", (event) => next(event.error));
+      socket.addEventListener("error", (event: any) => next(event.error));
       return () => socket.close();
     }
   );
-
-  //const [debouncedData] = useDebounce(data, 2500);
-
-  // useEffect(() => {
-  //   if (toastIdRef.current) {
-  //     toast.success("Refreshed", {
-  //       id: toastIdRef.current,
-  //     });
-
-  //     setTimeout(() => {
-  //       toastIdRef.current = "";
-  //     }, 500);
-  //   }
-  // }, [debouncedData]);
 
   return {
     data: data as WebSocketResponse | null,

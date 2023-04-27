@@ -96,7 +96,7 @@ const ScheduleExplorer = () => {
             </h2>
             <div>
               <nav className="flex items-end gap-4" aria-label="Breadcrumb">
-                <ol role="list" className="flex w-11/12 items-center gap-4">
+                <ol className="flex w-11/12 items-center gap-4">
                   <li className="w-full">
                     {data.schedules && (
                       <Select<Schedule>
@@ -138,6 +138,7 @@ const ScheduleExplorer = () => {
                           data-testid="generated-request-path"
                           href={`http://${data.triggerAddress}/topic/${selectedSchedule?.topicKey}`}
                           target="_blank"
+                          rel="noreferrer"
                         >
                           http://{data.triggerAddress}/topic/
                           {selectedSchedule?.topicKey}
@@ -268,6 +269,7 @@ const ScheduleExplorer = () => {
             className="underline"
             target="_blank"
             href="https://nitric.io/docs/schedules#create-schedules"
+            rel="noreferrer"
           >
             creating schedules
           </a>{" "}

@@ -250,7 +250,7 @@ const APIExplorer = () => {
                 />
               </div>
               <nav className="flex items-end gap-4" aria-label="Breadcrumb">
-                <ol role="list" className="flex w-11/12 items-center gap-4">
+                <ol className="flex w-11/12 items-center gap-4">
                   <li className="w-9/12">
                     <Select<Endpoint>
                       items={paths}
@@ -332,6 +332,7 @@ const APIExplorer = () => {
                           data-testid="generated-request-path"
                           href={`http://${apiAddress}${request.path}`}
                           target="_blank"
+                          rel="noreferrer"
                         >
                           http://{apiAddress}
                           {request.path}
@@ -339,7 +340,7 @@ const APIExplorer = () => {
                       </p>
                     </div>
                     {currentTabName === "Params" && (
-                      <ul role="list" className="divide-gray-200 my-4">
+                      <ul className="divide-gray-200 my-4">
                         <li className="flex flex-col py-4">
                           <h4 className="text-lg font-medium text-gray-900">
                             Query Params

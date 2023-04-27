@@ -27,6 +27,7 @@ import (
 	"reflect"
 	"regexp"
 	osruntime "runtime"
+	"sort"
 	"strings"
 	"sync"
 
@@ -187,6 +188,16 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 
 		apiSpecs = append(apiSpecs, spec)
 	}
+
+	// sort apis by title
+	sort.Slice(apiSpecs, func(i, j int) bool {
+		return apiSpecs[i].Info.Title < apiSpecs[j].Info.Title
+	})
+
+	// sort schedules by topic key
+	sort.Slice(schedules, func(i, j int) bool {
+		return schedules[i].TopicKey < schedules[j].TopicKey
+	})
 
 	return &SpecResult{
 		Apis:     apiSpecs,

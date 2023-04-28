@@ -2,6 +2,7 @@ describe("API Explorer spec", () => {
   beforeEach(() => {
     cy.viewport("macbook-16");
     cy.visit("/");
+    cy.wait(500);
   });
 
   it("should retrieve correct apis and endpoints", () => {
@@ -192,6 +193,8 @@ describe("API Explorer spec", () => {
     cy.getTestEl("send-api-btn").click();
 
     cy.wait("@apiCall");
+
+    cy.wait(500);
 
     cy.getAPIResponseCodeEditor()
       .invoke("text")

@@ -20,6 +20,13 @@ jobs:
         with:
           path: cli
 
+      - name: Lint Dashboard
+        working-directory: cli/dashboard
+        run: |
+          yarn install
+          yarn format:check
+          yarn lint --quiet
+
       - name: Setup Go
         uses: actions/setup-go@v3
         with:

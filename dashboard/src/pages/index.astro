@@ -6,6 +6,6 @@ import Layout from "../layouts/Layout.astro";
 
 <Layout title="API Explorer | Dev Dashboard | Nitric">
   <AppLayout client:load title="API Explorer" routePath={Astro.url.pathname}>
-    <APIExplorer client:load />
+    <APIExplorer client:only />
   </AppLayout>
 </Layout>

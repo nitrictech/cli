@@ -132,7 +132,7 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 	sp, err := NewStorage(pool, StorageOptions{
 		AccessKey: "dummykey",
 		SecretKey: "dummysecret",
-		Endpoint:  l.status.StorageEndpoint,		
+		Endpoint:  l.status.StorageEndpoint,
 	})
 	if err != nil {
 		return err

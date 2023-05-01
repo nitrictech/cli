@@ -22,20 +22,21 @@ import (
 
 	"github.com/pterm/pterm"
 
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/worker"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
 type BucketNotification struct {
-	Bucket string
-	EventType string
-	EventFilter string
+	Bucket                   string
+	NotificationType         v1.BucketNotificationType
+	NotificationPrefixFilter string
 }
 
 type RunStackState struct {
-	apis      map[string]string
-	subs      map[string]string
-	schedules map[string]string
+	apis                map[string]string
+	subs                map[string]string
+	schedules           map[string]string
 	bucketNotifications []*BucketNotification
 }
 
@@ -50,7 +51,7 @@ func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
 		r.apis[name] = address
 	}
 
-	// TODO: We can probably move this directly into local service state	
+	// TODO: We can probably move this directly into local service state
 	for _, wrkr := range workerPool.GetWorkers(&pool.GetWorkerOptions{}) {
 		switch w := wrkr.(type) {
 		case *worker.SubscriptionWorker:
@@ -60,9 +61,9 @@ func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
 			r.subs[w.Key()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), topicKey)
 		case *worker.BucketNotificationWorker:
 			r.bucketNotifications = append(r.bucketNotifications, &BucketNotification{
-				Bucket: w.Bucket(),
-				EventType: w.EventType(),
-				EventFilter: w.EventFilter(),
+				Bucket:                   w.Bucket(),
+				NotificationType:         w.NotificationType(),
+				NotificationPrefixFilter: w.NotificationPrefixFilter(),
 			})
 		}
 	}
@@ -143,7 +144,7 @@ func (r *RunStackState) BucketNotificationsTable(port int) (string, int) {
 
 	for _, notification := range r.bucketNotifications {
 		tableData = append(tableData, []string{
-			notification.Bucket, notification.EventType, notification.EventFilter,
+			notification.Bucket, notification.NotificationType.String(), notification.NotificationPrefixFilter,
 		})
 	}
 
@@ -162,9 +163,9 @@ func (r *RunStackState) DashboardTable(port int) string {
 
 func NewStackState() *RunStackState {
 	return &RunStackState{
-		apis:      map[string]string{},
-		subs:      map[string]string{},
-		schedules: map[string]string{},
+		apis:                map[string]string{},
+		subs:                map[string]string{},
+		schedules:           map[string]string{},
 		bucketNotifications: []*BucketNotification{},
 	}
 }

@@ -35,12 +35,13 @@ import (
 	s3_service "github.com/nitrictech/nitric/cloud/aws/runtime/storage"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
+	"github.com/nitrictech/nitric/core/pkg/worker"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
 type RunStorageService struct {
 	storage.StorageService
-	pool pool.WorkerPool
+	pool   pool.WorkerPool
 	client *s3.Client
 }
 
@@ -67,15 +68,16 @@ func (r *RunStorageService) ensureBucketExists(ctx context.Context, bucket strin
 	return err
 }
 
-func (r *RunStorageService) triggerBucketNotification(ctx context.Context, bucket, key, eventType string) error {
+func (r *RunStorageService) triggerBucketNotification(ctx context.Context, bucket string, key string, eventType v1.BucketNotificationType) error {
 	evt := &v1.TriggerRequest{
 		Context: &v1.TriggerRequest_Notification{
 			Notification: &v1.NotificationTriggerContext{
-				Type:     v1.NotificationType_Bucket,
-				Resource: bucket,
-				Attributes: map[string]string{
-					"key": key,
-					"type": eventType,
+				Source: bucket,
+				Notification: &v1.NotificationTriggerContext_Bucket{
+					Bucket: &v1.BucketNotification{
+						Key:  key,
+						Type: eventType,
+					},
 				},
 			},
 		},
@@ -83,6 +85,10 @@ func (r *RunStorageService) triggerBucketNotification(ctx context.Context, bucke
 
 	worker, err := r.pool.GetWorker(&pool.GetWorkerOptions{
 		Trigger: evt,
+		Filter: func(w worker.Worker) bool {
+			_, ok := w.(*worker.BucketNotificationWorker)
+			return ok
+		},
 	})
 	if err != nil {
 		// There is no worker for this notification
@@ -90,7 +96,7 @@ func (r *RunStorageService) triggerBucketNotification(ctx context.Context, bucke
 	}
 
 	if _, err := worker.HandleTrigger(ctx, evt); err != nil {
-		return fmt.Errorf("error occcured triggering bucket notification: %v", err)
+		return fmt.Errorf("error occcured triggering bucket notification: %w", err)
 	}
 
 	return nil
@@ -116,7 +122,7 @@ func (r *RunStorageService) Write(ctx context.Context, bucket string, key string
 		return err
 	}
 
-	err = r.triggerBucketNotification(ctx, bucket, key, "created")
+	err = r.triggerBucketNotification(ctx, bucket, key, v1.BucketNotificationType_Created)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -135,7 +141,7 @@ func (r *RunStorageService) Delete(ctx context.Context, bucket string, key strin
 		return err
 	}
 
-	err = r.triggerBucketNotification(ctx, bucket, key, "deleted")
+	err = r.triggerBucketNotification(ctx, bucket, key, v1.BucketNotificationType_Deleted)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -201,7 +207,7 @@ func NewStorage(pool pool.WorkerPool, opts StorageOptions) (storage.StorageServi
 
 	return &RunStorageService{
 		StorageService: s3Service,
-		pool: pool,
+		pool:           pool,
 		client:         s3Client,
 	}, nil
 }

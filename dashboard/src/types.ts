@@ -22,8 +22,15 @@ export interface WebSocketResponse {
   projectName: string;
   apis: APIDoc[];
   schedules: Schedule[];
+  bucketNotifications: BucketNotification[];
   triggerAddress: string;
   apiAddresses: Record<string, string>;
+}
+
+export interface BucketNotification {
+  bucket: string;
+  notificationType: "Created" | "Deleted";
+  notificationPrefixFilter: string;
 }
 
 export interface Param {

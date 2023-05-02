@@ -1,4 +1,4 @@
-import { api, collection, schedule } from "@nitric/sdk";
+import { api, collection, schedule, bucket } from "@nitric/sdk";
 
 const firstApi = api("first-api");
 const secondApi = api("second-api");
@@ -185,4 +185,23 @@ schedule("process-tests-2").every("5 minutes", async (ctx) => {
       secondCount: 1,
     });
   }
+});
+
+const dogs = bucket("dog-images");
+const cats = bucket("cat-images");
+
+dogs.on("created:/black", (ctx) => {
+  console.log("triggered");
+});
+
+dogs.on("deleted:/brown", (ctx) => {
+  console.log("triggered");
+});
+
+cats.on("created:/orange", (ctx) => {
+  console.log("triggered");
+});
+
+cats.on("deleted:/spotted", (ctx) => {
+  console.log("triggered");
 });

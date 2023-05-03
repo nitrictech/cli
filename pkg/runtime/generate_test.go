@@ -62,6 +62,9 @@ COPY --from=build "node_modules/" "node_modules/"
 
 COPY --from=build lib/ /
 
+# Copy any other non-ignored assets to be included
+COPY . .
+
 ENTRYPOINT ["node", "index.js"]`,
 		},
 		{

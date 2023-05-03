@@ -27,19 +27,15 @@ export LDFLAGS="-X $(VERSION_URI).Version=${BUILD_VERSION} \
 build: generate
 	$(BUILD_ENV) go build -ldflags $(LDFLAGS) -o bin/nitric$(EXECUTABLE_EXT) ./main.go
 
+.PHONY: build-dashboard
+build-dashboard: 
+	yarn --cwd ./dashboard install
+	yarn --cwd ./dashboard build
+
 .PHONY: generate
-generate:
+generate: build-dashboard
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
 	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/utils GetterClient > mocks/mock_utils/mock_getter.go
-	@go run github.com/golang/mock/mockgen github.com/aws/aws-sdk-go/service/lambda/lambdaiface LambdaAPI > mocks/mock_lambda/mock_lambda.go
-	@go run ./hack/modversion "github.com/nitrictech/nitric" > pkg/project/membraneversion.txt
-	@go run ./hack/modversion "github.com/pulumi/pulumi-gcp/" > pkg/provider/pulumi/gcp/pulumi-gcp-version.txt
-	@go run ./hack/modversion "github.com/pulumi/pulumi-azuread/" > pkg/provider/pulumi/azure/pulumi-azuread-version.txt
-	@go run ./hack/modversion "github.com/pulumi/pulumi-azure/" > pkg/provider/pulumi/azure/pulumi-azure-version.txt
-	@go run ./hack/modversion "github.com/pulumi/pulumi-azure-native-sdk/" > pkg/provider/pulumi/azure/pulumi-azure-native-version.txt
-	@go run ./hack/modversion "github.com/pulumi/pulumi-aws/" > pkg/provider/pulumi/aws/pulumi-aws-version.txt
-	@go run ./hack/modversion "github.com/pulumi/pulumi-random/"  > pkg/provider/pulumi/common/pulumi-random-version.txt
-	@go run ./hack/modversion -inpath "github.com/nitrictech/pulumi-docker-buildkit/sdk/"  > pkg/provider/pulumi/common/pulumi-docker-buildkit-version.txt
 	@go run ./hack/readmegen/ README.md
 
 .PHONY: fmt
@@ -47,11 +43,11 @@ fmt:
 	$(GOLANGCI_LINT) run --fix
 
 .PHONY: lint
-lint:
+lint: build-dashboard
 	$(GOLANGCI_LINT) run --timeout=10m
 
 .PHONY: test
-test:
+test: build-dashboard
 	go test ./pkg/...
 
 test-coverage:

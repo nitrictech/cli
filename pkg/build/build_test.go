@@ -38,7 +38,7 @@ func TestBuildBaseImages(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 
-	s := project.New(&project.Config{Name: "", Dir: dir})
+	s := project.New(project.BaseConfig{Name: "", Dir: dir})
 	s.Functions = map[string]project.Function{"foo": {Handler: "functions/list.ts", ComputeUnit: project.ComputeUnit{Name: "foo"}}}
 
 	me.EXPECT().Build(gomock.Any(), dir, "-foo", gomock.Any(), []string{

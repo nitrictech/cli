@@ -22,7 +22,8 @@ import (
 
 	"github.com/pterm/pterm"
 
-	"github.com/nitrictech/nitric/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
 type RunStackState struct {
@@ -31,7 +32,7 @@ type RunStackState struct {
 	schedules map[string]string
 }
 
-func (r *RunStackState) Update(pool worker.WorkerPool, ls LocalServices) {
+func (r *RunStackState) Update(pool pool.WorkerPool, ls LocalServices) {
 	// reset state maps
 	r.apis = make(map[string]string)
 	r.subs = make(map[string]string)
@@ -42,7 +43,7 @@ func (r *RunStackState) Update(pool worker.WorkerPool, ls LocalServices) {
 	}
 
 	// TODO: We can probably move this directly into local service state
-	for _, wrkr := range pool.GetWorkers(&worker.GetWorkerOptions{}) {
+	for _, wrkr := range pool.GetWorkers(nil) {
 		switch w := wrkr.(type) {
 		case *worker.SubscriptionWorker:
 			r.subs[w.Topic()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), w.Topic())
@@ -53,7 +54,7 @@ func (r *RunStackState) Update(pool worker.WorkerPool, ls LocalServices) {
 	}
 }
 
-func (r *RunStackState) Tables(port int) string {
+func (r *RunStackState) Tables(port int, dashPort int) string {
 	tables := []string{}
 
 	table, rows := r.ApiTable(9001)
@@ -70,6 +71,8 @@ func (r *RunStackState) Tables(port int) string {
 	if rows > 0 {
 		tables = append(tables, table)
 	}
+
+	tables = append(tables, r.DashboardTable(dashPort))
 
 	return strings.Join(tables, "\n\n")
 }
@@ -114,6 +117,14 @@ func (r *RunStackState) SchedulesTable(port int) (string, int) {
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
 
 	return str, len(r.schedules)
+}
+
+func (r *RunStackState) DashboardTable(port int) string {
+	tableData := pterm.TableData{{pterm.LightCyan("Dev Dashboard"), fmt.Sprintf("http://localhost:%v", port)}}
+
+	str, _ := pterm.DefaultTable.WithData(tableData).Srender()
+
+	return str
 }
 
 func NewStackState() *RunStackState {

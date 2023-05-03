@@ -33,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkg/build"
 	"github.com/nitrictech/cli/pkg/command"
 	"github.com/nitrictech/cli/pkg/containerengine"
+	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
@@ -69,7 +70,17 @@ var runCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
-		ls := run.NewLocalServices(proj, false)
+		dash, err := dashboard.New(proj, envMap)
+		if err != nil {
+			cobra.CheckErr(err)
+		}
+
+		dashPort, err := dash.Serve()
+		if err != nil {
+			cobra.CheckErr(err)
+		}
+
+		ls := run.NewLocalServices(proj, false, dashPort)
 		if ls.Running() {
 			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")
 			os.Exit(2)
@@ -153,10 +164,15 @@ var runCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
+		err = dash.Refresh(ls)
+		if err != nil {
+			cobra.CheckErr(err)
+		}
+
 		stackState.Update(pool, ls)
 
 		area, _ := pterm.DefaultArea.Start()
-		area.Update(stackState.Tables(9001))
+		area.Update(stackState.Tables(9001, *dashPort))
 
 		lck := sync.Mutex{}
 		// React to worker pool state and update services table
@@ -171,7 +187,12 @@ var runCmd = &cobra.Command{
 
 			stackState.Update(pool, ls)
 
-			area.Update(stackState.Tables(9001))
+			err = dash.Refresh(ls)
+			if err != nil {
+				cobra.CheckErr(err)
+			}
+
+			area.Update(stackState.Tables(9001, *dashPort))
 		})
 
 		select {

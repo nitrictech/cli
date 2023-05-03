@@ -26,7 +26,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v2"
 
-	v1 "github.com/nitrictech/nitric/pkg/api/nitric/v1"
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 )
 
 type Triggers struct {
@@ -36,23 +36,22 @@ type Triggers struct {
 type ComputeUnit struct {
 	Name string `yaml:"-"`
 
-	// Triggers used to invoke this compute unit, e.g. Topic Subscriptions
-	Triggers Triggers `yaml:"triggers,omitempty"`
+	Type string `yaml:"-"`
 
 	// The memory of the compute instance in MB: default 128
-	Memory int `yaml:"memory,omitempty"`
+	// Memory int `yaml:"memory,omitempty"`
 
 	// The minimum number of instances to keep alive: default 0
-	MinScale int `yaml:"minScale,omitempty"`
+	// MinScale int `yaml:"minScale,omitempty"`
 
 	// The maximum number of instances to scale to: default 10
-	MaxScale int `yaml:"maxScale,omitempty"`
+	// MaxScale int `yaml:"maxScale,omitempty"`
 
 	// The max running time of the function: default 15
-	Timeout int `yaml:"timeout,omitempty"`
+	// Timeout int `yaml:"timeout,omitempty"`
 
 	// Telemetry sampling percentage
-	Telemetry int `yaml:"telemetry,omitempty"`
+	// Telemetry int `yaml:"telemetry,omitempty"`
 }
 
 type Function struct {
@@ -76,7 +75,7 @@ type Compute interface {
 	ImageTagName(s *Project, provider string) string
 	Unit() *ComputeUnit
 	Workers() int
-	String() string
+	// String() string
 }
 
 // A subset of a NitricEvent
@@ -132,7 +131,7 @@ type Project struct {
 	Secrets  map[string]Secret    `yaml:"secrets,omitempty"`
 }
 
-func New(config *Config) *Project {
+func New(config BaseConfig) *Project {
 	return &Project{
 		Name:                config.Name,
 		Dir:                 config.Dir,

@@ -25,18 +25,19 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
-	"github.com/nitrictech/nitric/pkg/membrane"
-	"github.com/nitrictech/nitric/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/membrane"
+	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
 type LocalServices interface {
-	Start(pool worker.WorkerPool) error
+	Start(pool pool.WorkerPool) error
 	Stop() error
 	Running() bool
 	Status() *LocalServicesStatus
 	Refresh() error
 	Apis() map[string]string
 	TriggerAddress() string
+	GetWorkerPool() pool.WorkerPool
 }
 
 type LocalServicesStatus struct {
@@ -47,15 +48,16 @@ type LocalServicesStatus struct {
 }
 
 type localServices struct {
-	s       *project.Project
-	storage *SeaweedServer
-	mem     *membrane.Membrane
-	status  *LocalServicesStatus
-	gw      *BaseHttpGateway
-	isStart bool
+	s        *project.Project
+	storage  *SeaweedServer
+	mem      *membrane.Membrane
+	status   *LocalServicesStatus
+	gw       *BaseHttpGateway
+	isStart  bool
+	dashPort *int
 }
 
-func NewLocalServices(s *project.Project, isStart bool) LocalServices {
+func NewLocalServices(s *project.Project, isStart bool, dashPort *int) LocalServices {
 	return &localServices{
 		s:       s,
 		isStart: isStart,
@@ -63,6 +65,7 @@ func NewLocalServices(s *project.Project, isStart bool) LocalServices {
 			RunDir:          filepath.Join(utils.NitricRunDir(), s.Name),
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
 		},
+		dashPort: dashPort,
 	}
 }
 
@@ -110,7 +113,7 @@ func (l *localServices) Status() *LocalServicesStatus {
 	return l.status
 }
 
-func (l *localServices) Start(pool worker.WorkerPool) error {
+func (l *localServices) Start(pool pool.WorkerPool) error {
 	var err error
 
 	l.storage, err = NewSeaweed(l.status.RunDir)
@@ -170,6 +173,8 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 		return err
 	}
 
+	l.gw.dashPort = *l.dashPort
+
 	// Prepare development membrane to start
 	// This will start a single membrane that all
 	// running functions will connect to
@@ -190,4 +195,8 @@ func (l *localServices) Start(pool worker.WorkerPool) error {
 	}
 
 	return l.mem.Start()
+}
+
+func (l *localServices) GetWorkerPool() pool.WorkerPool {
+	return l.gw.pool
 }

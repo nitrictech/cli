@@ -20,30 +20,31 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/utils"
+
+	"github.com/docker/distribution/reference"
 )
 
 var stackPath string
 
 func FromConfig(c *Config) (*Project, error) {
-	p := New(c)
+	p := New(c.BaseConfig)
 
-	for _, h := range c.Handlers {
-		maybeFile := filepath.Join(p.Dir, h)
+	for _, h := range c.ConcreteHandlers {
+		maybeFile := filepath.Join(p.Dir, h.Match)
 
 		if _, err := os.Stat(maybeFile); err != nil {
-			fs, err := utils.GlobInDir(stackPath, h)
+			fs, err := utils.GlobInDir(stackPath, h.Match)
 			if err != nil {
 				return nil, err
 			}
 
 			for _, f := range fs {
-				fn, err := FunctionFromHandler(f)
+				fn, err := FunctionFromHandler(f, h.Type)
 				if err != nil {
 					return nil, err
 				}
@@ -51,7 +52,7 @@ func FromConfig(c *Config) (*Project, error) {
 				p.Functions[fn.Name] = fn
 			}
 		} else {
-			fn, err := FunctionFromHandler(h)
+			fn, err := FunctionFromHandler(h.Match, h.Type)
 			if err != nil {
 				return nil, err
 			}
@@ -61,13 +62,18 @@ func FromConfig(c *Config) (*Project, error) {
 	}
 
 	if len(p.Functions) == 0 {
-		return nil, fmt.Errorf("no functions were found with the glob '%s', try a new pattern", strings.Join(c.Handlers, ","))
+		return nil, fmt.Errorf("no functions were found within match on handlers '%+v' in dir '%s', try a new pattern", c.ConcreteHandlers, p.Dir)
 	}
 
 	return p, nil
 }
 
-func FunctionFromHandler(h string) (Function, error) {
+func FunctionFromHandler(h string, t string) (Function, error) {
+	_, err := reference.Parse(filepath.Base(h))
+	if err != nil {
+		return Function{}, fmt.Errorf("handler filepath \"%s\" is invalid, must be valid ASCII containing lowercase and uppercase letters, digits, underscores, periods and hyphens", h)
+	}
+
 	pterm.Debug.Println("Using function from " + h)
 
 	rt, err := runtime.NewRunTimeFromHandler(h)
@@ -78,6 +84,7 @@ func FunctionFromHandler(h string) (Function, error) {
 	return Function{
 		ComputeUnit: ComputeUnit{
 			Name: rt.ContainerName(),
+			Type: t,
 		},
 		Handler: h,
 	}, nil

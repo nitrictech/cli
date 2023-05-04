@@ -92,11 +92,11 @@ func checkPulumiLoginState() (bool, error) {
 
 		pterm.Warning.Print("No pulumi config detected")
 		fmt.Println("")
-		pterm.Info.Printf("For production deployments, see docs %s", "https://nitric.io/docs/deployment#self-hosting")
+		pterm.Info.Printf("For more information on best practices for production deployments, see docs %s", "https://nitric.io/docs/deployment#self-hosting")
 		fmt.Println("")
 
 		err := survey.AskOne(&survey.Select{
-			Message: "Would you like us to automatically configure pulumi for testing purposes?",
+			Message: "To deploy we require you to be logged in to pulumi. We can automatically configure this to be a local login?",
 			Default: "No",
 			Options: []string{"Yes", "No"},
 		}, &confirm)
@@ -105,9 +105,11 @@ func checkPulumiLoginState() (bool, error) {
 		}
 
 		if confirm != "Yes" {
-			pterm.Info.Println("Cancelling command")
+			pterm.Info.Println("Cancelling deployment. You can log into pulumi using `pulumi login --local`.")
 			os.Exit(0)
 		}
+
+		fmt.Println("Configuring ephemeral pulumi local login. To remove this message in the future and persist stack information use `pulumi login --local`")
 
 		return true, nil
 	}

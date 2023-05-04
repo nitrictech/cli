@@ -63,7 +63,7 @@ var Pulumi = &Dependency{
 			cmd.Stdout = os.Stdout
 			installErr = cmd.Run()
 			if installErr == nil {
-				cmd := exec.Command("SET", "PATH=%PATH%;%USERPROFILE%\\.pulumi\\bin")
+				cmd := exec.Command("powershell", "SET", "PATH='%PATH%;%USERPROFILE%\\.pulumi\\bin'")
 				cmd.Stdout = os.Stdout
 				installErr = cmd.Run()
 			}

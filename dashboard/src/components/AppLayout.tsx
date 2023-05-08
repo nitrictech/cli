@@ -7,7 +7,6 @@ import {
   XMarkIcon,
   ClockIcon,
   ChatBubbleLeftIcon,
-  DocumentArrowUpIcon,
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
 import { useWebSocket } from "../lib/use-web-socket";

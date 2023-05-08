@@ -140,7 +140,7 @@ func (r *RunStackState) SchedulesTable(port int) (string, int) {
 }
 
 func (r *RunStackState) BucketNotificationsTable(port int) (string, int) {
-	tableData := pterm.TableData{{"Bucket", "Event Type", "Event Filter"}}
+	tableData := pterm.TableData{{"Bucket", "Notification Type", "Notification Prefix Filter"}}
 
 	for _, notification := range r.bucketNotifications {
 		tableData = append(tableData, []string{

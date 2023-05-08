@@ -18,7 +18,6 @@ package run
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -188,73 +187,6 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 	ctx.Success("text/plain", []byte(fmt.Sprintf("%d successful & %d failed deliveries", len(ws)-len(errList), len(errList))))
 }
 
-type BucketNotificationPayload struct {
-	Key  string `json:"key"`
-	Type string `json:"type"`
-}
-
-func notificationStringToNotificationType(notificationType string) (v1.BucketNotificationType, error) {
-	switch strings.ToLower(notificationType) {
-	case "created":
-		return v1.BucketNotificationType_Created, nil
-	case "deleted":
-		return v1.BucketNotificationType_Deleted, nil
-	default:
-		return v1.BucketNotificationType_All, fmt.Errorf("unsupported event type: %s", notificationType)
-	}
-}
-
-func (s *BaseHttpGateway) handleBucketNotificationRequest(ctx *fasthttp.RequestCtx) {
-	bucketName := ctx.UserValue("name").(string)
-
-	var payload BucketNotificationPayload
-
-	err := json.Unmarshal(ctx.Request.Body(), &payload)
-	if err != nil {
-		ctx.Error(err.Error(), 400)
-	}
-
-	notificationType, err := notificationStringToNotificationType(payload.Type)
-	if err != nil {
-		ctx.Error(err.Error(), 400)
-		return
-	}
-
-	trigger := &v1.TriggerRequest{
-		Context: &v1.TriggerRequest_Notification{
-			Notification: &v1.NotificationTriggerContext{
-				Source: bucketName,
-				Notification: &v1.NotificationTriggerContext_Bucket{
-					Bucket: &v1.BucketNotification{
-						Key:  payload.Key,
-						Type: notificationType,
-					},
-				},
-			},
-		},
-	}
-
-	w, err := s.pool.GetWorker(&pool.GetWorkerOptions{
-		Trigger: trigger,
-		Filter: func(w worker.Worker) bool {
-			_, ok := w.(*worker.BucketNotificationWorker)
-			return ok
-		},
-	})
-	if err != nil {
-		ctx.Error("could not get bucket notification for bucket", 404)
-		return
-	}
-
-	resp, err := w.HandleTrigger(context.TODO(), trigger)
-	if err != nil || !resp.GetNotification().Success {
-		ctx.Error("bucket notification failed", 500)
-		return
-	}
-
-	ctx.Success("text/plain", []byte("success"))
-}
-
 // Update the gateway and API based on the worker pool
 func (s *BaseHttpGateway) Refresh() error {
 	// instansiate servers if not already done
@@ -327,8 +259,6 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 	r := router.New()
 	// Publish to a topic
 	r.POST("/topic/{name}", s.handleTopicRequest)
-	// Publish to a bucket notification
-	r.POST("/notification/bucket/{name}", s.handleBucketNotificationRequest)
 
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
 		if string(ctx.Path()) == "/" {

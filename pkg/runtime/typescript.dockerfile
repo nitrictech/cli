@@ -2,8 +2,6 @@ FROM node:alpine as build
 
 ARG HANDLER
 
-RUN apk add --no-cache git
-
 RUN yarn global add typescript @vercel/ncc
 
 COPY package.json *.lock *-lock.json /

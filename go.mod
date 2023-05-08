@@ -2,11 +2,6 @@ module github.com/nitrictech/cli
 
 go 1.19
 
-replace (
-	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230213031554-d8ff7f3013b8 => ../nitric/cloud/aws
-	github.com/nitrictech/nitric/core v0.0.0-20230327032749-a67f53bf20d6 => ../nitric/core
-)
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible
@@ -35,8 +30,8 @@ require (
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/moby/moby v20.10.22+incompatible
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
-	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230213031554-d8ff7f3013b8
-	github.com/nitrictech/nitric/core v0.0.0-20230327032749-a67f53bf20d6
+	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230504071446-19454f649a4e
+	github.com/nitrictech/nitric/core v0.0.0-20230504071446-19454f649a4e
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.53
 	github.com/spf13/cobra v1.7.0

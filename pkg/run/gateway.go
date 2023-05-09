@@ -88,7 +88,7 @@ func (s *BaseHttpGateway) GetApiAddresses() map[string]string {
 	return addresses
 }
 
-func (s *BaseHttpGateway) api(apiName string) func(ctx *fasthttp.RequestCtx) {
+func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.RequestCtx) {
 	return func(ctx *fasthttp.RequestCtx) {
 		headerMap := base_http.HttpHeadersToMap(&ctx.Request.Header)
 
@@ -156,7 +156,7 @@ func (s *BaseHttpGateway) api(apiName string) func(ctx *fasthttp.RequestCtx) {
 	}
 }
 
-func (s *BaseHttpGateway) topic(ctx *fasthttp.RequestCtx) {
+func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 	topicName := ctx.UserValue("name").(string)
 
 	trigger := &v1.TriggerRequest{
@@ -208,7 +208,7 @@ func (s *BaseHttpGateway) Refresh() error {
 					ReadTimeout:     time.Second * 1,
 					IdleTimeout:     time.Second * 1,
 					CloseOnShutdown: true,
-					Handler:         s.api(api.Api()),
+					Handler:         s.handleHttpRequest(api.Api()),
 				}
 
 				lis, err := utils.GetNextListener()
@@ -258,7 +258,7 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 	// Setup routes
 	r := router.New()
 	// Publish to a topic
-	r.POST("/topic/{name}", s.topic)
+	r.POST("/topic/{name}", s.handleTopicRequest)
 
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
 		if string(ctx.Path()) == "/" {

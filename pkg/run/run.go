@@ -129,7 +129,7 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 
 	l.status.StorageEndpoint = fmt.Sprintf("http://localhost:%d", l.storage.GetApiPort())
 
-	sp, err := NewStorage(StorageOptions{
+	sp, err := NewStorage(pool, StorageOptions{
 		AccessKey: "dummykey",
 		SecretKey: "dummysecret",
 		Endpoint:  l.status.StorageEndpoint,

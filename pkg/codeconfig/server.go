@@ -57,6 +57,8 @@ func (s *Server) TriggerStream(stream v1.FaasService_TriggerStreamServer) error 
 		return s.function.AddScheduleHandler(w.Schedule)
 	case *v1.InitRequest_Subscription:
 		return s.function.AddSubscriptionHandler(w.Subscription)
+	case *v1.InitRequest_BucketNotification:
+		return s.function.AddBucketNotificationHandler(w.BucketNotification)
 	}
 
 	// treat as normal function worker

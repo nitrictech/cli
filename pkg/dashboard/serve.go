@@ -37,13 +37,14 @@ import (
 )
 
 type dashboard struct {
-	project        *project.Project
-	apis           []*openapi3.T
-	schedules      []*codeconfig.TopicResult
-	envMap         map[string]string
-	melody         *melody.Melody
-	triggerAddress string
-	apiAddresses   map[string]string
+	project             *project.Project
+	apis                []*openapi3.T
+	schedules           []*codeconfig.TopicResult
+	bucketNotifications []*codeconfig.BucketNotification
+	envMap              map[string]string
+	melody              *melody.Melody
+	triggerAddress      string
+	apiAddresses        map[string]string
 }
 
 type Api struct {
@@ -52,11 +53,12 @@ type Api struct {
 }
 
 type DashResponse struct {
-	Apis           []*openapi3.T             `json:"apis,omitempty"`
-	Schedules      []*codeconfig.TopicResult `json:"schedules,omitempty"`
-	ProjectName    string                    `json:"projectName,omitempty"`
-	ApiAddresses   map[string]string         `json:"apiAddresses,omitempty"`
-	TriggerAddress string                    `json:"triggerAddress,omitempty"`
+	Apis                []*openapi3.T                    `json:"apis,omitempty"`
+	Schedules           []*codeconfig.TopicResult        `json:"schedules,omitempty"`
+	BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications,omitempty"`
+	ProjectName         string                           `json:"projectName,omitempty"`
+	ApiAddresses        map[string]string                `json:"apiAddresses,omitempty"`
+	TriggerAddress      string                           `json:"triggerAddress,omitempty"`
 }
 
 //go:embed dist/*
@@ -66,10 +68,12 @@ func New(p *project.Project, envMap map[string]string) (*dashboard, error) {
 	m := melody.New()
 
 	return &dashboard{
-		project: p,
-		apis:    []*openapi3.T{},
-		envMap:  envMap,
-		melody:  m,
+		project:             p,
+		apis:                []*openapi3.T{},
+		schedules:           []*codeconfig.TopicResult{},
+		bucketNotifications: []*codeconfig.BucketNotification{},
+		envMap:              envMap,
+		melody:              m,
 	}, nil
 }
 
@@ -89,7 +93,8 @@ func (d *dashboard) Refresh(ls run.LocalServices) error {
 	d.triggerAddress = ls.TriggerAddress()
 	d.apiAddresses = ls.Apis()
 	d.apis = spec.Apis
-	d.schedules = spec.Shedules
+	d.schedules = spec.Schedules
+	d.bucketNotifications = spec.BucketNotifications
 
 	err = d.sendUpdate()
 	if err != nil {
@@ -227,11 +232,12 @@ func (d *dashboard) sendUpdate() error {
 	}
 
 	response := &DashResponse{
-		Apis:           d.apis,
-		Schedules:      d.schedules,
-		ProjectName:    d.project.Name,
-		ApiAddresses:   d.apiAddresses,
-		TriggerAddress: d.triggerAddress,
+		Apis:                d.apis,
+		Schedules:           d.schedules,
+		BucketNotifications: d.bucketNotifications,
+		ProjectName:         d.project.Name,
+		ApiAddresses:        d.apiAddresses,
+		TriggerAddress:      d.triggerAddress,
 	}
 
 	// Encode the response as JSON

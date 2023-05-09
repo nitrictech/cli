@@ -68,7 +68,7 @@ func (r *RunStorageService) ensureBucketExists(ctx context.Context, bucket strin
 	return err
 }
 
-func (r *RunStorageService) triggerBucketNotifications(ctx context.Context, bucket string, key string, eventType v1.BucketNotificationType) error {
+func (r *RunStorageService) triggerBucketNotifications(ctx context.Context, bucket string, key string, eventType v1.BucketNotificationType) {
 	trigger := &v1.TriggerRequest{
 		Context: &v1.TriggerRequest_Notification{
 			Notification: &v1.NotificationTriggerContext{
@@ -101,8 +101,6 @@ func (r *RunStorageService) triggerBucketNotifications(ctx context.Context, buck
 			}
 		}(target)
 	}
-
-	return nil
 }
 
 func (r *RunStorageService) Read(ctx context.Context, bucket string, key string) ([]byte, error) {

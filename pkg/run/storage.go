@@ -68,8 +68,8 @@ func (r *RunStorageService) ensureBucketExists(ctx context.Context, bucket strin
 	return err
 }
 
-func (r *RunStorageService) triggerBucketNotification(ctx context.Context, bucket string, key string, eventType v1.BucketNotificationType) error {
-	evt := &v1.TriggerRequest{
+func (r *RunStorageService) triggerBucketNotifications(ctx context.Context, bucket string, key string, eventType v1.BucketNotificationType) error {
+	trigger := &v1.TriggerRequest{
 		Context: &v1.TriggerRequest_Notification{
 			Notification: &v1.NotificationTriggerContext{
 				Source: bucket,
@@ -83,20 +83,23 @@ func (r *RunStorageService) triggerBucketNotification(ctx context.Context, bucke
 		},
 	}
 
-	worker, err := r.pool.GetWorker(&pool.GetWorkerOptions{
-		Trigger: evt,
+	targets := r.pool.GetWorkers(&pool.GetWorkerOptions{
+		Trigger: trigger,
 		Filter: func(w worker.Worker) bool {
 			_, ok := w.(*worker.BucketNotificationWorker)
 			return ok
 		},
 	})
-	if err != nil {
-		// There is no worker for this notification
-		return nil
-	}
 
-	if _, err := worker.HandleTrigger(ctx, evt); err != nil {
-		return fmt.Errorf("error occcured triggering bucket notification: %w", err)
+	for _, target := range targets {
+		go func(target worker.Worker) {
+			_, err := target.HandleTrigger(ctx, trigger)
+			if err != nil {
+				// this is likely an error in the user's handler, we don't want it to bring the server down.
+				// just log and move on.
+				fmt.Println("error occcured triggering bucket notification: %w", err)
+			}
+		}(target)
 	}
 
 	return nil
@@ -122,10 +125,7 @@ func (r *RunStorageService) Write(ctx context.Context, bucket string, key string
 		return err
 	}
 
-	err = r.triggerBucketNotification(ctx, bucket, key, v1.BucketNotificationType_Created)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	go r.triggerBucketNotifications(ctx, bucket, key, v1.BucketNotificationType_Created)
 
 	return nil
 }
@@ -141,10 +141,7 @@ func (r *RunStorageService) Delete(ctx context.Context, bucket string, key strin
 		return err
 	}
 
-	err = r.triggerBucketNotification(ctx, bucket, key, v1.BucketNotificationType_Deleted)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	go r.triggerBucketNotifications(ctx, bucket, key, v1.BucketNotificationType_Deleted)
 
 	return nil
 }

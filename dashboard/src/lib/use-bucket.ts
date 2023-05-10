@@ -16,7 +16,7 @@ export const useBucket = (bucket?: string, prefix?: string) => {
     async (file: File) => {
       return fetch(
         `${STORAGE_API}?action=write-file&bucket=${bucket}&fileKey=${encodeURI(
-          file.name
+          prefix === "/" ? file.name : prefix + file.name
         )}`,
         {
           method: "PUT",
@@ -24,7 +24,7 @@ export const useBucket = (bucket?: string, prefix?: string) => {
         }
       );
     },
-    [bucket]
+    [bucket, prefix]
   );
 
   const deleteFile = useCallback(
@@ -38,7 +38,7 @@ export const useBucket = (bucket?: string, prefix?: string) => {
         }
       );
     },
-    [bucket]
+    [bucket, prefix]
   );
 
   return {

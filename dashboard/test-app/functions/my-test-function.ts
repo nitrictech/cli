@@ -173,6 +173,15 @@ secondApi.put("/image-from-bucket", async (ctx) => {
   return ctx;
 });
 
+secondApi.put("/very-nested-files", async (ctx) => {
+  const { fileName } = ctx.req.query;
+  const data = ctx.req.data;
+
+  await myBucket.file(`5/4/3/2/1/${fileName}`).write(data);
+
+  return ctx;
+});
+
 secondApi.delete("/image-from-bucket", async (ctx) => {
   await myBucket.file("images/photo.jpg").delete();
 

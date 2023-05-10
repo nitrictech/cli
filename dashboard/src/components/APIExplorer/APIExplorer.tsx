@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWebSocket } from "../../lib/use-web-socket";
 import Select from "../shared/Select";
 import type {
@@ -23,6 +23,7 @@ import { generatePathParams } from "./generate-path-params";
 import { generateResponse } from "../../lib/generate-response";
 import { formatResponseTime } from "./format-response-time";
 import Loading from "../shared/Loading";
+import FileUpload from "../StorageExplorer/FileUpload";
 
 const getTabCount = (rows: FieldRow[]) => rows.filter((r) => !!r.key).length;
 
@@ -48,17 +49,26 @@ const requestDefault = {
   ],
 };
 
+const bodyTabs = [
+  {
+    name: "JSON",
+  },
+  { name: "Binary" },
+];
+
 const APIExplorer = () => {
   const { data, loading } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
 
   const [JSONBody, setJSONBody] = useState<string>("");
+  const [fileToUpload, setFileToUpload] = useState<File>();
 
   const [request, setRequest] = useState<APIRequest>(requestDefault);
   const [response, setResponse] = useState<APIResponse>();
 
   const [selectedApiEndpoint, setSelectedApiEndpoint] = useState<Endpoint>();
   const [currentTabIndex, setCurrentTabIndex] = useState(0);
+  const [bodyTabIndex, setBodyTabIndex] = useState(0);
   const [responseTabIndex, setResponseTabIndex] = useState(0);
 
   const paths = useMemo(
@@ -176,42 +186,14 @@ const APIExplorer = () => {
     }
   }, [request, JSONBody]);
 
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => setFileToUpload(acceptedFiles[0]),
+    []
+  );
+
   const apiAddress = selectedApiEndpoint
     ? data?.apiAddresses[selectedApiEndpoint.api]
     : null;
-
-  const handleSend = async (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    if (!selectedApiEndpoint) return;
-    setCallLoading(true);
-    e.preventDefault();
-
-    const { path, method, headers } = request;
-
-    const url = `http://${getHost()}/call` + path;
-    const requestOptions: RequestInit = {
-      method,
-      headers: fieldRowArrToHeaders([
-        ...headers,
-        {
-          key: "X-Nitric-Local-Call-Address",
-          value: apiAddress || "localhost:4001",
-        },
-      ]),
-    };
-
-    if (method !== "GET" && method !== "HEAD" && JSONBody.trim()) {
-      requestOptions.body = JSONBody;
-    }
-    const startTime = window.performance.now();
-    const res = await fetch(url, requestOptions);
-
-    const callResponse = await generateResponse(res, startTime);
-    setResponse(callResponse);
-
-    setTimeout(() => setCallLoading(false), 300);
-  };
 
   const tabs = [
     {
@@ -224,6 +206,46 @@ const APIExplorer = () => {
 
   const currentTabName = tabs[currentTabIndex].name;
 
+  const currentBodyTabName = bodyTabs[bodyTabIndex].name;
+
+  const handleSend = async (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ) => {
+    if (!selectedApiEndpoint) return;
+    setCallLoading(true);
+    e.preventDefault();
+
+    const { path, method, headers } = request;
+
+    const url = `http://${getHost()}/api/call` + path;
+    const requestOptions: RequestInit = {
+      method,
+      headers: fieldRowArrToHeaders([
+        ...headers,
+        {
+          key: "X-Nitric-Local-Call-Address",
+          value: apiAddress || "localhost:4001",
+        },
+      ]),
+    };
+
+    if (method !== "GET" && method !== "HEAD") {
+      // handle body in request
+      if (currentBodyTabName === "Binary" && fileToUpload) {
+        requestOptions.body = fileToUpload;
+      } else if (currentBodyTabName === "JSON" && JSONBody.trim()) {
+        requestOptions.body = JSONBody;
+      }
+    }
+    const startTime = window.performance.now();
+    const res = await fetch(url, requestOptions);
+
+    const callResponse = await generateResponse(res, startTime);
+    setResponse(callResponse);
+
+    setTimeout(() => setCallLoading(false), 300);
+  };
+
   return (
     <Loading
       delay={400}
@@ -234,7 +256,7 @@ const APIExplorer = () => {
           <div className="w-full md:w-7/12 flex flex-col gap-8">
             <div>
               <div className="flex">
-                <h2 className="text-2xl font-medium text-blue-900">
+                <h2 className="text-2xl font-medium text-blue-800">
                   API - {selectedApiEndpoint.api}
                 </h2>
                 <APIMenu
@@ -391,16 +413,41 @@ const APIExplorer = () => {
                       </div>
                     )}
                     {currentTabName === "Body" && (
-                      <div className="my-4">
-                        <CodeEditor
-                          id="json-editor"
-                          contentType={"application/json"}
-                          value={JSONBody}
-                          includeLinters
-                          onChange={(value) => {
-                            setJSONBody(value);
-                          }}
+                      <div className="my-4 flex flex-col gap-4">
+                        <Tabs
+                          tabs={bodyTabs}
+                          index={bodyTabIndex}
+                          pill
+                          setIndex={setBodyTabIndex}
                         />
+                        {currentBodyTabName === "JSON" && (
+                          <CodeEditor
+                            id="json-editor"
+                            contentType={"application/json"}
+                            value={JSONBody}
+                            includeLinters
+                            onChange={(value) => {
+                              setJSONBody(value);
+                            }}
+                          />
+                        )}
+                        {currentBodyTabName === "Binary" && (
+                          <div className="flex flex-col mb-2">
+                            <h4 className="text-lg mb-2 font-medium text-gray-900">
+                              Binary File
+                            </h4>
+                            <FileUpload multiple={false} onDrop={onDrop} />
+                            {fileToUpload && (
+                              <span
+                                data-testid="file-upload-info"
+                                className="px-4 flex items-center py-4 sm:px-0"
+                              >
+                                {fileToUpload.name} -{" "}
+                                {formatFileSize(fileToUpload.size)}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

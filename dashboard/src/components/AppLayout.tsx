@@ -7,6 +7,7 @@ import {
   XMarkIcon,
   ClockIcon,
   ChatBubbleLeftIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
 import { useWebSocket } from "../lib/use-web-socket";
@@ -63,6 +64,12 @@ const AppLayout: React.FC<Props> = ({
       href: "/schedules",
       icon: ClockIcon,
       count: data?.schedules?.length || 0,
+    },
+    {
+      name: "Storage",
+      href: "/storage",
+      icon: CircleStackIcon,
+      count: data?.buckets?.length || 0,
     },
     // { name: "Storage", href: "#", icon: CircleStackIcon, current: false },
     // { name: "Collections", href: "#", icon: FolderIcon, current: false },
@@ -291,7 +298,7 @@ const AppLayout: React.FC<Props> = ({
 
       <main className="py-10 lg:pl-72 h-screen">
         <div className="px-4 h-full sm:px-6 lg:px-8">
-          <h1 className="text-4xl text-blue-900 font-bold mb-12">{title}</h1>
+          <h1 className="text-4xl text-blue-800 font-bold mb-12">{title}</h1>
           {children}
         </div>
       </main>

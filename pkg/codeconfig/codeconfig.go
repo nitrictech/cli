@@ -76,19 +76,6 @@ type SpecResult struct {
 	BucketNotifications []*BucketNotification
 }
 
-// type SpecResultInterface interface {
-//     GetAPIs() []*openapi3.T
-// 	GetSchedules() []*TopicResult
-// }
-
-// func (s *SpecResult) GetAPIs() []*openapi3.T {
-//     return s.apis
-// }
-
-// func (s *SpecResult) GetSchedules() []*TopicResult {
-//     return s.shedules
-// }
-
 func New(p *project.Project, envMap map[string]string) (*codeConfig, error) {
 	return &codeConfig{
 		initialProject: p,

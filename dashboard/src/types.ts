@@ -20,10 +20,12 @@ export interface Schedule {
 
 export interface WebSocketResponse {
   projectName: string;
+  buckets: string[];
   apis: APIDoc[];
   schedules: Schedule[];
   triggerAddress: string;
   apiAddresses: Record<string, string>;
+  storageAddress: string; // has http:// prefix
 }
 
 export interface Param {
@@ -60,4 +62,8 @@ export interface APIResponse {
 export interface HistoryItem {
   request: APIRequest;
   JSONBody: string;
+}
+
+export interface BucketFile {
+  Key: string;
 }

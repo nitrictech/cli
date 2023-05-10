@@ -15,7 +15,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.22+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
-	github.com/fasthttp/router v1.4.14
+	github.com/fasthttp/router v1.4.18
 	github.com/getkin/kin-openapi v0.113.0
 	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.52.2
@@ -30,10 +30,10 @@ require (
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/moby/moby v20.10.22+incompatible
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
-	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230504071446-19454f649a4e
-	github.com/nitrictech/nitric/core v0.0.0-20230504071446-19454f649a4e
+	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230509232736-48f59463930d
+	github.com/nitrictech/nitric/core v0.0.0-20230509232736-48f59463930d
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.53
+	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.2
 	github.com/valyala/fasthttp v1.45.0
@@ -47,7 +47,7 @@ require (
 
 require (
 	github.com/docker/distribution v2.7.1+incompatible
-	github.com/nitrictech/nitric/cloud/common v0.0.0-20230213031554-d8ff7f3013b8
+	github.com/nitrictech/nitric/cloud/common v0.0.0-20230509232736-48f59463930d
 	github.com/olahol/melody v1.1.3
 	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
 	go.etcd.io/bbolt v1.3.6
@@ -59,7 +59,7 @@ require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect
 	4d63.com/gochecknoglobals v0.2.1 // indirect
 	atomicgo.dev/cursor v0.1.1 // indirect
-	atomicgo.dev/keyboard v0.2.8 // indirect
+	atomicgo.dev/keyboard v0.2.9 // indirect
 	cloud.google.com/go v0.110.0 // indirect
 	cloud.google.com/go/compute v1.19.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
@@ -322,7 +322,7 @@ require (
 	github.com/sanposhiho/wastedassign/v2 v2.0.7 // indirect
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.23.0 // indirect
-	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
+	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/schollz/progressbar/v3 v3.12.2 // indirect
 	github.com/seaweedfs/goexif v2.0.0+incompatible // indirect
 	github.com/seaweedfs/raft v1.1.0 // indirect

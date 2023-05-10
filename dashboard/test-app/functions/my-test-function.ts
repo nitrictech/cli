@@ -1,7 +1,9 @@
-import { api, collection, schedule } from "@nitric/sdk";
+import { api, bucket, collection, faas, schedule } from "@nitric/sdk";
 
 const firstApi = api("first-api");
 const secondApi = api("second-api");
+
+const myBucket = bucket("test-bucket").for("reading", "writing", "deleting");
 
 interface Doc {
   firstCount: number;
@@ -151,6 +153,28 @@ secondApi.get("/content-type-binary", (ctx) => {
   `;
   ctx.res.headers = { "content-type": ["application/xml"] };
   ctx.res.body = xmlData.trim();
+
+  return ctx;
+});
+
+secondApi.get("/image-from-bucket", async (ctx) => {
+  const image = await myBucket.file("images/photo.jpg").read();
+
+  ctx.res.body = image;
+  ctx.res.headers = { "Content-Type": ["image/jpeg"] };
+  return ctx;
+});
+
+secondApi.put("/image-from-bucket", async (ctx) => {
+  const imageData = ctx.req.data;
+
+  await myBucket.file("images/photo.jpg").write(imageData);
+
+  return ctx;
+});
+
+secondApi.delete("/image-from-bucket", async (ctx) => {
+  await myBucket.file("images/photo.jpg").delete();
 
   return ctx;
 });

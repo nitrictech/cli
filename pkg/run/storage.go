@@ -172,13 +172,14 @@ type StorageOptions struct {
 	Endpoint  string
 }
 
-func NewStorage(pool pool.WorkerPool, opts StorageOptions) (storage.StorageService, error) {
+func NewStorage(opts StorageOptions, pool pool.WorkerPool) (*RunStorageService, error) {
 	cfg, sessionError := config.LoadDefaultConfig(context.TODO(),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(opts.AccessKey, opts.SecretKey, "")),
 		config.WithRegion("us-east-1"),
 		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{URL: opts.Endpoint}, nil
 		})),
+		config.WithRetryMaxAttempts(5),
 	)
 	if sessionError != nil {
 		return nil, fmt.Errorf("error creating new AWS session %w", sessionError)

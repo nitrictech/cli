@@ -25,12 +25,12 @@ import (
 )
 
 //go:embed nitric-version.txt
-var knownlatestversion string
+var DefaultNitricVersion string
 
 func ProviderFromFile(cfc types.ConfigFromCode, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
 	switch provider {
 	case types.Aws, types.Azure, types.Gcp:
-		return remote.FromFile(cfc, name, fmt.Sprintf("nitric/%s@%s", provider, knownlatestversion), envMap, opts)
+		return remote.FromFile(cfc, name, fmt.Sprintf("nitric/%s@%s", provider, DefaultNitricVersion), envMap, opts)
 	default:
 		return remote.FromFile(cfc, name, provider, envMap, opts)
 	}
@@ -39,7 +39,7 @@ func ProviderFromFile(cfc types.ConfigFromCode, name, provider string, envMap ma
 func NewProvider(cfc types.ConfigFromCode, name, provider string, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
 	switch provider {
 	case types.Aws, types.Azure, types.Gcp:
-		return remote.New(cfc, name, fmt.Sprintf("nitric/%s@%s", provider, knownlatestversion), envMap, opts)
+		return remote.New(cfc, name, fmt.Sprintf("nitric/%s@%s", provider, DefaultNitricVersion), envMap, opts)
 	default:
 		return remote.New(cfc, name, provider, envMap, opts)
 	}

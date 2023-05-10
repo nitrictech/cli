@@ -27,7 +27,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
-	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/provider"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
@@ -54,7 +54,7 @@ var diag = Diagnostics{
 	Arch:           runtime.GOARCH,
 	GoVersion:      runtime.Version(),
 	CliVersion:     utils.Version,
-	FabricVersion:  project.DefaultMembraneVersion,
+	FabricVersion:  provider.DefaultNitricVersion,
 	DetectedErrors: make([]string, 0),
 }
 

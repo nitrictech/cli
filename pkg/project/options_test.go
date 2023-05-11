@@ -124,7 +124,7 @@ func TestFromConfig(t *testing.T) {
 				Dir:  "../../pkg",
 				Name: "docker",
 				Functions: map[string]Function{
-					"typescript.dockerfile-ac9eee6caa6e16eee0fdb692ffaaae1386f11a8481ca760745bd1e98a3ff5b94": {
+					"typescript.dockerfile-3f87c7b9702a57a8fa2968ad77981d0ae6a2f78eee7f82f4247082792ac1ac9a": {
 						Handler:    "",
 						Dockerfile: filepath.Join(pkgAbsPath, "runtime/typescript.dockerfile"),
 						Args: map[string]string{
@@ -132,7 +132,7 @@ func TestFromConfig(t *testing.T) {
 						},
 						Context: pkgAbsPath,
 						ComputeUnit: ComputeUnit{
-							Name: "typescript.dockerfile-ac9eee6caa6e16eee0fdb692ffaaae1386f11a8481ca760745bd1e98a3ff5b94",
+							Name: "typescript.dockerfile-3f87c7b9702a57a8fa2968ad77981d0ae6a2f78eee7f82f4247082792ac1ac9a",
 						},
 					},
 				},
@@ -209,7 +209,7 @@ func TestFromConfig(t *testing.T) {
 							Name: "python.dockerfile-a351536d73ca631b449872b8e19f216f029c029d3a871136148b31a0691bba5b",
 						},
 					},
-					"typescript.dockerfile-ac9eee6caa6e16eee0fdb692ffaaae1386f11a8481ca760745bd1e98a3ff5b94": {
+					"typescript.dockerfile-3f87c7b9702a57a8fa2968ad77981d0ae6a2f78eee7f82f4247082792ac1ac9a": {
 						Handler:    "",
 						Dockerfile: filepath.Join(pkgAbsPath, "runtime/typescript.dockerfile"),
 						Args: map[string]string{
@@ -217,7 +217,7 @@ func TestFromConfig(t *testing.T) {
 						},
 						Context: pkgAbsPath,
 						ComputeUnit: ComputeUnit{
-							Name: "typescript.dockerfile-ac9eee6caa6e16eee0fdb692ffaaae1386f11a8481ca760745bd1e98a3ff5b94",
+							Name: "typescript.dockerfile-3f87c7b9702a57a8fa2968ad77981d0ae6a2f78eee7f82f4247082792ac1ac9a",
 						},
 					},
 				},

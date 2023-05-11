@@ -20,7 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -139,7 +139,7 @@ func FunctionFromContainer(c DockerConfig) (Function, error) {
 	pterm.Debug.Println("Using container from dockerfile: " + c.Dockerfile)
 
 	// // Read the contents of the file
-	fileContent, err := ioutil.ReadFile(c.Dockerfile)
+	fileContent, err := os.ReadFile(c.Dockerfile)
 	if err != nil {
 		return Function{}, err
 	}

@@ -1,5 +1,5 @@
 describe("a11y test suite", () => {
-  const pages = ["/", "/schedules", "/not-found"];
+  const pages = ["/", "/schedules", "/storage", "/not-found"];
 
   pages.forEach((page) => {
     it(`Should test page ${page} for a11y violations on desktop screen`, () => {

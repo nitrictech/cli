@@ -10,6 +10,7 @@ const Badge: React.FC<Props> = ({
   status = "default",
   className,
   children,
+  ...rest
 }) => {
   return (
     <span
@@ -22,6 +23,7 @@ const Badge: React.FC<Props> = ({
         status === "default" && "text-gray-800 bg-gray-100",
         className
       )}
+      {...rest}
     >
       {children}
     </span>

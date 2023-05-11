@@ -66,6 +66,7 @@ func (m *SeaweedServer) Start() error {
 			"-s3",
 			fmt.Sprintf("-s3.port=%d", port),
 			"fs.configure -volumeGrowthCount=1",
+			"-volume.max=100",
 		}
 
 		origOsArgs := os.Args

@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/core/pkg/membrane"
@@ -38,6 +39,7 @@ type LocalServices interface {
 	Apis() map[string]string
 	TriggerAddress() string
 	GetWorkerPool() pool.WorkerPool
+	GetDashPort() *int
 }
 
 type LocalServicesStatus struct {
@@ -48,16 +50,17 @@ type LocalServicesStatus struct {
 }
 
 type localServices struct {
-	s        *project.Project
-	storage  *SeaweedServer
-	mem      *membrane.Membrane
-	status   *LocalServicesStatus
-	gw       *BaseHttpGateway
-	isStart  bool
-	dashPort *int
+	s       *project.Project
+	storage *SeaweedServer
+	mem     *membrane.Membrane
+	status  *LocalServicesStatus
+	gw      *BaseHttpGateway
+	sp      *RunStorageService
+	dash    *dashboard.Dashboard
+	isStart bool
 }
 
-func NewLocalServices(s *project.Project, isStart bool, dashPort *int) LocalServices {
+func NewLocalServices(s *project.Project, isStart bool, dash *dashboard.Dashboard) LocalServices {
 	return &localServices{
 		s:       s,
 		isStart: isStart,
@@ -65,7 +68,7 @@ func NewLocalServices(s *project.Project, isStart bool, dashPort *int) LocalServ
 			RunDir:          filepath.Join(utils.NitricRunDir(), s.Name),
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
 		},
-		dashPort: dashPort,
+		dash: dash,
 	}
 }
 
@@ -79,7 +82,21 @@ func (l *localServices) TriggerAddress() string {
 
 func (l *localServices) Refresh() error {
 	if l.gw != nil {
-		return l.gw.Refresh()
+		err := l.gw.Refresh()
+		if err != nil {
+			return err
+		}
+	}
+
+	err := l.dash.Refresh(&dashboard.RefreshOptions{
+		Pool:            l.GetWorkerPool(),
+		TriggerAddress:  l.TriggerAddress(),
+		ApiAddresses:    l.Apis(),
+		StorageAddress:  l.Status().StorageEndpoint,
+		ServiceListener: l.gw.serviceListener,
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -113,6 +130,14 @@ func (l *localServices) Status() *LocalServicesStatus {
 	return l.status
 }
 
+func (l *localServices) GetDashPort() *int {
+	if l.gw != nil {
+		return &l.gw.dashPort
+	}
+
+	return nil
+}
+
 func (l *localServices) Start(pool pool.WorkerPool) error {
 	var err error
 
@@ -129,11 +154,11 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 
 	l.status.StorageEndpoint = fmt.Sprintf("http://localhost:%d", l.storage.GetApiPort())
 
-	sp, err := NewStorage(pool, StorageOptions{
+	l.sp, err = NewStorage(StorageOptions{
 		AccessKey: "dummykey",
 		SecretKey: "dummysecret",
 		Endpoint:  l.status.StorageEndpoint,
-	})
+	}, pool)
 	if err != nil {
 		return err
 	}
@@ -173,7 +198,13 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		return err
 	}
 
-	l.gw.dashPort = *l.dashPort
+	// Start local dashboard
+	port, err := l.dash.Serve(l.sp)
+	if err != nil {
+		return err
+	}
+
+	l.gw.dashPort = *port
 
 	// Prepare development membrane to start
 	// This will start a single membrane that all
@@ -182,11 +213,11 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		ServiceAddress:          "0.0.0.0:50051",
 		SecretPlugin:            secp,
 		QueuePlugin:             qp,
-		StoragePlugin:           sp,
+		StoragePlugin:           l.sp,
 		DocumentPlugin:          dp,
 		GatewayPlugin:           l.gw,
 		EventsPlugin:            ev,
-		ResourcesPlugin:         NewResources(l.gw, l.isStart),
+		ResourcesPlugin:         NewResources(l, l.isStart),
 		Pool:                    pool,
 		TolerateMissingServices: false,
 	})

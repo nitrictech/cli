@@ -61,4 +61,47 @@ describe("Storage Explorer spec", () => {
       "not.exist"
     );
   });
+
+  it("should handle directories", () => {
+    cy.fixture("photo.jpg").then((fileContent) => {
+      // Use cy.get() to select the file input element and upload the file
+      cy.getTestEl("file-upload").then((el) => {
+        // Upload the file to the input element
+        const testFile = new File(
+          [fileContent],
+          "5/4/3/2/1/storage-test-photo.jpg",
+          {
+            type: "image/jpeg",
+          }
+        );
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(testFile);
+        const fileInput = el[0];
+        // @ts-ignore
+        fileInput.files = dataTransfer.files;
+        // Trigger a 'change' event on the input element
+        cy.wrap(fileInput).trigger("change", { force: true });
+      });
+    });
+
+    ["5/", "5/4/", "5/4/3/", "5/4/3/2/", "5/4/3/2/1/"].forEach((id) => {
+      cy.get(`[data-chonky-file-id="${id}"]`, {
+        timeout: 5000,
+      }).dblclick();
+    });
+
+    cy.get(`[data-chonky-file-id="5/4/3/2/1/storage-test-photo.jpg"]`, {
+      timeout: 5000,
+    }).should("exist");
+  });
+
+  it("should delete directory files", () => {
+    cy.get(`[data-chonky-file-id="5/`, {
+      timeout: 5000,
+    }).type("{del}");
+
+    cy.get(`[data-chonky-file-id="5/`, {
+      timeout: 5000,
+    }).should("not.exist");
+  });
 });

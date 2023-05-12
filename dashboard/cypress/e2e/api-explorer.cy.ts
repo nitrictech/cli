@@ -23,6 +23,7 @@ describe("API Explorer spec", () => {
       "second-api/content-type-image1 methods",
       "second-api/content-type-xml1 methods",
       "second-api/image-from-bucket3 methods",
+      "second-api/very-nested-files1 methods",
     ];
 
     cy.getTestEl("endpoint-select-options")

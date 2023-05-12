@@ -14,7 +14,6 @@ import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useWebSocket } from "../../lib/use-web-socket";
 
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
-import { downloadFiles } from "./download-files";
 import { useBucket } from "../../lib/use-bucket";
 import "./file-browser-styles.css";
 import FileUpload from "./FileUpload";
@@ -27,8 +26,74 @@ setChonkyDefaults({
   iconComponent: ChonkyIconFA,
 });
 
-function joinPath(...segments: any[]) {
-  return segments.reduce((url, segment) => new URL(segment, url).pathname, "");
+function generateTree(data: { Key: string }[]): FileData[] {
+  const tree: FileData[] = [];
+
+  data.forEach((item) => {
+    const parts = item.Key.split("/");
+    let parent = tree;
+    let path = "";
+
+    parts.forEach((part, index) => {
+      const isDir = index < parts.length - 1;
+      path += isDir ? `${part}/` : part;
+
+      const existingDir = parent.find((node) => node.isDir && node.id === path);
+      if (existingDir) {
+        parent = existingDir.children!;
+      } else {
+        const newNode = {
+          id: path,
+          name: part,
+          ext: !isDir && part.includes(".") ? undefined : "",
+          isDir,
+          children: isDir ? [] : undefined,
+        };
+        parent.push(newNode);
+        parent = newNode.children || [];
+      }
+    });
+  });
+
+  return tree;
+}
+
+function findNode(id: string, node: FileArray | FileData): FileData | null {
+  if (Array.isArray(node)) {
+    return findNode(id, { children: node } as any);
+  }
+
+  if (node.id === id) {
+    return node;
+  }
+
+  if (node?.children) {
+    for (const child of node.children) {
+      const found = findNode(id, child);
+      if (found !== null) {
+        return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+function getAllFiles(
+  node: Partial<FileData>,
+  files: Partial<FileData>[] = []
+): FileData[] {
+  if (node.isDir && node.children) {
+    // if the current node is a directory, recursively process all children
+    for (const child of node.children) {
+      getAllFiles(child, files);
+    }
+  } else {
+    // if the current node is a file, add it to the array of files
+    files.push(node);
+  }
+
+  return files as FileData[];
 }
 
 const actionsToDisable: string[] = [
@@ -37,8 +102,9 @@ const actionsToDisable: string[] = [
 ];
 
 const FileBrowser: FC<Props> = ({ bucket }) => {
-  const [files, setFiles] = useState<FileArray>([]);
-  const [folderPrefix, setKeyPrefix] = useState<string>("/");
+  const [rootFiles, setRootFiles] = useState<FileArray>([]);
+  const [folderFiles, setFolderFiles] = useState<FileArray>([]);
+  const [folderPrefix, setFolderPrefix] = useState<string>("/");
   const { data } = useWebSocket();
   const {
     data: contents,
@@ -53,27 +119,19 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
       await Promise.all(acceptedFiles.map((file) => writeFile(file)));
       mutate();
     },
-    [bucket]
+    [bucket, folderPrefix]
   );
 
-  const getFilePath = (fileId: string) =>
-    `${folderChain.map((f) => f?.id).join("/")}${fileId}`;
+  const getFilePath = (fileId: string) => `/${fileId}`;
 
   useEffect(() => {
     if (contents?.length) {
-      setFiles(
-        contents.map(
-          (content) =>
-            ({
-              id: content.Key,
-              name: content.Key!.split("/").pop() || "",
-            } as FileData)
-        )
-      );
+      const tree = generateTree(contents);
+      setRootFiles(tree);
     } else {
-      setFiles([]);
+      setRootFiles([]);
     }
-  }, [folderPrefix, contents]);
+  }, [contents]);
 
   const handleFileAction = useCallback(
     async (actionData: ChonkyFileActionData) => {
@@ -91,25 +149,32 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
           ""
         )}/`;
 
-        setKeyPrefix(newPrefix);
+        setFolderPrefix(newPrefix);
       } else if (actionData.id === ChonkyActions.DeleteFiles.id) {
+        const filesToDelete = getAllFiles({
+          children: actionData.state.selectedFilesForAction,
+          isDir: true,
+        });
+
+        // TODO perhaps add a confirm dialog?
         await Promise.all(
-          actionData.state.selectedFilesForAction.map((file) =>
-            deleteFile(getFilePath(file.id))
-          )
+          filesToDelete.map((file) => deleteFile(getFilePath(file.id)))
         );
 
+        const filesLeftCount = getAllFiles({
+          children: folderFiles,
+          isDir: true,
+        }).length;
+
+        // if no files left, simulate all being removed
+        if (filesToDelete.length === filesLeftCount) {
+          setFolderFiles([]);
+        }
+
         mutate();
-      } else if (actionData.id === ChonkyActions.DownloadFiles.id) {
-        downloadFiles(
-          actionData.state.selectedFilesForAction.map((file) => ({
-            name: file.name,
-            url: `${data?.storageAddress}/${bucket}/${getFilePath(file.id)}`,
-          }))
-        );
       }
     },
-    [setKeyPrefix, bucket]
+    [setFolderPrefix, bucket, contents, folderFiles]
   );
 
   const folderChain = useMemo(() => {
@@ -124,7 +189,7 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
           .split("/")
           .map((prefixPart): FileData => {
             currentPrefix = currentPrefix
-              ? joinPath(currentPrefix, prefixPart)
+              ? [currentPrefix, prefixPart].join("/")
               : prefixPart;
             return {
               id: currentPrefix,
@@ -142,7 +207,18 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
     }
 
     return [];
-  }, [folderPrefix, bucket]);
+  }, [folderPrefix, bucket, rootFiles]);
+
+  useEffect(() => {
+    if (folderPrefix === "/") {
+      setFolderFiles(rootFiles);
+    } else {
+      const foundNode = findNode(folderPrefix, rootFiles);
+      if (foundNode?.isDir) {
+        setFolderFiles(foundNode.children);
+      }
+    }
+  }, [folderPrefix, rootFiles]);
 
   return (
     <Loading className="my-20" delay={500} conditionToShow={!loading}>
@@ -151,16 +227,15 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
         <div style={{ height: 300 }} className="file-explorer">
           <ChonkFileBrowser
             instanceId={bucket}
-            files={files}
+            files={folderFiles}
             disableDefaultFileActions={actionsToDisable}
-            fileActions={[
-              ChonkyActions.DownloadFiles,
-              ChonkyActions.DeleteFiles,
-            ]}
+            fileActions={[ChonkyActions.DeleteFiles]}
             folderChain={folderChain}
             onFileAction={handleFileAction}
             thumbnailGenerator={(file) =>
-              `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`
+              !file.isDir
+                ? `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`
+                : null
             }
           >
             <FileNavbar />

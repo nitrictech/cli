@@ -22,34 +22,49 @@ import (
 
 	"github.com/pterm/pterm"
 
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/worker"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
-type RunStackState struct {
-	apis      map[string]string
-	subs      map[string]string
-	schedules map[string]string
+type BucketNotification struct {
+	Bucket                   string
+	NotificationType         v1.BucketNotificationType
+	NotificationPrefixFilter string
 }
 
-func (r *RunStackState) Update(pool pool.WorkerPool, ls LocalServices) {
+type RunStackState struct {
+	apis                map[string]string
+	subs                map[string]string
+	schedules           map[string]string
+	bucketNotifications []*BucketNotification
+}
+
+func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
 	// reset state maps
 	r.apis = make(map[string]string)
 	r.subs = make(map[string]string)
 	r.schedules = make(map[string]string)
+	r.bucketNotifications = []*BucketNotification{}
 
 	for name, address := range ls.Apis() {
 		r.apis[name] = address
 	}
 
 	// TODO: We can probably move this directly into local service state
-	for _, wrkr := range pool.GetWorkers(nil) {
+	for _, wrkr := range workerPool.GetWorkers(&pool.GetWorkerOptions{}) {
 		switch w := wrkr.(type) {
 		case *worker.SubscriptionWorker:
 			r.subs[w.Topic()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), w.Topic())
 		case *worker.ScheduleWorker:
 			topicKey := strings.ToLower(strings.ReplaceAll(w.Key(), " ", "-"))
 			r.subs[w.Key()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), topicKey)
+		case *worker.BucketNotificationWorker:
+			r.bucketNotifications = append(r.bucketNotifications, &BucketNotification{
+				Bucket:                   w.Bucket(),
+				NotificationType:         w.NotificationType(),
+				NotificationPrefixFilter: w.NotificationPrefixFilter(),
+			})
 		}
 	}
 }
@@ -68,6 +83,11 @@ func (r *RunStackState) Tables(port int, dashPort int) string {
 	}
 
 	table, rows = r.SchedulesTable(9001)
+	if rows > 0 {
+		tables = append(tables, table)
+	}
+
+	table, rows = r.BucketNotificationsTable(9001)
 	if rows > 0 {
 		tables = append(tables, table)
 	}
@@ -119,6 +139,20 @@ func (r *RunStackState) SchedulesTable(port int) (string, int) {
 	return str, len(r.schedules)
 }
 
+func (r *RunStackState) BucketNotificationsTable(port int) (string, int) {
+	tableData := pterm.TableData{{"Bucket", "Notification Type", "Notification Prefix Filter"}}
+
+	for _, notification := range r.bucketNotifications {
+		tableData = append(tableData, []string{
+			notification.Bucket, notification.NotificationType.String(), notification.NotificationPrefixFilter,
+		})
+	}
+
+	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+
+	return str, len(r.bucketNotifications)
+}
+
 func (r *RunStackState) DashboardTable(port int) string {
 	tableData := pterm.TableData{{pterm.LightCyan("Dev Dashboard"), fmt.Sprintf("http://localhost:%v", port)}}
 
@@ -129,8 +163,9 @@ func (r *RunStackState) DashboardTable(port int) string {
 
 func NewStackState() *RunStackState {
 	return &RunStackState{
-		apis:      map[string]string{},
-		subs:      map[string]string{},
-		schedules: map[string]string{},
+		apis:                map[string]string{},
+		subs:                map[string]string{},
+		schedules:           map[string]string{},
+		bucketNotifications: []*BucketNotification{},
 	}
 }

@@ -12,7 +12,7 @@ import { generateResponse } from "../lib/generate-response";
 import { formatResponseTime } from "./APIExplorer/format-response-time";
 import Loading from "./shared/Loading";
 
-export const LOCAL_STORAGE_KEY = "nitric-local-dash-schedule-history";
+const LOCAL_STORAGE_KEY = "nitric-local-dash-schedule-history";
 
 const ScheduleExplorer = () => {
   const { data, loading } = useWebSocket();
@@ -50,6 +50,16 @@ const ScheduleExplorer = () => {
     }
   }, [data]);
 
+  useEffect(() => {
+    if (selectedSchedule) {
+      // set history
+      localStorage.setItem(
+        `${LOCAL_STORAGE_KEY}-last-schedule`,
+        selectedSchedule.topicKey
+      );
+    }
+  }, [selectedSchedule]);
+
   const handleSend = async (
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
@@ -58,7 +68,7 @@ const ScheduleExplorer = () => {
     e.preventDefault();
 
     const url =
-      `http://${getHost()}/call` + `/topic/${selectedSchedule.topicKey}`;
+      `http://${getHost()}/api/call` + `/topic/${selectedSchedule.topicKey}`;
     const requestOptions: RequestInit = {
       method: "POST",
       headers: fieldRowArrToHeaders([
@@ -91,7 +101,7 @@ const ScheduleExplorer = () => {
       {selectedSchedule && data ? (
         <div className="flex max-w-7xl flex-col md:flex-row gap-8 md:pr-8">
           <div className="w-full md:w-7/12 flex flex-col gap-8">
-            <h2 className="text-2xl font-medium text-blue-900">
+            <h2 className="text-2xl font-medium text-blue-800">
               Schedule - {selectedSchedule?.topicKey}
             </h2>
             <div>

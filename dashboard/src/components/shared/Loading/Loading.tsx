@@ -1,13 +1,26 @@
 import Lottie from "lottie-react";
 import loadingAnim from "./loading.animation.json";
-import { PropsWithChildren, useEffect, useRef, useState } from "react";
+import {
+  PropsWithChildren,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import classNames from "classnames";
 
 interface Props extends PropsWithChildren {
   delay: number;
   conditionToShow: boolean;
+  className?: string;
 }
 
-const Loading: React.FC<Props> = ({ delay, conditionToShow, children }) => {
+const Loading: React.FC<Props> = ({
+  delay,
+  conditionToShow,
+  className,
+  children,
+}) => {
   const timeoutRef = useRef<NodeJS.Timeout>();
   const [showLoader, setShowLoader] = useState(true);
 
@@ -25,12 +38,12 @@ const Loading: React.FC<Props> = ({ delay, conditionToShow, children }) => {
     return () => clearTimeout(timeoutRef.current);
   }, [delay]);
 
-  return showLoader || !conditionToShow ? (
+  const Loader = (
     <div
       role="status"
       className="w-full h-full flex flex-col items-center justify-center"
     >
-      <div className="w-40 mb-20">
+      <div className={classNames("w-40 mb-20", className)}>
         <Lottie
           initialSegment={[40, 149]}
           loop
@@ -40,8 +53,12 @@ const Loading: React.FC<Props> = ({ delay, conditionToShow, children }) => {
       </div>
       <span className="sr-only">Loading...</span>
     </div>
+  );
+
+  return showLoader || !conditionToShow ? (
+    Loader
   ) : (
-    <>{children}</>
+    <Suspense fallback={Loader}>{children}</Suspense>
   );
 };
 

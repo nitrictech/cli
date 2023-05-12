@@ -75,12 +75,7 @@ var runCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
-		dashPort, err := dash.Serve()
-		if err != nil {
-			cobra.CheckErr(err)
-		}
-
-		ls := run.NewLocalServices(proj, false, dashPort)
+		ls := run.NewLocalServices(proj, false, dash)
 		if ls.Running() {
 			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")
 			os.Exit(2)
@@ -164,15 +159,10 @@ var runCmd = &cobra.Command{
 			cobra.CheckErr(err)
 		}
 
-		err = dash.Refresh(ls)
-		if err != nil {
-			cobra.CheckErr(err)
-		}
-
 		stackState.Update(pool, ls)
 
 		area, _ := pterm.DefaultArea.Start()
-		area.Update(stackState.Tables(9001, *dashPort))
+		area.Update(stackState.Tables(9001, *ls.GetDashPort()))
 
 		lck := sync.Mutex{}
 		// React to worker pool state and update services table
@@ -187,12 +177,7 @@ var runCmd = &cobra.Command{
 
 			stackState.Update(pool, ls)
 
-			err = dash.Refresh(ls)
-			if err != nil {
-				cobra.CheckErr(err)
-			}
-
-			area.Update(stackState.Tables(9001, *dashPort))
+			area.Update(stackState.Tables(9001, *ls.GetDashPort()))
 		})
 
 		select {

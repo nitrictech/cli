@@ -17,6 +17,7 @@
 package dashboard
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -26,24 +27,30 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
 
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
+	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
-type dashboard struct {
-	project        *project.Project
-	apis           []*openapi3.T
-	schedules      []*codeconfig.TopicResult
-	envMap         map[string]string
-	melody         *melody.Melody
-	triggerAddress string
-	apiAddresses   map[string]string
+type Dashboard struct {
+	project              *project.Project
+	apis                 []*openapi3.T
+	schedules            []*codeconfig.TopicResult
+	buckets              []string
+	envMap               map[string]string
+	melody               *melody.Melody
+	triggerAddress       string
+	storageAddress       string
+	apiAddresses         map[string]string
+	resourcesLastUpdated time.Time
+	bucketNotifications  []*codeconfig.BucketNotification
 }
 
 type Api struct {
@@ -52,44 +59,80 @@ type Api struct {
 }
 
 type DashResponse struct {
-	Apis           []*openapi3.T             `json:"apis,omitempty"`
-	Schedules      []*codeconfig.TopicResult `json:"schedules,omitempty"`
-	ProjectName    string                    `json:"projectName,omitempty"`
-	ApiAddresses   map[string]string         `json:"apiAddresses,omitempty"`
-	TriggerAddress string                    `json:"triggerAddress,omitempty"`
+	Apis                []*openapi3.T                    `json:"apis,omitempty"`
+	Buckets             []string                         `json:"buckets,omitempty"`
+	Schedules           []*codeconfig.TopicResult        `json:"schedules,omitempty"`
+	ProjectName         string                           `json:"projectName,omitempty"`
+	ApiAddresses        map[string]string                `json:"apiAddresses,omitempty"`
+	TriggerAddress      string                           `json:"triggerAddress,omitempty"`
+	StorageAddress      string                           `json:"storageAddress,omitempty"`
+	BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications,omitempty"`
+}
+
+type Bucket struct {
+	Name         string     `json:"name,omitempty"`
+	CreationDate *time.Time `json:"creationDate,omitempty"`
+}
+
+type RefreshOptions struct {
+	Pool            pool.WorkerPool
+	TriggerAddress  string
+	StorageAddress  string
+	ApiAddresses    map[string]string
+	ServiceListener net.Listener
 }
 
 //go:embed dist/*
 var content embed.FS
 
-func New(p *project.Project, envMap map[string]string) (*dashboard, error) {
+func New(p *project.Project, envMap map[string]string) (*Dashboard, error) {
 	m := melody.New()
 
-	return &dashboard{
-		project: p,
-		apis:    []*openapi3.T{},
-		envMap:  envMap,
-		melody:  m,
+	return &Dashboard{
+		project:             p,
+		apis:                []*openapi3.T{},
+		envMap:              envMap,
+		melody:              m,
+		bucketNotifications: []*codeconfig.BucketNotification{},
+		schedules:           []*codeconfig.TopicResult{},
 	}, nil
 }
 
-func (d *dashboard) Refresh(ls run.LocalServices) error {
+func (d *Dashboard) AddBucket(name string) {
+	// reset buckets to allow for most recent resources only
+	if !d.resourcesLastUpdated.IsZero() && time.Since(d.resourcesLastUpdated) > time.Second*5 {
+		d.buckets = []string{}
+	}
+
+	for _, b := range d.buckets {
+		if b == name {
+			return
+		}
+	}
+
+	d.buckets = append(d.buckets, name)
+
+	d.resourcesLastUpdated = time.Now()
+}
+
+func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 	cc, err := codeconfig.New(d.project, d.envMap)
 	if err != nil {
 		return err
 	}
 
-	pool := ls.GetWorkerPool()
-
-	spec, err := cc.SpecFromWorkerPool(pool)
+	spec, err := cc.SpecFromWorkerPool(opts.Pool)
 	if err != nil {
 		return err
 	}
 
-	d.triggerAddress = ls.TriggerAddress()
-	d.apiAddresses = ls.Apis()
 	d.apis = spec.Apis
-	d.schedules = spec.Shedules
+	d.schedules = spec.Schedules
+	d.bucketNotifications = spec.BucketNotifications
+
+	d.triggerAddress = opts.TriggerAddress
+	d.apiAddresses = opts.ApiAddresses
+	d.storageAddress = opts.StorageAddress
 
 	err = d.sendUpdate()
 	if err != nil {
@@ -99,11 +142,7 @@ func (d *dashboard) Refresh(ls run.LocalServices) error {
 	return nil
 }
 
-type Message struct {
-	Text string `json:"text"`
-}
-
-func (d *dashboard) Serve() (*int, error) {
+func (d *Dashboard) Serve(sp storage.StorageService) (*int, error) {
 	// Get the embedded files from the 'dist' directory
 	staticFiles, err := fs.Sub(content, "dist")
 	if err != nil {
@@ -140,7 +179,7 @@ func (d *dashboard) Serve() (*int, error) {
 	})
 
 	// Define an API route under /call to proxy communication between app and apis
-	http.HandleFunc("/call/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/call/", func(w http.ResponseWriter, r *http.Request) {
 		// Set CORs headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
@@ -154,8 +193,8 @@ func (d *dashboard) Serve() (*int, error) {
 		// find call callAddress
 		callAddress := r.Header.Get("X-Nitric-Local-Call-Address")
 
-		// Remove "/call" prefix from URL path
-		path := strings.TrimPrefix(r.URL.Path, "/call/")
+		// Remove "/api/call/" prefix from URL path
+		path := strings.TrimPrefix(r.URL.Path, "/api/call/")
 
 		// Build proxy request URL with query parameters
 		query := r.URL.RawQuery
@@ -201,6 +240,81 @@ func (d *dashboard) Serve() (*int, error) {
 		}
 	})
 
+	http.HandleFunc("/api/storage", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == "OPTIONS" {
+			return
+		}
+
+		ctx := context.Background()
+		action := r.URL.Query().Get("action")
+		bucket := r.URL.Query().Get("bucket")
+
+		if bucket == "" && action != "list-buckets" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			handleResponseWriter(w, []byte(`{"error": "Bucket is required"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		switch action {
+		case "list-files":
+			fileList, err := sp.ListFiles(ctx, bucket)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			jsonResponse, _ := json.Marshal(fileList)
+			handleResponseWriter(w, jsonResponse)
+		case "write-file":
+			fileKey := r.URL.Query().Get("fileKey")
+			if fileKey == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				handleResponseWriter(w, []byte(`{"error": "fileKey is required for delete-file action"}`))
+				return
+			}
+
+			// Read the contents of the file
+			contents, err := io.ReadAll(r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				handleResponseWriter(w, []byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+				return
+			}
+
+			err = sp.Write(ctx, bucket, fileKey, contents)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			handleResponseWriter(w, []byte(`{"success": true}`))
+		case "delete-file":
+			fileKey := r.URL.Query().Get("fileKey")
+			if fileKey == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				handleResponseWriter(w, []byte(`{"error": "fileKey is required for delete-file action"}`))
+				return
+			}
+
+			err = sp.Delete(ctx, bucket, fileKey)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			handleResponseWriter(w, []byte(`{"success": true}`))
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			handleResponseWriter(w, []byte(`{"error": "Invalid action"}`))
+		}
+	})
+
 	// using ephemeral ports, we will redirect to the dashboard on main api 4000
 	dashListener, err := utils.GetNextListener(utils.MinPort(49152), utils.MaxPort(65535))
 	if err != nil {
@@ -220,18 +334,28 @@ func (d *dashboard) Serve() (*int, error) {
 	return &port, nil
 }
 
-func (d *dashboard) sendUpdate() error {
+func handleResponseWriter(w http.ResponseWriter, data []byte) {
+	_, err := w.Write(data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (d *Dashboard) sendUpdate() error {
 	// ignore if no apis
 	if len(d.apis) == 0 {
 		return nil
 	}
 
 	response := &DashResponse{
-		Apis:           d.apis,
-		Schedules:      d.schedules,
-		ProjectName:    d.project.Name,
-		ApiAddresses:   d.apiAddresses,
-		TriggerAddress: d.triggerAddress,
+		Apis:                d.apis,
+		Buckets:             d.buckets,
+		Schedules:           d.schedules,
+		ProjectName:         d.project.Name,
+		ApiAddresses:        d.apiAddresses,
+		TriggerAddress:      d.triggerAddress,
+		StorageAddress:      d.storageAddress,
+		BucketNotifications: d.bucketNotifications,
 	}
 
 	// Encode the response as JSON

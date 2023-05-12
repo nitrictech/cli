@@ -92,14 +92,29 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 	errs := multierror.ErrorList{}
 
 	for _, f := range c.functions {
-		for k := range f.buckets {
-			builder.set(&deploy.Resource{
-				Name: k,
+		for bucketName := range f.buckets {
+			notifications := []*deploy.BucketNotificationTarget{}
+
+			for _, v := range f.bucketNotifications[bucketName] {
+				notifications = append(notifications, &deploy.BucketNotificationTarget{
+					Config: v.Config,
+					Target: &deploy.BucketNotificationTarget_ExecutionUnit{
+						ExecutionUnit: f.name,
+					},
+				})
+			}
+
+			res := &deploy.Resource{
+				Name: bucketName,
 				Type: v1.ResourceType_Bucket,
 				Config: &deploy.Resource_Bucket{
-					Bucket: &deploy.Bucket{},
+					Bucket: &deploy.Bucket{
+						Notifications: notifications,
+					},
 				},
-			})
+			}
+
+			builder.set(res)
 		}
 
 		for k := range f.collections {

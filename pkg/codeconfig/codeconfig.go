@@ -63,23 +63,18 @@ type TopicResult struct {
 	WorkerKey string `json:"workerKey,omitempty"`
 	TopicKey  string `json:"topicKey,omitempty"`
 }
-type SpecResult struct {
-	Apis     []*openapi3.T
-	Shedules []*TopicResult
+
+type BucketNotification struct {
+	Bucket                   string `json:"bucket,omitempty"`
+	NotificationType         string `json:"notificationType,omitempty"`
+	NotificationPrefixFilter string `json:"notificationPrefixFilter,omitempty"`
 }
 
-// type SpecResultInterface interface {
-//     GetAPIs() []*openapi3.T
-// 	GetSchedules() []*TopicResult
-// }
-
-// func (s *SpecResult) GetAPIs() []*openapi3.T {
-//     return s.apis
-// }
-
-// func (s *SpecResult) GetSchedules() []*TopicResult {
-//     return s.shedules
-// }
+type SpecResult struct {
+	Apis                []*openapi3.T
+	Schedules           []*TopicResult
+	BucketNotifications []*BucketNotification
+}
 
 func New(p *project.Project, envMap map[string]string) (*codeConfig, error) {
 	return &codeConfig{
@@ -140,6 +135,7 @@ var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, error) {
 	apis := map[string][]*apiHandler{}
 	schedules := []*TopicResult{}
+	bucketNotifications := []*BucketNotification{}
 
 	// transform worker pool into apiHandlers
 	for _, wrkr := range pool.GetWorkers(nil) {
@@ -175,6 +171,12 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 				TopicKey:  topicKey,
 				WorkerKey: w.Key(),
 			})
+		case *worker.BucketNotificationWorker:
+			bucketNotifications = append(bucketNotifications, &BucketNotification{
+				Bucket:                   w.Bucket(),
+				NotificationType:         w.NotificationType().String(),
+				NotificationPrefixFilter: w.NotificationPrefixFilter(),
+			})
 		}
 	}
 	// Convert the map of unique API specs to an array
@@ -199,9 +201,15 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 		return schedules[i].TopicKey < schedules[j].TopicKey
 	})
 
+	// sort schedules by topic key
+	sort.Slice(bucketNotifications, func(i, j int) bool {
+		return bucketNotifications[i].Bucket < bucketNotifications[j].Bucket
+	})
+
 	return &SpecResult{
-		Apis:     apiSpecs,
-		Shedules: schedules,
+		Apis:                apiSpecs,
+		Schedules:           schedules,
+		BucketNotifications: bucketNotifications,
 	}, nil
 }
 

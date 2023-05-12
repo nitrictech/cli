@@ -22,6 +22,8 @@ describe("API Explorer spec", () => {
       "second-api/content-type-html1 methods",
       "second-api/content-type-image1 methods",
       "second-api/content-type-xml1 methods",
+      "second-api/image-from-bucket3 methods",
+      "second-api/very-nested-files1 methods",
     ];
 
     cy.getTestEl("endpoint-select-options")
@@ -34,7 +36,7 @@ describe("API Explorer spec", () => {
   });
 
   it("should allow query params", () => {
-    cy.intercept("/call/**").as("apiCall");
+    cy.intercept("/api/call/**").as("apiCall");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
     cy.getTestEl("endpoint-select-options").within(() => {
@@ -64,7 +66,7 @@ describe("API Explorer spec", () => {
       "/query-test?firstParam=myValue&secondParam=mySecondValue"
     );
 
-    cy.intercept("/call/**").as("apiCall");
+    cy.intercept("/api/call/**").as("apiCall");
 
     cy.getTestEl("send-api-btn").click();
 
@@ -85,7 +87,7 @@ describe("API Explorer spec", () => {
   });
 
   it("should allow request headers", () => {
-    cy.intercept("/call/**").as("apiCall");
+    cy.intercept("/api/call/**").as("apiCall");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
     cy.getTestEl("endpoint-select-options").within(() => {
@@ -102,7 +104,7 @@ describe("API Explorer spec", () => {
         expect(JSON.parse(text)).to.have.property("headers");
       });
 
-    cy.intercept("/call/**").as("apiCall");
+    cy.intercept("/api/call/**").as("apiCall");
 
     cy.getTestEl("Headers-tab-btn").first().click();
 
@@ -132,7 +134,7 @@ describe("API Explorer spec", () => {
   });
 
   it("should allow path params", () => {
-    cy.intercept("/call/**").as("apiCall");
+    cy.intercept("/api/call/**").as("apiCall");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
     cy.getTestEl("endpoint-select-options").within(() => {
@@ -153,7 +155,7 @@ describe("API Explorer spec", () => {
       "/path-test/tester"
     );
 
-    cy.intercept("/call/**").as("apiCall");
+    cy.intercept("/api/call/**").as("apiCall");
 
     cy.getTestEl("send-api-btn").click();
 
@@ -163,7 +165,7 @@ describe("API Explorer spec", () => {
   });
 
   it("should allow json body", () => {
-    cy.intercept("/call/**").as("apiCall");
+    cy.intercept("/api/call/**").as("apiCall");
     cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
     cy.getTestEl("endpoint-select-options").within(() => {
@@ -188,7 +190,7 @@ describe("API Explorer spec", () => {
 
     cy.getTestEl("generated-request-path").should("contain.text", "/json-test");
 
-    cy.intercept("/call/**").as("apiCall");
+    cy.intercept("/api/call/**").as("apiCall");
 
     cy.getTestEl("send-api-btn").click();
 
@@ -206,6 +208,67 @@ describe("API Explorer spec", () => {
           },
         });
       });
+  });
+
+  it("should upload binary file", () => {
+    cy.intercept("/api/call/**").as("apiCall");
+    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
+
+    cy.getTestEl("endpoint-select-options").within(() => {
+      cy.get("li").contains("second-api/image-from-bucket3 methods").click();
+    });
+
+    cy.getTestEl("method-select").within(() => cy.get("button").click());
+
+    cy.getTestEl("method-select-options").within(() => {
+      cy.get("li").contains("PUT").click();
+    });
+
+    cy.getTestEl("Body-tab-btn").click();
+
+    cy.getTestEl("Binary-tab-btn").click();
+
+    cy.fixture("photo.jpg").then((fileContent) => {
+      // Use cy.get() to select the file input element and upload the file
+      cy.getTestEl("file-upload").then((el) => {
+        // Upload the file to the input element
+        const testFile = new File([fileContent], "photo.jpg", {
+          type: "image/jpeg",
+        });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(testFile);
+        const fileInput = el[0];
+        // @ts-ignore
+        fileInput.files = dataTransfer.files;
+        // Trigger a 'change' event on the input element
+        cy.wrap(fileInput).trigger("change", { force: true });
+      });
+    });
+
+    cy.getTestEl("file-upload-info").should(
+      "contain.text",
+      "photo.jpg - 20.05 KB"
+    );
+
+    cy.getTestEl("send-api-btn").click();
+
+    cy.wait("@apiCall");
+
+    cy.getTestEl("response-status", 5000).should("contain.text", "Status: 200");
+
+    cy.getTestEl("method-select").within(() => cy.get("button").click());
+
+    cy.getTestEl("method-select-options").within(() => {
+      cy.get("li").contains("GET").click();
+    });
+
+    cy.intercept("/api/call/**").as("apiCall");
+
+    cy.getTestEl("send-api-btn").click();
+
+    cy.wait("@apiCall");
+
+    cy.getTestEl("response-image").should("exist");
   });
 
   [
@@ -228,7 +291,7 @@ describe("API Explorer spec", () => {
     ],
   ].forEach(([contentType, expected]) => {
     it(`should handle content type ${contentType}`, () => {
-      cy.intercept("/call/**").as("apiCall");
+      cy.intercept("/api/call/**").as("apiCall");
       cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
       cy.getTestEl("endpoint-select-options").within(() => {

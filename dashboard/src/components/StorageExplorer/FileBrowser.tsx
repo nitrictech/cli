@@ -45,6 +45,7 @@ function generateTree(data: { Key: string }[]): FileData[] {
         const newNode = {
           id: path,
           name: part,
+          ext: !isDir && part.includes(".") ? undefined : "",
           isDir,
           children: isDir ? [] : undefined,
         };

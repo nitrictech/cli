@@ -21,6 +21,8 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
       }
     }
 
+    localStorage.removeItem(`${LOCAL_STORAGE_KEY}-requests`);
+
     onAfterClear();
   };
 

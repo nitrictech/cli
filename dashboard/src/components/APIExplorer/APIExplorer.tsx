@@ -7,6 +7,7 @@ import type {
   Endpoint,
   HistoryItem,
   Method,
+  RequestHistoryItem,
 } from "../../types";
 import Badge from "../shared/Badge";
 import { fieldRowArrToHeaders, getHost } from "../../lib/utils";
@@ -24,6 +25,7 @@ import { generateResponse } from "../../lib/generate-response";
 import { formatResponseTime } from "./format-response-time";
 import Loading from "../shared/Loading";
 import FileUpload from "../StorageExplorer/FileUpload";
+import APIHistory from "./APIHistory";
 
 const getTabCount = (rows: FieldRow[]) => rows.filter((r) => !!r.key).length;
 
@@ -71,12 +73,14 @@ const APIExplorer = () => {
   const [bodyTabIndex, setBodyTabIndex] = useState(0);
   const [responseTabIndex, setResponseTabIndex] = useState(0);
 
+  const [apiHistory, setApiHistory] = useState<RequestHistoryItem[]>([]);
+
   const paths = useMemo(
     () => data?.apis.map((doc) => flattenPaths(doc)).flat(),
     [data]
   );
 
-  // Load history from localStorage on mount
+  // Load single history from localStorage on mount
   useEffect(() => {
     if (selectedApiEndpoint) {
       const storedHistory = localStorage.getItem(
@@ -110,6 +114,18 @@ const APIExplorer = () => {
       setResponse(undefined);
     }
   }, [selectedApiEndpoint]);
+
+  // Load request history
+  useEffect(() => {
+    const localHistory = localStorage.getItem(`${LOCAL_STORAGE_KEY}-requests`);
+    if (!localHistory) {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}-requests`, JSON.stringify([]));
+      setApiHistory([]);
+      return;
+    }
+
+    setApiHistory(JSON.parse(localHistory));
+  }, []);
 
   useEffect(() => {
     if (paths?.length) {
@@ -208,6 +224,15 @@ const APIExplorer = () => {
 
   const currentBodyTabName = bodyTabs[bodyTabIndex].name;
 
+  const handleSetCurrentEndpoint = (
+    endpoint: Endpoint,
+    request: APIRequest
+  ) => {
+    setSelectedApiEndpoint(endpoint);
+    setRequest(request);
+    setJSONBody(request.body?.toString() ?? "");
+  };
+
   const handleSend = async (
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
@@ -241,9 +266,28 @@ const APIExplorer = () => {
     const res = await fetch(url, requestOptions);
 
     const callResponse = await generateResponse(res, startTime);
+    handleAppendHistory(selectedApiEndpoint, request, callResponse);
     setResponse(callResponse);
 
     setTimeout(() => setCallLoading(false), 300);
+  };
+
+  const handleAppendHistory = (
+    endpoint: Endpoint,
+    request: APIRequest,
+    response: APIResponse
+  ) => {
+    const appendedApiHistory = [
+      ...apiHistory,
+      { endpoint, request, response, time: Date.now() } as RequestHistoryItem,
+    ];
+
+    setApiHistory(appendedApiHistory);
+
+    localStorage.setItem(
+      `${LOCAL_STORAGE_KEY}-requests`,
+      JSON.stringify(appendedApiHistory)
+    );
   };
 
   return (
@@ -252,8 +296,8 @@ const APIExplorer = () => {
       conditionToShow={Boolean(paths && selectedApiEndpoint && request?.method)}
     >
       {paths && selectedApiEndpoint && request?.method ? (
-        <div className="flex max-w-7xl flex-col md:flex-row gap-8 md:pr-8">
-          <div className="w-full md:w-7/12 flex flex-col gap-8">
+        <div className="flex max-w-7xl flex-col xl:flex-row gap-8 md:pr-8">
+          <div className="w-full xl:w-7/12 flex flex-col gap-8">
             <div>
               <div className="flex">
                 <h2 className="text-2xl font-medium text-blue-800">
@@ -262,11 +306,16 @@ const APIExplorer = () => {
                 <APIMenu
                   selected={selectedApiEndpoint}
                   onAfterClear={() => {
+                    setApiHistory([]);
                     setJSONBody("");
                     setRequest({
                       ...requestDefault,
                       method: selectedApiEndpoint.methods[0],
                       path: generatePath(selectedApiEndpoint, [], []),
+                      pathParams: generatePathParams(
+                        selectedApiEndpoint,
+                        requestDefault
+                      ),
                     });
                   }}
                 />
@@ -566,11 +615,14 @@ const APIExplorer = () => {
               </div>
             </div>
           </div>
-          <div className="w-5/12 flex flex-col gap-12 px-8">
+          <div className="w-full xl:w-5/12 flex flex-col gap-12 px-8">
             <h3 className="text-2xl font-semibold opacity-70 leading-6 text-gray-900">
-              History (Coming soon)
+              History
             </h3>
-            {/* <APIHistory history={history} /> */}
+            <APIHistory
+              history={apiHistory}
+              setSelectedRequest={handleSetCurrentEndpoint}
+            />
           </div>
         </div>
       ) : null}

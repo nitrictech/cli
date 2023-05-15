@@ -179,12 +179,22 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 	errList := make([]error, 0)
 
 	for _, w := range ws {
-		if _, err := w.HandleTrigger(context.TODO(), trigger); err != nil {
+		resp, err := w.HandleTrigger(context.TODO(), trigger);
+		if err != nil {
 			errList = append(errList, err)
+		}
+
+		if !resp.GetTopic().Success {
+			errList = append(errList, fmt.Errorf("topic delivery was unsuccessful"))
 		}
 	}
 
-	ctx.Success("text/plain", []byte(fmt.Sprintf("%d successful & %d failed deliveries", len(ws)-len(errList), len(errList))))
+	statusCode := 200
+	if len(errList) > 0 {
+		statusCode = 500
+	}
+
+	ctx.Error(fmt.Sprintf("%d successful & %d failed deliveries", len(ws)-len(errList), len(errList)), statusCode)
 }
 
 // Update the gateway and API based on the worker pool

@@ -64,6 +64,19 @@ export interface HistoryItem {
   JSONBody: string;
 }
 
+export interface RequestHistoryItem {
+  endpoint: Endpoint;
+  request: APIRequest;
+  response: APIResponse;
+  time: number;
+}
+
+export interface ScheduleHistoryItem {
+  schedule: Schedule;
+  success: boolean;
+  time: number;
+}
+
 export interface BucketFile {
   Key: string;
 }

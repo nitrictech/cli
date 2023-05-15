@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { useWebSocket } from "../lib/use-web-socket";
-import Select from "./shared/Select";
-import type { APIResponse, Schedule } from "../types";
-import Badge from "./shared/Badge";
-import Spinner from "./shared/Spinner";
-import { formatFileSize } from "./APIExplorer/format-file-size";
-import Tabs from "./layout/Tabs";
-import APIResponseContent from "./APIExplorer/APIResponseContent";
-import { fieldRowArrToHeaders, getHost } from "../lib/utils";
-import { generateResponse } from "../lib/generate-response";
-import { formatResponseTime } from "./APIExplorer/format-response-time";
-import Loading from "./shared/Loading";
+import { useWebSocket } from "../../lib/use-web-socket";
+import Select from "../shared/Select";
+import type { APIResponse, Schedule, ScheduleHistoryItem } from "../../types";
+import Badge from "../shared/Badge";
+import Spinner from "../shared/Spinner";
+import { formatFileSize } from "../APIExplorer/format-file-size";
+import Tabs from "../layout/Tabs";
+import APIResponseContent from "../APIExplorer/APIResponseContent";
+import { fieldRowArrToHeaders, getHost } from "../../lib/utils";
+import { generateResponse } from "../../lib/generate-response";
+import { formatResponseTime } from "../APIExplorer/format-response-time";
+import Loading from "../shared/Loading";
+import ScheduleHistory from "./ScheduleHistory";
 
 const LOCAL_STORAGE_KEY = "nitric-local-dash-schedule-history";
 
@@ -22,6 +23,40 @@ const ScheduleExplorer = () => {
 
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule>();
   const [responseTabIndex, setResponseTabIndex] = useState(0);
+
+  const [scheduleHistory, setScheduleHistory] = useState<ScheduleHistoryItem[]>(
+    []
+  );
+
+  // Load request history
+  useEffect(() => {
+    const localHistory = localStorage.getItem(`${LOCAL_STORAGE_KEY}-requests`);
+    if (!localHistory) {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}-requests`, JSON.stringify([]));
+      setScheduleHistory([]);
+      return;
+    }
+
+    setScheduleHistory(JSON.parse(localHistory));
+  }, []);
+
+  const handleSetCurrentSchedule = (schedule: Schedule) => {
+    setSelectedSchedule(schedule);
+  };
+
+  const handleAppendHistory = (schedule: Schedule, success: boolean) => {
+    const appendedScheduleHistory = [
+      ...scheduleHistory,
+      { schedule, success, time: Date.now() } as ScheduleHistoryItem,
+    ];
+
+    setScheduleHistory(appendedScheduleHistory);
+
+    localStorage.setItem(
+      `${LOCAL_STORAGE_KEY}-requests`,
+      JSON.stringify(appendedScheduleHistory)
+    );
+  };
 
   useEffect(() => {
     if (data?.schedules?.length) {
@@ -91,6 +126,7 @@ const ScheduleExplorer = () => {
     const res = await fetch(url, requestOptions);
 
     const callResponse = await generateResponse(res, startTime);
+    handleAppendHistory(selectedSchedule, callResponse.status < 400);
     setResponse(callResponse);
 
     setTimeout(() => setCallLoading(false), 300);
@@ -99,8 +135,8 @@ const ScheduleExplorer = () => {
   return (
     <Loading delay={400} conditionToShow={!loading}>
       {selectedSchedule && data ? (
-        <div className="flex max-w-7xl flex-col md:flex-row gap-8 md:pr-8">
-          <div className="w-full md:w-7/12 flex flex-col gap-8">
+        <div className="flex max-w-7xl flex-col xl:flex-row gap-8 md:pr-8">
+          <div className="w-full xl:w-7/12 flex flex-col gap-8">
             <h2 className="text-2xl font-medium text-blue-800">
               Schedule - {selectedSchedule?.topicKey}
             </h2>
@@ -270,6 +306,15 @@ const ScheduleExplorer = () => {
                 </div>
               </div>
             </div>
+          </div>
+          <div className="w-full xl:w-5/12 flex flex-col gap-12 px-8">
+            <h3 className="text-2xl font-semibold opacity-70 leading-6 text-gray-900">
+              History
+            </h3>
+            <ScheduleHistory
+              history={scheduleHistory}
+              setSelectedSchedule={handleSetCurrentSchedule}
+            />
           </div>
         </div>
       ) : !data?.schedules?.length ? (

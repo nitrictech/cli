@@ -1,20 +1,25 @@
-import type { APIRequest, Endpoint, RequestHistoryItem } from "../../types";
+import type { RequestHistory, ApiHistoryItem } from "../../types";
 import Badge from "../shared/Badge";
 import type { FieldRow } from "../shared/FieldRows";
 import { getDateString } from "../../lib/utils";
 
 interface Props {
-  history: RequestHistoryItem[];
-  setSelectedRequest: (endpoint: Endpoint, request: APIRequest) => void;
+  history: ApiHistoryItem[];
+  setSelectedRequest: (api: string, request: RequestHistory) => void;
 }
 
 const stringifyQueryParams = (queryParams: FieldRow[]) => {
-  return queryParams.filter((p) => p.key && p.value).length > 0
-    ? `?${queryParams.map(
-        (p, idx) =>
-          `${p.key}=${p.value}` + (idx !== queryParams.length - 1 ? "&" : "")
-      )}`
-    : "";
+  if (!queryParams) {
+    return "";
+  }
+  if (queryParams.filter((p) => p.key && p.value).length === 0) {
+    return "";
+  }
+
+  return `?${queryParams.map(
+    (p, idx) =>
+      `${p.key}=${p.value}` + (idx !== queryParams.length - 1 ? "&" : "")
+  )}`;
 };
 
 const APIHistory: React.FC<Props> = ({ history, setSelectedRequest }) => {
@@ -28,13 +33,15 @@ const APIHistory: React.FC<Props> = ({ history, setSelectedRequest }) => {
         {history
           .sort((a, b) => b.time - a.time)
           .filter((h) => h.request && h.response)
-          .map((h) => (
-            <div
-              onClick={() => setSelectedRequest(h.endpoint, h.request)}
+          .map((h, idx) => (
+            <button
+              key={idx}
+              aria-label={`selected-request-${idx}`}
+              onClick={() => setSelectedRequest(h.api, h.request)}
               className="flex flex-col gap-2 p-4 border border-slate-200 hover:bg-slate-100 rounded-lg hover:cursor-pointer"
             >
-              <div className="flex flex-row justify-between">
-                <div className="flex flex-row gap-4">
+              <div className="flex flex-row justify-between w-full items-center">
+                <div className="flex flex-row gap-2">
                   {h.response.status && (
                     <Badge status={h.response.status >= 400 ? "red" : "green"}>
                       {h.response.status}
@@ -61,11 +68,11 @@ const APIHistory: React.FC<Props> = ({ history, setSelectedRequest }) => {
                 <p>{getDateString(h.time)}</p>
               </div>
               <p>
-                {h.endpoint.api.replace("https://", "").replace("http://", "")}
+                {h.api.replace("https://", "").replace("http://", "")}
                 {h.request.path}
                 {stringifyQueryParams(h.request.queryParams)}
               </p>
-            </div>
+            </button>
           ))}
       </div>
     </div>

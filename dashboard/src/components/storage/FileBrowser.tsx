@@ -11,13 +11,14 @@ import {
   FileContextMenu,
 } from "chonky";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { useWebSocket } from "../../lib/use-web-socket";
+import { useWebSocket } from "../../lib/hooks/use-web-socket";
+import { useBucket } from "../../lib/hooks/use-bucket";
 
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
-import { useBucket } from "../../lib/use-bucket";
 import "./file-browser-styles.css";
 import FileUpload from "./FileUpload";
-import Loading from "../shared/Loading";
+import { Loading } from "../shared";
+
 interface Props {
   bucket: string;
 }

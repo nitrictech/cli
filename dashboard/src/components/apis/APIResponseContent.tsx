@@ -1,4 +1,4 @@
-import { getFileExtension } from "../../lib/get-file-extension";
+import { getFileExtension } from "../../lib/utils";
 import type { APIResponse } from "../../types";
 import CodeEditor from "./CodeEditor";
 

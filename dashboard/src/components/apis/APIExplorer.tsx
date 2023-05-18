@@ -1,33 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useWebSocket } from "../../lib/use-web-socket";
-import Select from "../shared/Select";
 import type {
   APIRequest,
   APIResponse,
   Endpoint,
-  HistoryItem,
   Method,
-  RequestHistoryItem,
+  LocalStorageHistoryItem,
+  ApiHistoryItem,
 } from "../../types";
-import Badge from "../shared/Badge";
-import { fieldRowArrToHeaders, getHost } from "../../lib/utils";
-import Spinner from "../shared/Spinner";
-import Tabs from "../layout/Tabs";
-import FieldRows, { FieldRow } from "../shared/FieldRows";
-import { flattenPaths } from "./flatten-paths";
-import { generatePath } from "./generate-path";
+import {
+  Select,
+  Badge,
+  Spinner,
+  Tabs,
+  FieldRows,
+  FieldRow,
+  Loading,
+} from "../shared";
+import {
+  flattenPaths,
+  generatePath,
+  generatePathParams,
+  formatResponseTime,
+  formatFileSize,
+  fieldRowArrToHeaders,
+  getHost,
+  generateResponse,
+} from "../../lib/utils";
 import APIResponseContent from "./APIResponseContent";
-import { formatFileSize } from "./format-file-size";
 import CodeEditor from "./CodeEditor";
 import APIMenu from "./APIMenu";
-import { generatePathParams } from "./generate-path-params";
-import { generateResponse } from "../../lib/generate-response";
-import { formatResponseTime } from "./format-response-time";
-import Loading from "../shared/Loading";
-import FileUpload from "../StorageExplorer/FileUpload";
 import APIHistory from "./APIHistory";
 
-const getTabCount = (rows: FieldRow[]) => rows.filter((r) => !!r.key).length;
+import FileUpload from "../storage/FileUpload";
+
+import { useWebSocket } from "../../lib/hooks/use-web-socket";
+import { useHistory } from "../../lib/hooks/use-history";
+
+const getTabCount = (rows: FieldRow[]) => {
+  if (!rows) return 0;
+
+  return rows.filter((r) => !!r.key).length;
+};
 
 export const LOCAL_STORAGE_KEY = "nitric-local-dash-api-history";
 
@@ -59,8 +72,10 @@ const bodyTabs = [
 ];
 
 const APIExplorer = () => {
-  const { data, loading } = useWebSocket();
+  const { data } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
+
+  const { data: history } = useHistory<ApiHistoryItem>("apis");
 
   const [JSONBody, setJSONBody] = useState<string>("");
   const [fileToUpload, setFileToUpload] = useState<File>();
@@ -73,12 +88,18 @@ const APIExplorer = () => {
   const [bodyTabIndex, setBodyTabIndex] = useState(0);
   const [responseTabIndex, setResponseTabIndex] = useState(0);
 
-  const [apiHistory, setApiHistory] = useState<RequestHistoryItem[]>([]);
+  const [apiHistory, setApiHistory] = useState<ApiHistoryItem[]>([]);
 
   const paths = useMemo(
     () => data?.apis.map((doc) => flattenPaths(doc)).flat(),
     [data]
   );
+
+  useEffect(() => {
+    if (history) {
+      setApiHistory(history);
+    }
+  }, [history]);
 
   // Load single history from localStorage on mount
   useEffect(() => {
@@ -88,7 +109,7 @@ const APIExplorer = () => {
       );
 
       if (storedHistory) {
-        const history: HistoryItem = JSON.parse(storedHistory);
+        const history: LocalStorageHistoryItem = JSON.parse(storedHistory);
         setJSONBody(history.JSONBody);
         setRequest({
           ...history.request,
@@ -224,10 +245,11 @@ const APIExplorer = () => {
 
   const currentBodyTabName = bodyTabs[bodyTabIndex].name;
 
-  const handleSetCurrentEndpoint = (
-    endpoint: Endpoint,
+  const handleSetCurrentEndpointFromHistory = (
+    api: string,
     request: APIRequest
   ) => {
+    const endpoint = paths?.find((p) => p.id === api);
     setSelectedApiEndpoint(endpoint);
     setRequest(request);
     setJSONBody(request.body?.toString() ?? "");
@@ -279,7 +301,17 @@ const APIExplorer = () => {
   ) => {
     const appendedApiHistory = [
       ...apiHistory,
-      { endpoint, request, response, time: Date.now() } as RequestHistoryItem,
+      {
+        api: endpoint.api,
+        request: {
+          method: request.method,
+          path: request.path,
+          queryParams: request.queryParams,
+        },
+        response: { status: response.status },
+        success: response.status ?? 500 < 400,
+        time: Date.now(),
+      } as ApiHistoryItem,
     ];
 
     setApiHistory(appendedApiHistory);
@@ -621,7 +653,7 @@ const APIExplorer = () => {
             </h3>
             <APIHistory
               history={apiHistory}
-              setSelectedRequest={handleSetCurrentEndpoint}
+              setSelectedRequest={handleSetCurrentEndpointFromHistory}
             />
           </div>
         </div>

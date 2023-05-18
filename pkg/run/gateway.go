@@ -24,8 +24,12 @@ import (
 	"time"
 
 	"github.com/fasthttp/router"
+	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 
+	"github.com/nitrictech/cli/pkg/codeconfig"
+	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
@@ -51,6 +55,7 @@ type BaseHttpGateway struct {
 	stop     chan bool
 	pool     pool.WorkerPool
 	dashPort int
+	project  *project.Project
 }
 
 var _ gateway.GatewayService = &BaseHttpGateway{}
@@ -149,6 +154,45 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 			ctx.Response.SetStatusCode(int(http.Status))
 			ctx.Response.SetBody(resp.Data)
 
+			var queryParams []dashboard.Param
+			for k, v := range query {
+				for _, val := range v.Value {
+					queryParams = append(queryParams, dashboard.Param{
+						Key: k,
+						Value: val,
+					})
+				}
+			}
+
+			err = dashboard.WriteHistoryRecord(s.project.Dir, dashboard.API, &dashboard.HistoryRecord{
+				Success: resp.GetHttp().Status < 400,
+				Time:    time.Now().UnixMilli(),
+				ApiHistoryItem: dashboard.ApiHistoryItem{
+					Api: s.GetApiAddresses()[apiName],
+					Request: &dashboard.RequestHistory{
+						Method: string(ctx.Request.Header.Method()),
+						Path:   string(ctx.URI().PathOriginal()),
+						QueryParams: queryParams,						
+						Headers: lo.MapEntries(headers, func(k string, v *v1.HeaderValue) (string, []string) {
+							return k, v.Value
+						}),
+						Body: ctx.Request.Body(),
+						PathParams: []dashboard.Param{},
+					},
+					Response: &dashboard.ResponseHistory{
+						Headers: lo.MapEntries(http.Headers, func(k string, v *v1.HeaderValue) (string, []string) {
+							return k, v.Value
+						}),
+						Status: http.Status,
+						Data:   resp.Data,
+						Size:   len(resp.Data),
+					},
+				},
+			})
+			if err != nil {
+				ctx.Error(fmt.Sprintf("error occurred writing history: %v", err), 500)
+			}
+
 			return
 		}
 
@@ -179,13 +223,36 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 	errList := make([]error, 0)
 
 	for _, w := range ws {
-		resp, err := w.HandleTrigger(context.TODO(), trigger);
+		resp, err := w.HandleTrigger(context.TODO(), trigger)
 		if err != nil {
 			errList = append(errList, err)
 		}
 
 		if !resp.GetTopic().Success {
 			errList = append(errList, fmt.Errorf("topic delivery was unsuccessful"))
+		}
+
+		var topicType dashboard.RecordType
+
+		switch w.(type) {
+		case *worker.ScheduleWorker:
+			topicType = dashboard.SCHEDULE
+		case *worker.SubscriptionWorker:
+			topicType = dashboard.TOPIC
+		}
+
+		err = dashboard.WriteHistoryRecord(s.project.Dir, topicType, &dashboard.HistoryRecord{
+			Success: resp.GetTopic().Success,
+			Time:    time.Now().UnixMilli(),
+			EventHistoryItem: dashboard.EventHistoryItem{
+				Event: &codeconfig.TopicResult{
+					TopicKey:  strings.ToLower(strings.ReplaceAll(topicName, " ", "-")),
+					WorkerKey: topicName,
+				},
+			},
+		})
+		if err != nil {
+			ctx.Error(fmt.Sprintf("error occurred writing history: %v", err), 500)
 		}
 	}
 

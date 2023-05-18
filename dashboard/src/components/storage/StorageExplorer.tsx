@@ -1,8 +1,7 @@
 import { lazy, useEffect, useState } from "react";
 
-import Loading from "../shared/Loading";
-import Select from "../shared/Select";
-import { useWebSocket } from "../../lib/use-web-socket";
+import { Loading, Select } from "../shared";
+import { useWebSocket } from "../../lib/hooks/use-web-socket";
 
 const FileBrowser = lazy(() => import("./FileBrowser"));
 

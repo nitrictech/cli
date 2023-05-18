@@ -13,16 +13,29 @@ export type Method =
   | "PATCH"
   | "TRACE";
 
-export interface Schedule {
+export interface WorkerResource {
   workerKey: string;
   topicKey: string;
+}
+export interface Schedule extends WorkerResource {}
+
+export interface Subscription extends WorkerResource {}
+
+export interface Topic extends Schedule {}
+
+export interface History {
+  apis: ApiHistoryItem[];
+  schedules: EventHistoryItem[];
+  topics: EventHistoryItem[];
 }
 
 export interface WebSocketResponse {
   projectName: string;
   buckets: string[];
   apis: APIDoc[];
-  schedules: Schedule[];
+  schedules: WorkerResource[];
+  topics: WorkerResource[];
+  subscriptions: WorkerResource[];
   triggerAddress: string;
   apiAddresses: Record<string, string>;
   storageAddress: string; // has http:// prefix
@@ -59,24 +72,34 @@ export interface APIResponse {
   headers?: Record<string, string>;
 }
 
-export interface HistoryItem {
+export interface BucketFile {
+  Key: string;
+}
+
+// HISTORY //
+
+/** Used only in local storage to store the last used params in a request */
+export interface LocalStorageHistoryItem {
   request: APIRequest;
   JSONBody: string;
 }
 
-export interface RequestHistoryItem {
-  endpoint: Endpoint;
-  request: APIRequest;
-  response: APIResponse;
+/** History that is received from the CLI web socket */
+export interface HistoryItem {
   time: number;
-}
-
-export interface ScheduleHistoryItem {
-  schedule: Schedule;
   success: boolean;
-  time: number;
 }
 
-export interface BucketFile {
-  Key: string;
+export interface EventHistoryItem extends HistoryItem {
+  event: WorkerResource;
 }
+
+export interface ApiHistoryItem extends HistoryItem {
+  api: string;
+  request: RequestHistory;
+  response: ResponseHistory;
+}
+
+export type RequestHistory = APIRequest;
+
+export type ResponseHistory = APIResponse;

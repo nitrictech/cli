@@ -49,6 +49,7 @@ require (
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/nitrictech/nitric/cloud/common v0.0.0-20230509232736-48f59463930d
 	github.com/olahol/melody v1.1.3
+	github.com/samber/lo v1.38.1
 	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
 	go.etcd.io/bbolt v1.3.6
 	google.golang.org/protobuf v1.30.0
@@ -319,7 +320,6 @@ require (
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd // indirect
 	github.com/ryancurrah/gomodguard v1.3.0 // indirect
 	github.com/ryanrolds/sqlclosecheck v0.4.0 // indirect
-	github.com/samber/lo v1.38.1 // indirect
 	github.com/sanposhiho/wastedassign/v2 v2.0.7 // indirect
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.23.0 // indirect

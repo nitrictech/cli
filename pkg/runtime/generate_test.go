@@ -37,27 +37,30 @@ FROM node:alpine as build
 
 ARG HANDLER
 
-WORKDIR /usr/app
-
 # Python and make are required by certain native package build processes in NPM packages.
-ENV PYTHONUNBUFFERED=1
-RUN apk add --update --no-cache python3 make g++ && ln -sf python3 /usr/bin/python
-RUN python3 -m ensurepip
-RUN pip3 install --no-cache --upgrade pip setuptools
+RUN apk add g++ make py3-pip
 
 RUN yarn global add typescript @vercel/ncc
 
-COPY . .
+WORKDIR /usr/app
 
-RUN yarn import || echo Lockfile already exists
+COPY package.json *.lock *-lock.json /
 
-RUN set -ex; yarn install --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
+RUN yarn import || echo ""
+
+RUN set -ex && \
+    yarn install --production --frozen-lockfile --cache-folder /tmp/.cache && \
+    rm -rf /tmp/.cache
 
 RUN test -f tsconfig.json || echo "{\"compilerOptions\":{\"esModuleInterop\":true,\"target\":\"es2015\",\"moduleResolution\":\"node\"}}" > tsconfig.json
 
+COPY . .
+
 # make prisma external to bundle - https://github.com/prisma/prisma/issues/16901#issuecomment-1362940774 \
 # TODO: remove when custom dockerfile support is available
-RUN ncc build ${HANDLER} -o lib/ -e .prisma/client -e @prisma/client
+RUN \
+  --mount=type=cache,target=/tmp/ncc-cache \
+  ncc build ${HANDLER} -o lib/ -e .prisma/client -e @prisma/client -t
 
 FROM node:alpine as final
 
@@ -67,17 +70,19 @@ RUN apk update && \
     apk add --no-cache ca-certificates && \
     update-ca-certificates
 
-COPY --from=build /usr/app/lib/ ./lib/
+COPY package.json *.lock *-lock.json ./
+
+RUN set -ex && \
+    yarn install --production --frozen-lockfile --cache-folder /tmp/.cache && \
+    rm -rf /tmp/.cache
 
 COPY . .
 
-RUN set -ex; \
-    yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; \
-    rm -rf /tmp/.cache; \
-    # prisma fix for docker installs: https://github.com/prisma/docs/issues/4365
-    # TODO: remove when custom dockerfile support is available
-    test -d ./prisma && npx prisma generate || echo "";
+COPY --from=build /usr/app/lib/ ./lib/
 
+# prisma fix for docker installs: https://github.com/prisma/docs/issues/4365
+# TODO: remove when custom dockerfile support is available
+RUN test -d ./prisma && npx prisma generate || echo "";
 
 ENTRYPOINT ["node", "lib/index.js"]`,
 		},

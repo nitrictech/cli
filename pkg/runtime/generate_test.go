@@ -32,9 +32,12 @@ func TestGenerate(t *testing.T) {
 		{
 			name:    "ts",
 			handler: "functions/list.ts",
-			wantFwriter: `FROM node:alpine as build
+			wantFwriter: `# syntax=docker/dockerfile:1
+FROM node:alpine as build
 
 ARG HANDLER
+
+WORKDIR /usr/app
 
 # Python and make are required by certain native package build processes in NPM packages.
 ENV PYTHONUNBUFFERED=1
@@ -48,28 +51,35 @@ COPY . .
 
 RUN yarn import || echo Lockfile already exists
 
-RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
+RUN set -ex; yarn install --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
 
 RUN test -f tsconfig.json || echo "{\"compilerOptions\":{\"esModuleInterop\":true,\"target\":\"es2015\",\"moduleResolution\":\"node\"}}" > tsconfig.json
 
-RUN ncc build ${HANDLER} -m --v8-cache -o lib/
+# make prisma external to bundle - https://github.com/prisma/prisma/issues/16901#issuecomment-1362940774 \
+# TODO: remove when custom dockerfile support is available
+RUN ncc build ${HANDLER} -o lib/ -e .prisma/client -e @prisma/client
 
 FROM node:alpine as final
+
+WORKDIR /usr/app
 
 RUN apk update && \
     apk add --no-cache ca-certificates && \
     update-ca-certificates
 
-COPY --from=build "package.json" "package.json"
+COPY --from=build /usr/app/lib/ ./lib/
 
-COPY --from=build "node_modules/" "node_modules/"
-
-COPY --from=build lib/ /
-
-# Copy any other non-ignored assets to be included
 COPY . .
 
-ENTRYPOINT ["node", "index.js"]`,
+RUN set -ex; \
+    yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; \
+    rm -rf /tmp/.cache; \
+    # prisma fix for docker installs: https://github.com/prisma/docs/issues/4365
+    # TODO: remove when custom dockerfile support is available
+    test -d ./prisma && npx prisma generate || echo "";
+
+
+ENTRYPOINT ["node", "lib/index.js"]`,
 		},
 		{
 			name:    "go",
@@ -133,7 +143,8 @@ ENTRYPOINT python $HANDLER
 		{
 			name:    "js",
 			handler: "functions/list.js",
-			wantFwriter: `FROM "node:alpine"
+			wantFwriter: `# syntax=docker/dockerfile:1
+FROM node:alpine
 
 ARG HANDLER
 ENV HANDLER=${HANDLER}
@@ -152,7 +163,13 @@ COPY . .
 
 RUN yarn import || echo Lockfile already exists
 
-RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
+RUN \
+  set -ex; \
+  yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; \
+  rm -rf /tmp/.cache; \
+  # prisma fix for docker installs: https://github.com/prisma/docs/issues/4365
+  # TODO: remove when custom dockerfile support is available
+  test -d ./prisma && npx prisma generate || echo "";
 
 ENTRYPOINT node $HANDLER
 `,

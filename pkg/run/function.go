@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/pterm/pterm"
-
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
@@ -73,8 +71,6 @@ func (f *Function) Start(envMap map[string]string) error {
 		// Set the address to the bound port
 		Env: env,
 	}
-
-	pterm.Debug.Print(containerengine.Cli(cc, hc))
 
 	cID, err := f.ce.ContainerCreate(cc, hc, nil, strings.Join([]string{f.projectName, "run", f.Name()}, "-"))
 	if err != nil {

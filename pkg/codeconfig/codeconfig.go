@@ -38,7 +38,6 @@ import (
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/moby/moby/pkg/stdcopy"
 	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
@@ -492,10 +491,6 @@ func (c *codeConfig) collectOne(handler string) error {
 		AttachStderr: true,
 		Image:        fmt.Sprintf("%s-%s", c.initialProject.Name, fun.name),
 		Env:          env,
-	}
-
-	if output.VerboseLevel > 2 {
-		pterm.Debug.Println(containerengine.Cli(cc, hostConfig))
 	}
 
 	cn := strings.Join([]string{c.initialProject.Name, "codeAsConfig", rt.ContainerName()}, "-")

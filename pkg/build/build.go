@@ -65,7 +65,7 @@ func BuildBaseImages(s *project.Project) error {
 		pterm.Debug.Println("Building image for" + f.Name())
 
 		ingoreFunctions := lo.Filter(lo.Values(s.Functions), func(item project.Function, index int) bool {
-			return f.Name() != fun.Name
+			return item.Name != fun.Name
 		})
 
 		ignoreHandlers := lo.Map(ingoreFunctions, func(item project.Function, index int) string {

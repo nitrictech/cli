@@ -37,8 +37,9 @@ func (t *csharp) ContainerName() string {
 	return strings.ToLower(strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1))
 }
 
-func (t *csharp) BuildIgnore() []string {
-	return append(commonIgnore, "obj/", "bin/")
+func (t *csharp) BuildIgnore(additional ...string) []string {
+	baseIgnores := append(commonIgnore, additional...)
+	return append(baseIgnores, "obj/", "bin/")
 }
 
 func (t *csharp) BaseDockerFile(w io.Writer) error {

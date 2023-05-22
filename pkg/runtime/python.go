@@ -37,8 +37,9 @@ func (t *python) ContainerName() string {
 	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
 }
 
-func (t *python) BuildIgnore() []string {
-	return append(commonIgnore, "__pycache__/", "*.py[cod]", "*$py.class")
+func (t *python) BuildIgnore(additional ...string) []string {
+	baseIgnores := append(commonIgnore, additional...)
+	return append(baseIgnores, "__pycache__/", "*.py[cod]", "*$py.class")
 }
 
 func (t *python) BaseDockerFile(w io.Writer) error {

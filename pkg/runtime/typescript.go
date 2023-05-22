@@ -37,8 +37,8 @@ func (t *typescript) ContainerName() string {
 	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
 }
 
-func (t *typescript) BuildIgnore() []string {
-	return javascriptIgnoreList
+func (t *typescript) BuildIgnore(additional ...string) []string {
+	return append(javascriptIgnoreList, additional...)
 }
 
 func (t *typescript) BuildArgs() map[string]string {

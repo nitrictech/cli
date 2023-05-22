@@ -1,4 +1,5 @@
-FROM "node:alpine"
+# syntax=docker/dockerfile:1
+FROM node:alpine
 
 ARG HANDLER
 ENV HANDLER=${HANDLER}
@@ -17,6 +18,12 @@ COPY . .
 
 RUN yarn import || echo Lockfile already exists
 
-RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
+RUN \
+  set -ex; \
+  yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; \
+  rm -rf /tmp/.cache; \
+  # prisma fix for docker installs: https://github.com/prisma/docs/issues/4365
+  # TODO: remove when custom dockerfile support is available
+  test -d ./prisma && npx prisma generate || echo "";
 
 ENTRYPOINT node $HANDLER

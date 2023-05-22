@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 
 	"github.com/pterm/pterm"
+	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
@@ -63,7 +64,15 @@ func BuildBaseImages(s *project.Project) error {
 
 		pterm.Debug.Println("Building image for" + f.Name())
 
-		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), rt.BuildIgnore()); err != nil {
+		ingoreFunctions := lo.Filter(lo.Values(s.Functions), func(item project.Function, index int) bool {
+			return item.Name != fun.Name
+		})
+
+		ignoreHandlers := lo.Map(ingoreFunctions, func(item project.Function, index int) string {
+			return item.Handler
+		})
+
+		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), rt.BuildIgnore(ignoreHandlers...)); err != nil {
 			return err
 		}
 	}

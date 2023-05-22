@@ -49,6 +49,7 @@ require (
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/nitrictech/nitric/cloud/common v0.0.0-20230509232736-48f59463930d
 	github.com/olahol/melody v1.1.3
+	github.com/samber/lo v1.38.1
 	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
 	go.etcd.io/bbolt v1.3.6
 	google.golang.org/protobuf v1.30.0

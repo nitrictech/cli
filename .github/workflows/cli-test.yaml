@@ -8,6 +8,10 @@ on:
       - develop
   pull_request:
 
+concurrency:
+  group: ci-cli-tests-${{ github.ref_name }}
+  cancel-in-progress: true
+
 env:
   GOPROXY: https://proxy.golang.org
 

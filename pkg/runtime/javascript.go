@@ -40,8 +40,8 @@ func (t *javascript) ContainerName() string {
 	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
 }
 
-func (t *javascript) BuildIgnore() []string {
-	return javascriptIgnoreList
+func (t *javascript) BuildIgnore(additional ...string) []string {
+	return append(javascriptIgnoreList, additional...)
 }
 
 func (t *javascript) BaseDockerFile(w io.Writer) error {

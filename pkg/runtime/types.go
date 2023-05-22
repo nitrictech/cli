@@ -26,7 +26,7 @@ import (
 
 type Runtime interface {
 	ContainerName() string
-	BuildIgnore() []string
+	BuildIgnore(additional ...string) []string
 	BaseDockerFile(w io.Writer) error
 	BuildArgs() map[string]string
 }

@@ -32,8 +32,8 @@ var _ Runtime = &golang{}
 //go:embed golang.dockerfile
 var golangDockerfile string
 
-func (t *golang) BuildIgnore() []string {
-	return commonIgnore
+func (t *golang) BuildIgnore(additional ...string) []string {
+	return append(commonIgnore, additional...)
 }
 
 func (t *golang) BaseDockerFile(w io.Writer) error {

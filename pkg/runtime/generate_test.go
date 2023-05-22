@@ -32,40 +32,59 @@ func TestGenerate(t *testing.T) {
 		{
 			name:    "ts",
 			handler: "functions/list.ts",
-			wantFwriter: `FROM node:alpine as build
+			wantFwriter: `# syntax=docker/dockerfile:1
+FROM node:alpine as build
 
 ARG HANDLER
 
+# Python and make are required by certain native package build processes in NPM packages.
+RUN apk add g++ make py3-pip
+
 RUN yarn global add typescript @vercel/ncc
+
+WORKDIR /usr/app
 
 COPY package.json *.lock *-lock.json /
 
-RUN yarn import || echo Lockfile already exists
+RUN yarn import || echo ""
 
-RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
-
-COPY . .
+RUN set -ex && \
+    yarn install --production --frozen-lockfile --cache-folder /tmp/.cache && \
+    rm -rf /tmp/.cache
 
 RUN test -f tsconfig.json || echo "{\"compilerOptions\":{\"esModuleInterop\":true,\"target\":\"es2015\",\"moduleResolution\":\"node\"}}" > tsconfig.json
 
-RUN ncc build ${HANDLER} -m --v8-cache -o lib/
+COPY . .
+
+# make prisma external to bundle - https://github.com/prisma/prisma/issues/16901#issuecomment-1362940774 \
+# TODO: remove when custom dockerfile support is available
+RUN \
+  --mount=type=cache,target=/tmp/ncc-cache \
+  ncc build ${HANDLER} -o lib/ -e .prisma/client -e @prisma/client -t
 
 FROM node:alpine as final
+
+WORKDIR /usr/app
 
 RUN apk update && \
     apk add --no-cache ca-certificates && \
     update-ca-certificates
 
-COPY --from=build "package.json" "package.json"
+COPY package.json *.lock *-lock.json ./
 
-COPY --from=build "node_modules/" "node_modules/"
+RUN set -ex && \
+    yarn install --production --frozen-lockfile --cache-folder /tmp/.cache && \
+    rm -rf /tmp/.cache
 
-COPY --from=build lib/ /
-
-# Copy any other non-ignored assets to be included
 COPY . .
 
-ENTRYPOINT ["node", "index.js"]`,
+COPY --from=build /usr/app/lib/ ./lib/
+
+# prisma fix for docker installs: https://github.com/prisma/docs/issues/4365
+# TODO: remove when custom dockerfile support is available
+RUN test -d ./prisma && npx prisma generate || echo "";
+
+ENTRYPOINT ["node", "lib/index.js"]`,
 		},
 		{
 			name:    "go",
@@ -126,7 +145,8 @@ ENTRYPOINT python $HANDLER
 		{
 			name:    "js",
 			handler: "functions/list.js",
-			wantFwriter: `FROM "node:alpine"
+			wantFwriter: `# syntax=docker/dockerfile:1
+FROM node:alpine
 
 ARG HANDLER
 ENV HANDLER=${HANDLER}
@@ -135,13 +155,23 @@ RUN apk update && \
     apk add --no-cache ca-certificates && \
     update-ca-certificates
 
-COPY package.json *.lock *-lock.json /
+# Python and make are required by certain native package build processes in NPM packages.
+ENV PYTHONUNBUFFERED=1
+RUN apk add --update --no-cache python3 make g++ && ln -sf python3 /usr/bin/python
+RUN python3 -m ensurepip
+RUN pip3 install --no-cache --upgrade pip setuptools
+
+COPY . .
 
 RUN yarn import || echo Lockfile already exists
 
-RUN set -ex; yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; rm -rf /tmp/.cache;
-
-COPY . .
+RUN \
+  set -ex; \
+  yarn install --production --frozen-lockfile --cache-folder /tmp/.cache; \
+  rm -rf /tmp/.cache; \
+  # prisma fix for docker installs: https://github.com/prisma/docs/issues/4365
+  # TODO: remove when custom dockerfile support is available
+  test -d ./prisma && npx prisma generate || echo "";
 
 ENTRYPOINT node $HANDLER
 `,

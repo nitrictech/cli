@@ -1,31 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useWebSocket } from "../../lib/use-web-socket";
-import Select from "../shared/Select";
 import type {
   APIRequest,
   APIResponse,
   Endpoint,
-  HistoryItem,
   Method,
+  LocalStorageHistoryItem,
+  ApiHistoryItem,
 } from "../../types";
-import Badge from "../shared/Badge";
-import { fieldRowArrToHeaders, getHost } from "../../lib/utils";
-import Spinner from "../shared/Spinner";
-import Tabs from "../layout/Tabs";
-import FieldRows, { FieldRow } from "../shared/FieldRows";
-import { flattenPaths } from "./flatten-paths";
-import { generatePath } from "./generate-path";
+import {
+  Select,
+  Badge,
+  Spinner,
+  Tabs,
+  FieldRows,
+  FieldRow,
+  Loading,
+} from "../shared";
+import {
+  flattenPaths,
+  generatePath,
+  generatePathParams,
+  formatResponseTime,
+  formatFileSize,
+  fieldRowArrToHeaders,
+  getHost,
+  generateResponse,
+} from "../../lib/utils";
 import APIResponseContent from "./APIResponseContent";
-import { formatFileSize } from "./format-file-size";
 import CodeEditor from "./CodeEditor";
 import APIMenu from "./APIMenu";
-import { generatePathParams } from "./generate-path-params";
-import { generateResponse } from "../../lib/generate-response";
-import { formatResponseTime } from "./format-response-time";
-import Loading from "../shared/Loading";
-import FileUpload from "../StorageExplorer/FileUpload";
+import APIHistory from "./APIHistory";
 
-const getTabCount = (rows: FieldRow[]) => rows.filter((r) => !!r.key).length;
+import FileUpload from "../storage/FileUpload";
+
+import { useWebSocket } from "../../lib/hooks/use-web-socket";
+import { useHistory } from "../../lib/hooks/use-history";
+
+const getTabCount = (rows: FieldRow[]) => {
+  if (!rows) return 0;
+
+  return rows.filter((r) => !!r.key).length;
+};
 
 export const LOCAL_STORAGE_KEY = "nitric-local-dash-api-history";
 
@@ -57,8 +72,10 @@ const bodyTabs = [
 ];
 
 const APIExplorer = () => {
-  const { data, loading } = useWebSocket();
+  const { data } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
+
+  const { data: history } = useHistory<ApiHistoryItem>("apis");
 
   const [JSONBody, setJSONBody] = useState<string>("");
   const [fileToUpload, setFileToUpload] = useState<File>();
@@ -76,7 +93,7 @@ const APIExplorer = () => {
     [data]
   );
 
-  // Load history from localStorage on mount
+  // Load single history from localStorage on mount
   useEffect(() => {
     if (selectedApiEndpoint) {
       const storedHistory = localStorage.getItem(
@@ -84,7 +101,7 @@ const APIExplorer = () => {
       );
 
       if (storedHistory) {
-        const history: HistoryItem = JSON.parse(storedHistory);
+        const history: LocalStorageHistoryItem = JSON.parse(storedHistory);
         setJSONBody(history.JSONBody);
         setRequest({
           ...history.request,
@@ -110,6 +127,15 @@ const APIExplorer = () => {
       setResponse(undefined);
     }
   }, [selectedApiEndpoint]);
+
+  // Load request history
+  useEffect(() => {
+    const localHistory = localStorage.getItem(`${LOCAL_STORAGE_KEY}-requests`);
+    if (!localHistory) {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}-requests`, JSON.stringify([]));
+      return;
+    }
+  }, []);
 
   useEffect(() => {
     if (paths?.length) {
@@ -252,8 +278,8 @@ const APIExplorer = () => {
       conditionToShow={Boolean(paths && selectedApiEndpoint && request?.method)}
     >
       {paths && selectedApiEndpoint && request?.method ? (
-        <div className="flex max-w-7xl flex-col md:flex-row gap-8 md:pr-8">
-          <div className="w-full md:w-7/12 flex flex-col gap-8">
+        <div className="flex max-w-7xl flex-col gap-8 md:pr-8">
+          <div className="w-full flex flex-col gap-8">
             <div>
               <div className="flex">
                 <h2 className="text-2xl font-medium text-blue-800">
@@ -267,6 +293,10 @@ const APIExplorer = () => {
                       ...requestDefault,
                       method: selectedApiEndpoint.methods[0],
                       path: generatePath(selectedApiEndpoint, [], []),
+                      pathParams: generatePathParams(
+                        selectedApiEndpoint,
+                        requestDefault
+                      ),
                     });
                   }}
                 />
@@ -566,11 +596,17 @@ const APIExplorer = () => {
               </div>
             </div>
           </div>
-          <div className="w-5/12 flex flex-col gap-12 px-8">
+          <div className="w-full flex flex-col gap-12 px-8 pb-20">
             <h3 className="text-2xl font-semibold opacity-70 leading-6 text-gray-900">
-              History (Coming soon)
+              Request History
             </h3>
-            {/* <APIHistory history={history} /> */}
+            <APIHistory
+              history={history ?? []}
+              selectedRequest={{
+                path: selectedApiEndpoint.path,
+                method: request.method,
+              }}
+            />
           </div>
         </div>
       ) : null}

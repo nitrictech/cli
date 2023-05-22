@@ -17,6 +17,7 @@ describe("API Explorer spec", () => {
       "first-api/path-test/{name}1 methods",
       "first-api/query-test1 methods",
       "first-api/schedule-count1 methods",
+      "first-api/topic-count1 methods",
       "second-api/content-type-binary1 methods",
       "second-api/content-type-css1 methods",
       "second-api/content-type-html1 methods",
@@ -179,7 +180,7 @@ describe("API Explorer spec", () => {
     cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
-        expect(JSON.parse(text)).to.deep.equal({});
+        expect(JSON.parse(text)).to.deep.equal({ requestData: {} });
       });
 
     cy.getTestEl("Body-tab-btn").click();

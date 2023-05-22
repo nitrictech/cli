@@ -11,10 +11,17 @@ interface Props {
   testId: string;
   rows: FieldRow[];
   lockKeys?: boolean;
+  canClearRow?: boolean;
   setRows: (value: FieldRow[]) => void;
 }
 
-const FieldRows: React.FC<Props> = ({ testId, rows, lockKeys, setRows }) => {
+const FieldRows: React.FC<Props> = ({
+  testId,
+  rows,
+  lockKeys,
+  setRows,
+  canClearRow = true,
+}) => {
   const id = useId();
 
   useEffect(() => {
@@ -95,20 +102,24 @@ const FieldRows: React.FC<Props> = ({ testId, rows, lockKeys, setRows }) => {
                 />
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const newArray = [...rows];
-                newArray.splice(i, 1);
-                setRows(newArray);
-              }}
-              className={classNames(
-                "rounded-full hidden absolute right-0 bg-gray-600 p-1 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
-                rows.length > 1 && (r.key || r.value) ? "group-hover:block" : ""
-              )}
-            >
-              <XMarkIcon className="h-5 w-5" aria-hidden="true" />
-            </button>
+            {canClearRow && (
+              <button
+                type="button"
+                onClick={() => {
+                  const newArray = [...rows];
+                  newArray.splice(i, 1);
+                  setRows(newArray);
+                }}
+                className={classNames(
+                  "rounded-full hidden absolute right-0 bg-gray-600 p-1 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
+                  rows.length > 1 && (r.key || r.value)
+                    ? "group-hover:block"
+                    : ""
+                )}
+              >
+                <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+              </button>
+            )}
           </li>
         );
       })}

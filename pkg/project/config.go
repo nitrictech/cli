@@ -24,6 +24,8 @@ import (
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 // Config shared by all compute types
@@ -127,6 +129,8 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	p.Name = utils.FormatProjectName(p.Name)
 
 	return configFromBaseConfig(p)
 }

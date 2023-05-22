@@ -87,3 +87,43 @@ func TestStringTrunc(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatProjectName(t *testing.T) {
+	tests := []struct {
+		projectName string
+		want        string
+	}{
+		{
+			projectName: "camelCase",
+			want:        "camel-case",
+		},
+		{
+			projectName: "PascalCase",
+			want:        "pascal-case",
+		},
+		{
+			projectName: "ALLCAPS",
+			want:        "allcaps",
+		},
+		{
+			projectName: "TeStInG",
+			want:        "te-st-in-g",
+		},
+		{
+			projectName: "kebab-case",
+			want:        "kebab-case",
+		},
+		{
+			projectName: "Sentence case",
+			want:        "sentence-case",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.projectName, func(t *testing.T) {
+			if got := FormatProjectName(tt.projectName); got != tt.want {
+				t.Errorf("StringTrunc() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -18,6 +18,8 @@ package utils
 
 import (
 	"bytes"
+	"regexp"
+	"strings"
 )
 
 func StringTrunc(s string, max int) string {
@@ -38,4 +40,17 @@ func JoinCamelCase(ss []string) string {
 	}
 
 	return res
+}
+
+var (
+	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
+)
+
+func FormatProjectName(projectName string) string {
+	formatted := matchFirstCap.ReplaceAllString(projectName, "${1}-${2}")
+	formatted = matchAllCap.ReplaceAllString(formatted, "${1}-${2}")
+	formatted = strings.ReplaceAll(formatted, " ", "-")
+
+	return strings.ToLower(formatted)
 }

@@ -52,11 +52,18 @@ type FeedbackPreferences struct {
 }
 
 func GetLocalPassPhraseFile() (string, error) {
-	if _, err := os.Stat(utils.NitricLocalPassphrasePath()); errors.Is(err, os.ErrNotExist) {
-		err = os.WriteFile(utils.NitricLocalPassphrasePath(), []byte(defaultBackendPassPhrase), os.ModePerm)
-		if err != nil {
-			return "", err
-		}
+	_, err := os.Stat(utils.NitricLocalPassphrasePath())
+	if errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+
+	return utils.NitricLocalPassphrasePath(), nil
+}
+
+func GenerateLocalPassPhraseFile() (string, error) {
+	err := os.WriteFile(utils.NitricLocalPassphrasePath(), []byte(defaultBackendPassPhrase), os.ModePerm)
+	if err != nil {
+		return "", err
 	}
 
 	return utils.NitricLocalPassphrasePath(), nil

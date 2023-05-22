@@ -218,7 +218,7 @@ var stackDeleteCmd = &cobra.Command{
 	Example: `nitric stack down -s aws
 
 # To not be prompted, use -y
-nitric stack down -e aws -y`,
+nitric stack down -s aws -y`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if !confirmDown {
 			confirm := ""

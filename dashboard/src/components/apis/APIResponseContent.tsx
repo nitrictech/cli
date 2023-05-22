@@ -10,10 +10,6 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
   let contentType = response.headers!["content-type"];
   contentType = Array.isArray(contentType) ? contentType[0] : contentType;
 
-  console.log(response);
-
-  console.log(contentType);
-
   if (contentType.startsWith("image/")) {
     return (
       <img

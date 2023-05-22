@@ -88,7 +88,7 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
-	rootCmd.PersistentFlags().BoolVar(&output.CI, "ci", false, "CI output mode, disable all output styling")
+	rootCmd.PersistentFlags().BoolVar(&output.CI, "ci", false, "CI mode, disable output styling and auto-confirm all operations")
 	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
 
 	err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

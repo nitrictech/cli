@@ -220,10 +220,10 @@ var stackDeleteCmd = &cobra.Command{
 # To not be prompted, use -y
 nitric stack down -s aws -y`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if !confirmDown {
+		if !confirmDown && !output.CI {
 			confirm := ""
 			err := survey.AskOne(&survey.Select{
-				Message: "Warning - This operation will destroy your stack, all deployed resources will be removed. Are you sure you want to proceed?",
+				Message: "Warning - This operation will destroy your stack and all resources, it cannot be undo. Continue?",
 				Default: "No",
 				Options: []string{"Yes", "No"},
 			}, &confirm)

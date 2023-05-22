@@ -179,7 +179,7 @@ describe("API Explorer spec", () => {
     cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
-        expect(JSON.parse(text)).to.deep.equal({ requestData: {} });
+        expect(JSON.parse(text)).to.deep.equal({});
       });
 
     cy.getTestEl("Body-tab-btn").click();

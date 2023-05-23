@@ -5,30 +5,19 @@ describe("Schedules Spec", () => {
   });
 
   it("should retrieve correct schedules", () => {
-    cy.get("h2").should("contain.text", "Schedule - process-tests");
-    cy.get(".bg-gray-50 > .bg-white").should("have.text", "2");
-    cy.getTestEl("topic-select").within(() => cy.get("button").click());
+    cy.get("h2").should("contain.text", "process-tests");
+    cy.getTestEl("Schedules-count").should("have.text", "2");
 
     const expectedSchedules = ["process-tests", "process-tests-2"];
 
-    cy.getTestEl("topic-select-options")
-      .find("li")
-      .should("have.length", expectedSchedules.length)
-      .each(($li, i) => {
-        // Assert that each list item contains the expected text
-        expect(expectedSchedules).to.include($li.text());
-      });
+    expectedSchedules.forEach((id) => {
+      cy.get(`[data-rct-item-id="${id}"]`).should("exist");
+    });
   });
 
   ["process-tests", "process-tests-2"].forEach((schedule) => {
     it(`should trigger schedule ${schedule}`, () => {
-      cy.getTestEl("topic-select").within(() => cy.get("button").click());
-
-      cy.getTestEl("topic-select-options").within(() => {
-        cy.get("li")
-          .contains(new RegExp(`^${schedule}$`))
-          .click();
-      });
+      cy.get(`[data-rct-item-id="${schedule}"]`).click();
 
       cy.getTestEl("generated-request-path").should(
         "have.attr",
@@ -36,7 +25,7 @@ describe("Schedules Spec", () => {
         `http://localhost:4000/topic/${schedule}`
       );
 
-      cy.getTestEl("trigger-topic-btn").click();
+      cy.getTestEl("trigger-schedules-btn").click();
 
       cy.getAPIResponseCodeEditor().should(
         "have.text",
@@ -47,11 +36,8 @@ describe("Schedules Spec", () => {
 
   it(`should add to doc count after schedule triggers`, () => {
     cy.visit("/");
-    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
-    cy.getTestEl("endpoint-select-options").within(() => {
-      cy.get("li").contains("first-api/schedule-count1 methods").click();
-    });
+    cy.get('[data-rct-item-id="first-api-/schedule-count-GET"]').click();
 
     cy.getTestEl("send-api-btn").click();
 

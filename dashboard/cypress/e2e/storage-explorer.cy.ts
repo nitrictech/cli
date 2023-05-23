@@ -6,18 +6,15 @@ describe("Storage Explorer spec", () => {
   });
 
   it("should retrieve correct buckets", () => {
-    cy.get("h2").first().should("have.text", "Bucket - test-bucket");
-    cy.getTestEl("bucket-select").within(() => cy.get("button").click());
+    cy.get("h2").first().should("have.text", "test-bucket");
 
     const expectedBuckets = ["test-bucket"];
 
-    cy.getTestEl("bucket-select-options")
-      .find("li")
-      .should("have.length", expectedBuckets.length)
-      .each(($li, i) => {
-        // Assert that each list item contains the expected text
-        expect(expectedBuckets).to.include($li.text());
-      });
+    cy.getTestEl("Storage-count").should("have.text", "1");
+
+    expectedBuckets.forEach((id) => {
+      cy.get(`[data-rct-item-id="${id}"]`).should("exist");
+    });
   });
 
   it("should load files of first bucket", () => {

@@ -1,4 +1,4 @@
-import { getFileExtension } from "../../lib/get-file-extension";
+import { getFileExtension } from "../../lib/utils";
 import type { APIResponse } from "../../types";
 import CodeEditor from "./CodeEditor";
 
@@ -7,7 +7,8 @@ interface Props {
 }
 
 const APIResponseContent: React.FC<Props> = ({ response }) => {
-  const contentType = response.headers!["content-type"];
+  let contentType = response.headers!["content-type"];
+  contentType = Array.isArray(contentType) ? contentType[0] : contentType;
 
   if (contentType.startsWith("image/")) {
     return (

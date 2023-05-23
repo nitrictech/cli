@@ -33,7 +33,7 @@ type RunResourcesService struct {
 var _ common.ResourceService = &RunResourcesService{}
 
 func (r *RunResourcesService) getApiDetails(name string) (*common.DetailsResponse[any], error) {
-	gatewayUri, ok := r.ls.gw.GetApiAddresses()[name]
+	gatewayUri, ok := r.ls.gateway.GetApiAddresses()[name]
 	if !ok {
 		return nil, fmt.Errorf("api %s does not exist", name)
 	}
@@ -66,7 +66,7 @@ func (r *RunResourcesService) Declare(ctx context.Context, req common.ResourceDe
 
 	switch resource.Type {
 	case v1.ResourceType_Bucket:
-		r.ls.dash.AddBucket(resource.GetName())
+		r.ls.dashboard.AddBucket(resource.GetName())
 		return nil
 	default:
 		return nil

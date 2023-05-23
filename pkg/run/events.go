@@ -20,8 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/nitrictech/cli/pkg/codeconfig"
+	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/project"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/plugins/errors"
 	"github.com/nitrictech/nitric/core/pkg/plugins/errors/codes"
@@ -32,7 +36,8 @@ import (
 
 type WorkerPoolEventService struct {
 	events.UnimplementedeventsPlugin
-	pool pool.WorkerPool
+	pool    pool.WorkerPool
+	project *project.Project
 }
 
 func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *v1.TriggerRequest) {
@@ -51,11 +56,26 @@ func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *v1.Trigg
 
 	for _, target := range targets {
 		go func(target worker.Worker) {
-			_, err := target.HandleTrigger(ctx, evt)
+			resp, err := target.HandleTrigger(ctx, evt)
 			if err != nil {
 				// this is likely an error in the user's handler, we don't want it to bring the server down.
 				// just log and move on.
 				fmt.Println(err)
+			}
+
+			err = dashboard.WriteHistoryRecord(s.project.Dir, dashboard.TOPIC, &dashboard.HistoryRecord{
+				Success: resp.GetTopic().Success,
+				Time:    time.Now().UnixMilli(),
+				EventHistoryItem: dashboard.EventHistoryItem{
+					Event: &codeconfig.TopicResult{
+						TopicKey:  strings.ToLower(strings.ReplaceAll(topic.Topic, " ", "-")),
+						WorkerKey: topic.Topic,
+					},
+					Payload: string(evt.Data),
+				},
+			})
+			if err != nil {
+				fmt.Printf("error occurred writing history: %v", err)
 			}
 		}(target)
 	}
@@ -103,8 +123,9 @@ func (s *WorkerPoolEventService) Publish(ctx context.Context, topic string, dela
 }
 
 // Create new Dev EventService
-func NewEvents(pool pool.WorkerPool) (events.EventService, error) {
+func NewEvents(pool pool.WorkerPool, project *project.Project) (events.EventService, error) {
 	return &WorkerPoolEventService{
-		pool: pool,
+		pool:    pool,
+		project: project,
 	}, nil
 }

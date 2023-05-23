@@ -8,9 +8,10 @@ import {
   ClockIcon,
   ChatBubbleLeftIcon,
   CircleStackIcon,
+  MegaphoneIcon,
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
-import { useWebSocket } from "../lib/use-web-socket";
+import { useWebSocket } from "../../lib/hooks/use-web-socket";
 import { Toaster } from "react-hot-toast";
 
 const resourceLinks = [
@@ -71,9 +72,14 @@ const AppLayout: React.FC<Props> = ({
       icon: CircleStackIcon,
       count: data?.buckets?.length || 0,
     },
+    {
+      name: "Topics",
+      href: "/topics",
+      icon: MegaphoneIcon,
+      count: data?.topics?.length,
+    },
     // { name: "Storage", href: "#", icon: CircleStackIcon, current: false },
     // { name: "Collections", href: "#", icon: FolderIcon, current: false },
-    // { name: "Messages", href: "#", icon: MegaphoneIcon, current: false },
     // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
   ];
 

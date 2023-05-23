@@ -1,6 +1,6 @@
 import useSWRSubscription from "swr/subscription";
-import type { WebSocketResponse } from "../types";
-import { getHost } from "./utils";
+import type { WebSocketResponse } from "../../types";
+import { getHost } from "../utils";
 import { toast } from "react-hot-toast";
 import { useRef } from "react";
 import { isEqual } from "radash";

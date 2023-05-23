@@ -43,6 +43,7 @@ type Dashboard struct {
 	project              *project.Project
 	apis                 []*openapi3.T
 	schedules            []*codeconfig.TopicResult
+	topics               []*codeconfig.TopicResult
 	buckets              []string
 	envMap               map[string]string
 	melody               *melody.Melody
@@ -58,10 +59,11 @@ type Api struct {
 	OpenApi map[string]interface{} `json:"spec,omitempty"` // not sure which spec version yet
 }
 
-type DashResponse struct {
+type DashboardResponse struct {
 	Apis                []*openapi3.T                    `json:"apis,omitempty"`
 	Buckets             []string                         `json:"buckets,omitempty"`
 	Schedules           []*codeconfig.TopicResult        `json:"schedules,omitempty"`
+	Topics              []*codeconfig.TopicResult        `json:"topics,omitempty"`
 	ProjectName         string                           `json:"projectName,omitempty"`
 	ApiAddresses        map[string]string                `json:"apiAddresses,omitempty"`
 	TriggerAddress      string                           `json:"triggerAddress,omitempty"`
@@ -95,6 +97,7 @@ func New(p *project.Project, envMap map[string]string) (*Dashboard, error) {
 		melody:              m,
 		bucketNotifications: []*codeconfig.BucketNotification{},
 		schedules:           []*codeconfig.TopicResult{},
+		topics:              []*codeconfig.TopicResult{},
 	}, nil
 }
 
@@ -128,6 +131,7 @@ func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 
 	d.apis = spec.Apis
 	d.schedules = spec.Schedules
+	d.topics = spec.Topics
 	d.bucketNotifications = spec.BucketNotifications
 
 	d.triggerAddress = opts.TriggerAddress
@@ -250,8 +254,8 @@ func (d *Dashboard) Serve(sp storage.StorageService) (*int, error) {
 		}
 
 		ctx := context.Background()
-		action := r.URL.Query().Get("action")
 		bucket := r.URL.Query().Get("bucket")
+		action := r.URL.Query().Get("action")
 
 		if bucket == "" && action != "list-buckets" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -310,8 +314,46 @@ func (d *Dashboard) Serve(sp storage.StorageService) (*int, error) {
 
 			handleResponseWriter(w, []byte(`{"success": true}`))
 		default:
-			w.WriteHeader(http.StatusBadRequest)
 			handleResponseWriter(w, []byte(`{"error": "Invalid action"}`))
+		}
+	})
+
+	// Define an API route under /call to proxy communication between app and apis
+	http.HandleFunc("/api/history", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "DELETE, GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
+
+		historyType := r.URL.Query().Get("type")
+
+		switch r.Method {
+		case "OPTIONS":
+			return
+		case "DELETE":
+			err := DeleteHistoryRecord(d.project.Dir, RecordType(historyType))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		case "GET":
+			history, err := ReadHistoryRecords(d.project.Dir, RecordType(historyType))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			data, err := json.Marshal(history)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			handleResponseWriter(w, data)
+			return
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			return
 		}
 	})
 
@@ -347,8 +389,9 @@ func (d *Dashboard) sendUpdate() error {
 		return nil
 	}
 
-	response := &DashResponse{
+	response := &DashboardResponse{
 		Apis:                d.apis,
+		Topics:              d.topics,
 		Buckets:             d.buckets,
 		Schedules:           d.schedules,
 		ProjectName:         d.project.Name,

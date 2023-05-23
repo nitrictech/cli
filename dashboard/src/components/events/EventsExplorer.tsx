@@ -1,76 +1,122 @@
 import { useEffect, useState } from "react";
-import { useWebSocket } from "../lib/use-web-socket";
-import Select from "./shared/Select";
-import type { APIResponse, Schedule } from "../types";
-import Badge from "./shared/Badge";
-import Spinner from "./shared/Spinner";
-import { formatFileSize } from "./APIExplorer/format-file-size";
-import Tabs from "./layout/Tabs";
-import APIResponseContent from "./APIExplorer/APIResponseContent";
-import { fieldRowArrToHeaders, getHost } from "../lib/utils";
-import { generateResponse } from "../lib/generate-response";
-import { formatResponseTime } from "./APIExplorer/format-response-time";
-import Loading from "./shared/Loading";
+import { useWebSocket } from "../../lib/hooks/use-web-socket";
+import type {
+  APIResponse,
+  EventHistoryItem,
+  TopicRequest,
+  WorkerResource,
+} from "../../types";
+import { Badge, Select, Spinner, Tabs, Loading, FieldRows } from "../shared";
+import APIResponseContent from "../apis/APIResponseContent";
+import {
+  fieldRowArrToHeaders,
+  getHost,
+  generateResponse,
+  formatFileSize,
+  formatResponseTime,
+  capitalize,
+} from "../../lib/utils";
+import EventsHistory from "./EventsHistory";
+import { useHistory } from "../../lib/hooks/use-history";
+import { v4 as uuidv4 } from "uuid";
+import CodeEditor from "../apis/CodeEditor";
+import EventsMenu from "./EventsMenu";
 
-const LOCAL_STORAGE_KEY = "nitric-local-dash-schedule-history";
+interface Props {
+  workerType: "schedules" | "topics";
+}
 
-const ScheduleExplorer = () => {
+const EventsExplorer: React.FC<Props> = ({ workerType }) => {
+  const storageKey = `nitric-local-dash-${workerType}-history`;
+
   const { data, loading } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
 
+  const { data: history } = useHistory<EventHistoryItem>(workerType);
+
   const [response, setResponse] = useState<APIResponse>();
 
-  const [selectedSchedule, setSelectedSchedule] = useState<Schedule>();
+  const [selectedWorker, setSelectedWorker] = useState<WorkerResource>();
   const [responseTabIndex, setResponseTabIndex] = useState(0);
+  const [requestTabIndex, setRequestTabIndex] = useState(0);
+
+  const [eventHistory, setEventHistory] = useState<EventHistoryItem[]>([]);
+
+  const [body, setBody] = useState({
+    id: uuidv4(),
+    payloadType: "None",
+    payload: {},
+  } as TopicRequest);
+
+  const handleAppendHistory = (event: WorkerResource, success: boolean) => {
+    const appendedEventHistory = [
+      ...eventHistory,
+      { event, success, time: Date.now() } as EventHistoryItem,
+    ];
+
+    setEventHistory(appendedEventHistory);
+
+    localStorage.setItem(
+      `${storageKey}-requests`,
+      JSON.stringify(appendedEventHistory)
+    );
+  };
 
   useEffect(() => {
-    if (data?.schedules?.length) {
+    if (history) {
+      setEventHistory(history);
+    }
+  }, [history]);
+
+  useEffect(() => {
+    if (data && data[workerType]) {
       // restore history or select first if not selected
-      if (!selectedSchedule) {
+      if (!selectedWorker) {
         const previousId = localStorage.getItem(
-          `${LOCAL_STORAGE_KEY}-last-schedule`
+          `${storageKey}-last-${workerType}`
         );
 
-        const schedule =
+        const worker =
           (previousId &&
-            data.schedules.find((s) => s.topicKey === previousId)) ||
-          data.schedules[0];
+            data[workerType].find((s) => s.topicKey === previousId)) ||
+          data[workerType][0];
 
-        setSelectedSchedule(schedule);
+        setSelectedWorker(worker);
       } else {
         // could be a refresh from ws, so update the selected endpoint
-        const latest = data.schedules.find(
-          (s) => s.topicKey === selectedSchedule.topicKey
+        const latest = data[workerType].find(
+          (s) => s.topicKey === selectedWorker.topicKey
         );
 
         if (latest) {
-          setSelectedSchedule(latest);
+          setSelectedWorker(latest);
         }
       }
     }
   }, [data]);
 
   useEffect(() => {
-    if (selectedSchedule) {
+    if (selectedWorker) {
       // set history
       localStorage.setItem(
-        `${LOCAL_STORAGE_KEY}-last-schedule`,
-        selectedSchedule.topicKey
+        `${storageKey}-last-${workerType}`,
+        selectedWorker.topicKey
       );
     }
-  }, [selectedSchedule]);
+  }, [selectedWorker]);
 
   const handleSend = async (
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
-    if (!selectedSchedule) return;
+    if (!selectedWorker) return;
     setCallLoading(true);
     e.preventDefault();
 
     const url =
-      `http://${getHost()}/api/call` + `/topic/${selectedSchedule.topicKey}`;
+      `http://${getHost()}/api/call` + `/topic/${selectedWorker.topicKey}`;
     const requestOptions: RequestInit = {
       method: "POST",
+      body: JSON.stringify(body),
       headers: fieldRowArrToHeaders([
         {
           key: "Accept",
@@ -91,6 +137,7 @@ const ScheduleExplorer = () => {
     const res = await fetch(url, requestOptions);
 
     const callResponse = await generateResponse(res, startTime);
+    handleAppendHistory(selectedWorker, callResponse.status < 400);
     setResponse(callResponse);
 
     setTimeout(() => setCallLoading(false), 300);
@@ -98,26 +145,37 @@ const ScheduleExplorer = () => {
 
   return (
     <Loading delay={400} conditionToShow={!loading}>
-      {selectedSchedule && data ? (
-        <div className="flex max-w-7xl flex-col md:flex-row gap-8 md:pr-8">
-          <div className="w-full md:w-7/12 flex flex-col gap-8">
-            <h2 className="text-2xl font-medium text-blue-800">
-              Schedule - {selectedSchedule?.topicKey}
-            </h2>
+      {selectedWorker && data ? (
+        <div className="flex max-w-7xl flex-col gap-8 md:pr-8">
+          <div className="w-full flex flex-col gap-8">
+            <div className="flex">
+              <h2 className="text-2xl font-medium text-blue-800">
+                {capitalize(workerType).slice(0, -1)} -{" "}
+                {selectedWorker?.topicKey}
+              </h2>
+              <EventsMenu
+                selected={selectedWorker}
+                storageKey={storageKey}
+                workerType={workerType}
+                onAfterClear={() => {
+                  return;
+                }}
+              />
+            </div>
             <div>
               <nav className="flex items-end gap-4" aria-label="Breadcrumb">
                 <ol className="flex w-11/12 items-center gap-4">
                   <li className="w-full">
-                    {data.schedules && (
-                      <Select<Schedule>
-                        id="topic-select"
-                        items={data.schedules}
-                        label="Topic"
-                        selected={selectedSchedule}
-                        setSelected={setSelectedSchedule}
-                        display={(v) => (
+                    {data[workerType] && (
+                      <Select<WorkerResource>
+                        id={`${workerType}-select`}
+                        items={data[workerType]}
+                        label={capitalize(workerType)}
+                        selected={selectedWorker}
+                        setSelected={setSelectedWorker}
+                        display={(w: WorkerResource) => (
                           <div className="flex items-center p-0.5 text-lg gap-4">
-                            {v?.workerKey}
+                            {w?.workerKey}
                           </div>
                         )}
                       />
@@ -127,7 +185,7 @@ const ScheduleExplorer = () => {
                 <div className="ml-auto">
                   <button
                     type="button"
-                    data-testid="trigger-topic-btn"
+                    data-testid={`trigger-${workerType}-btn`}
                     onClick={handleSend}
                     className="inline-flex items-center rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                   >
@@ -146,12 +204,12 @@ const ScheduleExplorer = () => {
                         To initiate a POST request to{" "}
                         <a
                           data-testid="generated-request-path"
-                          href={`http://${data.triggerAddress}/topic/${selectedSchedule?.topicKey}`}
+                          href={`http://${data.triggerAddress}/topic/${selectedWorker?.topicKey}`}
                           target="_blank"
                           rel="noreferrer"
                         >
                           http://{data.triggerAddress}/topic/
-                          {selectedSchedule?.topicKey}
+                          {selectedWorker?.topicKey}
                         </a>
                         , <strong>click the trigger button.</strong>
                       </p>
@@ -160,6 +218,69 @@ const ScheduleExplorer = () => {
                 </div>
               </div>
             </div>
+            {workerType === "topics" && (
+              <div className="flex flex-col py-4">
+                <div className="bg-white shadow sm:rounded-lg">
+                  <Tabs
+                    index={requestTabIndex}
+                    setIndex={setRequestTabIndex}
+                    tabs={[
+                      {
+                        name: "Params",
+                      },
+                      {
+                        name: "Payload",
+                      },
+                    ]}
+                  />
+                  <div className="px-4 py-5 sm:p-6">
+                    {requestTabIndex === 0 && (
+                      <div className="pt-4">
+                        <h4 className="text-lg font-medium text-gray-900">
+                          Params
+                        </h4>
+                        <div className="flex flex-row gap-2 w-full"></div>
+                        <hr />
+                        <FieldRows
+                          lockKeys
+                          canClearRow={false}
+                          testId="topic-payload"
+                          rows={[
+                            { key: "ID", value: body.id },
+                            { key: "Payload Type", value: body.payloadType },
+                          ]}
+                          setRows={(rows) => {
+                            setBody((prev) => ({
+                              ...prev,
+                              id: rows.find((r) => r.key === "ID")?.value ?? "",
+                              payloadType:
+                                rows.find((r) => r.key === "Payload Type")
+                                  ?.value ?? "",
+                            }));
+                          }}
+                        />
+                      </div>
+                    )}{" "}
+                    {requestTabIndex === 1 && (
+                      <div className="pt-4">
+                        <CodeEditor
+                          value={JSON.stringify(body.payload, null, 2)}
+                          contentType="application/json"
+                          onChange={(payload: string) => {
+                            try {
+                              const obj = JSON.parse(payload);
+                              setBody((prev) => ({ ...prev, payload: obj }));
+                            } catch {
+                              return;
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="bg-white shadow sm:rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="sm:flex sm:items-start sm:justify-between">
@@ -271,23 +392,32 @@ const ScheduleExplorer = () => {
               </div>
             </div>
           </div>
+          <div className="w-full flex flex-col gap-12 px-8 pb-20">
+            <h3 className="text-2xl font-semibold opacity-70 leading-6 text-gray-900">
+              History
+            </h3>
+            <EventsHistory
+              history={eventHistory}
+              selectedWorker={selectedWorker}
+            />
+          </div>
         </div>
-      ) : !data?.schedules?.length ? (
+      ) : !data || !data[workerType] ? (
         <div>
           Please refer to our documentation on{" "}
           <a
             className="underline"
             target="_blank"
-            href="https://nitric.io/docs/schedules#create-schedules"
+            href="https://nitric.io/docs/"
             rel="noreferrer"
           >
-            creating schedules
+            creating {workerType}
           </a>{" "}
-          as we are unable to find any existing schedules.
+          as we are unable to find any existing {workerType}.
         </div>
       ) : null}
     </Loading>
   );
 };
 
-export default ScheduleExplorer;
+export default EventsExplorer;

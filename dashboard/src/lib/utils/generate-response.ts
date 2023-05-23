@@ -1,4 +1,4 @@
-import { headersToObject } from "./utils";
+import { headersToObject } from "../utils";
 
 export const generateResponse = async (res: Response, startTime: number) => {
   const contentType = res.headers.get("Content-Type");

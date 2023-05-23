@@ -5,7 +5,7 @@ import CodeMirror, {
 import { StreamLanguage } from "@codemirror/language";
 import { parse } from "@prantlf/jsonlint";
 import { linter, Diagnostic } from "@codemirror/lint";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ClipboardDocumentCheckIcon,
   ClipboardIcon,
@@ -89,6 +89,7 @@ const copyToClipboard = (str: string) => {
 
 const CodeEditor: React.FC<Props> = ({
   contentType,
+  content,
   readOnly,
   includeLinters,
   onChange,

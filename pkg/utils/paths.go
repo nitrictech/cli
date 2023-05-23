@@ -17,6 +17,8 @@
 package utils
 
 import (
+	"errors"
+	"fmt"
 	"go/build"
 	"log"
 	"os"
@@ -126,6 +128,35 @@ func NewNitricLogFile(stackPath string) (string, error) {
 	tf.Close()
 
 	return tf.Name(), nil
+}
+
+// NitricHistoryFile returns a path to a request history file, making one if it doesn't exist
+func NitricHistoryFile(stackPath string, historyType string) (string, error) {
+	logDir := NitricLogDir(stackPath)
+
+	fileName := fmt.Sprintf("%s/history-%s.json", logDir, historyType)
+
+	// ensure .nitric exists
+	err := os.MkdirAll(logDir, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := os.Stat(fileName); errors.Is(err, os.ErrNotExist) {
+		tf, err := os.Create(fileName)
+		if err != nil {
+			return "", err
+		}
+
+		_, err = tf.Write([]byte("[]"))
+		if err != nil {
+			return "", err
+		}
+
+		tf.Close()
+	}
+
+	return fileName, nil
 }
 
 func GoPath() (string, error) {

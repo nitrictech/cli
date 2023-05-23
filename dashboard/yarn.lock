@@ -5594,6 +5594,11 @@ radash@^10.8.1:
   resolved "https://registry.yarnpkg.com/radash/-/radash-10.8.1.tgz#7a49fa1ec07381dba9174ddadf83401e1db293f9"
   integrity sha512-NzYo3XgM9Tzjf5iFPIMG2l5+LSOCi2H7Axe3Ry/1PrhlvuqxUoiLsmcTBtw4CfKtzy5Fzo79STiEj9JZWMfDQg==
 
+react-complex-tree@^2.1.4:
+  version "2.1.4"
+  resolved "https://registry.yarnpkg.com/react-complex-tree/-/react-complex-tree-2.1.4.tgz#d932909388ec55ed49b0c85e40ce2b97e3509470"
+  integrity sha512-wfBvob8dv/wf5fvup0w/0odV/zaiOvX9pX5wBF0tpfZfZTrPxF9qdzw3x1Arj7GhM32nmfxdOwJVVPxMkbWuTQ==
+
 react-display-name@^0.2.4:
   version "0.2.5"
   resolved "https://registry.yarnpkg.com/react-display-name/-/react-display-name-0.2.5.tgz#304c7cbfb59ee40389d436e1a822c17fe27936c6"

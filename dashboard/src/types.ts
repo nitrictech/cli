@@ -17,11 +17,11 @@ export interface WorkerResource {
   workerKey: string;
   topicKey: string;
 }
-export interface Schedule extends WorkerResource {}
+export type Schedule = WorkerResource;
 
-export interface Subscription extends WorkerResource {}
+export type Subscription = WorkerResource;
 
-export interface Topic extends Schedule {}
+export type Topic = Schedule;
 
 export interface History {
   apis: ApiHistoryItem[];

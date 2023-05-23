@@ -47,7 +47,7 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
     <Menu as="div" className="relative ml-auto">
       <Menu.Button className="-m-2.5 block p-2.5 text-gray-400 hover:text-gray-500">
         <span className="sr-only">Open options</span>
-        <EllipsisHorizontalIcon className="h-10 w-10" aria-hidden="true" />
+        <EllipsisHorizontalIcon className="h-6 w-6" aria-hidden="true" />
       </Menu.Button>
       <Transition
         as={Fragment}

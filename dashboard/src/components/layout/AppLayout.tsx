@@ -1,9 +1,9 @@
-import { Fragment, PropsWithChildren, useState } from "react";
+import { Fragment, PropsWithChildren, ReactNode, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import {
   ArrowTopRightOnSquareIcon,
   Bars3Icon,
-  MagnifyingGlassIcon,
+  GlobeAltIcon,
   XMarkIcon,
   ClockIcon,
   ChatBubbleLeftIcon,
@@ -40,11 +40,13 @@ const resourceLinks = [
 interface Props extends PropsWithChildren {
   title: string;
   routePath: string;
+  secondLevelNav: ReactNode;
 }
 
 const AppLayout: React.FC<Props> = ({
   title = "Dev Dashboard",
   children,
+  secondLevelNav,
   routePath = "/",
 }) => {
   const { data } = useWebSocket();
@@ -57,7 +59,7 @@ const AppLayout: React.FC<Props> = ({
     {
       name: "API Explorer",
       href: "/",
-      icon: MagnifyingGlassIcon,
+      icon: GlobeAltIcon,
       count: data?.apis.length,
     },
     {
@@ -101,7 +103,7 @@ const AppLayout: React.FC<Props> = ({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-gray-900/80" />
+            <div className="fixed inset-0 bg-white/80" />
           </Transition.Child>
 
           <div className="fixed inset-0 flex">
@@ -207,105 +209,68 @@ const AppLayout: React.FC<Props> = ({
         </Dialog>
       </Transition.Root>
 
-      {/* Static sidebar for desktop */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-        {/* Sidebar component, swap this element with another sidebar if you like */}
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6">
-          <div className="flex h-16 shrink-0 items-center">
-            <img
-              className="h-8 w-auto"
-              src="/nitric-no-text.svg"
-              alt="Nitric Logo"
-            />
-          </div>
-          <nav className="flex flex-1 flex-col">
-            <ul className="flex flex-1 flex-col gap-y-7">
-              <li>
-                <ul className="-mx-2 space-y-1">
-                  {navigation.map((item) => (
-                    <li key={item.name}>
-                      <a
-                        href={item.href}
-                        className={classNames(
-                          item.href === routePath
-                            ? "bg-gray-50 text-blue-600"
-                            : "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
-                          "group flex gap-x-3 tracking-wide rounded-md p-2 text-sm leading-6 font-semibold"
-                        )}
-                      >
-                        <item.icon
-                          className={classNames(
-                            item.href === routePath
-                              ? "text-blue-600"
-                              : "text-gray-400 group-hover:text-blue-600",
-                            "h-6 w-6 shrink-0"
-                          )}
-                          aria-hidden="true"
-                        />
-                        {item.name}
-                        {item.count ? (
-                          <span
-                            className={classNames(
-                              item.href === routePath
-                                ? "bg-white"
-                                : "bg-gray-100 text-gray-600 group-hover:bg-gray-200",
-                              "ml-auto inline-block rounded-full py-0.5 px-3 text-xs"
-                            )}
-                          >
-                            {item.count}
-                          </span>
-                        ) : null}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-              <li>
-                <div className="text-sm font-semibold leading-6 text-gray-400">
-                  Resources & Feedback
-                </div>
-                <ul className="-mx-2 mt-2 space-y-1">
-                  {resourceLinks.map(({ icon: Icon, name, href }) => (
-                    <li key={name}>
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={classNames(
-                          "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
-                          "group flex gap-x-2 leading-6 rounded-md p-2 items-center text-sm font-semibold"
-                        )}
-                      >
-                        <span className="truncate">{name}</span>
-                        <Icon className="w-4 h-4" />
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            </ul>
-          </nav>
+      <div className="hidden lg:fixed border-r lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-20 lg:overflow-y-auto lg:bg-white lg:pb-4">
+        <div className="flex h-16 shrink-0 items-center justify-center">
+          <img
+            className="h-8 w-auto"
+            src="/nitric-no-text.svg"
+            alt="Nitric Logo"
+          />
         </div>
+        <nav className="mt-8">
+          <ul className="flex flex-col items-center space-y-1">
+            {navigation.map((item) => (
+              <li key={item.name}>
+                <a
+                  href={item.href}
+                  className={classNames(
+                    item.href === routePath
+                      ? "bg-gray-100 text-blue-600"
+                      : "text-gray-400 hover:text-blue-600 hover:bg-gray-100",
+                    "group relative flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                  )}
+                >
+                  <item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">{item.name}</span>
+                  {item.count ? (
+                    <span
+                      data-testid={`${item.name}-count`}
+                      className="absolute right-0 bottom-0 flex items-center justify-center h-4 w-4 text-xs -translate-y-1/2 translate-x-1/2 transform rounded-full bg-white ring-2 ring-gray-100"
+                    >
+                      {item.count}
+                    </span>
+                  ) : null}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
 
-      <div className="sticky top-0 z-40 flex items-center gap-x-6 bg-white py-4 px-4 shadow-sm sm:px-6 lg:hidden">
+      <div className="sticky top-0 z-40 flex items-center gap-x-6 bg-white px-4 py-4 shadow-sm sm:px-6 lg:hidden">
         <button
           type="button"
-          className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
+          className="-m-2.5 p-2.5 text-gray-400 lg:hidden"
           onClick={() => setSidebarOpen(true)}
         >
           <span className="sr-only">Open sidebar</span>
           <Bars3Icon className="h-6 w-6" aria-hidden="true" />
         </button>
-        <div className="flex-1 text-sm font-semibold leading-6 text-gray-900">
+        <div className="flex-1 text-sm font-semibold leading-6 text-blue-600">
           Nitric Dashboard / {title}
         </div>
       </div>
 
-      <main className="py-10 lg:pl-72 h-screen">
-        <div className="px-4 h-full sm:px-6 lg:px-8">
-          <h1 className="text-4xl text-blue-800 font-bold mb-12">{title}</h1>
-          {children}
+      <aside className="fixed inset-y-0 left-20 pt-20 hidden w-72 overflow-y-auto border-r border-gray-200 py-6 xl:block">
+        {secondLevelNav}
+      </aside>
+
+      <main className="lg:pl-20">
+        <div className="xl:pl-80">
+          <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+            <h1 className="text-4xl text-blue-800 font-bold mb-12">{title}</h1>
+            {children}
+          </div>
         </div>
       </main>
     </>

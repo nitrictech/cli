@@ -5,7 +5,5 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout title="Storage | Dev Dashboard | Nitric">
-  <AppLayout client:load title="Storage" routePath={Astro.url.pathname}>
-    <StorageExplorer client:only />
-  </AppLayout>
+  <StorageExplorer client:only />
 </Layout>

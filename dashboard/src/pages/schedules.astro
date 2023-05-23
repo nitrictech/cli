@@ -1,11 +1,9 @@
 ---
-import AppLayout from '../components/layout/AppLayout';
-import EventExplorer from '../components/events/EventsExplorer';
+import AppLayout from "../components/layout/AppLayout";
+import EventExplorer from "../components/events/EventsExplorer";
 import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout title="Schedules | Dev Dashboard | Nitric">
-  <AppLayout client:load title="Schedules" routePath={Astro.url.pathname}>
-    <EventExplorer client:only workerType="schedules" />
-  </AppLayout>
+  <EventExplorer client:only workerType="schedules" />
 </Layout>

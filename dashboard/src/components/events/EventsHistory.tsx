@@ -48,7 +48,7 @@ const EventHistoryAccordion: React.FC<EventHistoryItem> = ({
               <div className="flex flex-row gap-4 w-2/3">
                 <Badge
                   status={success ? "green" : "red"}
-                  className="!text-md w-1/6"
+                  className="!text-md w-16 h-6"
                 >
                   {success ? "success" : "failure"}
                 </Badge>

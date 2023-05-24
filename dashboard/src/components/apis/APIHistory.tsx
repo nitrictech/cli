@@ -84,18 +84,19 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
                 {response.status && (
                   <Badge
                     status={success ? "green" : "red"}
-                    className="!text-md"
+                    className="!text-md w-12 sm:w-20 h-6"
                   >
-                    Status: {response.status}
+                    <span className="hidden md:inline">Status: </span>
+                    {response.status}
                   </Badge>
                 )}
-                <p className="truncate">
+                <p className="truncate max-w-[200px] md:max-w-lg">
                   {api}
                   {request.path}
                 </p>
               </div>
-              <div className="flex flex-row gap-4">
-                <p>{getDateString(time)}</p>
+              <div className="flex flex-row gap-2 md:gap-4">
+                <p className="hidden sm:inline">{getDateString(time)}</p>
                 <ChevronUpIcon
                   className={`${
                     open ? "rotate-180 transform" : ""

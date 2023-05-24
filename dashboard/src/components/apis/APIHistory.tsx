@@ -117,18 +117,20 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
                       <div className="flex flex-col gap-2">
                         <p className="text-md font-semibold">Request Headers</p>
                         <table>
-                          {Object.entries(request.headers)
-                            .filter(([key, value]) => key && value)
-                            .map(([key, value]) => (
-                              <tr key={key}>
-                                <td className="text-sm w-1/5">
-                                  {key.toLowerCase()}:
-                                </td>
-                                <td className="text-sm w-4/5 text-ellipsis">
-                                  {value.join(", ")}
-                                </td>
-                              </tr>
-                            ))}
+                          <tbody>
+                            {Object.entries(request.headers)
+                              .filter(([key, value]) => key && value)
+                              .map(([key, value]) => (
+                                <tr key={key}>
+                                  <td className="text-sm w-1/5">
+                                    {key.toLowerCase()}:
+                                  </td>
+                                  <td className="text-sm w-4/5 text-ellipsis">
+                                    {value.join(", ")}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
                         </table>
                       </div>
                       <div className="flex flex-col gap-2">
@@ -136,18 +138,20 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
                           Response Headers
                         </p>
                         <table>
-                          {Object.entries(response.headers ?? [])
-                            .filter(([key, value]) => key && value)
-                            .map(([key, value]) => (
-                              <tr key={key}>
-                                <td className="text-sm w-1/5">
-                                  {key.toLowerCase()}:
-                                </td>
-                                <td className="text-sm w-4/5 text-ellipsis">
-                                  {value}
-                                </td>
-                              </tr>
-                            ))}
+                          <tbody>
+                            {Object.entries(response.headers ?? [])
+                              .filter(([key, value]) => key && value)
+                              .map(([key, value]) => (
+                                <tr key={key}>
+                                  <td className="text-sm w-1/5">
+                                    {key.toLowerCase()}:
+                                  </td>
+                                  <td className="text-sm w-4/5 text-ellipsis">
+                                    {value}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
                         </table>
                       </div>
                     </div>
@@ -182,16 +186,18 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
                               Query Params
                             </p>
                             <table>
-                              {Object.entries(request.queryParams ?? [])
-                                .filter(([key, value]) => key && value)
-                                .map(([key, value]) => (
-                                  <tr key={key}>
-                                    <td className="text-sm w-1/5">{key}:</td>
-                                    <td className="text-sm w-4/5 text-ellipsis">
-                                      {value.join(", ")}
-                                    </td>
-                                  </tr>
-                                ))}
+                              <tbody>
+                                {Object.entries(request.queryParams ?? [])
+                                  .filter(([key, value]) => key && value)
+                                  .map(([key, value]) => (
+                                    <tr key={key}>
+                                      <td className="text-sm w-1/5">{key}:</td>
+                                      <td className="text-sm w-4/5 text-ellipsis">
+                                        {value.join(", ")}
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
                             </table>
                           </>
                         )}

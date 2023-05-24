@@ -5,30 +5,19 @@ describe("Topics Spec", () => {
   });
 
   it("should retrieve correct topics", () => {
-    cy.get("h2").should("contain.text", "Topic - subscribe-tests");
-    cy.get(".bg-gray-50 > .bg-white").should("have.text", "2");
-    cy.getTestEl("topics-select").within(() => cy.get("button").click());
+    cy.get("h2").should("contain.text", "subscribe-tests");
+    cy.getTestEl("Topics-count").should("have.text", "2");
 
     const expectedTopics = ["subscribe-tests", "subscribe-tests-2"];
 
-    cy.getTestEl("topics-select-options")
-      .find("li")
-      .should("have.length", expectedTopics.length)
-      .each(($li, i) => {
-        // Assert that each list item contains the expected text
-        expect(expectedTopics).to.include($li.text());
-      });
+    expectedTopics.forEach((id) => {
+      cy.get(`[data-rct-item-id="${id}"]`).should("exist");
+    });
   });
 
   ["subscribe-tests", "subscribe-tests-2"].forEach((topic) => {
     it(`should trigger topic ${topic}`, () => {
-      cy.getTestEl("topics-select").within(() => cy.get("button").click());
-
-      cy.getTestEl("topics-select-options").within(() => {
-        cy.get("li")
-          .contains(new RegExp(`^${topic}$`))
-          .click();
-      });
+      cy.get(`[data-rct-item-id="${topic}"]`).click();
 
       cy.getTestEl("generated-request-path").should(
         "have.attr",
@@ -47,11 +36,8 @@ describe("Topics Spec", () => {
 
   it(`should add to doc count after topic triggers`, () => {
     cy.visit("/");
-    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
-    cy.getTestEl("endpoint-select-options").within(() => {
-      cy.get("li").contains("first-api/topic-count1 methods").click();
-    });
+    cy.get('[data-rct-item-id="first-api-/topic-count-GET"]').click();
 
     cy.getTestEl("send-api-btn").click();
 

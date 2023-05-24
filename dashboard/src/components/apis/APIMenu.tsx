@@ -5,6 +5,7 @@ import { Fragment } from "react";
 import type { Endpoint } from "../../types";
 import { LOCAL_STORAGE_KEY } from "./APIExplorer";
 import { useHistory } from "../../lib/hooks/use-history";
+import { formatJSON } from "../../lib/utils";
 
 interface Props {
   selected: Endpoint;
@@ -31,7 +32,7 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
   };
 
   const downloadSpec = () => {
-    const json = JSON.stringify(selected.doc, null, 2);
+    const json = formatJSON(selected.doc);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -47,7 +48,10 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
     <Menu as="div" className="relative ml-auto">
       <Menu.Button className="-m-2.5 block p-2.5 text-gray-400 hover:text-gray-500">
         <span className="sr-only">Open options</span>
-        <EllipsisHorizontalIcon className="h-10 w-10" aria-hidden="true" />
+        <EllipsisHorizontalIcon
+          className="h-10 w-10 md:h-6 md:w-6"
+          aria-hidden="true"
+        />
       </Menu.Button>
       <Transition
         as={Fragment}

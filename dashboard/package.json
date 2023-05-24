@@ -39,6 +39,7 @@
     "lottie-react": "^2.4.0",
     "radash": "^10.8.1",
     "react": "^18.2.0",
+    "react-complex-tree": "^2.1.4",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
     "react-hot-toast": "^2.4.0",

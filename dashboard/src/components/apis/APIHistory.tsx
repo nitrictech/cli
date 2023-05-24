@@ -1,6 +1,6 @@
 import type { ApiHistoryItem, Endpoint } from "../../types";
 import Badge from "../shared/Badge";
-import { getDateString } from "../../lib/utils";
+import { formatJSON, getDateString } from "../../lib/utils";
 import { Disclosure } from "@headlessui/react";
 import { ChevronUpIcon } from "@heroicons/react/20/solid";
 import { useState } from "react";
@@ -108,7 +108,6 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
               <div className="bg-white shadow sm:rounded-lg">
                 <Tabs
                   tabs={isJson ? jsonTabs : tabs}
-                  round
                   index={tabIndex}
                   setIndex={setTabIndex}
                 />
@@ -170,7 +169,9 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
                         <CodeEditor
                           contentType="application/json"
                           readOnly={true}
-                          value={atob(request.body?.toString() ?? "")}
+                          value={formatJSON(
+                            JSON.parse(atob(request.body?.toString() ?? ""))
+                          )}
                           title="Request Body"
                         />
                       </div>

@@ -1,4 +1,4 @@
-import { headersToObject } from "../utils";
+import { formatJSON, headersToObject } from "../utils";
 
 export const generateResponse = async (res: Response, startTime: number) => {
   const contentType = res.headers.get("Content-Type");
@@ -6,7 +6,7 @@ export const generateResponse = async (res: Response, startTime: number) => {
   let data;
 
   if (contentType === "application/json") {
-    data = JSON.stringify(await res.json(), null, 2);
+    data = formatJSON(await res.json());
   } else if (
     contentType?.startsWith("image/") ||
     contentType?.startsWith("video/") ||

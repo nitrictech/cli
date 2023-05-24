@@ -15,6 +15,7 @@ import {
 import classNames from "classnames";
 import { debounce } from "radash";
 import TextField from "./TextField";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip";
 
 interface Props<T>
   extends Omit<ControlledTreeEnvironmentProps<T>, "viewState"> {
@@ -117,11 +118,8 @@ const TreeView = <T extends Record<string, any>>({
             )
           ) : null
         }
-        renderItem={({ title, arrow, depth, context, children, item }) => (
-          <li
-            {...context.itemContainerWithChildrenProps}
-            className={classNames("flex w-full flex-col text-base items-start")}
-          >
+        renderItem={({ title, arrow, depth, context, children, item }) => {
+          const buttonContent = (
             <button
               {...context.itemContainerWithoutChildrenProps}
               {...context.interactiveElementProps}
@@ -134,14 +132,34 @@ const TreeView = <T extends Record<string, any>>({
               style={{
                 paddingLeft: depth > 0 ? depth * 15 : undefined,
               }}
-              title={item.data.label}
             >
               {arrow}
               {title}
             </button>
-            {children}
-          </li>
-        )}
+          );
+
+          return (
+            <li
+              {...context.itemContainerWithChildrenProps}
+              className={classNames(
+                "flex w-full flex-col text-base items-start"
+              )}
+            >
+              {/* if text is over 30 chars, show tooltip */}
+              {item.data.label.length >= 30 ? (
+                <Tooltip disableHoverableContent>
+                  <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>{item.data.label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                buttonContent
+              )}
+              {children}
+            </li>
+          );
+        }}
         items={filteredItems}
         {...props}
         viewState={{

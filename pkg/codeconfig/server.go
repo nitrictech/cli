@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 )
 
@@ -59,12 +60,9 @@ func (s *Server) TriggerStream(stream v1.FaasService_TriggerStreamServer) error 
 		return s.function.AddSubscriptionHandler(w.Subscription)
 	case *v1.InitRequest_BucketNotification:
 		return s.function.AddBucketNotificationHandler(w.BucketNotification)
+	default:
+		return utils.NewIncompatibleWorkerError()
 	}
-
-	// treat as normal function worker
-	// XXX: No-op for now. This can be handled exclusively at runtime
-	// Close the stream, once we've received the InitRequest
-	return nil
 }
 
 // Declare - Accepts resource declarations, adding them as dependencies to the Function

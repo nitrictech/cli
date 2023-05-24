@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Tabs } from "../shared";
 import CodeEditor from "./CodeEditor";
 import APIResponseContent from "./APIResponseContent";
+import TableGroup from "../shared/TableGroup";
 
 interface Props {
   history: ApiHistoryItem[];
@@ -88,7 +89,7 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
                     Status: {response.status}
                   </Badge>
                 )}
-                <p className="text-ellipsis">
+                <p className="truncate">
                   {api}
                   {request.path}
                 </p>
@@ -111,50 +112,29 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
                   index={tabIndex}
                   setIndex={setTabIndex}
                 />
-                <div className="px-4 py-5 sm:p-6">
+                <div className="py-5">
                   {tabIndex === 0 && (
-                    <div className="flex flex-col gap-8">
-                      <div className="flex flex-col gap-2">
-                        <p className="text-md font-semibold">Request Headers</p>
-                        <table>
-                          <tbody>
-                            {Object.entries(request.headers)
-                              .filter(([key, value]) => key && value)
-                              .map(([key, value]) => (
-                                <tr key={key}>
-                                  <td className="text-sm w-1/5">
-                                    {key.toLowerCase()}:
-                                  </td>
-                                  <td className="text-sm w-4/5 text-ellipsis">
-                                    {value.join(", ")}
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <p className="text-md font-semibold">
-                          Response Headers
-                        </p>
-                        <table>
-                          <tbody>
-                            {Object.entries(response.headers ?? [])
-                              .filter(([key, value]) => key && value)
-                              .map(([key, value]) => (
-                                <tr key={key}>
-                                  <td className="text-sm w-1/5">
-                                    {key.toLowerCase()}:
-                                  </td>
-                                  <td className="text-sm w-4/5 text-ellipsis">
-                                    {value}
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    <TableGroup
+                      headers={["Key", "Value"]}
+                      rowDataClassName="max-w-[100px]"
+                      groups={[
+                        {
+                          name: "Request Headers",
+                          rows: Object.entries(request.headers)
+                            .filter(([key, value]) => key && value)
+                            .map(([key, value]) => [
+                              key.toLowerCase(),
+                              value.join(", "),
+                            ]),
+                        },
+                        {
+                          name: "Response Headers",
+                          rows: Object.entries(response.headers ?? [])
+                            .filter(([key, value]) => key && value)
+                            .map(([key, value]) => [key.toLowerCase(), value]),
+                        },
+                      ]}
+                    />
                   )}
                   {tabIndex === 1 && (
                     <div className="flex flex-col gap-8">
@@ -181,25 +161,18 @@ const ApiHistoryAccordion: React.FC<ApiHistoryItem> = ({
                       </div>
                       <div className="flex flex-col gap-2">
                         {request.queryParams && (
-                          <>
-                            <p className="text-md font-semibold">
-                              Query Params
-                            </p>
-                            <table>
-                              <tbody>
-                                {Object.entries(request.queryParams ?? [])
-                                  .filter(([key, value]) => key && value)
-                                  .map(([key, value]) => (
-                                    <tr key={key}>
-                                      <td className="text-sm w-1/5">{key}:</td>
-                                      <td className="text-sm w-4/5 text-ellipsis">
-                                        {value.join(", ")}
-                                      </td>
-                                    </tr>
-                                  ))}
-                              </tbody>
-                            </table>
-                          </>
+                          <TableGroup
+                            headers={["Key", "Value"]}
+                            rowDataClassName="max-w-[100px]"
+                            groups={[
+                              {
+                                name: "Query Params",
+                                rows: request.queryParams
+                                  .filter(({ key, value }) => key && value)
+                                  .map(({ key, value }) => [key, value]),
+                              },
+                            ]}
+                          />
                         )}
                       </div>
                     </div>

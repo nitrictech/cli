@@ -111,7 +111,7 @@ export interface RequestHistory {
   path?: string;
   method?: Method;
   pathParams: FieldRow[] | [];
-  queryParams: Record<string, string[]>;
+  queryParams: FieldRow[] | [];
   headers: Record<string, string[]>;
   body?: BodyInit | null;
 }

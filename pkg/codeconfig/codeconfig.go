@@ -185,6 +185,8 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 				NotificationType:         w.NotificationType().String(),
 				NotificationPrefixFilter: w.NotificationPrefixFilter(),
 			})
+		default:
+			return nil, utils.NewIncompatibleWorkerError()
 		}
 	}
 	// Convert the map of unique API specs to an array

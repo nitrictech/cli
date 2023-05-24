@@ -122,6 +122,8 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
+    cy.wait(1000);
+
     cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {

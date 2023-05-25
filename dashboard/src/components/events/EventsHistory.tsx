@@ -1,6 +1,6 @@
 import type { EventHistoryItem, WorkerResource } from "../../types";
 import Badge from "../shared/Badge";
-import { getDateString } from "../../lib/utils";
+import { formatJSON, getDateString } from "../../lib/utils";
 import { Disclosure } from "@headlessui/react";
 import { ChevronUpIcon } from "@heroicons/react/20/solid";
 import CodeEditor from "../apis/CodeEditor";
@@ -37,9 +37,7 @@ const EventHistoryAccordion: React.FC<EventHistoryItem> = ({
   success,
   time,
 }) => {
-  const formattedPayload = payload
-    ? JSON.stringify(JSON.parse(payload), null, 2)
-    : "";
+  const formattedPayload = payload ? formatJSON(payload) : "";
 
   return (
     <Disclosure>
@@ -50,7 +48,7 @@ const EventHistoryAccordion: React.FC<EventHistoryItem> = ({
               <div className="flex flex-row gap-4 w-2/3">
                 <Badge
                   status={success ? "green" : "red"}
-                  className="!text-md w-1/6"
+                  className="!text-md w-16 h-6"
                 >
                   {success ? "success" : "failure"}
                 </Badge>

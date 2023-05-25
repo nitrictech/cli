@@ -6,43 +6,44 @@ describe("API Explorer spec", () => {
   });
 
   it("should retrieve correct apis and endpoints", () => {
-    cy.get("h2").should("contain.text", "API - ");
-    cy.get(".bg-gray-50 > .bg-white").should("have.text", "2");
-    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
+    cy.getTestEl("API Explorer-count").should("have.text", "2");
+
+    cy.get('[data-rct-item-id="second-api"]').click();
 
     const expectedEndpoints = [
-      "first-api/all-methods6 methods",
-      "first-api/header-test1 methods",
-      "first-api/json-test1 methods",
-      "first-api/path-test/{name}1 methods",
-      "first-api/query-test1 methods",
-      "first-api/schedule-count1 methods",
-      "first-api/topic-count1 methods",
-      "second-api/content-type-binary1 methods",
-      "second-api/content-type-css1 methods",
-      "second-api/content-type-html1 methods",
-      "second-api/content-type-image1 methods",
-      "second-api/content-type-xml1 methods",
-      "second-api/image-from-bucket3 methods",
-      "second-api/very-nested-files1 methods",
+      "first-api",
+      "first-api-/all-methods-DELETE",
+      "first-api-/all-methods-GET",
+      "first-api-/all-methods-OPTIONS",
+      "first-api-/all-methods-PATCH",
+      "first-api-/all-methods-POST",
+      "first-api-/all-methods-PUT",
+      "first-api-/header-test-GET",
+      "first-api-/json-test-POST",
+      "first-api-/path-test/{name}-GET",
+      "first-api-/query-test-GET",
+      "first-api-/schedule-count-GET",
+      "first-api-/topic-count-GET",
+      "second-api-/content-type-binary-GET",
+      "second-api-/content-type-css-GET",
+      "second-api-/content-type-html-GET",
+      "second-api-/content-type-image-GET",
+      "second-api-/content-type-xml-GET",
+      "second-api-/image-from-bucket-DELETE",
+      "second-api-/image-from-bucket-GET",
+      "second-api-/image-from-bucket-PUT",
+      "second-api-/very-nested-files-PUT",
     ];
 
-    cy.getTestEl("endpoint-select-options")
-      .find("li")
-      .should("have.length", expectedEndpoints.length)
-      .each(($li, i) => {
-        // Assert that each list item contains the expected text
-        expect(expectedEndpoints).to.include($li.text());
-      });
+    expectedEndpoints.forEach((id) => {
+      cy.get(`[data-rct-item-id="${id}"]`).should("exist");
+    });
   });
 
   it("should allow query params", () => {
     cy.intercept("/api/call/**").as("apiCall");
-    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
-    cy.getTestEl("endpoint-select-options").within(() => {
-      cy.get("li").contains("first-api/query-test1 methods").click();
-    });
+    cy.get('[data-rct-item-id="first-api-/query-test-GET"]').click();
 
     cy.getTestEl("send-api-btn").click();
 
@@ -89,11 +90,8 @@ describe("API Explorer spec", () => {
 
   it("should allow request headers", () => {
     cy.intercept("/api/call/**").as("apiCall");
-    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
-    cy.getTestEl("endpoint-select-options").within(() => {
-      cy.get("li").contains("first-api/header-test1 methods").click();
-    });
+    cy.get('[data-rct-item-id="first-api-/header-test-GET"]').click();
 
     cy.getTestEl("send-api-btn").click();
 
@@ -124,6 +122,8 @@ describe("API Explorer spec", () => {
 
     cy.wait("@apiCall");
 
+    cy.wait(1000);
+
     cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
@@ -136,11 +136,8 @@ describe("API Explorer spec", () => {
 
   it("should allow path params", () => {
     cy.intercept("/api/call/**").as("apiCall");
-    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
-    cy.getTestEl("endpoint-select-options").within(() => {
-      cy.get("li").contains("first-api/path-test/{name}1 methods").click();
-    });
+    cy.get('[data-rct-item-id="first-api-/path-test/{name}-GET"]').click();
 
     cy.getTestEl("send-api-btn").click();
 
@@ -167,11 +164,8 @@ describe("API Explorer spec", () => {
 
   it("should allow json body", () => {
     cy.intercept("/api/call/**").as("apiCall");
-    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
-    cy.getTestEl("endpoint-select-options").within(() => {
-      cy.get("li").contains("first-api/json-test1 methods").click();
-    });
+    cy.get('[data-rct-item-id="first-api-/json-test-POST"]').click();
 
     cy.getTestEl("send-api-btn").click();
 
@@ -180,7 +174,7 @@ describe("API Explorer spec", () => {
     cy.getAPIResponseCodeEditor()
       .invoke("text")
       .then((text) => {
-        expect(JSON.parse(text)).to.deep.equal({ requestData: {} });
+        expect(JSON.parse(text)).to.deep.equal({});
       });
 
     cy.getTestEl("Body-tab-btn").click();
@@ -213,17 +207,9 @@ describe("API Explorer spec", () => {
 
   it("should upload binary file", () => {
     cy.intercept("/api/call/**").as("apiCall");
-    cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
-    cy.getTestEl("endpoint-select-options").within(() => {
-      cy.get("li").contains("second-api/image-from-bucket3 methods").click();
-    });
-
-    cy.getTestEl("method-select").within(() => cy.get("button").click());
-
-    cy.getTestEl("method-select-options").within(() => {
-      cy.get("li").contains("PUT").click();
-    });
+    cy.get('[data-rct-item-id="second-api"]').click();
+    cy.get('[data-rct-item-id="second-api-/image-from-bucket-PUT"]').click();
 
     cy.getTestEl("Body-tab-btn").click();
 
@@ -257,11 +243,9 @@ describe("API Explorer spec", () => {
 
     cy.getTestEl("response-status", 5000).should("contain.text", "Status: 200");
 
-    cy.getTestEl("method-select").within(() => cy.get("button").click());
+    cy.wait(500);
 
-    cy.getTestEl("method-select-options").within(() => {
-      cy.get("li").contains("GET").click();
-    });
+    cy.get('[data-rct-item-id="second-api-/image-from-bucket-GET"]').click();
 
     cy.intercept("/api/call/**").as("apiCall");
 
@@ -293,13 +277,11 @@ describe("API Explorer spec", () => {
   ].forEach(([contentType, expected]) => {
     it(`should handle content type ${contentType}`, () => {
       cy.intercept("/api/call/**").as("apiCall");
-      cy.getTestEl("endpoint-select").within(() => cy.get("button").click());
 
-      cy.getTestEl("endpoint-select-options").within(() => {
-        cy.get("li")
-          .contains(`second-api/content-type-${contentType}1 methods`)
-          .click();
-      });
+      cy.get('[data-rct-item-id="second-api"]').click();
+      cy.get(
+        `[data-rct-item-id="second-api-/content-type-${contentType}-GET"]`
+      ).click();
 
       cy.getTestEl("send-api-btn").click();
 

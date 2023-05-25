@@ -17,6 +17,11 @@ export interface WorkerResource {
   workerKey: string;
   topicKey: string;
 }
+export type Schedule = WorkerResource;
+
+export type Subscription = WorkerResource;
+
+export type Topic = Schedule;
 
 export interface History {
   apis: ApiHistoryItem[];
@@ -45,7 +50,7 @@ export interface Endpoint {
   id: string;
   api: string;
   path: string;
-  methods: Method[];
+  method: Method;
   params?: Param[];
   doc: OpenAPIV3.Document<Record<string, any>>;
 }
@@ -106,7 +111,7 @@ export interface RequestHistory {
   path?: string;
   method?: Method;
   pathParams: FieldRow[] | [];
-  queryParams: Record<string, string[]>;
+  queryParams: FieldRow[] | [];
   headers: Record<string, string[]>;
   body?: BodyInit | null;
 }

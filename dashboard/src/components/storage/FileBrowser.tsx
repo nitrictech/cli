@@ -226,24 +226,26 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
       <div>
         <h2 className="mb-4">Bucket File Explorer</h2>
         <div style={{ height: 300 }} className="file-explorer">
-          <ChonkFileBrowser
-            instanceId={bucket}
-            files={folderFiles}
-            disableDefaultFileActions={actionsToDisable}
-            fileActions={[ChonkyActions.DeleteFiles]}
-            folderChain={folderChain}
-            onFileAction={handleFileAction}
-            thumbnailGenerator={(file) =>
-              !file.isDir
-                ? `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`
-                : null
-            }
-          >
-            <FileNavbar />
-            <FileToolbar />
-            <FileList />
-            <FileContextMenu />
-          </ChonkFileBrowser>
+          {!loading && (
+            <ChonkFileBrowser
+              instanceId={bucket}
+              files={folderFiles}
+              disableDefaultFileActions={actionsToDisable}
+              fileActions={[ChonkyActions.DeleteFiles]}
+              folderChain={folderChain}
+              onFileAction={handleFileAction}
+              thumbnailGenerator={(file) =>
+                !file.isDir
+                  ? `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`
+                  : null
+              }
+            >
+              <FileNavbar />
+              <FileToolbar />
+              <FileList />
+              <FileContextMenu />
+            </ChonkFileBrowser>
+          )}
         </div>
       </div>
       <div>

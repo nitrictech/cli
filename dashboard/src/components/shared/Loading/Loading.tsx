@@ -43,7 +43,7 @@ const Loading: React.FC<Props> = ({
       role="status"
       className="w-full h-full flex flex-col items-center justify-center"
     >
-      <div className={classNames("w-40 mb-20", className)}>
+      <div className={classNames("w-40 my-20", className)}>
         <Lottie
           initialSegment={[40, 149]}
           loop

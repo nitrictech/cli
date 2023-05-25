@@ -1,4 +1,4 @@
-import { getFileExtension } from "../../lib/utils";
+import { formatJSON, getFileExtension } from "../../lib/utils";
 import type { APIResponse } from "../../types";
 import CodeEditor from "./CodeEditor";
 
@@ -47,6 +47,11 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
         .
       </div>
     );
+  }
+
+  if (contentType === "application/json") {
+    // format
+    response.data = formatJSON(response.data);
   }
 
   return (

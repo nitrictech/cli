@@ -21,6 +21,13 @@ import (
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/go-cmp/cmp"
+
+	"github.com/nitrictech/cli/pkg/project"
+	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
+	"github.com/nitrictech/nitric/core/pkg/worker"
+	"github.com/nitrictech/nitric/core/pkg/worker/adapter"
+	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
 func Test_splitPath(t *testing.T) {
@@ -95,6 +102,117 @@ func Test_splitPath(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("splitPath() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func Test_specFromWorkerPool(t *testing.T) {
+	tests := []struct {
+		name   string
+		pool   pool.WorkerPool
+		expect *SpecResult
+	}{
+		{
+			name: "Route, Schedule, Subscription and BucketNotification Workers",
+			pool: func() pool.WorkerPool {
+				workerPool := pool.NewProcessPool(&pool.ProcessPoolOptions{MaxWorkers: 99})
+
+				err := workerPool.AddWorker(worker.NewRouteWorker(&adapter.GrpcAdapter{}, &worker.RouteWorkerOptions{
+					Api:     "test-api",
+					Path:    "/my-test-path",
+					Methods: []string{"PUT", "GET", "POST"},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = workerPool.AddWorker(worker.NewScheduleWorker(&adapter.GrpcAdapter{}, &worker.ScheduleWorkerOptions{
+					Key: "test-schedule",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = workerPool.AddWorker(worker.NewSubscriptionWorker(&adapter.GrpcAdapter{}, &worker.SubscriptionWorkerOptions{
+					Topic: "test-subscription",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = workerPool.AddWorker(worker.NewBucketNotificationWorker(&adapter.GrpcAdapter{}, &worker.BucketNotificationWorkerOptions{
+					Notification: &v1.BucketNotificationWorker{
+						Bucket: "test-bucket",
+						Config: &v1.BucketNotificationConfig{
+							NotificationPrefixFilter: "*",
+							NotificationType:         v1.BucketNotificationType_Created,
+						},
+					},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return workerPool
+			}(),
+			expect: &SpecResult{
+				Apis: []*openapi3.T{
+					{
+						OpenAPI:    "3.0.1",
+						Components: &openapi3.Components{SecuritySchemes: openapi3.SecuritySchemes{}},
+						Info:       &openapi3.Info{Title: "test-api", Version: "v1"},
+						Paths: openapi3.Paths{
+							"/my-test-path": {
+								Get: &openapi3.Operation{
+									Extensions:  map[string]any{"x-nitric-target": map[string]string{"name": "", "type": "function"}},
+									OperationID: "mytestpathget",
+									Responses:   openapi3.Responses{"default": {Value: &openapi3.Response{Description: new(string)}}},
+								},
+								Post: &openapi3.Operation{
+									Extensions:  map[string]any{"x-nitric-target": map[string]string{"name": "", "type": "function"}},
+									OperationID: "mytestpathpost",
+									Responses:   openapi3.Responses{"default": {Value: &openapi3.Response{Description: new(string)}}},
+								},
+								Put: &openapi3.Operation{
+									Extensions:  map[string]any{"x-nitric-target": map[string]string{"name": "", "type": "function"}},
+									OperationID: "mytestpathput",
+									Responses:   openapi3.Responses{"default": {Value: &openapi3.Response{Description: new(string)}}},
+								},
+								Parameters: openapi3.Parameters{},
+							},
+						},
+					},
+				},
+				Schedules: []*TopicResult{{WorkerKey: "test-schedule", TopicKey: "test-schedule"}},
+				BucketNotifications: []*BucketNotification{
+					{
+						Bucket:                   "test-bucket",
+						NotificationType:         "Created",
+						NotificationPrefixFilter: "*",
+					},
+				},
+				Topics: []*TopicResult{{WorkerKey: "test-subscription", TopicKey: "test-subscription"}},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cc, err := New(&project.Project{}, map[string]string{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := cc.SpecFromWorkerPool(tt.pool)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(tt.expect, got) {
+				t.Error(cmp.Diff(tt.expect, got, cmp.Exporter(func(x reflect.Type) bool {
+					// Return true if the type is openapi3.T or has unexported fields
+					return x == reflect.TypeOf(openapi3.T{}) || x.NumField() > 0
+				})))
 			}
 		})
 	}

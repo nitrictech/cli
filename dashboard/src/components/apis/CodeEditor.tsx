@@ -5,7 +5,7 @@ import CodeMirror, {
 import { StreamLanguage } from "@codemirror/language";
 import { parse } from "@prantlf/jsonlint";
 import { linter, Diagnostic } from "@codemirror/lint";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ClipboardDocumentCheckIcon,
   ClipboardIcon,
@@ -17,6 +17,8 @@ import { css } from "@codemirror/lang-css";
 import { xml } from "@codemirror/lang-xml";
 import { spreadsheet } from "@codemirror/legacy-modes/mode/spreadsheet";
 import type { EditorView } from "@codemirror/view";
+import { copyToClipboard } from "../../lib/utils/copy-to-clipboard";
+import { formatJSON } from "../../lib/utils";
 
 interface Props extends ReactCodeMirrorProps {
   contentType: string;
@@ -78,17 +80,9 @@ const jsonLinter = (view: EditorView): Diagnostic[] => {
   return errors;
 };
 
-const copyToClipboard = (str: string) => {
-  const focused = window.document.hasFocus();
-  if (focused) {
-    window.navigator?.clipboard?.writeText(str);
-  } else {
-    console.warn("Unable to copy to clipboard");
-  }
-};
-
 const CodeEditor: React.FC<Props> = ({
   contentType,
+  content,
   readOnly,
   includeLinters,
   onChange,
@@ -161,11 +155,7 @@ const CodeEditor: React.FC<Props> = ({
         changes: {
           from: 0,
           to: view.state.doc.length,
-          insert: JSON.stringify(
-            JSON.parse(view.state.doc.toString()),
-            null,
-            2
-          ),
+          insert: formatJSON(view.state.doc.toString()),
         },
       });
     }

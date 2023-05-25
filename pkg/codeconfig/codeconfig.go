@@ -72,6 +72,7 @@ type BucketNotification struct {
 type SpecResult struct {
 	Apis                []*openapi3.T
 	Schedules           []*TopicResult
+	Topics              []*TopicResult
 	BucketNotifications []*BucketNotification
 }
 
@@ -134,6 +135,7 @@ var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, error) {
 	apis := map[string][]*apiHandler{}
 	schedules := []*TopicResult{}
+	topics := []*TopicResult{}
 	bucketNotifications := []*BucketNotification{}
 
 	// transform worker pool into apiHandlers
@@ -170,12 +172,21 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 				TopicKey:  topicKey,
 				WorkerKey: w.Key(),
 			})
+		case *worker.SubscriptionWorker:
+			topicKey := strings.ToLower(strings.ReplaceAll(w.Topic(), " ", "-"))
+
+			topics = append(topics, &TopicResult{
+				TopicKey:  topicKey,
+				WorkerKey: w.Topic(),
+			})
 		case *worker.BucketNotificationWorker:
 			bucketNotifications = append(bucketNotifications, &BucketNotification{
 				Bucket:                   w.Bucket(),
 				NotificationType:         w.NotificationType().String(),
 				NotificationPrefixFilter: w.NotificationPrefixFilter(),
 			})
+		default:
+			return nil, utils.NewIncompatibleWorkerError()
 		}
 	}
 	// Convert the map of unique API specs to an array
@@ -200,6 +211,10 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 		return schedules[i].TopicKey < schedules[j].TopicKey
 	})
 
+	sort.Slice(topics, func(i, j int) bool {
+		return topics[i].TopicKey < topics[j].TopicKey
+	})
+
 	// sort schedules by topic key
 	sort.Slice(bucketNotifications, func(i, j int) bool {
 		return bucketNotifications[i].Bucket < bucketNotifications[j].Bucket
@@ -209,6 +224,7 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 		Apis:                apiSpecs,
 		Schedules:           schedules,
 		BucketNotifications: bucketNotifications,
+		Topics:              topics,
 	}, nil
 }
 

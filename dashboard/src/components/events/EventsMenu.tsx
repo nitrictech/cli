@@ -2,17 +2,26 @@ import { Menu, Transition } from "@headlessui/react";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import classNames from "classnames";
 import { Fragment } from "react";
-import type { Endpoint } from "../../types";
-import { LOCAL_STORAGE_KEY } from "./APIExplorer";
+import type { WorkerResource } from "../../types";
+import { useHistory } from "../../lib/hooks/use-history";
 
 interface Props {
-  selected: Endpoint;
+  storageKey: string;
+  workerType: string;
+  selected: WorkerResource;
   onAfterClear: () => void;
 }
 
-const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
-  const clearHistory = () => {
-    const prefix = `${LOCAL_STORAGE_KEY}-${selected.api}-`;
+const EventsMenu: React.FC<Props> = ({
+  workerType,
+  storageKey,
+  selected,
+  onAfterClear,
+}) => {
+  const { deleteHistory } = useHistory(workerType);
+
+  const clearHistory = async () => {
+    const prefix = `${storageKey}-${selected.topicKey}-`;
 
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -21,27 +30,21 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
       }
     }
 
-    onAfterClear();
-  };
+    localStorage.removeItem(`${storageKey}-requests`);
 
-  const downloadSpec = () => {
-    const json = JSON.stringify(selected.doc, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${selected.api}-spec.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    await deleteHistory();
+
+    onAfterClear();
   };
 
   return (
     <Menu as="div" className="relative ml-auto">
       <Menu.Button className="-m-2.5 block p-2.5 text-gray-400 hover:text-gray-500">
         <span className="sr-only">Open options</span>
-        <EllipsisHorizontalIcon className="h-10 w-10" aria-hidden="true" />
+        <EllipsisHorizontalIcon
+          className="h-10 w-10 md:h-6 md:w-6"
+          aria-hidden="true"
+        />
       </Menu.Button>
       <Transition
         as={Fragment}
@@ -53,19 +56,6 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
         leaveTo="transform opacity-0 scale-95"
       >
         <Menu.Items className="absolute right-0 z-10 mt-0.5 w-40 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
-          <Menu.Item>
-            {({ active }) => (
-              <button
-                className={classNames(
-                  active ? "bg-gray-50" : "",
-                  "flex px-3 py-1 w-full text-sm leading-6 text-gray-900"
-                )}
-                onClick={downloadSpec}
-              >
-                Export Spec
-              </button>
-            )}
-          </Menu.Item>
           <Menu.Item>
             {({ active }) => (
               <button
@@ -85,4 +75,4 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
   );
 };
 
-export default APIMenu;
+export default EventsMenu;

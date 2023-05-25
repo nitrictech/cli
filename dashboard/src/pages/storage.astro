@@ -1,11 +1,9 @@
 ---
-import AppLayout from "../components/AppLayout";
-import StorageExplorer from "../components/StorageExplorer";
+import AppLayout from "../components/layout/AppLayout";
+import StorageExplorer from "../components/storage/StorageExplorer";
 import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout title="Storage | Dev Dashboard | Nitric">
-  <AppLayout client:load title="Storage" routePath={Astro.url.pathname}>
-    <StorageExplorer client:only />
-  </AppLayout>
+  <StorageExplorer client:only />
 </Layout>

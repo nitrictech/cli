@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import useSWR from "swr";
 import { fetcher } from "./fetcher";
-import type { BucketFile } from "../types";
-import { STORAGE_API } from "./const";
+import type { BucketFile } from "../../types";
+import { STORAGE_API } from "../constants";
 
 export const useBucket = (bucket?: string, prefix?: string) => {
   const { data, mutate } = useSWR<BucketFile[]>(

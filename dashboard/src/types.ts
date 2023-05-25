@@ -13,16 +13,29 @@ export type Method =
   | "PATCH"
   | "TRACE";
 
-export interface Schedule {
+export interface WorkerResource {
   workerKey: string;
   topicKey: string;
+}
+export type Schedule = WorkerResource;
+
+export type Subscription = WorkerResource;
+
+export type Topic = Schedule;
+
+export interface History {
+  apis: ApiHistoryItem[];
+  schedules: EventHistoryItem[];
+  topics: EventHistoryItem[];
 }
 
 export interface WebSocketResponse {
   projectName: string;
   buckets: string[];
   apis: APIDoc[];
-  schedules: Schedule[];
+  schedules: WorkerResource[];
+  topics: WorkerResource[];
+  subscriptions: WorkerResource[];
   triggerAddress: string;
   apiAddresses: Record<string, string>;
   storageAddress: string; // has http:// prefix
@@ -37,7 +50,7 @@ export interface Endpoint {
   id: string;
   api: string;
   path: string;
-  methods: Method[];
+  method: Method;
   params?: Param[];
   doc: OpenAPIV3.Document<Record<string, any>>;
 }
@@ -59,11 +72,46 @@ export interface APIResponse {
   headers?: Record<string, string>;
 }
 
-export interface HistoryItem {
+export interface BucketFile {
+  Key: string;
+}
+
+export interface TopicRequest {
+  id: string;
+  payloadType: string;
+  payload: Record<string, string>;
+}
+
+// HISTORY //
+
+/** Used only in local storage to store the last used params in a request */
+export interface LocalStorageHistoryItem {
   request: APIRequest;
   JSONBody: string;
 }
 
-export interface BucketFile {
-  Key: string;
+/** History that is received from the CLI web socket */
+export interface HistoryItem {
+  time: number;
+  success: boolean;
+}
+
+export interface EventHistoryItem extends HistoryItem {
+  event: WorkerResource;
+  payload: string;
+}
+
+export interface ApiHistoryItem extends HistoryItem {
+  api: string;
+  request: RequestHistory;
+  response: APIResponse;
+}
+
+export interface RequestHistory {
+  path?: string;
+  method?: Method;
+  pathParams: FieldRow[] | [];
+  queryParams: FieldRow[] | [];
+  headers: Record<string, string[]>;
+  body?: BodyInit | null;
 }

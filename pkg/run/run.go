@@ -50,50 +50,50 @@ type LocalServicesStatus struct {
 }
 
 type localServices struct {
-	s       *project.Project
-	storage *SeaweedServer
-	mem     *membrane.Membrane
-	status  *LocalServicesStatus
-	gw      *BaseHttpGateway
-	sp      *RunStorageService
-	dash    *dashboard.Dashboard
-	isStart bool
+	project        *project.Project
+	storage        *SeaweedServer
+	membrane       *membrane.Membrane
+	status         *LocalServicesStatus
+	gateway        *BaseHttpGateway
+	storageService *RunStorageService
+	dashboard      *dashboard.Dashboard
+	isStart        bool
 }
 
-func NewLocalServices(s *project.Project, isStart bool, dash *dashboard.Dashboard) LocalServices {
+func NewLocalServices(project *project.Project, isStart bool, dashboard *dashboard.Dashboard) LocalServices {
 	return &localServices{
-		s:       s,
+		project: project,
 		isStart: isStart,
 		status: &LocalServicesStatus{
-			RunDir:          filepath.Join(utils.NitricRunDir(), s.Name),
+			RunDir:          filepath.Join(utils.NitricRunDir(), project.Name),
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
 		},
-		dash: dash,
+		dashboard: dashboard,
 	}
 }
 
 func (l *localServices) TriggerAddress() string {
-	if l.gw != nil {
-		return l.gw.GetTriggerAddress()
+	if l.gateway != nil {
+		return l.gateway.GetTriggerAddress()
 	}
 
 	return ""
 }
 
 func (l *localServices) Refresh() error {
-	if l.gw != nil {
-		err := l.gw.Refresh()
+	if l.gateway != nil {
+		err := l.gateway.Refresh()
 		if err != nil {
 			return err
 		}
 	}
 
-	err := l.dash.Refresh(&dashboard.RefreshOptions{
+	err := l.dashboard.Refresh(&dashboard.RefreshOptions{
 		Pool:            l.GetWorkerPool(),
 		TriggerAddress:  l.TriggerAddress(),
 		ApiAddresses:    l.Apis(),
 		StorageAddress:  l.Status().StorageEndpoint,
-		ServiceListener: l.gw.serviceListener,
+		ServiceListener: l.gateway.serviceListener,
 	})
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (l *localServices) Refresh() error {
 }
 
 func (l *localServices) Stop() error {
-	l.mem.Stop()
+	l.membrane.Stop()
 	return l.storage.Stop()
 }
 
@@ -119,8 +119,8 @@ func (l *localServices) Running() bool {
 }
 
 func (l *localServices) Apis() map[string]string {
-	if l.gw != nil {
-		return l.gw.GetApiAddresses()
+	if l.gateway != nil {
+		return l.gateway.GetApiAddresses()
 	}
 
 	return nil
@@ -131,8 +131,8 @@ func (l *localServices) Status() *LocalServicesStatus {
 }
 
 func (l *localServices) GetDashPort() *int {
-	if l.gw != nil {
-		return &l.gw.dashPort
+	if l.gateway != nil {
+		return &l.gateway.dashPort
 	}
 
 	return nil
@@ -154,7 +154,7 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 
 	l.status.StorageEndpoint = fmt.Sprintf("http://localhost:%d", l.storage.GetApiPort())
 
-	l.sp, err = NewStorage(StorageOptions{
+	l.storageService, err = NewStorage(StorageOptions{
 		AccessKey: "dummykey",
 		SecretKey: "dummysecret",
 		Endpoint:  l.status.StorageEndpoint,
@@ -187,35 +187,36 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		return err
 	}
 
-	ev, err := NewEvents(pool)
+	ev, err := NewEvents(pool, l.project)
 	if err != nil {
 		return err
 	}
 
 	// Start a new gateway plugin
-	l.gw, err = NewGateway()
+	l.gateway, err = NewGateway()
 	if err != nil {
 		return err
 	}
 
 	// Start local dashboard
-	port, err := l.dash.Serve(l.sp)
+	port, err := l.dashboard.Serve(l.storageService)
 	if err != nil {
 		return err
 	}
 
-	l.gw.dashPort = *port
+	l.gateway.dashPort = *port
+	l.gateway.project = l.project
 
 	// Prepare development membrane to start
 	// This will start a single membrane that all
 	// running functions will connect to
-	l.mem, err = membrane.New(&membrane.MembraneOptions{
+	l.membrane, err = membrane.New(&membrane.MembraneOptions{
 		ServiceAddress:          "0.0.0.0:50051",
 		SecretPlugin:            secp,
 		QueuePlugin:             qp,
-		StoragePlugin:           l.sp,
+		StoragePlugin:           l.storageService,
 		DocumentPlugin:          dp,
-		GatewayPlugin:           l.gw,
+		GatewayPlugin:           l.gateway,
 		EventsPlugin:            ev,
 		ResourcesPlugin:         NewResources(l, l.isStart),
 		Pool:                    pool,
@@ -225,9 +226,9 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		return err
 	}
 
-	return l.mem.Start()
+	return l.membrane.Start()
 }
 
 func (l *localServices) GetWorkerPool() pool.WorkerPool {
-	return l.gw.pool
+	return l.gateway.pool
 }

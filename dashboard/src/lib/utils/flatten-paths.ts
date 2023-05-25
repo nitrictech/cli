@@ -1,6 +1,6 @@
 import type { OpenAPIV3 } from "openapi-types";
 import type { Endpoint, Method, Param } from "../../types";
-import { sortedUniq, uniqBy } from "../../lib/utils";
+import { sortedUniq, uniqBy } from "../utils";
 
 export function flattenPaths(doc: OpenAPIV3.Document): Endpoint[] {
   const uniquePaths: Record<string, Endpoint> = {};
@@ -16,26 +16,17 @@ export function flattenPaths(doc: OpenAPIV3.Document): Endpoint[] {
         return;
       }
 
-      const key = `${doc.info.title}-${path}`;
+      method = method.toUpperCase();
+      const key = `${doc.info.title}-${path}-${method}`;
       const endpoint: Endpoint = {
         id: key,
         api: doc.info.title,
         path,
-        methods: [method.toUpperCase() as Method],
+        method: method as Method,
         doc,
       };
 
-      if (!uniquePaths[key]) {
-        uniquePaths[key] = endpoint;
-      } else {
-        uniquePaths[key] = {
-          ...uniquePaths[key],
-          methods: sortedUniq([
-            ...uniquePaths[key].methods,
-            ...endpoint.methods,
-          ]),
-        };
-      }
+      uniquePaths[key] = endpoint;
     });
   });
 

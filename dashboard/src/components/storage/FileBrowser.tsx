@@ -11,13 +11,14 @@ import {
   FileContextMenu,
 } from "chonky";
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { useWebSocket } from "../../lib/use-web-socket";
+import { useWebSocket } from "../../lib/hooks/use-web-socket";
+import { useBucket } from "../../lib/hooks/use-bucket";
 
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
-import { useBucket } from "../../lib/use-bucket";
 import "./file-browser-styles.css";
 import FileUpload from "./FileUpload";
-import Loading from "../shared/Loading";
+import { Loading } from "../shared";
+
 interface Props {
   bucket: string;
 }
@@ -225,24 +226,26 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
       <div>
         <h2 className="mb-4">Bucket File Explorer</h2>
         <div style={{ height: 300 }} className="file-explorer">
-          <ChonkFileBrowser
-            instanceId={bucket}
-            files={folderFiles}
-            disableDefaultFileActions={actionsToDisable}
-            fileActions={[ChonkyActions.DeleteFiles]}
-            folderChain={folderChain}
-            onFileAction={handleFileAction}
-            thumbnailGenerator={(file) =>
-              !file.isDir
-                ? `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`
-                : null
-            }
-          >
-            <FileNavbar />
-            <FileToolbar />
-            <FileList />
-            <FileContextMenu />
-          </ChonkFileBrowser>
+          {!loading && (
+            <ChonkFileBrowser
+              instanceId={bucket}
+              files={folderFiles}
+              disableDefaultFileActions={actionsToDisable}
+              fileActions={[ChonkyActions.DeleteFiles]}
+              folderChain={folderChain}
+              onFileAction={handleFileAction}
+              thumbnailGenerator={(file) =>
+                !file.isDir
+                  ? `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`
+                  : null
+              }
+            >
+              <FileNavbar />
+              <FileToolbar />
+              <FileList />
+              <FileContextMenu />
+            </ChonkFileBrowser>
+          )}
         </div>
       </div>
       <div>

@@ -83,6 +83,10 @@ type ResponseHistory struct {
 	Headers map[string][]string `json:"headers"`
 }
 
+func NewHistoryError(recordType RecordType, historyFile string) error {
+	return fmt.Errorf("could not write %s history to the JSON file '%s' due to a formatting issue. Please check the file's formatting and ensure it follows the correct JSON structure, or reset the history by deleting the file", recordType, historyFile)
+}
+
 func WriteHistoryRecord(stackName string, recordType RecordType, historyRecord *HistoryRecord) error {
 	historyFile, err := utils.NitricHistoryFile(stackName, string(recordType))
 	if err != nil {
@@ -91,17 +95,22 @@ func WriteHistoryRecord(stackName string, recordType RecordType, historyRecord *
 
 	existingRecords, err := ReadHistoryRecords(stackName, recordType)
 	if err != nil {
-		return err
+		return NewHistoryError(recordType, historyFile)
 	}
 
 	existingRecords = append(existingRecords, historyRecord)
 
 	data, err := json.Marshal(existingRecords)
 	if err != nil {
-		return err
+		return NewHistoryError(recordType, historyFile)
 	}
 
-	return os.WriteFile(historyFile, data, fs.ModePerm)
+	err = os.WriteFile(historyFile, data, fs.ModePerm)
+	if err != nil {
+		return NewHistoryError(recordType, historyFile)
+	}
+
+	return nil
 }
 
 func DeleteHistoryRecord(stackName string, recordType RecordType) error {

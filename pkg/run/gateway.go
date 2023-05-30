@@ -192,7 +192,7 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 				},
 			})
 			if err != nil {
-				fmt.Printf("error occurred writing history: %v", err)
+				fmt.Println(err.Error())
 			}
 
 			return
@@ -255,7 +255,7 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 			},
 		})
 		if err != nil {
-			fmt.Printf("error occurred writing history: %v", err)
+			fmt.Println(err.Error())
 		}
 	}
 

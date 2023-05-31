@@ -68,6 +68,14 @@ nitric stack list
 		currPassFile := os.Getenv("PULUMI_CONFIG_PASSPHRASE_FILE")
 		if currPass == "" && currPassFile == "" {
 			p, err := preferences.GetLocalPassPhraseFile()
+			// In non-CI environments we can generate the file to save a step.
+			// in CI environments this file would typically be lost, so it shouldn't auto-generate
+			if err != nil && !output.CI {
+				p, err = preferences.GenerateLocalPassPhraseFile()
+			}
+			if err != nil {
+				err = fmt.Errorf("unable to determine configured passphrase. See https://nitric.io/docs/guides/github-actions#configuring-environment-variables")
+			}
 			cobra.CheckErr(err)
 
 			// Set the default
@@ -218,12 +226,12 @@ var stackDeleteCmd = &cobra.Command{
 	Example: `nitric stack down -s aws
 
 # To not be prompted, use -y
-nitric stack down -e aws -y`,
+nitric stack down -s aws -y`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if !confirmDown {
+		if !confirmDown && !output.CI {
 			confirm := ""
 			err := survey.AskOne(&survey.Select{
-				Message: "Warning - This operation will destroy your stack, all deployed resources will be removed. Are you sure you want to proceed?",
+				Message: "Warning - This operation will destroy your stack and all resources, it cannot be undone. Continue?",
 				Default: "No",
 				Options: []string{"Yes", "No"},
 			}, &confirm)

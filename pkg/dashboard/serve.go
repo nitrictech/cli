@@ -268,7 +268,7 @@ func (d *Dashboard) Serve(sp storage.StorageService) (*int, error) {
 
 		switch action {
 		case "list-files":
-			fileList, err := sp.ListFiles(ctx, bucket)
+			fileList, err := sp.ListFiles(ctx, bucket, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

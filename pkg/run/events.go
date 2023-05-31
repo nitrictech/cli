@@ -35,7 +35,7 @@ import (
 )
 
 type WorkerPoolEventService struct {
-	events.UnimplementedeventsPlugin
+	events.UnimplementedEventsPlugin
 	pool    pool.WorkerPool
 	project *project.Project
 }

@@ -80,7 +80,7 @@ const APIExplorer = () => {
   const { data } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
 
-  const { data: history } = useHistory<ApiHistoryItem>("apis");
+  const { data: history } = useHistory("apis");
 
   const [JSONBody, setJSONBody] = useState<string>("");
   const [fileToUpload, setFileToUpload] = useState<File>();
@@ -617,7 +617,7 @@ const APIExplorer = () => {
                 Request History
               </h3>
               <APIHistory
-                history={history ?? []}
+                history={history?.apis ?? []}
                 selectedRequest={{
                   path: selectedApiEndpoint.path,
                   method: request.method,

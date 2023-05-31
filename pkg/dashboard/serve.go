@@ -17,16 +17,12 @@
 package dashboard
 
 import (
-	"context"
 	"embed"
 	"encoding/json"
-	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -46,7 +42,8 @@ type Dashboard struct {
 	topics               []*codeconfig.TopicResult
 	buckets              []string
 	envMap               map[string]string
-	melody               *melody.Melody
+	stackWebSocket       *melody.Melody
+	historyWebSocket     *melody.Melody
 	triggerAddress       string
 	storageAddress       string
 	apiAddresses         map[string]string
@@ -88,13 +85,16 @@ type RefreshOptions struct {
 var content embed.FS
 
 func New(p *project.Project, envMap map[string]string) (*Dashboard, error) {
-	m := melody.New()
+	stackWebSocket := melody.New()
+
+	historyWebSocket := melody.New()
 
 	return &Dashboard{
 		project:             p,
 		apis:                []*openapi3.T{},
 		envMap:              envMap,
-		melody:              m,
+		stackWebSocket:      stackWebSocket,
+		historyWebSocket:    historyWebSocket,
 		bucketNotifications: []*codeconfig.BucketNotification{},
 		schedules:           []*codeconfig.TopicResult{},
 		topics:              []*codeconfig.TopicResult{},
@@ -138,7 +138,12 @@ func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 	d.apiAddresses = opts.ApiAddresses
 	d.storageAddress = opts.StorageAddress
 
-	err = d.sendUpdate()
+	err = d.sendStackUpdate()
+	if err != nil {
+		return err
+	}
+
+	err = d.sendHistoryUpdate()
 	if err != nil {
 		return err
 	}
@@ -146,7 +151,7 @@ func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 	return nil
 }
 
-func (d *Dashboard) Serve(sp storage.StorageService) (*int, error) {
+func (d *Dashboard) Serve(storagePlugin storage.StorageService) (*int, error) {
 	// Get the embedded files from the 'dist' directory
 	staticFiles, err := fs.Sub(content, "dist")
 	if err != nil {
@@ -160,202 +165,57 @@ func (d *Dashboard) Serve(sp storage.StorageService) (*int, error) {
 
 	// handle websocket
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		err := d.melody.HandleRequest(w, r)
+		err := d.stackWebSocket.HandleRequest(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
 
 	// Register a handler for when a client connects
-	d.melody.HandleConnect(func(s *melody.Session) {
+	d.stackWebSocket.HandleConnect(func(s *melody.Session) {
 		// Send a welcome message to the client
-		err := d.sendUpdate()
+		err := d.sendStackUpdate()
 		if err != nil {
 			log.Fatal(err)
 		}
 	})
 
-	d.melody.HandleMessage(func(s *melody.Session, msg []byte) {
-		err := d.melody.Broadcast(msg)
+	d.stackWebSocket.HandleMessage(func(s *melody.Session, msg []byte) {
+		err := d.stackWebSocket.Broadcast(msg)
 		if err != nil {
 			log.Print(err)
 		}
 	})
 
-	// Define an API route under /call to proxy communication between app and apis
-	http.HandleFunc("/api/call/", func(w http.ResponseWriter, r *http.Request) {
-		// Set CORs headers
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		// find call callAddress
-		callAddress := r.Header.Get("X-Nitric-Local-Call-Address")
-
-		// Remove "/api/call/" prefix from URL path
-		path := strings.TrimPrefix(r.URL.Path, "/api/call/")
-
-		// Build proxy request URL with query parameters
-		query := r.URL.RawQuery
-		if query != "" {
-			query = "?" + query
-		}
-		url := fmt.Sprintf("http://%s/%s%s", callAddress, path, query)
-
-		// Create a new request object
-		req, err := http.NewRequest(r.Method, url, r.Body)
+	// handle history websocket
+	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
+		err := d.historyWebSocket.HandleRequest(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Copy the headers from the original request to the new request
-		for key, value := range r.Header {
-			req.Header.Set(key, value[0])
-		}
-
-		// Send the new request and handle the response
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer resp.Body.Close()
-
-		// Copy the headers from the response to the response writer
-		for key, value := range resp.Header {
-			w.Header().Set(key, value[0])
-		}
-
-		// Copy the status code from the response to the response writer
-		w.WriteHeader(resp.StatusCode)
-
-		// Copy the response body to the response writer
-		_, err = io.Copy(w, resp.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	})
 
-	http.HandleFunc("/api/storage", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-		if r.Method == "OPTIONS" {
-			return
-		}
-
-		ctx := context.Background()
-		bucket := r.URL.Query().Get("bucket")
-		action := r.URL.Query().Get("action")
-
-		if bucket == "" && action != "list-buckets" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Header().Set("Content-Type", "application/json")
-			handleResponseWriter(w, []byte(`{"error": "Bucket is required"}`))
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-
-		switch action {
-		case "list-files":
-			fileList, err := sp.ListFiles(ctx, bucket, nil)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			jsonResponse, _ := json.Marshal(fileList)
-			handleResponseWriter(w, jsonResponse)
-		case "write-file":
-			fileKey := r.URL.Query().Get("fileKey")
-			if fileKey == "" {
-				w.WriteHeader(http.StatusBadRequest)
-				handleResponseWriter(w, []byte(`{"error": "fileKey is required for delete-file action"}`))
-				return
-			}
-
-			// Read the contents of the file
-			contents, err := io.ReadAll(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				handleResponseWriter(w, []byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
-				return
-			}
-
-			err = sp.Write(ctx, bucket, fileKey, contents)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			handleResponseWriter(w, []byte(`{"success": true}`))
-		case "delete-file":
-			fileKey := r.URL.Query().Get("fileKey")
-			if fileKey == "" {
-				w.WriteHeader(http.StatusBadRequest)
-				handleResponseWriter(w, []byte(`{"error": "fileKey is required for delete-file action"}`))
-				return
-			}
-
-			err = sp.Delete(ctx, bucket, fileKey)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			handleResponseWriter(w, []byte(`{"success": true}`))
-		default:
-			handleResponseWriter(w, []byte(`{"error": "Invalid action"}`))
+	d.historyWebSocket.HandleConnect(func(s *melody.Session) {
+		// Send a welcome message to the client
+		err := d.sendHistoryUpdate()
+		if err != nil {
+			log.Fatal(err)
 		}
 	})
+
+	d.historyWebSocket.HandleMessage(func(s *melody.Session, msg []byte) {
+		err := d.historyWebSocket.Broadcast(msg)
+		if err != nil {
+			log.Print(err)
+		}
+	})
+
+	http.HandleFunc("/api/history", d.handleHistory())
 
 	// Define an API route under /call to proxy communication between app and apis
-	http.HandleFunc("/api/history", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "DELETE, GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Content-Type", "application/json")
+	http.HandleFunc("/api/call/", d.handleCallProxy())
 
-		historyType := r.URL.Query().Get("type")
-
-		switch r.Method {
-		case "OPTIONS":
-			return
-		case "DELETE":
-			err := DeleteHistoryRecord(d.project.Dir, RecordType(historyType))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		case "GET":
-			history, err := ReadHistoryRecords(d.project.Dir, RecordType(historyType))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			data, err := json.Marshal(history)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			handleResponseWriter(w, data)
-			return
-		default:
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-	})
+	http.HandleFunc("/api/storage", d.handleStorage(storagePlugin))
 
 	// using ephemeral ports, we will redirect to the dashboard on main api 4000
 	dashListener, err := utils.GetNextListener(utils.MinPort(49152), utils.MaxPort(65535))
@@ -383,7 +243,7 @@ func handleResponseWriter(w http.ResponseWriter, data []byte) {
 	}
 }
 
-func (d *Dashboard) sendUpdate() error {
+func (d *Dashboard) sendStackUpdate() error {
 	// ignore if no apis
 	if len(d.apis) == 0 {
 		return nil
@@ -407,7 +267,24 @@ func (d *Dashboard) sendUpdate() error {
 		return err
 	}
 
-	err = d.melody.Broadcast(jsonData)
+	err = d.stackWebSocket.Broadcast(jsonData)
+
+	return err
+}
+
+func (d *Dashboard) sendHistoryUpdate() error {
+	// Define an API route under /call to proxy communication between app and apis
+	response, err := d.project.History.ReadAllHistoryRecords()
+	if err != nil {
+		return err
+	}
+
+	jsonData, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+
+	err = d.historyWebSocket.Broadcast(jsonData)
 
 	return err
 }

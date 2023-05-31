@@ -67,7 +67,7 @@ const EventHistoryAccordion: React.FC<EventHistoryItem> = ({
             </div>
           </Disclosure.Button>
 
-          {payload && (
+          {formattedPayload && (
             <Disclosure.Panel className="px-4 pt-4 pb-2 text-sm text-gray-500">
               <div className="flex flex-col gap-8">
                 <div className="flex flex-col gap-2">

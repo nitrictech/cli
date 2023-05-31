@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dashboard
+package history
 
 import (
 	"encoding/json"
@@ -22,14 +22,13 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-type History struct {
-	ScheduleHistory []*HistoryRecord `json:"scheduleHistory,omitempty"`
-	TopicHistory    []*HistoryRecord `json:"topicHistory,omitempty"`
-	ApiHistory      []*HistoryRecord `json:"apiHistory,omitempty"`
+type HistoryRecords struct {
+	ScheduleHistory []*HistoryRecord `json:"schedules"`
+	TopicHistory    []*HistoryRecord `json:"topics"`
+	ApiHistory      []*HistoryRecord `json:"apis"`
 }
 
 type RecordType string
@@ -49,9 +48,14 @@ type HistoryRecord struct {
 	ApiHistoryItem
 }
 
+type EventRecord struct {
+	WorkerKey string `json:"workerKey,omitempty"`
+	TopicKey  string `json:"topicKey,omitempty"`
+}
+
 type EventHistoryItem struct {
-	Event   *codeconfig.TopicResult `json:"event,omitempty"`
-	Payload string                  `json:"payload,omitempty"`
+	Event   *EventRecord `json:"event,omitempty"`
+	Payload string       `json:"payload,omitempty"`
 }
 
 type ApiHistoryItem struct {
@@ -83,17 +87,21 @@ type ResponseHistory struct {
 	Headers map[string][]string `json:"headers"`
 }
 
+type History struct {
+	ProjectDir string
+}
+
 func NewHistoryError(recordType RecordType, historyFile string) error {
 	return fmt.Errorf("could not write %s history to the JSON file '%s' due to a formatting issue. Please check the file's formatting and ensure it follows the correct JSON structure, or reset the history by deleting the file", recordType, historyFile)
 }
 
-func WriteHistoryRecord(stackName string, recordType RecordType, historyRecord *HistoryRecord) error {
-	historyFile, err := utils.NitricHistoryFile(stackName, string(recordType))
+func (h *History) WriteHistoryRecord(recordType RecordType, historyRecord *HistoryRecord) error {
+	historyFile, err := utils.NitricHistoryFile(h.ProjectDir, string(recordType))
 	if err != nil {
 		return err
 	}
 
-	existingRecords, err := ReadHistoryRecords(stackName, recordType)
+	existingRecords, err := h.ReadHistoryRecords(recordType)
 	if err != nil {
 		return NewHistoryError(recordType, historyFile)
 	}
@@ -113,8 +121,8 @@ func WriteHistoryRecord(stackName string, recordType RecordType, historyRecord *
 	return nil
 }
 
-func DeleteHistoryRecord(stackName string, recordType RecordType) error {
-	historyFile, err := utils.NitricHistoryFile(stackName, string(recordType))
+func (h *History) DeleteHistoryRecord(recordType RecordType) error {
+	historyFile, err := utils.NitricHistoryFile(h.ProjectDir, string(recordType))
 	if err != nil {
 		return err
 	}
@@ -122,31 +130,31 @@ func DeleteHistoryRecord(stackName string, recordType RecordType) error {
 	return os.Remove(historyFile)
 }
 
-func ReadAllHistoryRecords(stackName string) (*History, error) {
-	schedules, err := ReadHistoryRecords(stackName, SCHEDULE)
+func (h *History) ReadAllHistoryRecords() (*HistoryRecords, error) {
+	schedules, err := h.ReadHistoryRecords(SCHEDULE)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred reading schedule history: %w", err)
 	}
 
-	topics, err := ReadHistoryRecords(stackName, TOPIC)
+	topics, err := h.ReadHistoryRecords(TOPIC)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred reading topic history: %w", err)
 	}
 
-	apis, err := ReadHistoryRecords(stackName, API)
+	apis, err := h.ReadHistoryRecords(API)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred reading api history: %w", err)
 	}
 
-	return &History{
+	return &HistoryRecords{
 		ScheduleHistory: schedules,
 		TopicHistory:    topics,
 		ApiHistory:      apis,
 	}, nil
 }
 
-func ReadHistoryRecords(stackName string, recordType RecordType) ([]*HistoryRecord, error) {
-	historyFile, err := utils.NitricHistoryFile(stackName, string(recordType))
+func (h *History) ReadHistoryRecords(recordType RecordType) ([]*HistoryRecord, error) {
+	historyFile, err := utils.NitricHistoryFile(h.ProjectDir, string(recordType))
 	if err != nil {
 		return nil, err
 	}

@@ -19,10 +19,12 @@ package project
 import (
 	"reflect"
 	"testing"
+
+	"github.com/nitrictech/cli/pkg/history"
 )
 
 func TestCompute(t *testing.T) {
-	s := &Project{Dir: "../run", Name: "test"}
+	s := &Project{Dir: "../run", Name: "test", History: &history.History{ProjectDir: "../run"}}
 	cu := ComputeUnit{
 		Name: "unit",
 	}

@@ -144,13 +144,13 @@ func (r *RunStorageService) Delete(ctx context.Context, bucket string, key strin
 	return nil
 }
 
-func (r *RunStorageService) ListFiles(ctx context.Context, bucket string) ([]*storage.FileInfo, error) {
+func (r *RunStorageService) ListFiles(ctx context.Context, bucket string, options *storage.ListFileOptions) ([]*storage.FileInfo, error) {
 	err := r.ensureBucketExists(ctx, bucket)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.StorageService.ListFiles(ctx, bucket)
+	return r.StorageService.ListFiles(ctx, bucket, nil)
 }
 
 func (r *RunStorageService) PreSignUrl(ctx context.Context, bucket string, key string, operation storage.Operation, expiry uint32) (string, error) {

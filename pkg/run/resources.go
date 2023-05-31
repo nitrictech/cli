@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
-	"github.com/nitrictech/nitric/core/pkg/providers/common"
+	"github.com/nitrictech/nitric/core/pkg/plugins/resource"
 )
 
 type RunResourcesService struct {
@@ -30,9 +30,9 @@ type RunResourcesService struct {
 	isStart bool
 }
 
-var _ common.ResourceService = &RunResourcesService{}
+var _ resource.ResourceService = &RunResourcesService{}
 
-func (r *RunResourcesService) getApiDetails(name string) (*common.DetailsResponse[any], error) {
+func (r *RunResourcesService) getApiDetails(name string) (*resource.DetailsResponse[any], error) {
 	gatewayUri, ok := r.ls.gateway.GetApiAddresses()[name]
 	if !ok {
 		return nil, fmt.Errorf("api %s does not exist", name)
@@ -42,26 +42,26 @@ func (r *RunResourcesService) getApiDetails(name string) (*common.DetailsRespons
 		gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
 	}
 
-	return &common.DetailsResponse[any]{
+	return &resource.DetailsResponse[any]{
 		Id:       name,
 		Provider: "dev",
 		Service:  "Api",
-		Detail: common.ApiDetails{
+		Detail: resource.ApiDetails{
 			URL: gatewayUri,
 		},
 	}, nil
 }
 
-func (r *RunResourcesService) Details(ctx context.Context, typ common.ResourceType, name string) (*common.DetailsResponse[any], error) {
+func (r *RunResourcesService) Details(ctx context.Context, typ resource.ResourceType, name string) (*resource.DetailsResponse[any], error) {
 	switch typ {
-	case common.ResourceType_Api:
+	case resource.ResourceType_Api:
 		return r.getApiDetails(name)
 	default:
 		return nil, fmt.Errorf("unsupported resource type %s", typ)
 	}
 }
 
-func (r *RunResourcesService) Declare(ctx context.Context, req common.ResourceDeclareRequest) error {
+func (r *RunResourcesService) Declare(ctx context.Context, req resource.ResourceDeclareRequest) error {
 	resource := req.Resource
 
 	switch resource.Type {
@@ -73,7 +73,7 @@ func (r *RunResourcesService) Declare(ctx context.Context, req common.ResourceDe
 	}
 }
 
-func NewResources(ls *localServices, isStart bool) common.ResourceService {
+func NewResources(ls *localServices, isStart bool) resource.ResourceService {
 	return &RunResourcesService{
 		ls:      ls,
 		isStart: isStart,

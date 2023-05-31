@@ -55,7 +55,7 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 
 		switch action {
 		case "list-files":
-			fileList, err := storagePlugin.ListFiles(ctx, bucket)
+			fileList, err := storagePlugin.ListFiles(ctx, bucket, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

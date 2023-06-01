@@ -173,7 +173,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               onSelect={(resource) => {
                 setSelectedWorker(resource);
               }}
-              resources={data[workerType]}
+              resources={data[workerType] ?? []}
             />
           </>
         )

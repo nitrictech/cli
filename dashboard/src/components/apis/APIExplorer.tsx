@@ -208,9 +208,10 @@ const APIExplorer = () => {
     []
   );
 
-  const apiAddress = selectedApiEndpoint
-    ? data?.apiAddresses[selectedApiEndpoint.api]
-    : null;
+  const apiAddress =
+    selectedApiEndpoint && data?.apiAddresses
+      ? data.apiAddresses[selectedApiEndpoint.api]
+      : null;
 
   const tabs = [
     {

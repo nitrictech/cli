@@ -141,9 +141,7 @@ describe("API Explorer spec", () => {
 
     cy.getTestEl("send-api-btn").click();
 
-    cy.wait("@apiCall");
-
-    cy.getAPIResponseCodeEditor().should("contain.text", "Route not found");
+    cy.getTestEl("path-0-value-error-icon").should("exist");
 
     cy.getTestEl("path-0-key").should("have.value", "name");
     cy.getTestEl("path-0-value").type("tester");

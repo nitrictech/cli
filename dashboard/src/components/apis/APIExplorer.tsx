@@ -456,6 +456,7 @@ const APIExplorer = () => {
                               <FieldRows
                                 lockKeys
                                 testId="path"
+                                valueRequired
                                 rows={request.pathParams}
                                 valueErrors={requiredPathParamErrors}
                                 setRows={(rows) => {

@@ -12,6 +12,7 @@ interface Props {
   rows: FieldRow[];
   lockKeys?: boolean;
   canClearRow?: boolean;
+  valueRequired?: boolean;
   valueErrors?: Record<number, FieldRow>;
   setRows: (value: FieldRow[]) => void;
 }
@@ -22,6 +23,7 @@ const FieldRows: React.FC<Props> = ({
   lockKeys,
   setRows,
   valueErrors,
+  valueRequired,
   canClearRow = true,
 }) => {
   const id = useId();
@@ -100,6 +102,7 @@ const FieldRows: React.FC<Props> = ({
 
                     setRows(newArr);
                   }}
+                  required={valueRequired}
                   name={valueId}
                   id={valueId}
                   value={r.value}
@@ -110,7 +113,10 @@ const FieldRows: React.FC<Props> = ({
                   )}
                 />
                 {valueHasError && (
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <div
+                    data-testid={`${testId}-${i}-value-error-icon`}
+                    className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+                  >
                     <ExclamationCircleIcon
                       className="h-5 w-5 text-red-500"
                       aria-hidden="true"

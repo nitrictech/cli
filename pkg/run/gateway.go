@@ -27,6 +27,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 
+	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
@@ -55,6 +56,7 @@ type BaseHttpGateway struct {
 	pool     pool.WorkerPool
 	dashPort int
 	project  *project.Project
+	dash     *dashboard.Dashboard
 }
 
 var _ gateway.GatewayService = &BaseHttpGateway{}
@@ -190,6 +192,11 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 					},
 				},
 			})
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+
+			err = s.dash.RefreshHistory()
 			if err != nil {
 				fmt.Println(err.Error())
 			}

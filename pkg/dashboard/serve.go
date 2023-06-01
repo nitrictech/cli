@@ -151,6 +151,10 @@ func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 	return nil
 }
 
+func (d *Dashboard) RefreshHistory() error {
+	return d.sendHistoryUpdate()
+}
+
 func (d *Dashboard) Serve(storagePlugin storage.StorageService) (*int, error) {
 	// Get the embedded files from the 'dist' directory
 	staticFiles, err := fs.Sub(content, "dist")

@@ -369,10 +369,10 @@ const APIExplorer = () => {
                   />
                 </div>
                 <nav
-                  className="flex items-end md:items-center gap-4"
+                  className="flex items-end lg:items-center gap-4"
                   aria-label="Breadcrumb"
                 >
-                  <ol className="flex w-full items-center md:hidden gap-4">
+                  <ol className="flex w-full items-center lg:hidden gap-4">
                     <li className="w-full">
                       <Select<Endpoint>
                         items={paths}
@@ -384,9 +384,9 @@ const APIExplorer = () => {
                           <div className="grid grid-cols-12 items-center p-0.5 text-lg gap-4">
                             <APIMethodBadge
                               method={v.method}
-                              className="!text-lg col-span-3"
+                              className="!text-lg col-span-3 md:col-span-2"
                             />
-                            <div className="col-span-9 flex gap-4">
+                            <div className="col-span-9 md:col-span-10 flex gap-4">
                               <span>{v?.api}</span>
                               <span>{v?.path}</span>
                             </div>
@@ -395,7 +395,7 @@ const APIExplorer = () => {
                       />
                     </li>
                   </ol>
-                  <div className="hidden md:flex items-center gap-4">
+                  <div className="hidden lg:flex items-center gap-4">
                     <APIMethodBadge
                       className="!text-lg"
                       method={request.method}

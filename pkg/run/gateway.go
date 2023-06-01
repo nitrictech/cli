@@ -27,8 +27,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 
-	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
@@ -56,6 +56,7 @@ type BaseHttpGateway struct {
 	pool     pool.WorkerPool
 	dashPort int
 	project  *project.Project
+	dash     *dashboard.Dashboard
 }
 
 var _ gateway.GatewayService = &BaseHttpGateway{}
@@ -154,23 +155,23 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 			ctx.Response.SetStatusCode(int(http.Status))
 			ctx.Response.SetBody(resp.Data)
 
-			var queryParams []dashboard.Param
+			var queryParams []history.Param
 
 			for k, v := range query {
 				for _, val := range v.Value {
-					queryParams = append(queryParams, dashboard.Param{
+					queryParams = append(queryParams, history.Param{
 						Key:   k,
 						Value: val,
 					})
 				}
 			}
 
-			err = dashboard.WriteHistoryRecord(s.project.Dir, dashboard.API, &dashboard.HistoryRecord{
+			err = s.project.History.WriteHistoryRecord(history.API, &history.HistoryRecord{
 				Success: http.Status < 400,
 				Time:    time.Now().UnixMilli(),
-				ApiHistoryItem: dashboard.ApiHistoryItem{
+				ApiHistoryItem: history.ApiHistoryItem{
 					Api: s.GetApiAddresses()[apiName],
-					Request: &dashboard.RequestHistory{
+					Request: &history.RequestHistory{
 						Method:      string(ctx.Request.Header.Method()),
 						Path:        string(ctx.URI().PathOriginal()),
 						QueryParams: queryParams,
@@ -178,9 +179,9 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 							return k, v.Value
 						}),
 						Body:       ctx.Request.Body(),
-						PathParams: []dashboard.Param{},
+						PathParams: []history.Param{},
 					},
-					Response: &dashboard.ResponseHistory{
+					Response: &history.ResponseHistory{
 						Headers: lo.MapEntries(http.Headers, func(k string, v *v1.HeaderValue) (string, []string) {
 							return k, v.Value
 						}),
@@ -191,6 +192,11 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 					},
 				},
 			})
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+
+			err = s.dash.RefreshHistory()
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -234,20 +240,20 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 			errList = append(errList, fmt.Errorf("topic delivery was unsuccessful"))
 		}
 
-		var topicType dashboard.RecordType
+		var topicType history.RecordType
 
 		switch w.(type) {
 		case *worker.ScheduleWorker:
-			topicType = dashboard.SCHEDULE
+			topicType = history.SCHEDULE
 		case *worker.SubscriptionWorker:
-			topicType = dashboard.TOPIC
+			topicType = history.TOPIC
 		}
 
-		err = dashboard.WriteHistoryRecord(s.project.Dir, topicType, &dashboard.HistoryRecord{
+		err = s.project.History.WriteHistoryRecord(topicType, &history.HistoryRecord{
 			Success: resp.GetTopic().Success,
 			Time:    time.Now().UnixMilli(),
-			EventHistoryItem: dashboard.EventHistoryItem{
-				Event: &codeconfig.TopicResult{
+			EventHistoryItem: history.EventHistoryItem{
+				Event: &history.EventRecord{
 					TopicKey:  strings.ToLower(strings.ReplaceAll(topicName, " ", "-")),
 					WorkerKey: topicName,
 				},

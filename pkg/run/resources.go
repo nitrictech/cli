@@ -67,10 +67,9 @@ func (r *RunResourcesService) Declare(ctx context.Context, req resource.Resource
 	switch resource.Type {
 	case v1.ResourceType_Bucket:
 		r.ls.dashboard.AddBucket(resource.GetName())
-		return nil
-	default:
-		return nil
 	}
+
+	return nil
 }
 
 func NewResources(ls *localServices, isStart bool) resource.ResourceService {

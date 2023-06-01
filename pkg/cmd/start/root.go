@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
@@ -63,6 +64,9 @@ var startCmd = &cobra.Command{
 
 		ls := run.NewLocalServices(&project.Project{
 			Name: "local",
+			History: &history.History{
+				ProjectDir: proj.Dir,
+			},
 		}, true, dash)
 		if ls.Running() {
 			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")

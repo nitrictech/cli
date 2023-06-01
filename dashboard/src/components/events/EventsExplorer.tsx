@@ -38,7 +38,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
   const { data, loading } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
 
-  const { data: history } = useHistory<EventHistoryItem>(workerType);
+  const { data: history } = useHistory(workerType);
 
   const [response, setResponse] = useState<APIResponse>();
 
@@ -70,7 +70,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
 
   useEffect(() => {
     if (history) {
-      setEventHistory(history);
+      setEventHistory(history ? history[workerType] : []);
     }
   }, [history]);
 
@@ -173,7 +173,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               onSelect={(resource) => {
                 setSelectedWorker(resource);
               }}
-              resources={data[workerType]}
+              resources={data[workerType] ?? []}
             />
           </>
         )

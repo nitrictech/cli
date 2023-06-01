@@ -4,7 +4,6 @@ import type {
   APIResponse,
   Endpoint,
   LocalStorageHistoryItem,
-  ApiHistoryItem,
 } from "../../types";
 import {
   Select,
@@ -92,6 +91,8 @@ const APIExplorer = () => {
   const [currentTabIndex, setCurrentTabIndex] = useState(0);
   const [bodyTabIndex, setBodyTabIndex] = useState(0);
   const [responseTabIndex, setResponseTabIndex] = useState(0);
+
+  const [requiredPathParamErrors, setRequiredPathParamErrors] = useState({});
 
   const paths = useMemo(
     () => data?.apis.map((doc) => flattenPaths(doc)).flat(),
@@ -226,12 +227,49 @@ const APIExplorer = () => {
 
   const currentBodyTabName = bodyTabs[bodyTabIndex].name;
 
+  const refreshPathParamErrors = () => {
+    const newPathParamErrors: Record<number, FieldRow> = {};
+    const emptyParams = request.pathParams.filter((p, idx) => {
+      if (p.value === "") {
+        newPathParamErrors[idx] = p;
+        return true;
+      }
+
+      return false;
+    });
+
+    setRequiredPathParamErrors(newPathParamErrors);
+
+    return emptyParams;
+  };
+
+  useEffect(() => {
+    if (Object.keys(requiredPathParamErrors).length) {
+      refreshPathParamErrors();
+    }
+  }, [request.pathParams]);
+
   const handleSend = async (
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
     if (!selectedApiEndpoint) return;
     setCallLoading(true);
     e.preventDefault();
+
+    if (request.pathParams.length) {
+      const emptyParams = refreshPathParamErrors();
+
+      if (emptyParams.length) {
+        setCallLoading(false);
+        toast.error(
+          `Required path parameter(s) missing: ${emptyParams
+            .map((p) => p.key)
+            .join(", ")}`
+        );
+
+        return;
+      }
+    }
 
     const { path, method, headers } = request;
 
@@ -331,10 +369,10 @@ const APIExplorer = () => {
                   />
                 </div>
                 <nav
-                  className="flex items-end md:items-center gap-4"
+                  className="flex items-end lg:items-center gap-4"
                   aria-label="Breadcrumb"
                 >
-                  <ol className="flex w-full items-center md:hidden gap-4">
+                  <ol className="flex w-full items-center lg:hidden gap-4">
                     <li className="w-full">
                       <Select<Endpoint>
                         items={paths}
@@ -346,9 +384,9 @@ const APIExplorer = () => {
                           <div className="grid grid-cols-12 items-center p-0.5 text-lg gap-4">
                             <APIMethodBadge
                               method={v.method}
-                              className="!text-lg col-span-3"
+                              className="!text-lg col-span-3 md:col-span-2"
                             />
-                            <div className="col-span-9 flex gap-4">
+                            <div className="col-span-9 md:col-span-10 flex gap-4">
                               <span>{v?.api}</span>
                               <span>{v?.path}</span>
                             </div>
@@ -357,7 +395,7 @@ const APIExplorer = () => {
                       />
                     </li>
                   </ol>
-                  <div className="hidden md:flex items-center gap-4">
+                  <div className="hidden lg:flex items-center gap-4">
                     <APIMethodBadge
                       className="!text-lg"
                       method={request.method}
@@ -410,6 +448,26 @@ const APIExplorer = () => {
                       </div>
                       {currentTabName === "Params" && (
                         <ul className="divide-gray-200 my-4">
+                          {request.pathParams.length > 0 && (
+                            <li className="flex flex-col py-4">
+                              <h4 className="text-lg font-medium text-gray-900">
+                                Path Params
+                              </h4>
+                              <FieldRows
+                                lockKeys
+                                testId="path"
+                                valueRequired
+                                rows={request.pathParams}
+                                valueErrors={requiredPathParamErrors}
+                                setRows={(rows) => {
+                                  setRequest((prev) => ({
+                                    ...prev,
+                                    pathParams: rows,
+                                  }));
+                                }}
+                              />
+                            </li>
+                          )}
                           <li className="flex flex-col py-4">
                             <h4 className="text-lg font-medium text-gray-900">
                               Query Params
@@ -425,24 +483,6 @@ const APIExplorer = () => {
                               }}
                             />
                           </li>
-                          {request.pathParams.length > 0 && (
-                            <li className="flex flex-col py-4">
-                              <h4 className="text-lg font-medium text-gray-900">
-                                Path Params
-                              </h4>
-                              <FieldRows
-                                lockKeys
-                                testId="path"
-                                rows={request.pathParams}
-                                setRows={(rows) => {
-                                  setRequest((prev) => ({
-                                    ...prev,
-                                    pathParams: rows,
-                                  }));
-                                }}
-                              />
-                            </li>
-                          )}
                         </ul>
                       )}
                       {currentTabName === "Headers" && (

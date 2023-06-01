@@ -314,7 +314,7 @@ const AppLayout: React.FC<Props> = ({
           </nav>
         </div>
 
-        <aside className="fixed inset-y-0 left-20 pt-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 py-6 xl:block">
+        <aside className="fixed inset-y-0 left-20 pt-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 py-6 lg:block">
           {secondLevelNav}
         </aside>
 
@@ -435,7 +435,7 @@ const AppLayout: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="xl:pl-80">
+          <div className="lg:pl-80">
             <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
               <h1 className="text-4xl text-blue-800 font-bold mb-12">
                 {title}

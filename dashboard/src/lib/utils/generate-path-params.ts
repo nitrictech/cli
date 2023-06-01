@@ -1,5 +1,5 @@
+import type { FieldRow } from "../../components/shared";
 import type { APIRequest, Endpoint } from "../../types";
-import type { FieldRow } from "../shared/FieldRows";
 
 export const generatePathParams = (endpoint: Endpoint, request: APIRequest) => {
   const pathParams: FieldRow[] = [];

@@ -206,6 +206,7 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 
 	l.gateway.dashPort = *port
 	l.gateway.project = l.project
+	l.gateway.dash = l.dashboard
 
 	// Prepare development membrane to start
 	// This will start a single membrane that all

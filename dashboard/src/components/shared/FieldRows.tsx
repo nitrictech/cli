@@ -1,4 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/20/solid";
+import { ExclamationCircleIcon, XMarkIcon } from "@heroicons/react/20/solid";
 import classNames from "classnames";
 import React, { useEffect, useId } from "react";
 
@@ -12,6 +12,8 @@ interface Props {
   rows: FieldRow[];
   lockKeys?: boolean;
   canClearRow?: boolean;
+  valueRequired?: boolean;
+  valueErrors?: Record<number, FieldRow>;
   setRows: (value: FieldRow[]) => void;
 }
 
@@ -20,6 +22,8 @@ const FieldRows: React.FC<Props> = ({
   rows,
   lockKeys,
   setRows,
+  valueErrors,
+  valueRequired,
   canClearRow = true,
 }) => {
   const id = useId();
@@ -44,6 +48,7 @@ const FieldRows: React.FC<Props> = ({
       {rows.map((r, i) => {
         const keyId = `${id}-${i}-key`;
         const valueId = `${id}-${i}-value`;
+        const valueHasError = Boolean(valueErrors && valueErrors[i]);
 
         return (
           <li
@@ -81,7 +86,7 @@ const FieldRows: React.FC<Props> = ({
               <label htmlFor={valueId} className="sr-only">
                 {r.value}
               </label>
-              <div className="mt-2 sm:col-span-2 sm:mt-0">
+              <div className="mt-2 relative sm:col-span-2 sm:mt-0">
                 <input
                   type="text"
                   placeholder="Value"
@@ -97,11 +102,27 @@ const FieldRows: React.FC<Props> = ({
 
                     setRows(newArr);
                   }}
+                  required={valueRequired}
                   name={valueId}
                   id={valueId}
                   value={r.value}
-                  className="block w-full px-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                  className={classNames(
+                    "block w-full px-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6",
+                    valueHasError &&
+                      "ring-red-300 placeholder:text-red-300 text-red-900 focus:ring-red-500"
+                  )}
                 />
+                {valueHasError && (
+                  <div
+                    data-testid={`${testId}-${i}-value-error-icon`}
+                    className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+                  >
+                    <ExclamationCircleIcon
+                      className="h-5 w-5 text-red-500"
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
               </div>
             </div>
             {canClearRow && (

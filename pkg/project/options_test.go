@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/imdario/mergo"
 
+	"github.com/nitrictech/cli/pkg/history"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 )
 
@@ -61,6 +62,9 @@ func TestFromConfig(t *testing.T) {
 					},
 				},
 				Policies: []*v1.PolicyResource{},
+				History: &history.History{
+					ProjectDir: ".",
+				},
 			},
 		},
 		{
@@ -96,6 +100,9 @@ func TestFromConfig(t *testing.T) {
 					},
 				},
 				Policies: []*v1.PolicyResource{},
+				History: &history.History{
+					ProjectDir: "../../pkg",
+				},
 			},
 		},
 	}

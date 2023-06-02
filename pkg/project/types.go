@@ -26,6 +26,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v2"
 
+	"github.com/nitrictech/cli/pkg/history"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 )
 
@@ -129,6 +130,7 @@ type Project struct {
 	// NOTE: if we want to use the proto definition here we would need support for yaml parsing to use customisable tags
 	Policies []*v1.PolicyResource `yaml:"-"`
 	Secrets  map[string]Secret    `yaml:"secrets,omitempty"`
+	History  *history.History     `yaml:"-"`
 }
 
 func New(config BaseConfig) *Project {
@@ -147,6 +149,9 @@ func New(config BaseConfig) *Project {
 		SecurityDefinitions: make(map[string]map[string]*v1.ApiSecurityDefinition),
 		Policies:            make([]*v1.PolicyResource, 0),
 		Secrets:             map[string]Secret{},
+		History: &history.History{
+			ProjectDir: config.Dir,
+		},
 	}
 }
 
@@ -292,7 +297,7 @@ func FromFile(name string) (*Project, error) {
 		return nil, err
 	}
 
-	stack := &Project{Dir: dir}
+	stack := &Project{Dir: dir, History: &history.History{ProjectDir: dir}}
 
 	err = yaml.Unmarshal(yamlFile, stack)
 	if err != nil {

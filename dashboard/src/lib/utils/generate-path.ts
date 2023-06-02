@@ -1,5 +1,5 @@
+import type { FieldRow } from "../../components/shared";
 import type { Endpoint } from "../../types";
-import type { FieldRow } from "../shared/FieldRows";
 
 export function generatePath(
   endpoint: Endpoint,
@@ -9,7 +9,10 @@ export function generatePath(
   let transformedPath = endpoint.path;
 
   pathParams.forEach((p) => {
-    transformedPath = transformedPath.replace(`{${p.key}}`, p.value);
+    transformedPath = transformedPath.replace(
+      `{${p.key}}`,
+      encodeURIComponent(p.value)
+    );
   });
 
   if (queryParams.length) {
@@ -28,5 +31,5 @@ export function generatePath(
     }
   }
 
-  return encodeURI(transformedPath);
+  return transformedPath;
 }

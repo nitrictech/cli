@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,8 +28,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 
-	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
@@ -43,12 +44,11 @@ type HttpMiddleware func(*fasthttp.RequestCtx, pool.WorkerPool) bool
 type apiServer struct {
 	lis net.Listener
 	srv *fasthttp.Server
-
-	workerCount int
 }
 
 type BaseHttpGateway struct {
-	apiServer       map[string]*apiServer
+	apiServers      []*apiServer
+	apis            []string
 	serviceServer   *fasthttp.Server
 	serviceListener net.Listener
 	gateway.UnimplementedGatewayPlugin
@@ -56,6 +56,7 @@ type BaseHttpGateway struct {
 	pool     pool.WorkerPool
 	dashPort int
 	project  *project.Project
+	dash     *dashboard.Dashboard
 }
 
 var _ gateway.GatewayService = &BaseHttpGateway{}
@@ -83,18 +84,21 @@ func (s *BaseHttpGateway) GetTriggerAddress() string {
 func (s *BaseHttpGateway) GetApiAddresses() map[string]string {
 	addresses := make(map[string]string)
 
-	for api, srv := range s.apiServer {
-		if srv.workerCount > 0 {
-			srvAddress := strings.Replace(srv.lis.Addr().String(), "[::]", "localhost", 1)
-			addresses[api] = srvAddress
-		}
+	for idx, api := range s.apis {
+		addresses[api] = strings.Replace(s.apiServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
 	}
 
 	return addresses
 }
 
-func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.RequestCtx) {
+func (s *BaseHttpGateway) handleHttpRequest(apiIdx int) func(ctx *fasthttp.RequestCtx) {
 	return func(ctx *fasthttp.RequestCtx) {
+		if apiIdx >= len(s.apis) {
+			ctx.Error("Sorry, nitric is listening on this port but is waiting for an API to be available to handle, you may have removed an API during development this port will be assigned to an API when one becomes available", 404)
+			return
+		}
+
+		apiName := s.apis[apiIdx]
 		headerMap := base_http.HttpHeadersToMap(&ctx.Request.Header)
 
 		headers := map[string]*v1.HeaderValue{}
@@ -154,23 +158,23 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 			ctx.Response.SetStatusCode(int(http.Status))
 			ctx.Response.SetBody(resp.Data)
 
-			var queryParams []dashboard.Param
+			var queryParams []history.Param
 
 			for k, v := range query {
 				for _, val := range v.Value {
-					queryParams = append(queryParams, dashboard.Param{
+					queryParams = append(queryParams, history.Param{
 						Key:   k,
 						Value: val,
 					})
 				}
 			}
 
-			err = dashboard.WriteHistoryRecord(s.project.Dir, dashboard.API, &dashboard.HistoryRecord{
+			err = s.project.History.WriteHistoryRecord(history.API, &history.HistoryRecord{
 				Success: http.Status < 400,
 				Time:    time.Now().UnixMilli(),
-				ApiHistoryItem: dashboard.ApiHistoryItem{
+				ApiHistoryItem: history.ApiHistoryItem{
 					Api: s.GetApiAddresses()[apiName],
-					Request: &dashboard.RequestHistory{
+					Request: &history.RequestHistory{
 						Method:      string(ctx.Request.Header.Method()),
 						Path:        string(ctx.URI().PathOriginal()),
 						QueryParams: queryParams,
@@ -178,9 +182,9 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 							return k, v.Value
 						}),
 						Body:       ctx.Request.Body(),
-						PathParams: []dashboard.Param{},
+						PathParams: []history.Param{},
 					},
-					Response: &dashboard.ResponseHistory{
+					Response: &history.ResponseHistory{
 						Headers: lo.MapEntries(http.Headers, func(k string, v *v1.HeaderValue) (string, []string) {
 							return k, v.Value
 						}),
@@ -191,6 +195,11 @@ func (s *BaseHttpGateway) handleHttpRequest(apiName string) func(ctx *fasthttp.R
 					},
 				},
 			})
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+
+			err = s.dash.RefreshHistory()
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -234,20 +243,20 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 			errList = append(errList, fmt.Errorf("topic delivery was unsuccessful"))
 		}
 
-		var topicType dashboard.RecordType
+		var topicType history.RecordType
 
 		switch w.(type) {
 		case *worker.ScheduleWorker:
-			topicType = dashboard.SCHEDULE
+			topicType = history.SCHEDULE
 		case *worker.SubscriptionWorker:
-			topicType = dashboard.TOPIC
+			topicType = history.TOPIC
 		}
 
-		err = dashboard.WriteHistoryRecord(s.project.Dir, topicType, &dashboard.HistoryRecord{
+		err = s.project.History.WriteHistoryRecord(topicType, &history.HistoryRecord{
 			Success: resp.GetTopic().Success,
 			Time:    time.Now().UnixMilli(),
-			EventHistoryItem: dashboard.EventHistoryItem{
-				Event: &codeconfig.TopicResult{
+			EventHistoryItem: history.EventHistoryItem{
+				Event: &history.EventRecord{
 					TopicKey:  strings.ToLower(strings.ReplaceAll(topicName, " ", "-")),
 					WorkerKey: topicName,
 				},
@@ -269,61 +278,55 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 
 // Update the gateway and API based on the worker pool
 func (s *BaseHttpGateway) Refresh() error {
+	s.apis = make([]string, 0)
 	// instansiate servers if not already done
-	if s.apiServer == nil {
-		s.apiServer = make(map[string]*apiServer)
+	if s.apiServers == nil {
+		s.apiServers = make([]*apiServer, 0)
 	}
 
-	for _, srv := range s.apiServer {
-		// reset all server worker counts
-		srv.workerCount = 0
-	}
-
-	for _, w := range s.pool.GetWorkers(&pool.GetWorkerOptions{}) {
+	workers := s.pool.GetWorkers(&pool.GetWorkerOptions{})
+	uniqApis := lo.Reduce(workers, func(agg []string, w worker.Worker, idx int) []string {
 		if api, ok := w.(*worker.RouteWorker); ok {
-			currApi, ok := s.apiServer[api.Api()]
-
-			if !ok {
-				fhttp := &fasthttp.Server{
-					ReadTimeout:     time.Second * 1,
-					IdleTimeout:     time.Second * 1,
-					CloseOnShutdown: true,
-					Handler:         s.handleHttpRequest(api.Api()),
-				}
-
-				lis, err := utils.GetNextListener()
-				if err != nil {
-					return err
-				}
-
-				srv := &apiServer{
-					lis:         lis,
-					srv:         fhttp,
-					workerCount: 0,
-				}
-
-				// get a free port and listen on that for this API
-				go func(srv *apiServer) {
-					err := srv.srv.Serve(srv.lis)
-					if err != nil {
-						fmt.Println(err)
-					}
-				}(srv)
-
-				currApi = srv
-				// append to the server collection
-				s.apiServer[api.Api()] = currApi
-
-				// this is a brand new server we need to start up
-				// lets start it and add it to the active list of servers
-				// we can then filter the servers by their active worker count
-				currApi.workerCount = 0
+			if !lo.Contains(agg, api.Api()) {
+				agg = append(agg, api.Api())
 			}
-
-			// Increment this APIs worker count
-			// this will be used to filter displayed APIs
-			currApi.workerCount = currApi.workerCount + 1
 		}
+
+		return agg
+	}, []string{})
+
+	// sort the APIs by alphabetical order
+	sort.Strings(uniqApis)
+
+	s.apis = append(s.apis, uniqApis...)
+
+	for len(s.apiServers) < len(s.apis) {
+		fhttp := &fasthttp.Server{
+			ReadTimeout:     time.Second * 1,
+			IdleTimeout:     time.Second * 1,
+			CloseOnShutdown: true,
+			Handler:         s.handleHttpRequest(len(s.apiServers)),
+		}
+		// Expand servers to account for apis
+		lis, err := utils.GetNextListener()
+		if err != nil {
+			return err
+		}
+
+		srv := &apiServer{
+			lis: lis,
+			srv: fhttp,
+		}
+
+		// get a free port and listen on that for this API
+		go func(srv *apiServer) {
+			err := srv.srv.Serve(srv.lis)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}(srv)
+
+		s.apiServers = append(s.apiServers, srv)
 	}
 
 	return nil
@@ -371,7 +374,7 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 }
 
 func (s *BaseHttpGateway) Stop() error {
-	for _, s := range s.apiServer {
+	for _, s := range s.apiServers {
 		// shutdown all the servers
 		// this will allow Start to exit
 		_ = s.srv.Shutdown()

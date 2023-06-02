@@ -23,8 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nitrictech/cli/pkg/codeconfig"
-	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/plugins/errors"
@@ -63,11 +62,11 @@ func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *v1.Trigg
 				fmt.Println(err)
 			}
 
-			err = dashboard.WriteHistoryRecord(s.project.Dir, dashboard.TOPIC, &dashboard.HistoryRecord{
+			err = s.project.History.WriteHistoryRecord(history.TOPIC, &history.HistoryRecord{
 				Success: resp.GetTopic().Success,
 				Time:    time.Now().UnixMilli(),
-				EventHistoryItem: dashboard.EventHistoryItem{
-					Event: &codeconfig.TopicResult{
+				EventHistoryItem: history.EventHistoryItem{
+					Event: &history.EventRecord{
 						TopicKey:  strings.ToLower(strings.ReplaceAll(topic.Topic, " ", "-")),
 						WorkerKey: topic.Topic,
 					},

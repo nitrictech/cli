@@ -97,6 +97,7 @@ func (s *BaseHttpGateway) handleHttpRequest(apiIdx int) func(ctx *fasthttp.Reque
 			ctx.Error("Sorry, nitric is listening on this port but is waiting for an API to be available to handle, you may have removed an API during development this port will be assigned to an API when one becomes available", 404)
 			return
 		}
+
 		apiName := s.apis[apiIdx]
 		headerMap := base_http.HttpHeadersToMap(&ctx.Request.Header)
 

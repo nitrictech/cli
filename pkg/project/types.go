@@ -17,9 +17,10 @@
 package project
 
 import (
+	"github.com/samber/lo"
+
 	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/preview"
-	"github.com/samber/lo"
 )
 
 type ComputeUnit struct {

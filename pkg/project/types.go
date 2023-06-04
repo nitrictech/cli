@@ -18,6 +18,8 @@ package project
 
 import (
 	"github.com/nitrictech/cli/pkg/history"
+	"github.com/nitrictech/cli/pkg/preview"
+	"github.com/samber/lo"
 )
 
 type ComputeUnit struct {
@@ -37,10 +39,15 @@ type Function struct {
 }
 
 type Project struct {
-	Dir       string              `yaml:"-"`
-	Name      string              `yaml:"name"`
-	Functions map[string]Function `yaml:"functions,omitempty"`
-	History   *history.History    `yaml:"-"`
+	Dir             string              `yaml:"-"`
+	Name            string              `yaml:"name"`
+	Functions       map[string]Function `yaml:"functions,omitempty"`
+	PreviewFeatures []preview.Feature   `yaml:"-"`
+	History         *history.History    `yaml:"-"`
+}
+
+func (p *Project) IsPreviewFeatureEnabled(feat preview.Feature) bool {
+	return lo.Contains(p.PreviewFeatures, feat)
 }
 
 func New(config BaseConfig) *Project {

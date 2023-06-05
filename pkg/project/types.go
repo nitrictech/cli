@@ -53,9 +53,10 @@ func (p *Project) IsPreviewFeatureEnabled(feat preview.Feature) bool {
 
 func New(config BaseConfig) *Project {
 	return &Project{
-		Name:      config.Name,
-		Dir:       config.Dir,
-		Functions: map[string]Function{},
+		Name:            config.Name,
+		Dir:             config.Dir,
+		Functions:       map[string]Function{},
+		PreviewFeatures: config.PreviewFeatures,
 		History: &history.History{
 			ProjectDir: config.Dir,
 		},

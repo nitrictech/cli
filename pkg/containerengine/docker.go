@@ -25,6 +25,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
@@ -126,7 +127,12 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 
 	dockerBuildCache := os.Getenv("DOCKER_BUILD_CACHE")
 	if dockerBuildCache != "" {
-		args = append(args, fmt.Sprintf("--cache-to=%s", dockerBuildCache), fmt.Sprintf("--cache-from=%s", dockerBuildCache))
+		imageCache := filepath.Join(dockerBuildCache, imageTag)
+
+		cacheTo := fmt.Sprintf("--cache-to=type=local,dest=%s", imageCache)
+		cacheFrom := fmt.Sprintf("--cache-from=type=local,src=%s", imageCache)
+
+		args = append(args, cacheTo, cacheFrom)
 	}
 
 	cmd := exec.Command("docker", args...)

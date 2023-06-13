@@ -113,6 +113,11 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	}
 	args = append(args, buildArgsCmd...)
 
+	dockerBuildCache := os.Getenv("DOCKER_BUILD_CACHE")
+	if dockerBuildCache != "" {
+		args = append(args, fmt.Sprintf("--cache-to=%s", dockerBuildCache), fmt.Sprintf("--cache-from=%s", dockerBuildCache))
+	}
+
 	cmd := exec.Command("docker", args...)
 	cmd.Stderr = output.NewPtermWriter(pterm.Debug)
 	cmd.Stdout = output.NewPtermWriter(pterm.Debug)

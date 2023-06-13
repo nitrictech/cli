@@ -82,7 +82,18 @@ func (d *docker) Inspect(imageName string) (types.ImageInspect, error) {
 	return ii, err
 }
 
+// Create a known nitric container builder to allow custom cache configuration
+func (d *docker) createBuider() error {
+	// Create a known fixed nitric builder to allow caching
+	cmd := exec.Command("docker", "buildx", "create", "--name", "nitric", "--driver=docker-container", "--node", "nitric0")
+	return cmd.Run()
+}
+
 func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string) error {
+	err := d.createBuider()
+	if err != nil {
+		return err
+	}
 	// write a temporary dockerignore file
 	ignoreFile, err := os.Create(fmt.Sprintf("%s.dockerignore", dockerfile))
 	if err != nil {
@@ -109,7 +120,7 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	}
 
 	args := []string{
-		"buildx", "build", srcPath, "-f", dockerfile, "-t", imageTag, "--platform", "linux/amd64",
+		"buildx", "build", srcPath, "-f", dockerfile, "-t", imageTag, "--load", "--builder=nitric", "--platform", "linux/amd64",
 	}
 	args = append(args, buildArgsCmd...)
 

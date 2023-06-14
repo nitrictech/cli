@@ -165,7 +165,7 @@ var runCmd = &cobra.Command{
 		area.Update(stackState.Tables(9001, *ls.GetDashPort()))
 
 		// Create a debouncer for the refresh and remove locking
-		debounced := debounce.New(100 * time.Millisecond)
+		debounced := debounce.New(500 * time.Millisecond)
 
 		// React to worker pool state and update services table
 		pool.Listen(func(we run.WorkerEvent) {

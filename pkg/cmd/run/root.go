@@ -21,10 +21,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
+	"github.com/bep/debounce"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -164,20 +164,21 @@ var runCmd = &cobra.Command{
 		area, _ := pterm.DefaultArea.Start()
 		area.Update(stackState.Tables(9001, *ls.GetDashPort()))
 
-		lck := sync.Mutex{}
+		// Create a debouncer for the refresh and remove locking
+		debounced := debounce.New(500 * time.Millisecond)
+
 		// React to worker pool state and update services table
 		pool.Listen(func(we run.WorkerEvent) {
-			lck.Lock()
-			defer lck.Unlock()
+			debounced(func() {
+				err := ls.Refresh()
+				if err != nil {
+					cobra.CheckErr(err)
+				}
 
-			err := ls.Refresh()
-			if err != nil {
-				cobra.CheckErr(err)
-			}
+				stackState.Update(pool, ls)
 
-			stackState.Update(pool, ls)
-
-			area.Update(stackState.Tables(9001, *ls.GetDashPort()))
+				area.Update(stackState.Tables(9001, *ls.GetDashPort()))
+			})
 		})
 
 		select {

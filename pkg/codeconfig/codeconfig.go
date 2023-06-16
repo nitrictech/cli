@@ -56,7 +56,7 @@ type codeConfig struct {
 	initialProject *project.Project
 	envMap         map[string]string
 	lock           sync.RWMutex
-	isStart bool
+	isStart        bool
 }
 
 type TopicResult struct {
@@ -83,7 +83,7 @@ func New(p *project.Project, envMap map[string]string, isStart bool) (*codeConfi
 		functions:      map[string]*FunctionDependencies{},
 		lock:           sync.RWMutex{},
 		envMap:         envMap,
-		isStart: isStart,
+		isStart:        isStart,
 	}, nil
 }
 

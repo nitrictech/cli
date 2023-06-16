@@ -94,7 +94,7 @@ type FunctionOpts struct {
 	Handler         string
 	RunCtx          string
 	ContainerEngine containerengine.ContainerEngine
-	isStart bool
+	isStart         bool
 }
 
 func newFunction(opts FunctionOpts) (*Function, error) {
@@ -133,7 +133,7 @@ func FunctionsFromHandlers(p *project.Project, isStart bool) ([]*Function, error
 			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,
 			ProjectName:     p.Name,
-			isStart: isStart,
+			isStart:         isStart,
 		}); err != nil {
 			return nil, err
 		} else {

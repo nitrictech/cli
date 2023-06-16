@@ -183,7 +183,7 @@ ENTRYPOINT node $HANDLER
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fwriter := &bytes.Buffer{}
-			rt, err := NewRunTimeFromHandler(tt.handler)
+			rt, err := NewRunTimeFromHandler(tt.handler, false)
 			if err != nil {
 				t.Error(err)
 			}

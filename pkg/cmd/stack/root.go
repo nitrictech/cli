@@ -152,7 +152,7 @@ var stackUpdateCmd = &cobra.Command{
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
-		proj, err := project.FromConfig(config)
+		proj, err := project.FromConfig(config, false)
 		cobra.CheckErr(err)
 
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
@@ -175,7 +175,7 @@ var stackUpdateCmd = &cobra.Command{
 		}
 		tasklet.MustRun(createBaseImage, tasklet.Opts{})
 
-		cc, err := codeconfig.New(proj, envMap)
+		cc, err := codeconfig.New(proj, envMap, false)
 		cobra.CheckErr(err)
 
 		codeAsConfig := tasklet.Runner{
@@ -251,10 +251,10 @@ nitric stack down -s aws -y`,
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
-		proj, err := project.FromConfig(config)
+		proj, err := project.FromConfig(config, false)
 		cobra.CheckErr(err)
 
-		cc, err := codeconfig.New(proj, map[string]string{})
+		cc, err := codeconfig.New(proj, map[string]string{}, false)
 		cobra.CheckErr(err)
 
 		p, err := provider.ProviderFromFile(cc, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true})
@@ -293,10 +293,10 @@ nitric stack list -s aws
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
-		proj, err := project.FromConfig(config)
+		proj, err := project.FromConfig(config, false)
 		cobra.CheckErr(err)
 
-		cc, err := codeconfig.New(proj, map[string]string{})
+		cc, err := codeconfig.New(proj, map[string]string{}, false)
 		cobra.CheckErr(err)
 
 		p, err := provider.ProviderFromFile(cc, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{})
@@ -355,7 +355,7 @@ func newStack(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cc, err := codeconfig.New(project.New(pc.BaseConfig), map[string]string{})
+	cc, err := codeconfig.New(project.New(pc.BaseConfig), map[string]string{}, false)
 	cobra.CheckErr(err)
 
 	prov, err := provider.NewProvider(cc, name, pName, map[string]string{}, &types.ProviderOpts{})

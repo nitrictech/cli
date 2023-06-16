@@ -56,6 +56,7 @@ type codeConfig struct {
 	initialProject *project.Project
 	envMap         map[string]string
 	lock           sync.RWMutex
+	isStart bool
 }
 
 type TopicResult struct {
@@ -76,12 +77,13 @@ type SpecResult struct {
 	BucketNotifications []*BucketNotification
 }
 
-func New(p *project.Project, envMap map[string]string) (*codeConfig, error) {
+func New(p *project.Project, envMap map[string]string, isStart bool) (*codeConfig, error) {
 	return &codeConfig{
 		initialProject: p,
 		functions:      map[string]*FunctionDependencies{},
 		lock:           sync.RWMutex{},
 		envMap:         envMap,
+		isStart: isStart,
 	}, nil
 }
 
@@ -248,7 +250,7 @@ func (c *codeConfig) apiSpec(api string, workers []*apiHandler) (*openapi3.T, er
 
 		// Collect all workers
 		for handler, f := range c.functions {
-			rt, err := runtime.NewRunTimeFromHandler(handler)
+			rt, err := runtime.NewRunTimeFromHandler(handler, c.isStart)
 			if err != nil {
 				return nil, err
 			}
@@ -441,7 +443,7 @@ func useDockerInternal(hc *container.HostConfig, port int) []string {
 // collectOne - Collects information about a function for a nitric stack
 // handler - the specific handler for the application
 func (c *codeConfig) collectOne(handler string) error {
-	rt, err := runtime.NewRunTimeFromHandler(handler)
+	rt, err := runtime.NewRunTimeFromHandler(handler, c.isStart)
 	if err != nil {
 		return errors.WithMessage(err, "error getting the runtime from handler "+handler)
 	}

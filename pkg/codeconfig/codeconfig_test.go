@@ -198,7 +198,7 @@ func Test_specFromWorkerPool(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cc, err := New(&project.Project{}, map[string]string{})
+			cc, err := New(&project.Project{}, map[string]string{}, false)
 			if err != nil {
 				t.Fatal(err)
 			}

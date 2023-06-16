@@ -31,7 +31,7 @@ import (
 
 var stackPath string
 
-func FromConfig(c *Config) (*Project, error) {
+func FromConfig(c *Config, isStart bool) (*Project, error) {
 	p := New(c.BaseConfig)
 
 	for _, h := range c.ConcreteHandlers {
@@ -44,7 +44,7 @@ func FromConfig(c *Config) (*Project, error) {
 			}
 
 			for _, f := range fs {
-				fn, err := FunctionFromHandler(f, h.Type)
+				fn, err := FunctionFromHandler(f, h.Type, isStart)
 				if err != nil {
 					return nil, err
 				}
@@ -52,7 +52,7 @@ func FromConfig(c *Config) (*Project, error) {
 				p.Functions[fn.Name] = fn
 			}
 		} else {
-			fn, err := FunctionFromHandler(h.Match, h.Type)
+			fn, err := FunctionFromHandler(h.Match, h.Type, isStart)
 			if err != nil {
 				return nil, err
 			}
@@ -68,7 +68,7 @@ func FromConfig(c *Config) (*Project, error) {
 	return p, nil
 }
 
-func FunctionFromHandler(h string, t string) (Function, error) {
+func FunctionFromHandler(h string, t string, isStart bool) (Function, error) {
 	_, err := reference.Parse(filepath.Base(h))
 	if err != nil {
 		return Function{}, fmt.Errorf("handler filepath \"%s\" is invalid, must be valid ASCII containing lowercase and uppercase letters, digits, underscores, periods and hyphens", h)
@@ -76,7 +76,7 @@ func FunctionFromHandler(h string, t string) (Function, error) {
 
 	pterm.Debug.Println("Using function from " + h)
 
-	rt, err := runtime.NewRunTimeFromHandler(h)
+	rt, err := runtime.NewRunTimeFromHandler(h, isStart)
 	if err != nil {
 		return Function{}, err
 	}

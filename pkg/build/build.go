@@ -43,7 +43,7 @@ func BuildBaseImages(s *project.Project) error {
 	}
 
 	for _, fun := range s.Functions {
-		rt, err := runtime.NewRunTimeFromHandler(fun.Handler)
+		rt, err := runtime.NewRunTimeFromHandler(fun.Handler, false)
 		if err != nil {
 			return err
 		}

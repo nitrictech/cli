@@ -94,10 +94,11 @@ type FunctionOpts struct {
 	Handler         string
 	RunCtx          string
 	ContainerEngine containerengine.ContainerEngine
+	isStart bool
 }
 
 func newFunction(opts FunctionOpts) (*Function, error) {
-	rt, err := runtime.NewRunTimeFromHandler(opts.Handler)
+	rt, err := runtime.NewRunTimeFromHandler(opts.Handler, opts.isStart)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +113,7 @@ func newFunction(opts FunctionOpts) (*Function, error) {
 	}, nil
 }
 
-func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
+func FunctionsFromHandlers(p *project.Project, isStart bool) ([]*Function, error) {
 	funcs := make([]*Function, 0, len(p.Functions))
 
 	ce, err := containerengine.Discover()
@@ -132,6 +133,7 @@ func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
 			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,
 			ProjectName:     p.Name,
+			isStart: isStart,
 		}); err != nil {
 			return nil, err
 		} else {

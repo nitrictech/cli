@@ -60,7 +60,7 @@ var runCmd = &cobra.Command{
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
-		proj, err := project.FromConfig(config)
+		proj, err := project.FromConfig(config, false)
 		cobra.CheckErr(err)
 
 		envFiles := utils.FilesExisting(".env", ".env.development", envFile)
@@ -134,7 +134,7 @@ var runCmd = &cobra.Command{
 		startFunctions := tasklet.Runner{
 			StartMsg: "Starting functions",
 			Runner: func(_ output.Progress) error {
-				functions, err = run.FunctionsFromHandlers(proj)
+				functions, err = run.FunctionsFromHandlers(proj, false)
 				if err != nil {
 					return err
 				}

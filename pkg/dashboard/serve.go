@@ -119,7 +119,7 @@ func (d *Dashboard) AddBucket(name string) {
 }
 
 func (d *Dashboard) Refresh(opts *RefreshOptions) error {
-	cc, err := codeconfig.New(d.project, d.envMap)
+	cc, err := codeconfig.New(d.project, d.envMap, true)
 	if err != nil {
 		return err
 	}

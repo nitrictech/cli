@@ -54,7 +54,7 @@ var startCmd = &cobra.Command{
 		config, err := project.ConfigFromProjectPath("")
 		cobra.CheckErr(err)
 
-		proj, err := project.FromConfig(config)
+		proj, err := project.FromConfig(config, true)
 		cobra.CheckErr(err)
 
 		dash, err := dashboard.New(proj, map[string]string{})

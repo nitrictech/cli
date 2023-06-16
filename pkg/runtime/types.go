@@ -45,10 +45,10 @@ const (
 
 var commonIgnore = []string{".nitric/", "!.nitric/*.yaml", ".git/", ".idea/", ".vscode/", ".github/", "*.dockerfile", "*.dockerignore"}
 
-func NewRunTimeFromHandler(handler string) (Runtime, error) {
+func NewRunTimeFromHandler(handler string, isStart bool) (Runtime, error) {
 	rt := RuntimeExt(strings.Replace(filepath.Ext(handler), ".", "", -1))
 
-	if strings.Contains(runtime.GOARCH, "arm") && rt == RuntimeCsharp {
+	if !isStart && strings.Contains(runtime.GOARCH, "arm") && rt == RuntimeCsharp {
 		return nil, errors.New("the .NET runtime is not supported in containers using ARM based architecture. We recommend using nitric start for local development, and a CI/CD pipeline for deployments. For more info on the issue: https://devblogs.microsoft.com/dotnet/announcing-net-6/#docker-on-arm64")
 	}
 

@@ -28,8 +28,6 @@ ENV GOLANG_VERSION 1.17.3
 ENV GOLANG_SHA256 550f9845451c0c94be679faf116291e7807a8d78b43149f9506c1b15eb89008c
 ENV DOCKER_PASS_CH v0.6.4
 
-ARG DOCKER_VERSION=5:20.10.22~3-0~debian-bullseye
-
 # Install deps all in one step
 RUN apt-get update -y && \
   apt-get install --no-install-recommends -y \
@@ -58,7 +56,7 @@ RUN apt-get update -y && \
   echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"      | tee /etc/apt/sources.list.d/docker.list && \
   # Install second wave of dependencies
   apt-get update -y && \
-  apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION && \
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin && \
   # Clean up the lists work
   rm -rf /var/lib/apt/lists/*
 

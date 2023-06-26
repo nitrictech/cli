@@ -117,7 +117,7 @@ ENTRYPOINT ["/bin/main"]`,
 		{
 			name:    "python",
 			handler: "list.py",
-			wantFwriter: `FROM python:3.10-slim
+			wantFwriter: `FROM python:3.11-slim
 
 ARG HANDLER
 

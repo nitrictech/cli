@@ -41,6 +41,7 @@ func dynamicDockerfile(dir, name string) (*os.File, error) {
 
 func buildFunction(s *project.Project, f project.Function) func() error {
 	fun := &f
+
 	return func() error {
 		ce, _ := containerengine.Discover()
 

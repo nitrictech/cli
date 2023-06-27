@@ -90,7 +90,9 @@ var builderLock = sync.Mutex{}
 func (d *docker) createBuider() error {
 	builderLock.Lock()
 	defer builderLock.Unlock() // Create a known fixed nitric builder to allow caching
+
 	cmd := exec.Command("docker", "buildx", "create", "--name", "nitric", "--bootstrap", "--driver=docker-container", "--node", "nitric0")
+
 	return cmd.Run()
 }
 

@@ -125,14 +125,37 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	}
 	args = append(args, buildArgsCmd...)
 
+	cacheTo := ""
+	cacheFrom := ""
+
 	dockerBuildCache := os.Getenv("DOCKER_BUILD_CACHE")
 	if dockerBuildCache != "" {
 		imageCache := filepath.Join(dockerBuildCache, imageTag)
 
-		cacheTo := fmt.Sprintf("--cache-to=type=local,dest=%s", imageCache)
-		cacheFrom := fmt.Sprintf("--cache-from=type=local,src=%s", imageCache)
+		cacheTo = fmt.Sprintf("--cache-to=type=local,dest=%s", imageCache)
+		cacheFrom = fmt.Sprintf("--cache-from=type=local,src=%s", imageCache)
+	}
 
-		args = append(args, cacheTo, cacheFrom)
+	dockerBuildCacheDest := os.Getenv("DOCKER_BUILD_CACHE_DEST")
+	if dockerBuildCacheDest != "" {
+		imageCache := filepath.Join(dockerBuildCacheDest, imageTag)
+
+		cacheTo = fmt.Sprintf("--cache-to=type=local,dest=%s", imageCache)
+	}
+
+	dockerBuildCacheSrc := os.Getenv("DOCKER_BUILD_CACHE_SRC")
+	if dockerBuildCacheSrc != "" {
+		imageCache := filepath.Join(dockerBuildCacheSrc, imageTag)
+
+		cacheFrom = fmt.Sprintf("--cache-from=type=local,src=%s", imageCache)
+	}
+
+	if cacheTo != "" {
+		args = append(args, cacheTo)
+	}
+
+	if cacheFrom != "" {
+		args = append(args, cacheFrom)
 	}
 
 	cmd := exec.Command("docker", args...)

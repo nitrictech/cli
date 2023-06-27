@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -83,10 +84,13 @@ func (d *docker) Inspect(imageName string) (types.ImageInspect, error) {
 	return ii, err
 }
 
+var builderLock = sync.Mutex{}
+
 // Create a known nitric container builder to allow custom cache configuration
 func (d *docker) createBuider() error {
-	// Create a known fixed nitric builder to allow caching
-	cmd := exec.Command("docker", "buildx", "create", "--name", "nitric", "--driver=docker-container", "--node", "nitric0")
+	builderLock.Lock()
+	defer builderLock.Unlock() // Create a known fixed nitric builder to allow caching
+	cmd := exec.Command("docker", "buildx", "create", "--name", "nitric", "--bootstrap", "--driver=docker-container", "--node", "nitric0")
 	return cmd.Run()
 }
 

@@ -41,7 +41,7 @@ func (t *javascript) ContainerName() string {
 }
 
 func (t *javascript) BuildIgnore(additional ...string) []string {
-	return append(javascriptIgnoreList, additional...)
+	return append(additional, javascriptIgnoreList...)
 }
 
 func (t *javascript) BaseDockerFile(w io.Writer) error {

@@ -18,7 +18,17 @@ package utils
 
 import (
 	"fmt"
+	"os"
+
+	"github.com/pterm/pterm"
 )
+
+func CheckErr(err error) {
+	if err != nil {
+		pterm.Error.Println(err)
+		os.Exit(1)
+	}
+}
 
 func NewIncompatibleWorkerError() error {
 	return fmt.Errorf("unable to register incompatible worker. This can be caused by out of date Nitric CLI versions, an upgrade may resolve this issue")

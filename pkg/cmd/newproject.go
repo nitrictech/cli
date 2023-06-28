@@ -31,6 +31,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/templates"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 var (
@@ -65,7 +66,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 
 		downloadr := templates.NewDownloader()
 		dirs, err := downloadr.Names()
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		templateNameQu.Prompt = &survey.Select{
 			Message: "Choose a template:",
@@ -115,16 +116,16 @@ nitric new hello-world "official/TypeScript - Starter" `,
 
 		if len(qs) > 0 {
 			err = survey.Ask(qs, &answers)
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 		}
 
 		cd, err := filepath.Abs(".")
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		projDir := path.Join(cd, answers.ProjectName)
 
 		err = downloadr.DownloadDirectoryContents(answers.TemplateName, projDir, force)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		var p *project.Config
 		// Check if the downloaded template has a default nitric.yaml file
@@ -152,7 +153,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 			}{}
 
 			err = survey.Ask(globQ, &globA)
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 
 			p = &project.Config{
 				BaseConfig: project.BaseConfig{
@@ -164,12 +165,12 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		} else {
 			// Load and update the project name in the template's nitric.yaml
 			p, err = project.ConfigFromProjectPath(projDir)
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 			p.Name = answers.ProjectName
 		}
 
 		err = p.ToFile()
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 	},
 	Args: cobra.MaximumNArgs(2),
 }

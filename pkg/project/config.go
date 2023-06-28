@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"reflect"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
@@ -29,14 +30,15 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-// Config shared by all compute types
-type BaseComputeConfig struct {
-	Type string `yaml:"type"`
+type DockerConfig struct {
+	File string
+	Args map[string]string
 }
 
 type HandlerConfig struct {
-	BaseComputeConfig
-	Match string
+	Type   string        `yaml:"type" mapstructure:"type"`
+	Match  string        `yaml:"match" mapstructure:"match"`
+	Docker *DockerConfig `yaml:"docker,omitempty" mapstructure:"docker,omitempty"`
 }
 
 // TODO: Determine best way to use generic mixed type constraint when deserializing
@@ -84,20 +86,20 @@ func configFromBaseConfig(base BaseConfig) (*Config, error) {
 		if str, isString := h.(string); isString {
 			// if its a basic string populate with default handler config
 			newConfig.ConcreteHandlers = append(newConfig.ConcreteHandlers, &HandlerConfig{
-				BaseComputeConfig: BaseComputeConfig{
-					Type: "default",
-				},
+				Type:  "default",
 				Match: str,
 			})
 		} else if m, isMap := h.(map[any]any); isMap {
+			actualConfig := &HandlerConfig{}
+
+			err := mapstructure.Decode(m, actualConfig)
+			if err != nil {
+				return nil, err
+			}
+
 			// otherwise extract its map configuration
 			// TODO: Check and validate the map properties
-			newConfig.ConcreteHandlers = append(newConfig.ConcreteHandlers, &HandlerConfig{
-				BaseComputeConfig: BaseComputeConfig{
-					Type: m["type"].(string),
-				},
-				Match: m["match"].(string),
-			})
+			newConfig.ConcreteHandlers = append(newConfig.ConcreteHandlers, actualConfig)
 		} else {
 			return nil, fmt.Errorf("invalid handler config provided: %+v %s", h, reflect.TypeOf(h))
 		}

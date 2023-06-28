@@ -45,6 +45,14 @@ const (
 
 var commonIgnore = []string{".nitric/", "!.nitric/*.yaml", ".git/", ".idea/", ".vscode/", ".github/", "*.dockerfile", "*.dockerignore"}
 
+func NewCustomRuntime(handler string, dockerfile string, args map[string]string) (Runtime, error) {
+	return &custom{
+		handler:    handler,
+		dockerfile: dockerfile,
+		args:       args,
+	}, nil
+}
+
 func NewRunTimeFromHandler(handler string) (Runtime, error) {
 	rt := RuntimeExt(strings.Replace(filepath.Ext(handler), ".", "", -1))
 

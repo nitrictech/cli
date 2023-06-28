@@ -17,26 +17,37 @@
 package project
 
 import (
+	"fmt"
+
 	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/preview"
+	"github.com/nitrictech/cli/pkg/runtime"
 )
 
-type ComputeUnit struct {
-	Name string `yaml:"-"`
-
-	Type string `yaml:"-"`
-}
-
 type Function struct {
+	// Parent Project backreference
+	Project *Project
+	// The functions unique name
+	Name string `yaml:"-"`
 	// The location of the function handler
 	Handler string `yaml:"handler"`
+	// The functions type
+	Config *HandlerConfig `yaml:"-"`
+}
 
-	ComputeUnit `yaml:",inline"`
-
-	// The number of workers this function contains
-	WorkerCount int
+func (f *Function) GetRuntime() (runtime.Runtime, error) {
+	if f.Config.Docker != nil {
+		if !f.Project.IsPreviewFeatureEnabled(preview.Feature_Dockerfile) {
+			return nil, fmt.Errorf("custom dockerfiles are currently in preview and must be enabled using preview-features in your nitric.yaml file")
+		}
+		// Using a custom runtime
+		return runtime.NewCustomRuntime(f.Handler, f.Config.Docker.File, f.Config.Docker.Args)
+	} else {
+		// Using an OOTB runtime
+		return runtime.NewRunTimeFromHandler(f.Handler)
+	}
 }
 
 type Project struct {

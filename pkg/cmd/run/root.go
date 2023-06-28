@@ -58,21 +58,21 @@ var runCmd = &cobra.Command{
 		log.SetFlags(0)
 
 		config, err := project.ConfigFromProjectPath("")
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		proj, err := project.FromConfig(config)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		envFiles := utils.FilesExisting(".env", ".env.development", envFile)
 		envMap := map[string]string{}
 		if len(envFiles) > 0 {
 			envMap, err = godotenv.Read(envFiles...)
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 		}
 
 		dash, err := dashboard.New(proj, envMap)
 		if err != nil {
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 		}
 
 		ls := run.NewLocalServices(proj, false, dash)
@@ -82,10 +82,10 @@ var runCmd = &cobra.Command{
 		}
 
 		ce, err := containerengine.Discover()
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		logger := ce.Logger(proj.Dir)
-		cobra.CheckErr(logger.Start())
+		utils.CheckErr(logger.Start())
 
 		createBaseImage := tasklet.Runner{
 			StartMsg: "Building Images",
@@ -156,7 +156,7 @@ var runCmd = &cobra.Command{
 
 		err = ls.Refresh()
 		if err != nil {
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 		}
 
 		stackState.Update(pool, ls)
@@ -197,7 +197,7 @@ var runCmd = &cobra.Command{
 		_ = area.Stop()
 		_ = logger.Stop()
 		// Stop the membrane
-		cobra.CheckErr(ls.Stop())
+		utils.CheckErr(ls.Stop())
 	},
 	Args: cobra.ExactArgs(0),
 }

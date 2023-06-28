@@ -67,7 +67,7 @@ var rootCmd = &cobra.Command{
 		if _, err := os.Stat(utils.NitricHomeDir()); os.IsNotExist(err) {
 			err := os.MkdirAll(utils.NitricHomeDir(), 0o700) // Create the Nitric Home Directory if it's missing
 			if err != nil {
-				cobra.CheckErr(fmt.Errorf("Failed to create nitric home directory. %w", err))
+				utils.CheckErr(fmt.Errorf("Failed to create nitric home directory. %w", err))
 			}
 		}
 	},
@@ -83,7 +83,7 @@ func Execute() {
 		}
 	}()
 
-	cobra.CheckErr(rootCmd.Execute())
+	utils.CheckErr(rootCmd.Execute())
 }
 
 func init() {
@@ -94,7 +94,7 @@ func init() {
 	err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
 	})
-	cobra.CheckErr(err)
+	utils.CheckErr(err)
 
 	newProjectCmd.Flags().BoolVarP(&force, "force", "f", false, "force project creation, even in non-empty directories.")
 	rootCmd.AddCommand(newProjectCmd)
@@ -113,7 +113,7 @@ func init() {
 
 func addAlias(from, to string, commonCommand bool) {
 	cmd, _, err := rootCmd.Find(strings.Split(from, " "))
-	cobra.CheckErr(err)
+	utils.CheckErr(err)
 
 	if cmd.Annotations == nil {
 		cmd.Annotations = map[string]string{}
@@ -131,7 +131,7 @@ func addAlias(from, to string, commonCommand bool) {
 			newArgs = append(newArgs, strings.Split(from, " ")...)
 			newArgs = append(newArgs, args...)
 			os.Args = newArgs
-			cobra.CheckErr(rootCmd.Execute())
+			utils.CheckErr(rootCmd.Execute())
 		},
 		DisableFlagParsing: true, // the real command will parse the flags
 	}

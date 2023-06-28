@@ -31,7 +31,6 @@ import (
 
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/runtime"
 )
 
 func dynamicDockerfile(dir, name string) (*os.File, error) {
@@ -45,7 +44,7 @@ func buildFunction(s *project.Project, f project.Function) func() error {
 	return func() error {
 		ce, _ := containerengine.Discover()
 
-		rt, err := runtime.NewRunTimeFromHandler(fun.Handler)
+		rt, err := fun.GetRuntime()
 		if err != nil {
 			return err
 		}

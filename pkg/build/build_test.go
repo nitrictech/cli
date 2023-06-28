@@ -38,8 +38,11 @@ func TestBuildBaseImages(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 
-	s := project.New(project.BaseConfig{Name: "", Dir: dir})
-	s.Functions = map[string]project.Function{"foo": {Handler: "functions/list.ts", ComputeUnit: project.ComputeUnit{Name: "foo"}}}
+	s := project.New(project.BaseConfig{Name: "", Dir: dir, PreviewFeatures: []string{"dockerfile"}})
+	s.Functions = map[string]project.Function{"foo": {Project: s, Handler: "functions/list.ts", Name: "foo", Config: &project.HandlerConfig{
+		Type:  "default",
+		Match: "functions/list.ts",
+	}}}
 
 	me.EXPECT().Build(gomock.Any(), dir, "-foo", gomock.Any(), []string{
 		".nitric/", "!.nitric/*.yaml", ".git/", ".idea/", ".vscode/", ".github/", "*.dockerfile", "*.dockerignore", "node_modules/",

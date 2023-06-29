@@ -38,9 +38,9 @@ func (t *custom) ContainerName() string {
 }
 
 func (t *custom) BuildIgnore(additional ...string) []string {
+	ignoreContents := []string{}
 	// make an ignore file from one if there is one available
 	dockerfile, err := os.ReadFile(fmt.Sprintf("%s.dockerignore", t.dockerfile))
-	ignoreContents := []string{}
 	if err == nil {
 		ignoreContents = strings.Split(string(dockerfile), "\n")
 	}

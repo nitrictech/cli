@@ -11,7 +11,7 @@ RUN yarn global add typescript @vercel/ncc
 
 WORKDIR /usr/app
 
-COPY package.json *.lock *-lock.json /
+COPY package.json *.lock *-lock.json ./
 
 RUN yarn import || echo ""
 
@@ -38,7 +38,7 @@ WORKDIR /usr/app
 
 COPY . .
 
-COPY --from=build node_modules/ ./node_modules/
+COPY --from=build /usr/app/node_modules/ ./node_modules/
 
 COPY --from=build /usr/app/lib/ ./lib/
 

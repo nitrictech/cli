@@ -4,7 +4,8 @@ FROM node:alpine as build
 ARG HANDLER
 
 # Python and make are required by certain native package build processes in NPM packages.
-RUN apk add g++ make py3-pip
+RUN --mount=type=cache,target=/var/cache/apk \
+    apk --update-cache add git g++ make py3-pip
 
 RUN yarn global add typescript @vercel/ncc
 
@@ -14,9 +15,9 @@ COPY package.json *.lock *-lock.json /
 
 RUN yarn import || echo ""
 
-RUN set -ex && \
-    yarn install --production --frozen-lockfile --cache-folder /tmp/.cache && \
-    rm -rf /tmp/.cache
+RUN --mount=type=cache,target=/tmp/.yarn_cache \
+    set -ex && \
+    yarn install --production --prefer-offline --frozen-lockfile --cache-folder /tmp/.yarn_cache
 
 RUN test -f tsconfig.json || echo "{\"compilerOptions\":{\"esModuleInterop\":true,\"target\":\"es2015\",\"moduleResolution\":\"node\"}}" > tsconfig.json
 
@@ -24,25 +25,20 @@ COPY . .
 
 # make prisma external to bundle - https://github.com/prisma/prisma/issues/16901#issuecomment-1362940774 \
 # TODO: remove when custom dockerfile support is available
-RUN \
-  --mount=type=cache,target=/tmp/ncc-cache \
+RUN --mount=type=cache,target=/tmp/ncc-cache \
   ncc build ${HANDLER} -o lib/ -e .prisma/client -e @prisma/client -t
 
 FROM node:alpine as final
-
-WORKDIR /usr/app
 
 RUN apk update && \
     apk add --no-cache ca-certificates && \
     update-ca-certificates
 
-COPY package.json *.lock *-lock.json ./
-
-RUN set -ex && \
-    yarn install --production --frozen-lockfile --cache-folder /tmp/.cache && \
-    rm -rf /tmp/.cache
+WORKDIR /usr/app
 
 COPY . .
+
+COPY --from=build node_modules/ ./node_modules/
 
 COPY --from=build /usr/app/lib/ ./lib/
 

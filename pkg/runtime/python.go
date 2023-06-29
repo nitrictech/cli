@@ -38,7 +38,7 @@ func (t *python) ContainerName() string {
 }
 
 func (t *python) BuildIgnore(additional ...string) []string {
-	baseIgnores := append(commonIgnore, additional...)
+	baseIgnores := append(additional, commonIgnore...)
 	return append(baseIgnores, "__pycache__/", "*.py[cod]", "*$py.class")
 }
 

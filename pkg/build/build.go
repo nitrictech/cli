@@ -17,12 +17,17 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
+	"golang.org/x/sync/errgroup"
+
+	goruntime "runtime"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
@@ -34,15 +39,12 @@ func dynamicDockerfile(dir, name string) (*os.File, error) {
 	return os.Create(filepath.Join(dir, fmt.Sprintf("%s.nitric.dynamic.dockerfile", name)))
 }
 
-// Build base non-nitric wrapped docker image
-// These will also be used for config as code runs
-func BuildBaseImages(s *project.Project) error {
-	ce, err := containerengine.Discover()
-	if err != nil {
-		return err
-	}
+func buildFunction(s *project.Project, f project.Function) func() error {
+	fun := &f
 
-	for _, fun := range s.Functions {
+	return func() error {
+		ce, _ := containerengine.Discover()
+
 		rt, err := runtime.NewRunTimeFromHandler(fun.Handler)
 		if err != nil {
 			return err
@@ -62,8 +64,6 @@ func BuildBaseImages(s *project.Project) error {
 			return err
 		}
 
-		pterm.Debug.Println("Building image for" + f.Name())
-
 		ingoreFunctions := lo.Filter(lo.Values(s.Functions), func(item project.Function, index int) bool {
 			return item.Name != fun.Name
 		})
@@ -72,10 +72,41 @@ func BuildBaseImages(s *project.Project) error {
 			return item.Handler
 		})
 
-		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), rt.BuildIgnore(ignoreHandlers...)); err != nil {
+		ignores := rt.BuildIgnore(ignoreHandlers...)
+
+		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), ignores); err != nil {
 			return err
 		}
+
+		return nil
+	}
+}
+
+// Build base non-nitric wrapped docker image
+// These will also be used for config as code runs
+func BuildBaseImages(s *project.Project) error {
+	errs, _ := errgroup.WithContext(context.Background())
+	// set concurrent build limit here
+
+	maxConcurrency := lo.Min([]int{goruntime.GOMAXPROCS(0), goruntime.NumCPU()})
+
+	maxConcurrencyEnv := os.Getenv("MAX_BUILD_CONCURRENCY")
+	if maxConcurrencyEnv != "" {
+		newVal, err := strconv.Atoi(maxConcurrencyEnv)
+		if err != nil {
+			return fmt.Errorf("invalid value for MAX_BUILD_CONCURRENCY must be int got %s", maxConcurrencyEnv)
+		}
+
+		maxConcurrency = newVal
 	}
 
-	return nil
+	pterm.Debug.Printfln("running builds %d at a time", maxConcurrency)
+
+	errs.SetLimit(maxConcurrency)
+
+	for _, fun := range s.Functions {
+		errs.Go(buildFunction(s, fun))
+	}
+
+	return errs.Wait()
 }

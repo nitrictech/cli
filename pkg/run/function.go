@@ -93,18 +93,14 @@ type FunctionOpts struct {
 	ProjectName     string
 	Handler         string
 	RunCtx          string
+	Runtime         runtime.Runtime
 	ContainerEngine containerengine.ContainerEngine
 }
 
 func newFunction(opts FunctionOpts) (*Function, error) {
-	rt, err := runtime.NewRunTimeFromHandler(opts.Handler)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Function{
 		name:        opts.Name,
-		rt:          rt,
+		rt:          opts.Runtime,
 		projectName: opts.ProjectName,
 		handler:     opts.Handler,
 		runCtx:      opts.RunCtx,
@@ -126,8 +122,14 @@ func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
 			return nil, err
 		}
 
+		runtime, err := f.GetRuntime()
+		if err != nil {
+			return nil, err
+		}
+
 		if f, err := newFunction(FunctionOpts{
 			Name:            f.Name,
+			Runtime:         runtime,
 			RunCtx:          p.Dir,
 			Handler:         relativeHandlerPath,
 			ContainerEngine: ce,

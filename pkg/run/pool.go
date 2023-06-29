@@ -19,8 +19,7 @@ package run
 import (
 	"strconv"
 
-	"github.com/spf13/cobra"
-
+	cliutils "github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/core/pkg/utils"
 	"github.com/nitrictech/nitric/core/pkg/worker"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
@@ -85,7 +84,7 @@ func (r *RunProcessPool) Listen(l WorkerListener) {
 
 func NewRunProcessPool() *RunProcessPool {
 	maxWorkers, err := strconv.Atoi(utils.GetEnv("MAX_WORKERS", "300"))
-	cobra.CheckErr(err)
+	cliutils.CheckErr(err)
 
 	return &RunProcessPool{
 		listeners: make([]WorkerListener, 0),

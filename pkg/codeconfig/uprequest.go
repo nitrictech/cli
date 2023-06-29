@@ -285,7 +285,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 						},
 					},
 					Workers: int32(f.WorkerCount()),
-					Type:    fun.Type,
+					Type:    fun.Config.Type,
 					Env:     c.envMap,
 				},
 			},

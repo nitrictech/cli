@@ -35,6 +35,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/tasklet"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 var startCmd = &cobra.Command{
@@ -52,15 +53,13 @@ var startCmd = &cobra.Command{
 		log.SetFlags(0)
 
 		config, err := project.ConfigFromProjectPath("")
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		proj, err := project.FromConfig(config)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		dash, err := dashboard.New(proj, map[string]string{})
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+		utils.CheckErr(err)
 
 		ls := run.NewLocalServices(&project.Project{
 			Name: "local",
@@ -137,7 +136,7 @@ var startCmd = &cobra.Command{
 
 		_ = area.Stop()
 		// Stop the membrane
-		cobra.CheckErr(ls.Stop())
+		utils.CheckErr(ls.Stop())
 	},
 	Args: cobra.ExactArgs(0),
 }

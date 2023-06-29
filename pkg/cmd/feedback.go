@@ -25,6 +25,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/pkg/ghissue"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 var feedbackCmd = &cobra.Command{
@@ -43,7 +44,7 @@ var feedbackCmd = &cobra.Command{
 		d := ghissue.Gather()
 
 		diag, err := yaml.Marshal(d)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		qs := []*survey.Question{
 			{
@@ -77,7 +78,7 @@ var feedbackCmd = &cobra.Command{
 			},
 		}
 		err = survey.Ask(qs, &answers)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		pterm.Info.Println("Please create a github issue by clicking on the link below")
 		fmt.Println(ghissue.IssueLink(answers.Repo, answers.Kind, answers.Title, answers.Body))

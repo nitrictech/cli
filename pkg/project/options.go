@@ -18,12 +18,10 @@ package project
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/pterm/pterm"
 
-	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/utils"
 
 	"github.com/docker/distribution/reference"
@@ -35,29 +33,28 @@ func FromConfig(c *Config) (*Project, error) {
 	p := New(c.BaseConfig)
 
 	for _, h := range c.ConcreteHandlers {
-		maybeFile := filepath.Join(p.Dir, h.Match)
+		fs, err := utils.GlobInDir(stackPath, h.Match)
+		if err != nil {
+			return nil, err
+		}
 
-		if _, err := os.Stat(maybeFile); err != nil {
-			fs, err := utils.GlobInDir(stackPath, h.Match)
+		for _, f := range fs {
+			fn, err := FunctionFromHandler(f, h)
 			if err != nil {
 				return nil, err
 			}
 
-			for _, f := range fs {
-				fn, err := FunctionFromHandler(f, h.Type)
-				if err != nil {
-					return nil, err
-				}
+			fn.Project = p
 
-				p.Functions[fn.Name] = fn
-			}
-		} else {
-			fn, err := FunctionFromHandler(h.Match, h.Type)
+			rt, err := fn.GetRuntime()
 			if err != nil {
 				return nil, err
 			}
 
-			p.Functions[fn.Name] = fn
+			fn.Name = rt.ContainerName()
+			fn.Project = p
+
+			p.Functions[rt.ContainerName()] = fn
 		}
 	}
 
@@ -68,24 +65,20 @@ func FromConfig(c *Config) (*Project, error) {
 	return p, nil
 }
 
-func FunctionFromHandler(h string, t string) (Function, error) {
-	_, err := reference.Parse(filepath.Base(h))
+func FunctionFromHandler(handlerFile string, config *HandlerConfig) (Function, error) {
+	_, err := reference.Parse(filepath.Base(handlerFile))
 	if err != nil {
-		return Function{}, fmt.Errorf("handler filepath \"%s\" is invalid, must be valid ASCII containing lowercase and uppercase letters, digits, underscores, periods and hyphens", h)
+		return Function{}, fmt.Errorf("handler filepath \"%s\" is invalid, must be valid ASCII containing lowercase and uppercase letters, digits, underscores, periods and hyphens", handlerFile)
 	}
 
-	pterm.Debug.Println("Using function from " + h)
+	pterm.Debug.Println("Using function from " + handlerFile)
 
-	rt, err := runtime.NewRunTimeFromHandler(h)
 	if err != nil {
 		return Function{}, err
 	}
 
 	return Function{
-		ComputeUnit: ComputeUnit{
-			Name: rt.ContainerName(),
-			Type: t,
-		},
-		Handler: h,
+		Handler: handlerFile,
+		Config:  config,
 	}, nil
 }

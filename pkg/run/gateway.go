@@ -48,7 +48,7 @@ type apiServer struct {
 
 type BaseHttpGateway struct {
 	apiServers      []*apiServer
-	httpServers      []*apiServer
+	httpServers     []*apiServer
 	apis            []string
 	httpWorkers     []int
 	serviceServer   *fasthttp.Server
@@ -83,7 +83,6 @@ func httpWorkerFilter(port int) func(w worker.Worker) bool {
 	}
 }
 
-
 // GetTriggerAddress - Returns the address built-in nitric services
 // this can be used to publishing messages to topics or triggering schedules
 func (s *BaseHttpGateway) GetTriggerAddress() string {
@@ -114,7 +113,7 @@ func (s *BaseHttpGateway) GetHttpWorkerAddresses() map[int]string {
 	return addresses
 }
 
-func (s *BaseHttpGateway) handleHttpProxyRequest(idx int) fasthttp.RequestHandler{
+func (s *BaseHttpGateway) handleHttpProxyRequest(idx int) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		port := s.httpWorkers[idx]
 
@@ -176,7 +175,7 @@ func (s *BaseHttpGateway) handleHttpProxyRequest(idx int) fasthttp.RequestHandle
 			ctx.Response.Header.Del("Content-Length")
 			ctx.Response.SetStatusCode(int(http.Status))
 			ctx.Response.SetBody(resp.Data)
-			
+
 			return
 		}
 
@@ -411,7 +410,7 @@ func (s *BaseHttpGateway) refreshHttpWorkers() {
 	s.httpWorkers = append(s.httpWorkers, uniqHttpWorkers...)
 }
 
-func (s *BaseHttpGateway) createApiServers() (error) {
+func (s *BaseHttpGateway) createApiServers() error {
 	// create an api server for every API worker
 	for len(s.apiServers) < len(s.apis) {
 		fhttp := &fasthttp.Server{
@@ -445,7 +444,7 @@ func (s *BaseHttpGateway) createApiServers() (error) {
 	return nil
 }
 
-func (s *BaseHttpGateway) createHttpServers() (error) {
+func (s *BaseHttpGateway) createHttpServers() error {
 	// create an api server for every API worker
 	for len(s.httpServers) < len(s.httpWorkers) {
 		fhttp := &fasthttp.Server{

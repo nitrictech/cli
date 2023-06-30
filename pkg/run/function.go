@@ -70,7 +70,7 @@ func (f *Function) Start(envMap map[string]string) error {
 
 	cc := &container.Config{
 		Image: fmt.Sprintf("%s-%s", f.projectName, f.Name()), // Select an image to use based on the handler
-		Env: env,
+		Env:   env,
 	}
 
 	// Set additional configuration for http proxy

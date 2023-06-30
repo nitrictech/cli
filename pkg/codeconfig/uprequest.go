@@ -273,7 +273,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 
 		for range f.httpWorkers {
 			builder.set(&deploy.Resource{
-				Name: fmt.Sprintf("%s-httpproxy", f.name),
+				Name: f.name,
 				Type: v1.ResourceType_Http,
 				Config: &deploy.Resource_Http{
 					Http: &deploy.Http{

@@ -28,6 +28,7 @@ import (
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type Function struct {
@@ -76,8 +77,13 @@ func (f *Function) Start(envMap map[string]string) error {
 	// Set additional configuration for http proxy
 	hostProxyPort := envMap["NITRIC_HTTP_PROXY_PORT"]
 	if hostProxyPort == "" {
-		cc.Env = append(cc.Env, "NITRIC_HTTP_PROXY_PORT=3000")
-		hostProxyPort = "3000"
+		randomPort, err := utils.Take(1)
+		if err != nil {
+			return err
+		}
+
+		cc.Env = append(cc.Env, fmt.Sprintf("NITRIC_HTTP_PROXY_PORT=%d", randomPort[0]))
+		hostProxyPort = fmt.Sprint(randomPort[0])
 	}
 
 	hc.PortBindings = nat.PortMap{

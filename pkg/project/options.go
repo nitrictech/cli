@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/pterm/pterm"
+	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/utils"
 
@@ -59,7 +60,13 @@ func FromConfig(c *Config) (*Project, error) {
 	}
 
 	if len(p.Functions) == 0 {
-		return nil, fmt.Errorf("no functions were found within match on handlers '%+v' in dir '%s', try a new pattern", c.ConcreteHandlers, p.Dir)
+		handlerMatches := lo.Reduce(c.ConcreteHandlers, func (agg string, handler *HandlerConfig, idx int) string {
+			if agg == "" {
+				return handler.Match
+			}
+			return fmt.Sprintf("%s, %s", agg, handler.Match)
+		}, "")
+		return nil, fmt.Errorf("no functions were found within match on handlers '%s' in dir '%s', try a new pattern", handlerMatches, p.Dir)
 	}
 
 	return p, nil

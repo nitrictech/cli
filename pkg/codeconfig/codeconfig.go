@@ -597,10 +597,18 @@ func (c *codeConfig) collectOne(projectFunction project.Function) error {
 		errs.Push(cErr)
 	}
 
+	for _, err := range fun.errors {
+		errs.Push(fmt.Errorf("%s", err))
+	}
+
+	if errs.Len() > 0 {
+		return errs.Err()
+	}
+
 	// Add the function
 	c.addFunction(fun, projectFunction.Handler)
 
-	return errs.Err()
+	return nil
 }
 
 func (c *codeConfig) addFunction(fun *FunctionDependencies, handler string) {

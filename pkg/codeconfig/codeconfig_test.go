@@ -202,8 +202,8 @@ func Test_specFromWorkerPool(t *testing.T) {
 						NotificationPrefixFilter: "*",
 					},
 				},
-				Topics: []*TopicResult{{WorkerKey: "test-subscription", TopicKey: "test-subscription"}},
-				HttpWorkers: []*HttpWorker{{Port:3000},{Port:8080}},
+				Topics:      []*TopicResult{{WorkerKey: "test-subscription", TopicKey: "test-subscription"}},
+				HttpWorkers: []*HttpWorker{{Port: 3000}, {Port: 8080}},
 			},
 		},
 	}

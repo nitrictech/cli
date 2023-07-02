@@ -38,7 +38,7 @@ func (t *typescript) ContainerName() string {
 }
 
 func (t *typescript) BuildIgnore(additional ...string) []string {
-	return append(javascriptIgnoreList, additional...)
+	return append(additional, javascriptIgnoreList...)
 }
 
 func (t *typescript) BuildArgs() map[string]string {

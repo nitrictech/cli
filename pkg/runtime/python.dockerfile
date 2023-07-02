@@ -1,8 +1,9 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 ARG HANDLER
 
 ENV HANDLER=${HANDLER}
+ENV PYTHONUNBUFFERED=TRUE
 
 RUN apt-get update -y && \
     apt-get install -y ca-certificates && \

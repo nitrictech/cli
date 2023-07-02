@@ -38,7 +38,7 @@ func (t *csharp) ContainerName() string {
 }
 
 func (t *csharp) BuildIgnore(additional ...string) []string {
-	baseIgnores := append(commonIgnore, additional...)
+	baseIgnores := append(additional, commonIgnore...)
 	return append(baseIgnores, "obj/", "bin/")
 }
 

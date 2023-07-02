@@ -43,7 +43,6 @@ import (
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/runtime"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/worker"
@@ -96,14 +95,16 @@ func (c *codeConfig) Collect() error {
 		go func(fn project.Function) {
 			defer wg.Done()
 
-			rel, err := fn.RelativeHandlerPath(c.initialProject)
+			var err error
+
+			fn.Handler, err = fn.RelativeHandlerPath(c.initialProject)
 			if err != nil {
 				errList.Push(err)
 
 				return
 			}
 
-			err = c.collectOne(rel)
+			err = c.collectOne(fn)
 			if err != nil {
 				errList.Push(err)
 
@@ -247,8 +248,8 @@ func (c *codeConfig) apiSpec(api string, workers []*apiHandler) (*openapi3.T, er
 		workers = make([]*apiHandler, 0)
 
 		// Collect all workers
-		for handler, f := range c.functions {
-			rt, err := runtime.NewRunTimeFromHandler(handler)
+		for _, f := range c.functions {
+			rt, err := f.functionConfig.GetRuntime()
 			if err != nil {
 				return nil, err
 			}
@@ -440,14 +441,14 @@ func useDockerInternal(hc *container.HostConfig, port int) []string {
 
 // collectOne - Collects information about a function for a nitric stack
 // handler - the specific handler for the application
-func (c *codeConfig) collectOne(handler string) error {
-	rt, err := runtime.NewRunTimeFromHandler(handler)
+func (c *codeConfig) collectOne(projectFunction project.Function) error {
+	rt, err := projectFunction.GetRuntime()
 	if err != nil {
-		return errors.WithMessage(err, "error getting the runtime from handler "+handler)
+		return errors.WithMessage(err, "error getting the runtime from handler "+projectFunction.Handler)
 	}
 
 	name := rt.ContainerName()
-	fun := NewFunction(name)
+	fun := NewFunction(name, projectFunction)
 
 	srv := NewServer(name, fun)
 	grpcSrv := grpc.NewServer()
@@ -582,7 +583,7 @@ func (c *codeConfig) collectOne(handler string) error {
 	}
 
 	// Add the function
-	c.addFunction(fun, handler)
+	c.addFunction(fun, projectFunction.Handler)
 
 	return errs.Err()
 }

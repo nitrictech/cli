@@ -24,6 +24,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
+
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type Dependency struct {
@@ -88,7 +90,7 @@ var Docker = &Dependency{
 func AddDependencyCheck(cmd *cobra.Command, deps ...*Dependency) *cobra.Command {
 	cmd.PreRun = func(cmd *cobra.Command, args []string) {
 		err := checkDependencies(deps...)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 	}
 
 	return cmd

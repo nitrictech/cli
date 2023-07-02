@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 )
@@ -111,6 +112,7 @@ func (a *Api) AddSecurity(name string, scopes []string) {
 // FunctionDependencies - Stores information about a Nitric Function, and it's dependencies
 type FunctionDependencies struct {
 	name                string
+	functionConfig      project.Function
 	apis                map[string]*Api
 	subscriptions       map[string]*v1.SubscriptionWorker
 	schedules           map[string]*v1.ScheduleWorker
@@ -267,9 +269,10 @@ func (a *FunctionDependencies) AddSecret(name string, s *v1.SecretResource) {
 }
 
 // NewFunction - creates a new Nitric Function, ready to register handlers and dependencies.
-func NewFunction(name string) *FunctionDependencies {
+func NewFunction(name string, projectFunction project.Function) *FunctionDependencies {
 	return &FunctionDependencies{
 		name:                name,
+		functionConfig:      projectFunction,
 		apis:                make(map[string]*Api),
 		subscriptions:       make(map[string]*v1.SubscriptionWorker),
 		schedules:           make(map[string]*v1.ScheduleWorker),

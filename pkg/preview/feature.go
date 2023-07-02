@@ -14,22 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package preview
 
-import (
-	"fmt"
-	"os"
+type Feature = string
 
-	"github.com/pterm/pterm"
+const (
+	Feature_Dockerfile Feature = "dockerfile"
+	Feature_Websockets Feature = "websockets"
 )
-
-func CheckErr(err error) {
-	if err != nil {
-		pterm.Error.Println(err)
-		os.Exit(1)
-	}
-}
-
-func NewIncompatibleWorkerError() error {
-	return fmt.Errorf("unable to register incompatible worker. This can be caused by out of date Nitric CLI versions, an upgrade may resolve this issue")
-}

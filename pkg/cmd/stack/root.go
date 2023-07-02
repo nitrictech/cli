@@ -76,7 +76,7 @@ nitric stack list
 			if err != nil {
 				err = fmt.Errorf("unable to determine configured passphrase. See https://nitric.io/docs/guides/github-actions#configuring-environment-variables")
 			}
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 
 			// Set the default
 			os.Setenv("PULUMI_CONFIG_PASSPHRASE_FILE", p)
@@ -90,7 +90,7 @@ var newStackCmd = &cobra.Command{
 	Long:  `Creates a new Nitric stack.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		err := newStack(cmd, args)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 	},
 	Args:        cobra.MaximumNArgs(2),
 	Annotations: map[string]string{"commonCommand": "yes"},
@@ -137,23 +137,23 @@ var stackUpdateCmd = &cobra.Command{
 				Default: "Yes",
 				Options: []string{"Yes", "No"},
 			}, &confirm)
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 			if confirm != "Yes" {
 				pterm.Info.Println("You can run `nitric stack new` to create a new stack.")
 				os.Exit(0)
 			}
 			err = newStack(cmd, args)
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 
 			s, err = stack.ConfigFromOptions()
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 		}
 
 		config, err := project.ConfigFromProjectPath("")
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		proj, err := project.FromConfig(config)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
 		log.SetFlags(0)
@@ -162,7 +162,7 @@ var stackUpdateCmd = &cobra.Command{
 		envMap := map[string]string{}
 		if len(envFiles) > 0 {
 			envMap, err = godotenv.Read(envFiles...)
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 		}
 
 		// build base images on updates
@@ -176,7 +176,7 @@ var stackUpdateCmd = &cobra.Command{
 		tasklet.MustRun(createBaseImage, tasklet.Opts{})
 
 		cc, err := codeconfig.New(proj, envMap)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		codeAsConfig := tasklet.Runner{
 			StartMsg: "Gathering configuration from code..",
@@ -188,7 +188,7 @@ var stackUpdateCmd = &cobra.Command{
 		tasklet.MustRun(codeAsConfig, tasklet.Opts{})
 
 		p, err := provider.ProviderFromFile(cc, s.Name, s.Provider, envMap, &types.ProviderOpts{Force: force})
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		d := &types.Deployment{}
 		deploy := tasklet.Runner{
@@ -235,7 +235,7 @@ nitric stack down -s aws -y`,
 				Default: "No",
 				Options: []string{"Yes", "No"},
 			}, &confirm)
-			cobra.CheckErr(err)
+			utils.CheckErr(err)
 			if confirm != "Yes" {
 				pterm.Info.Println("Cancelling command")
 				os.Exit(0)
@@ -243,22 +243,22 @@ nitric stack down -s aws -y`,
 		}
 
 		s, err := stack.ConfigFromOptions()
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
 		log.SetFlags(0)
 
 		config, err := project.ConfigFromProjectPath("")
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		proj, err := project.FromConfig(config)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		cc, err := codeconfig.New(proj, map[string]string{})
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		p, err := provider.ProviderFromFile(cc, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true})
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		deploy := tasklet.Runner{
 			StartMsg: "Deleting..",
@@ -288,22 +288,22 @@ nitric stack list -s aws
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := stack.ConfigFromOptions()
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		config, err := project.ConfigFromProjectPath("")
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		proj, err := project.FromConfig(config)
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		cc, err := codeconfig.New(proj, map[string]string{})
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		p, err := provider.ProviderFromFile(cc, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{})
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		deps, err := p.List()
-		cobra.CheckErr(err)
+		utils.CheckErr(err)
 
 		output.Print(deps)
 	},
@@ -317,14 +317,14 @@ func RootCommand() *cobra.Command {
 	stackCmd.AddCommand(command.AddDependencyCheck(stackUpdateCmd, command.Pulumi, command.Docker))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&force, "force", "f", false, "force override previous deployment")
-	cobra.CheckErr(stack.AddOptions(stackUpdateCmd, false))
+	utils.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(command.AddDependencyCheck(stackDeleteCmd, command.Pulumi))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
-	cobra.CheckErr(stack.AddOptions(stackDeleteCmd, false))
+	utils.CheckErr(stack.AddOptions(stackDeleteCmd, false))
 
 	stackCmd.AddCommand(stackListCmd)
-	cobra.CheckErr(stack.AddOptions(stackListCmd, false))
+	utils.CheckErr(stack.AddOptions(stackListCmd, false))
 
 	return stackCmd
 }
@@ -356,7 +356,7 @@ func newStack(cmd *cobra.Command, args []string) error {
 	}
 
 	cc, err := codeconfig.New(project.New(pc.BaseConfig), map[string]string{})
-	cobra.CheckErr(err)
+	utils.CheckErr(err)
 
 	prov, err := provider.NewProvider(cc, name, pName, map[string]string{}, &types.ProviderOpts{})
 	if err != nil {

@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -83,10 +84,15 @@ func (d *docker) Inspect(imageName string) (types.ImageInspect, error) {
 	return ii, err
 }
 
+var builderLock = sync.Mutex{}
+
 // Create a known nitric container builder to allow custom cache configuration
 func (d *docker) createBuider() error {
-	// Create a known fixed nitric builder to allow caching
-	cmd := exec.Command("docker", "buildx", "create", "--name", "nitric", "--driver=docker-container", "--node", "nitric0")
+	builderLock.Lock()
+	defer builderLock.Unlock() // Create a known fixed nitric builder to allow caching
+
+	cmd := exec.Command("docker", "buildx", "create", "--name", "nitric", "--bootstrap", "--driver=docker-container", "--node", "nitric0")
+
 	return cmd.Run()
 }
 
@@ -125,14 +131,37 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	}
 	args = append(args, buildArgsCmd...)
 
+	cacheTo := ""
+	cacheFrom := ""
+
 	dockerBuildCache := os.Getenv("DOCKER_BUILD_CACHE")
 	if dockerBuildCache != "" {
 		imageCache := filepath.Join(dockerBuildCache, imageTag)
 
-		cacheTo := fmt.Sprintf("--cache-to=type=local,dest=%s", imageCache)
-		cacheFrom := fmt.Sprintf("--cache-from=type=local,src=%s", imageCache)
+		cacheTo = fmt.Sprintf("--cache-to=type=local,dest=%s", imageCache)
+		cacheFrom = fmt.Sprintf("--cache-from=type=local,src=%s", imageCache)
+	}
 
-		args = append(args, cacheTo, cacheFrom)
+	dockerBuildCacheDest := os.Getenv("DOCKER_BUILD_CACHE_DEST")
+	if dockerBuildCacheDest != "" {
+		imageCache := filepath.Join(dockerBuildCacheDest, imageTag)
+
+		cacheTo = fmt.Sprintf("--cache-to=type=local,dest=%s", imageCache)
+	}
+
+	dockerBuildCacheSrc := os.Getenv("DOCKER_BUILD_CACHE_SRC")
+	if dockerBuildCacheSrc != "" {
+		imageCache := filepath.Join(dockerBuildCacheSrc, imageTag)
+
+		cacheFrom = fmt.Sprintf("--cache-from=type=local,src=%s", imageCache)
+	}
+
+	if cacheTo != "" {
+		args = append(args, cacheTo)
+	}
+
+	if cacheFrom != "" {
+		args = append(args, cacheFrom)
 	}
 
 	cmd := exec.Command("docker", args...)

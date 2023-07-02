@@ -33,7 +33,7 @@ var _ Runtime = &golang{}
 var golangDockerfile string
 
 func (t *golang) BuildIgnore(additional ...string) []string {
-	return append(commonIgnore, additional...)
+	return append(additional, commonIgnore...)
 }
 
 func (t *golang) BaseDockerFile(w io.Writer) error {

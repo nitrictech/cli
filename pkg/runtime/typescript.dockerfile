@@ -15,7 +15,7 @@ COPY package.json *.lock *-lock.json ./
 
 RUN yarn import || echo ""
 
-RUN --mount=type=cache,target=/tmp/.yarn_cache \
+RUN --mount=type=cache,sharing=locked,target=/tmp/.yarn_cache \
     set -ex && \
     yarn install --production --prefer-offline --frozen-lockfile --cache-folder /tmp/.yarn_cache
 
@@ -25,7 +25,7 @@ COPY . .
 
 # make prisma external to bundle - https://github.com/prisma/prisma/issues/16901#issuecomment-1362940774 \
 # TODO: remove when custom dockerfile support is available
-RUN --mount=type=cache,target=/tmp/ncc-cache \
+RUN --mount=type=cache,sharing=private,target=/tmp/ncc-cache \
   ncc build ${HANDLER} -o lib/ -e .prisma/client -e @prisma/client -t
 
 FROM node:alpine as final

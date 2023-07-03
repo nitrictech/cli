@@ -60,12 +60,13 @@ func FromConfig(c *Config) (*Project, error) {
 	}
 
 	if len(p.Functions) == 0 {
-		handlerMatches := lo.Reduce(c.ConcreteHandlers, func (agg string, handler *HandlerConfig, idx int) string {
+		handlerMatches := lo.Reduce(c.ConcreteHandlers, func(agg string, handler *HandlerConfig, idx int) string {
 			if agg == "" {
 				return handler.Match
 			}
 			return fmt.Sprintf("%s, %s", agg, handler.Match)
 		}, "")
+
 		return nil, fmt.Errorf("no functions were found within match on handlers '%s' in dir '%s', try a new pattern", handlerMatches, p.Dir)
 	}
 

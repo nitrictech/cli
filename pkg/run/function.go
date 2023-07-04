@@ -23,10 +23,12 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/runtime"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 type Function struct {
@@ -69,8 +71,31 @@ func (f *Function) Start(envMap map[string]string) error {
 
 	cc := &container.Config{
 		Image: fmt.Sprintf("%s-%s", f.projectName, f.Name()), // Select an image to use based on the handler
-		// Set the address to the bound port
-		Env: env,
+		Env:   env,
+	}
+
+	// Set additional configuration for http proxy
+	hostProxyPort := envMap["NITRIC_HTTP_PROXY_PORT"]
+	if hostProxyPort == "" {
+		randomPort, err := utils.Take(1)
+		if err != nil {
+			return err
+		}
+
+		cc.Env = append(cc.Env, fmt.Sprintf("NITRIC_HTTP_PROXY_PORT=%d", randomPort[0]))
+		hostProxyPort = fmt.Sprint(randomPort[0])
+	}
+
+	hc.PortBindings = nat.PortMap{
+		nat.Port(hostProxyPort): []nat.PortBinding{
+			{
+				HostPort: hostProxyPort,
+			},
+		},
+	}
+
+	cc.ExposedPorts = nat.PortSet{
+		nat.Port(hostProxyPort): struct{}{},
 	}
 
 	cID, err := f.ce.ContainerCreate(cc, hc, nil, strings.Join([]string{f.projectName, "run", f.Name()}, "-"))

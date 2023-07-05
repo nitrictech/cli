@@ -48,7 +48,9 @@ type apiServer struct {
 
 type BaseHttpGateway struct {
 	apiServers      []*apiServer
+	httpServers     []*apiServer
 	apis            []string
+	httpWorkers     []int
 	serviceServer   *fasthttp.Server
 	serviceListener net.Listener
 	gateway.UnimplementedGatewayPlugin
@@ -65,6 +67,16 @@ func apiWorkerFilter(apiName string) func(w worker.Worker) bool {
 	return func(w worker.Worker) bool {
 		if api, ok := w.(*worker.RouteWorker); ok {
 			return api.Api() == apiName
+		}
+
+		return false
+	}
+}
+
+func httpWorkerFilter(port int) func(w worker.Worker) bool {
+	return func(w worker.Worker) bool {
+		if http, ok := w.(*worker.HttpWorker); ok {
+			return http.GetPort() == port
 		}
 
 		return false
@@ -91,14 +103,95 @@ func (s *BaseHttpGateway) GetApiAddresses() map[string]string {
 	return addresses
 }
 
-func (s *BaseHttpGateway) handleHttpRequest(apiIdx int) func(ctx *fasthttp.RequestCtx) {
+func (s *BaseHttpGateway) GetHttpWorkerAddresses() map[int]string {
+	addresses := make(map[int]string)
+
+	for idx, port := range s.httpWorkers {
+		addresses[port] = strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+	}
+
+	return addresses
+}
+
+func (s *BaseHttpGateway) handleHttpProxyRequest(idx int) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		if apiIdx >= len(s.apis) {
+		port := s.httpWorkers[idx]
+
+		headerMap := base_http.HttpHeadersToMap(&ctx.Request.Header)
+
+		headers := map[string]*v1.HeaderValue{}
+		for k, v := range headerMap {
+			headers[k] = &v1.HeaderValue{Value: v}
+		}
+
+		query := map[string]*v1.QueryValue{}
+
+		ctx.QueryArgs().VisitAll(func(key []byte, val []byte) {
+			k := string(key)
+
+			if query[k] == nil {
+				query[k] = &v1.QueryValue{}
+			}
+
+			query[k].Value = append(query[k].Value, string(val))
+		})
+
+		httpTrigger := &v1.TriggerRequest{
+			Data: ctx.Request.Body(),
+			Context: &v1.TriggerRequest_Http{
+				Http: &v1.HttpTriggerContext{
+					Method:      string(ctx.Request.Header.Method()),
+					Path:        string(ctx.URI().PathOriginal()),
+					Headers:     headers,
+					QueryParams: query,
+				},
+			},
+		}
+
+		worker, err := s.pool.GetWorker(&pool.GetWorkerOptions{
+			Trigger: httpTrigger,
+			Filter:  httpWorkerFilter(port),
+		})
+		if err != nil {
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dashPort), fasthttp.StatusTemporaryRedirect)
+			return
+		}
+
+		resp, err := worker.HandleTrigger(context.TODO(), httpTrigger)
+		if err != nil {
+			ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
+			return
+		}
+
+		if http := resp.GetHttp(); http != nil {
+			// Copy headers across
+			for k, v := range http.Headers {
+				for _, val := range v.Value {
+					ctx.Response.Header.Add(k, val)
+				}
+			}
+
+			// Avoid content length header duplication
+			ctx.Response.Header.Del("Content-Length")
+			ctx.Response.SetStatusCode(int(http.Status))
+			ctx.Response.SetBody(resp.Data)
+
+			return
+		}
+
+		ctx.Error("Response was not a Http response", 500)
+	}
+}
+
+func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		if idx >= len(s.apis) {
 			ctx.Error("Sorry, nitric is listening on this port but is waiting for an API to be available to handle, you may have removed an API during development this port will be assigned to an API when one becomes available", 404)
 			return
 		}
 
-		apiName := s.apis[apiIdx]
+		apiName := s.apis[idx]
+
 		headerMap := base_http.HttpHeadersToMap(&ctx.Request.Header)
 
 		headers := map[string]*v1.HeaderValue{}
@@ -169,6 +262,7 @@ func (s *BaseHttpGateway) handleHttpRequest(apiIdx int) func(ctx *fasthttp.Reque
 				}
 			}
 
+			// Write history if it was an API request
 			err = s.project.History.WriteHistoryRecord(history.API, &history.HistoryRecord{
 				Success: http.Status < 400,
 				Time:    time.Now().UnixMilli(),
@@ -276,13 +370,8 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 	ctx.Error(fmt.Sprintf("%d successful & %d failed deliveries", len(ws)-len(errList), len(errList)), statusCode)
 }
 
-// Update the gateway and API based on the worker pool
-func (s *BaseHttpGateway) Refresh() error {
+func (s *BaseHttpGateway) refreshApis() {
 	s.apis = make([]string, 0)
-	// instansiate servers if not already done
-	if s.apiServers == nil {
-		s.apiServers = make([]*apiServer, 0)
-	}
 
 	workers := s.pool.GetWorkers(&pool.GetWorkerOptions{})
 	uniqApis := lo.Reduce(workers, func(agg []string, w worker.Worker, idx int) []string {
@@ -299,13 +388,36 @@ func (s *BaseHttpGateway) Refresh() error {
 	sort.Strings(uniqApis)
 
 	s.apis = append(s.apis, uniqApis...)
+}
 
+func (s *BaseHttpGateway) refreshHttpWorkers() {
+	s.httpWorkers = make([]int, 0)
+
+	workers := s.pool.GetWorkers(&pool.GetWorkerOptions{})
+	uniqHttpWorkers := lo.Reduce(workers, func(agg []int, w worker.Worker, idx int) []int {
+		if http, ok := w.(*worker.HttpWorker); ok {
+			if !lo.Contains(agg, http.GetPort()) {
+				agg = append(agg, http.GetPort())
+			}
+		}
+
+		return agg
+	}, []int{})
+
+	// sort the Http Worker Ports lowest to highest
+	sort.Ints(uniqHttpWorkers)
+
+	s.httpWorkers = append(s.httpWorkers, uniqHttpWorkers...)
+}
+
+func (s *BaseHttpGateway) createApiServers() error {
+	// create an api server for every API worker
 	for len(s.apiServers) < len(s.apis) {
 		fhttp := &fasthttp.Server{
 			ReadTimeout:     time.Second * 1,
 			IdleTimeout:     time.Second * 1,
 			CloseOnShutdown: true,
-			Handler:         s.handleHttpRequest(len(s.apiServers)),
+			Handler:         s.handleApiHttpRequest(len(s.apiServers)),
 		}
 		// Expand servers to account for apis
 		lis, err := utils.GetNextListener()
@@ -327,6 +439,61 @@ func (s *BaseHttpGateway) Refresh() error {
 		}(srv)
 
 		s.apiServers = append(s.apiServers, srv)
+	}
+
+	return nil
+}
+
+func (s *BaseHttpGateway) createHttpServers() error {
+	// create an api server for every API worker
+	for len(s.httpServers) < len(s.httpWorkers) {
+		fhttp := &fasthttp.Server{
+			ReadTimeout:     time.Second * 1,
+			IdleTimeout:     time.Second * 1,
+			CloseOnShutdown: true,
+			Handler:         s.handleHttpProxyRequest(len(s.httpServers)),
+		}
+		// Expand servers to account for apis
+		lis, err := utils.GetNextListener()
+		if err != nil {
+			return err
+		}
+
+		srv := &apiServer{
+			lis: lis,
+			srv: fhttp,
+		}
+
+		// get a free port and listen on that for this API
+		go func(srv *apiServer) {
+			err := srv.srv.Serve(srv.lis)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}(srv)
+
+		s.httpServers = append(s.httpServers, srv)
+	}
+
+	return nil
+}
+
+// Update the gateway and API based on the worker pool
+func (s *BaseHttpGateway) Refresh() error {
+	s.refreshApis()
+
+	s.refreshHttpWorkers()
+
+	var err error
+
+	err = s.createApiServers()
+	if err != nil {
+		return err
+	}
+
+	err = s.createHttpServers()
+	if err != nil {
+		return err
 	}
 
 	return nil

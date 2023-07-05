@@ -13,8 +13,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.8
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/docker/docker v20.10.22+incompatible
-	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/docker v20.10.24+incompatible
+	github.com/docker/go-connections v0.4.0
 	github.com/fasthttp/router v1.4.18
 	github.com/getkin/kin-openapi v0.113.0
 	github.com/golang/mock v1.6.0
@@ -30,8 +30,8 @@ require (
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/moby/moby v20.10.22+incompatible
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
-	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230531033433-9b7850becaa7
-	github.com/nitrictech/nitric/core v0.0.0-20230531033433-9b7850becaa7
+	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230704042306-8c505a65ab72
+	github.com/nitrictech/nitric/core v0.0.0-20230704042306-8c505a65ab72
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0
@@ -47,12 +47,14 @@ require (
 
 require (
 	github.com/bep/debounce v1.2.1
-	github.com/docker/distribution v2.7.1+incompatible
-	github.com/nitrictech/nitric/cloud/common v0.0.0-20230509232736-48f59463930d
+	github.com/docker/distribution v2.8.0+incompatible
+	github.com/mitchellh/mapstructure v1.5.0
+	github.com/nitrictech/nitric/cloud/common v0.0.0-20230616021604-4036d005db63
 	github.com/olahol/melody v1.1.3
 	github.com/samber/lo v1.38.1
 	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
 	go.etcd.io/bbolt v1.3.6
+	golang.org/x/sync v0.2.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -272,7 +274,6 @@ require (
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
@@ -410,7 +411,6 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect

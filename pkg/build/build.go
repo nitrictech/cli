@@ -42,7 +42,10 @@ func buildFunction(s *project.Project, f project.Function) func() error {
 	fun := &f
 
 	return func() error {
-		ce, _ := containerengine.Discover()
+		ce, err := containerengine.Discover()
+		if err != nil {
+			return err
+		}
 
 		rt, err := fun.GetRuntime()
 		if err != nil {

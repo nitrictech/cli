@@ -271,6 +271,22 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 			})
 		}
 
+		for range f.httpWorkers {
+			builder.set(&deploy.Resource{
+				Name: f.name,
+				Type: v1.ResourceType_Http,
+				Config: &deploy.Resource_Http{
+					Http: &deploy.Http{
+						Target: &deploy.HttpTarget{
+							Target: &deploy.HttpTarget_ExecutionUnit{
+								ExecutionUnit: f.name,
+							},
+						},
+					},
+				},
+			})
+		}
+
 		// Get the original function config
 		fun := c.initialProject.Functions[f.name]
 

@@ -26,6 +26,8 @@ issues:
   max-same-issues: 0
 
 linters-settings:
+  errcheck:
+    check-blank: true
   goimports:
     local-prefixes: github.com/nitrictech
   errorlint:

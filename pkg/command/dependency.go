@@ -44,10 +44,13 @@ var Pulumi = &Dependency{
 	command: "pulumi",
 	assist: func() error {
 		var resp bool
-		_ = survey.AskOne(&survey.Confirm{
+		err := survey.AskOne(&survey.Confirm{
 			Message: fmt.Sprintf("Pulumi is required by %s but is not installed, would you like to install it?", "command"),
 			Default: false,
 		}, &resp)
+		if err != nil {
+			return err
+		}
 
 		if !resp {
 			return fmt.Errorf("pulumi is required to run this command. For installation instructions see: https://www.pulumi.com/docs/get-started/install/")

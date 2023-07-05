@@ -78,7 +78,7 @@ func (m *SeaweedServer) Start() error {
 		os.Args = origOsArgs
 
 		// run the seaweedfs server command
-		_ = srvCmd.Flag.Parse(cmdArgs[1:])
+		_ = srvCmd.Flag.Parse(cmdArgs[1:]) //nolint:errcheck
 		srvCmd.Flag.SetOutput(io.Discard)
 		otherArgs := srvCmd.Flag.Args()
 

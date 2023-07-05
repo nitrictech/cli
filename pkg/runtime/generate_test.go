@@ -25,10 +25,25 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	tsFile, _ := os.ReadFile("typescript.dockerfile")
-	goFile, _ := os.ReadFile("golang.dockerfile")
-	pythonFile, _ := os.ReadFile("python.dockerfile")
-	jsFile, _ := os.ReadFile("javascript.dockerfile")
+	tsFile, err := os.ReadFile("typescript.dockerfile")
+	if err != nil {
+		t.Error(err)
+	}
+
+	goFile, err := os.ReadFile("golang.dockerfile")
+	if err != nil {
+		t.Error(err)
+	}
+
+	pythonFile, err := os.ReadFile("python.dockerfile")
+	if err != nil {
+		t.Error(err)
+	}
+
+	jsFile, err := os.ReadFile("javascript.dockerfile")
+	if err != nil {
+		t.Error(err)
+	}
 
 	tests := []struct {
 		name        string

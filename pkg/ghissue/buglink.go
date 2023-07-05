@@ -81,13 +81,16 @@ func BugLink(err interface{}) string {
 	}
 
 	title := "Command '" + issue.Command + "' panicked: " + utils.StringTrunc(issue.Error, 50)
-	b, _ := yaml.Marshal(issue)
+
+	// error check handled by recover()
+	b, _ := yaml.Marshal(issue) //nolint:errcheck
 
 	return IssueLink("cli", "bug", title, string(b))
 }
 
 func IssueLink(repo, kind, title, body string) string {
-	issueUrl, _ := url.Parse(fmt.Sprintf("https://github.com/nitrictech/%s/issues/new", repo))
+	// error check handled by recover()
+	issueUrl, _ := url.Parse(fmt.Sprintf("https://github.com/nitrictech/%s/issues/new", repo)) //nolint:errcheck
 
 	q := issueUrl.Query()
 	q.Add("title", title)

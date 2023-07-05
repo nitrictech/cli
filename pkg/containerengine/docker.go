@@ -319,15 +319,16 @@ func (d *docker) Logger(stackPath string) ContainerLogger {
 		return d.logger
 	}
 
-	logPath, _ := utils.NewNitricLogFile(stackPath)
+	logPath, _ := utils.NewNitricLogFile(stackPath) //nolint:errcheck
 	d.logger = newSyslog(logPath)
 
 	return d.logger
 }
 
 func (d *docker) Version() string {
-	sv, _ := d.cli.ServerVersion(context.Background())
-	b, _ := yaml.Marshal(sv)
+	// errors checked by recover()
+	sv, _ := d.cli.ServerVersion(context.Background()) //nolint:errcheck
+	b, _ := yaml.Marshal(sv)                           //nolint:errcheck
 
 	return string(b)
 }

@@ -531,7 +531,7 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 	}
 
 	go func() {
-		_ = s.serviceServer.Serve(s.serviceListener)
+		_ = s.serviceServer.Serve(s.serviceListener) //nolint:errcheck
 	}()
 
 	// block on a stop signal
@@ -544,7 +544,7 @@ func (s *BaseHttpGateway) Stop() error {
 	for _, s := range s.apiServers {
 		// shutdown all the servers
 		// this will allow Start to exit
-		_ = s.srv.Shutdown()
+		_ = s.srv.Shutdown() //nolint:errcheck
 	}
 
 	s.stop <- true

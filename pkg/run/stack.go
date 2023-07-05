@@ -88,40 +88,65 @@ func (r *RunStackState) Warnings() []string {
 	return warnings
 }
 
-func (r *RunStackState) Tables(port int, dashPort int) string {
+func (r *RunStackState) Tables(port int, dashPort int) (string, error) {
 	tables := []string{}
 
-	table, rows := r.ApiTable(9001)
+	table, rows, err := r.ApiTable(9001)
+	if err != nil {
+		return "", err
+	}
+
 	if rows > 0 {
 		tables = append(tables, table)
 	}
 
-	table, rows = r.TopicTable()
+	table, rows, err = r.TopicTable()
+	if err != nil {
+		return "", err
+	}
+
 	if rows > 0 {
 		tables = append(tables, table)
 	}
 
-	table, rows = r.SchedulesTable()
+	table, rows, err = r.SchedulesTable()
+	if err != nil {
+		return "", err
+	}
+
 	if rows > 0 {
 		tables = append(tables, table)
 	}
 
-	table, rows = r.BucketNotificationsTable()
+	table, rows, err = r.BucketNotificationsTable()
+	if err != nil {
+		return "", err
+	}
+
 	if rows > 0 {
 		tables = append(tables, table)
 	}
 
-	table, rows = r.HttpTable()
+	table, rows, err = r.HttpTable()
+	if err != nil {
+		return "", err
+	}
+
 	if rows > 0 {
 		tables = append(tables, table)
 	}
 
-	tables = append(tables, r.DashboardTable(dashPort))
+	table, err = r.DashboardTable(dashPort)
+	if err != nil {
+		return "", err
+	}
 
-	return strings.Join(tables, "\n\n")
+	tables = append(tables, table)
+
+	return strings.Join(tables, "\n\n"), nil
 }
 
-func (r *RunStackState) ApiTable(port int) (string, int) {
+func (r *RunStackState) ApiTable(port int) (string, int, error) {
 	tableData := pterm.TableData{{"Api", "Endpoint"}}
 
 	for name, address := range r.apis {
@@ -130,12 +155,15 @@ func (r *RunStackState) ApiTable(port int) (string, int) {
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	str, err := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	if err != nil {
+		return "", 0, err
+	}
 
-	return str, len(r.apis)
+	return str, len(r.apis), nil
 }
 
-func (r *RunStackState) TopicTable() (string, int) {
+func (r *RunStackState) TopicTable() (string, int, error) {
 	tableData := pterm.TableData{{"Topic", "Endpoint"}}
 
 	for k, address := range r.subs {
@@ -144,12 +172,15 @@ func (r *RunStackState) TopicTable() (string, int) {
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	str, err := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	if err != nil {
+		return "", 0, err
+	}
 
-	return str, len(r.subs)
+	return str, len(r.subs), nil
 }
 
-func (r *RunStackState) SchedulesTable() (string, int) {
+func (r *RunStackState) SchedulesTable() (string, int, error) {
 	tableData := pterm.TableData{{"Schedule", "Endpoint"}}
 
 	for k, address := range r.schedules {
@@ -158,12 +189,15 @@ func (r *RunStackState) SchedulesTable() (string, int) {
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	str, err := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	if err != nil {
+		return "", 0, err
+	}
 
-	return str, len(r.schedules)
+	return str, len(r.schedules), nil
 }
 
-func (r *RunStackState) HttpTable() (string, int) {
+func (r *RunStackState) HttpTable() (string, int, error) {
 	tableData := pterm.TableData{{"Proxy", "Endpoint"}}
 
 	for port, address := range r.httpWorkers {
@@ -172,12 +206,15 @@ func (r *RunStackState) HttpTable() (string, int) {
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	str, err := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	if err != nil {
+		return "", 0, err
+	}
 
-	return str, len(r.httpWorkers)
+	return str, len(r.httpWorkers), nil
 }
 
-func (r *RunStackState) BucketNotificationsTable() (string, int) {
+func (r *RunStackState) BucketNotificationsTable() (string, int, error) {
 	tableData := pterm.TableData{{"Bucket", "Notification Type", "Notification Prefix Filter"}}
 
 	for _, notification := range r.bucketNotifications {
@@ -186,17 +223,23 @@ func (r *RunStackState) BucketNotificationsTable() (string, int) {
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	str, err := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+	if err != nil {
+		return "", 0, err
+	}
 
-	return str, len(r.bucketNotifications)
+	return str, len(r.bucketNotifications), nil
 }
 
-func (r *RunStackState) DashboardTable(port int) string {
+func (r *RunStackState) DashboardTable(port int) (string, error) {
 	tableData := pterm.TableData{{pterm.LightCyan("Dev Dashboard"), fmt.Sprintf("http://localhost:%v", port)}}
 
-	str, _ := pterm.DefaultTable.WithData(tableData).Srender()
+	str, err := pterm.DefaultTable.WithData(tableData).Srender()
+	if err != nil {
+		return "", err
+	}
 
-	return str
+	return str, nil
 }
 
 func NewStackState(proj *project.Project) *RunStackState {

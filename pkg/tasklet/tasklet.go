@@ -96,7 +96,9 @@ func Run(runner Runner, opts Opts) error {
 	}
 
 	defer func() {
-		_ = spinner.Stop()
+		if err := spinner.Stop(); err != nil {
+			fmt.Println("Error stopping spinner:", err)
+		}
 	}()
 
 	if opts.SuccessPrefix != "" {

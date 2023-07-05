@@ -109,7 +109,9 @@ var startCmd = &cobra.Command{
 
 		stackState := run.NewStackState(proj)
 
-		area, _ := pterm.DefaultArea.Start()
+		area, err := pterm.DefaultArea.Start()
+		utils.CheckErr(err)
+
 		// Create a debouncer for the refresh and remove locking
 		debounced := debounce.New(500 * time.Millisecond)
 
@@ -117,13 +119,14 @@ var startCmd = &cobra.Command{
 		pool.Listen(func(we run.WorkerEvent) {
 			debounced(func() {
 				err := ls.Refresh()
-				if err != nil {
-					cobra.CheckErr(err)
-				}
+				utils.CheckErr(err)
 
 				stackState.Update(pool, ls)
 
-				area.Update(stackState.Tables(9001, *ls.GetDashPort()))
+				tables, err := stackState.Tables(9001, *ls.GetDashPort())
+				utils.CheckErr(err)
+
+				area.Update(tables)
 
 				for _, warning := range stackState.Warnings() {
 					pterm.Warning.Println(warning)
@@ -138,7 +141,9 @@ var startCmd = &cobra.Command{
 			fmt.Println("Shutting down services - exiting")
 		}
 
-		_ = area.Stop()
+		err = area.Stop()
+		utils.CheckErr(err)
+
 		// Stop the membrane
 		utils.CheckErr(ls.Stop())
 	},

@@ -155,14 +155,17 @@ var runCmd = &cobra.Command{
 		stackState := run.NewStackState(proj)
 
 		err = ls.Refresh()
-		if err != nil {
-			utils.CheckErr(err)
-		}
+		utils.CheckErr(err)
 
 		stackState.Update(pool, ls)
 
-		area, _ := pterm.DefaultArea.Start()
-		area.Update(stackState.Tables(9001, *ls.GetDashPort()))
+		area, err := pterm.DefaultArea.Start()
+		utils.CheckErr(err)
+
+		tables, err := stackState.Tables(9001, *ls.GetDashPort())
+		utils.CheckErr(err)
+
+		area.Update(tables)
 
 		// Create a debouncer for the refresh and remove locking
 		debounced := debounce.New(500 * time.Millisecond)
@@ -177,7 +180,10 @@ var runCmd = &cobra.Command{
 
 				stackState.Update(pool, ls)
 
-				area.Update(stackState.Tables(9001, *ls.GetDashPort()))
+				tables, err := stackState.Tables(9001, *ls.GetDashPort())
+				utils.CheckErr(err)
+
+				area.Update(tables)
 
 				for _, warning := range stackState.Warnings() {
 					pterm.Warning.Println(warning)
@@ -198,8 +204,12 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		_ = area.Stop()
-		_ = logger.Stop()
+		err = area.Stop()
+		utils.CheckErr(err)
+
+		err = logger.Stop()
+		utils.CheckErr(err)
+
 		// Stop the membrane
 		utils.CheckErr(ls.Stop())
 	},

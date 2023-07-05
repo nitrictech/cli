@@ -136,7 +136,7 @@ type apiHandler struct {
 	target string
 }
 
-var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
+var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+") //nolint:errcheck
 
 func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, error) {
 	apis := map[string][]*apiHandler{}
@@ -558,7 +558,7 @@ func (c *codeConfig) collectOne(projectFunction project.Function) error {
 	}
 
 	go func() {
-		_, _ = stdcopy.StdCopy(logWriter, logWriter, logreader)
+		_, _ = stdcopy.StdCopy(logWriter, logWriter, logreader) //nolint:errcheck
 	}()
 
 	errs := multierror.ErrorList{}

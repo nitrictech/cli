@@ -212,7 +212,8 @@ var stackUpdateCmd = &cobra.Command{
 			for k, v := range d.ApiEndpoints {
 				rows = append(rows, []string{k, v})
 			}
-			_ = pterm.DefaultTable.WithBoxed().WithData(rows).Render()
+			err = pterm.DefaultTable.WithBoxed().WithData(rows).Render()
+			utils.CheckErr(err)
 		}
 	},
 	Args:    cobra.MinimumNArgs(0),

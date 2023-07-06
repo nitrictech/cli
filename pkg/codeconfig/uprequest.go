@@ -63,7 +63,7 @@ func ValidateUpRequest(request *deploy.DeployUpRequest) error {
 
 	for _, ws := range websockets {
 		if ws.GetWebsocket().ConnectTarget == nil || ws.GetWebsocket().DisconnectTarget == nil || ws.GetWebsocket().MessageTarget == nil {
-			errors = append(errors, fmt.Sprintf("socket: %s, has missing handlers. Sockets must have handlers for connect/disconnect/message events", ws.Name))
+			errors = append(errors, fmt.Sprintf("socket: %s, is missing handlers. Sockets must have handlers for connect/disconnect/message events", ws.Name))
 		}
 	}
 

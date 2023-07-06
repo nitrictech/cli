@@ -21,9 +21,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/imdario/mergo"
 	multierror "github.com/missionMeteora/toolkit/errors"
+	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/cron"
 	deploy "github.com/nitrictech/nitric/core/pkg/api/nitric/deploy/v1"
@@ -50,6 +52,26 @@ func (b *upRequestBuilder) set(r *deploy.Resource) {
 
 		b.resources[r.Type][r.Name] = current
 	}
+}
+
+func ValidateUpRequest(request *deploy.DeployUpRequest) error {
+	errors := []string{}
+
+	websockets := lo.Filter(request.Spec.Resources, func(res *deploy.Resource, idx int) bool {
+		return res.Type == v1.ResourceType_Websocket
+	})
+
+	for _, ws := range websockets {
+		if ws.GetWebsocket().ConnectTarget == nil || ws.GetWebsocket().DisconnectTarget == nil || ws.GetWebsocket().MessageTarget == nil {
+			errors = append(errors, fmt.Sprintf("socket: %s, has missing handlers. Sockets must have handlers for connect/disconnect/message events", ws.Name))
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("application contains errors:\n %s", strings.Join(errors, "\n"))
+	}
+
+	return nil
 }
 
 func (b *upRequestBuilder) Output() *deploy.DeployUpRequest {
@@ -346,5 +368,16 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		})
 	}
 
-	return builder.Output(), errs.Err()
+	if errs.Err() != nil {
+		return nil, errs.Err()
+	}
+
+	out := builder.Output()
+
+	err := ValidateUpRequest(out)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }

@@ -198,6 +198,44 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 			})
 		}
 
+		// Create websockets and attach relevant workers for this function
+		for k, ws := range f.websockets {
+			// Collect all sockets organised by name and even type
+			deployWebsocket := &deploy.Websocket{}
+
+			if ws.connectWorker != nil {
+				deployWebsocket.ConnectTarget = &deploy.WebsocketTarget{
+					Target: &deploy.WebsocketTarget_ExecutionUnit{
+						ExecutionUnit: f.name,
+					},
+				}
+			}
+
+			if ws.disconnectWorker != nil {
+				deployWebsocket.DisconnectTarget = &deploy.WebsocketTarget{
+					Target: &deploy.WebsocketTarget_ExecutionUnit{
+						ExecutionUnit: f.name,
+					},
+				}
+			}
+
+			if ws.messageWorker != nil {
+				deployWebsocket.MessageTarget = &deploy.WebsocketTarget{
+					Target: &deploy.WebsocketTarget_ExecutionUnit{
+						ExecutionUnit: f.name,
+					},
+				}
+			}
+
+			builder.set(&deploy.Resource{
+				Name: k,
+				Type: v1.ResourceType_Websocket,
+				Config: &deploy.Resource_Websocket{
+					Websocket: deployWebsocket,
+				},
+			})
+		}
+
 		dedupedPolicies := map[string]*v1.PolicyResource{}
 
 		for _, v := range f.policies {

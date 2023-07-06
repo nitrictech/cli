@@ -19,12 +19,16 @@ package run
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/fasthttp/router"
+	"github.com/fasthttp/websocket"
+	"github.com/google/uuid"
+	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 
@@ -46,13 +50,25 @@ type apiServer struct {
 	srv *fasthttp.Server
 }
 
+type socketServer struct {
+	lis net.Listener
+	srv *fasthttp.Server
+
+	workerCount int
+}
+
+var upgrader = websocket.FastHTTPUpgrader{}
+
 type BaseHttpGateway struct {
-	apiServers      []*apiServer
-	httpServers     []*apiServer
-	apis            []string
-	httpWorkers     []int
-	serviceServer   *fasthttp.Server
-	serviceListener net.Listener
+	apiServers       []*apiServer
+	httpServers      []*apiServer
+	apis             []string
+	httpWorkers      []int
+	websocketWorkers []string
+	socketServer     map[string]*socketServer
+	serviceServer    *fasthttp.Server
+	websocketPlugin  *RunWebsocketService
+	serviceListener  net.Listener
 	gateway.UnimplementedGatewayPlugin
 	stop     chan bool
 	pool     pool.WorkerPool
@@ -108,6 +124,19 @@ func (s *BaseHttpGateway) GetHttpWorkerAddresses() map[int]string {
 
 	for idx, port := range s.httpWorkers {
 		addresses[port] = strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+	}
+
+	return addresses
+}
+
+func (s *BaseHttpGateway) GetWebsocketAddresses() map[string]string {
+	addresses := make(map[string]string)
+
+	for socket, srv := range s.socketServer {
+		if srv.workerCount > 0 {
+			srvAddress := strings.Replace(srv.lis.Addr().String(), "[::]", "localhost", 1)
+			addresses[socket] = srvAddress
+		}
 	}
 
 	return addresses
@@ -305,6 +334,128 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 	}
 }
 
+// websocket request handler
+// TODO: Add broadcast capability
+func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fasthttp.RequestCtx) {
+	return func(ctx *fasthttp.RequestCtx) {
+		upgrader.CheckOrigin = func(ctx *fasthttp.RequestCtx) bool {
+			return true
+		}
+		err := upgrader.Upgrade(ctx, func(ws *websocket.Conn) {
+			// generate a new connection ID for this client
+			defer ws.Close()
+
+			// Register new connection with a refrences to the websocket connection for sending/broadcasting
+			connectionId := uuid.New().String()
+
+			connectionRequest := &v1.TriggerRequest{
+				Context: &v1.TriggerRequest_Websocket{
+					Websocket: &v1.WebsocketTriggerContext{
+						Socket:       socketName,
+						Event:        v1.WebsocketEvent_Connect,
+						ConnectionId: connectionId,
+					},
+				},
+			}
+
+			w, err := s.pool.GetWorker(&pool.GetWorkerOptions{
+				Trigger: connectionRequest,
+			})
+			// handshake error...
+			if err != nil {
+				pterm.Error.Println("unable to find worker for websocket connection request")
+				return
+			}
+
+			_, err = w.HandleTrigger(context.TODO(), connectionRequest)
+			// handshake error...
+			if err != nil {
+				return
+			}
+
+			// Register the socket
+			s.websocketPlugin.RegisterConnection(socketName, connectionId, ws)
+
+			// Handshake successful send a registration message with connection ID to the socket worker
+			for {
+
+				// We have successfully connected a new client
+				// We can read/write messages to/from this client
+				// Need to create a unique ID for this connection and store in a central location
+				// This will allow connected clients to message eachother and broadcast to all clients as well
+				// We'll only read new messages on this connection here, writing will be done by a separate runtime API
+				_, message, err := ws.ReadMessage()
+				if err != nil {
+					log.Println("read:", err)
+					break
+				}
+
+				// Send the message to the worker
+				messageRequest := &v1.TriggerRequest{
+					Data: message,
+					Context: &v1.TriggerRequest_Websocket{
+						Websocket: &v1.WebsocketTriggerContext{
+							Socket:       socketName,
+							Event:        v1.WebsocketEvent_Message,
+							ConnectionId: connectionId,
+						},
+					},
+				}
+
+				w, err := s.pool.GetWorker(&pool.GetWorkerOptions{
+					Trigger: messageRequest,
+				})
+				// error getting worker
+				if err != nil {
+					pterm.Error.Println("unable to find worker for websocket message request")
+					return
+				}
+
+				_, err = w.HandleTrigger(context.TODO(), messageRequest)
+				// handshake error...
+				if err != nil {
+					pterm.Error.Println(err)
+					return
+				}
+			}
+
+			// send disconnection message to the websocket worker
+			disconnectionRequest := &v1.TriggerRequest{
+				Context: &v1.TriggerRequest_Websocket{
+					Websocket: &v1.WebsocketTriggerContext{
+						Socket:       socketName,
+						Event:        v1.WebsocketEvent_Disconnect,
+						ConnectionId: connectionId,
+					},
+				},
+			}
+
+			w, err = s.pool.GetWorker(&pool.GetWorkerOptions{
+				Trigger: disconnectionRequest,
+			})
+			// handshake error...
+			if err != nil {
+				pterm.Error.Println("unable to find worker for websocket disconnection request")
+				return
+			}
+
+			_, err = w.HandleTrigger(context.TODO(), disconnectionRequest)
+
+			// handshake error...
+			if err != nil {
+				return
+			}
+		})
+
+		if err != nil {
+			if _, ok := err.(websocket.HandshakeError); ok {
+				pterm.Error.Println(err)
+			}
+			return
+		}
+	}
+}
+
 func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 	topicName := ctx.UserValue("name").(string)
 
@@ -410,6 +561,26 @@ func (s *BaseHttpGateway) refreshHttpWorkers() {
 	s.httpWorkers = append(s.httpWorkers, uniqHttpWorkers...)
 }
 
+func (s *BaseHttpGateway) refreshWebsocketWorkers() {
+	s.websocketWorkers = make([]string, 0)
+
+	workers := s.pool.GetWorkers(&pool.GetWorkerOptions{})
+	websockets := lo.Reduce(workers, func(agg []string, w worker.Worker, idx int) []string {
+		if api, ok := w.(*worker.WebsocketWorker); ok {
+			if !lo.Contains(agg, api.Socket()) {
+				agg = append(agg, api.Socket())
+			}
+		}
+
+		return agg
+	}, []string{})
+
+	// sort the Http Worker Ports lowest to highest
+	sort.Strings(websockets)
+
+	s.websocketWorkers = append(s.websocketWorkers, websockets...)
+}
+
 func (s *BaseHttpGateway) createApiServers() error {
 	// create an api server for every API worker
 	for len(s.apiServers) < len(s.apis) {
@@ -439,6 +610,56 @@ func (s *BaseHttpGateway) createApiServers() error {
 		}(srv)
 
 		s.apiServers = append(s.apiServers, srv)
+	}
+
+	return nil
+}
+
+func (s *BaseHttpGateway) createWebsocketServers() error {
+	if s.socketServer == nil {
+		s.socketServer = make(map[string]*socketServer)
+	}
+
+	for _, sock := range s.websocketWorkers {
+		currSocket, ok := s.socketServer[sock]
+
+		if !ok {
+			fhttp := &fasthttp.Server{
+				ReadTimeout:     time.Second * 1,
+				IdleTimeout:     time.Second * 1,
+				CloseOnShutdown: true,
+				Handler:         s.handleWebsocketRequest(sock),
+			}
+
+			lis, err := utils.GetNextListener()
+			if err != nil {
+				return err
+			}
+
+			srv := &socketServer{
+				lis:         lis,
+				srv:         fhttp,
+				workerCount: 0,
+			}
+
+			go func(srv *socketServer) {
+				err := srv.srv.Serve(srv.lis)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}(srv)
+
+			currSocket = srv
+			// append to the server collection
+			s.socketServer[sock] = currSocket
+
+			// this is a brand new server we need to start up
+			// lets start it and add it to the active list of servers
+			// we can then filter the servers by their active worker count
+			currSocket.workerCount = 0
+		}
+
+		currSocket.workerCount = currSocket.workerCount + 1
 	}
 
 	return nil
@@ -484,6 +705,8 @@ func (s *BaseHttpGateway) Refresh() error {
 
 	s.refreshHttpWorkers()
 
+	s.refreshWebsocketWorkers()
+
 	var err error
 
 	err = s.createApiServers()
@@ -492,6 +715,11 @@ func (s *BaseHttpGateway) Refresh() error {
 	}
 
 	err = s.createHttpServers()
+	if err != nil {
+		return err
+	}
+
+	err = s.createWebsocketServers()
 	if err != nil {
 		return err
 	}
@@ -554,6 +782,8 @@ func (s *BaseHttpGateway) Stop() error {
 
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
-func NewGateway() (*BaseHttpGateway, error) {
-	return &BaseHttpGateway{}, nil
+func NewGateway(wsPlugin *RunWebsocketService) (*BaseHttpGateway, error) {
+	return &BaseHttpGateway{
+		websocketPlugin: wsPlugin,
+	}, nil
 }

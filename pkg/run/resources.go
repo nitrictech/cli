@@ -52,10 +52,32 @@ func (r *RunResourcesService) getApiDetails(name string) (*resource.DetailsRespo
 	}, nil
 }
 
+func (r *RunResourcesService) getWebsocketDetails(name string) (*resource.DetailsResponse[any], error) {
+	gatewayUri, ok := r.ls.gateway.GetWebsocketAddresses()[name]
+	if !ok {
+		return nil, fmt.Errorf("api %s does not exist", name)
+	}
+
+	if !r.isStart {
+		gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
+	}
+
+	return &resource.DetailsResponse[any]{
+		Id:       name,
+		Provider: "dev",
+		Service:  "Websocket",
+		Detail: resource.WebsocketDetails{
+			URL: fmt.Sprintf("ws://%s", gatewayUri),
+		},
+	}, nil
+}
+
 func (r *RunResourcesService) Details(ctx context.Context, typ resource.ResourceType, name string) (*resource.DetailsResponse[any], error) {
 	switch typ {
 	case resource.ResourceType_Api:
 		return r.getApiDetails(name)
+	case resource.ResourceType_Websocket:
+		return r.getWebsocketDetails(name)
 	default:
 		return nil, fmt.Errorf("unsupported resource type %s", typ)
 	}

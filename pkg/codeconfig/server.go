@@ -61,6 +61,8 @@ func (s *Server) TriggerStream(stream v1.FaasService_TriggerStreamServer) error 
 		s.function.AddBucketNotificationHandler(w.BucketNotification)
 	case *v1.InitRequest_HttpWorker:
 		s.function.AddHttpWorker(w.HttpWorker)
+	case *v1.InitRequest_Websocket:
+		s.function.AddWebsocketHandler(w.Websocket)
 	default:
 		s.function.AddError("declared unknown worker type, your CLI version may be out of date with your SDK version")
 	}
@@ -86,6 +88,8 @@ func (s *Server) Declare(ctx context.Context, req *v1.ResourceDeclareRequest) (*
 	case v1.ResourceType_Api:
 		s.function.AddApiSecurityDefinitions(req.Resource.Name, req.GetApi().SecurityDefinitions)
 		s.function.AddApiSecurity(req.Resource.Name, req.GetApi().Security)
+	case v1.ResourceType_Websocket:
+		// TODO: Add websocket configuration here when available
 	}
 
 	return &v1.ResourceDeclareResponse{}, nil

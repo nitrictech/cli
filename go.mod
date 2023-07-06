@@ -31,12 +31,12 @@ require (
 	github.com/moby/moby v20.10.22+incompatible
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
 	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230704042306-8c505a65ab72
-	github.com/nitrictech/nitric/core v0.0.0-20230704042306-8c505a65ab72
+	github.com/nitrictech/nitric/core v0.0.0-20230706012636-0dd65ae4c648
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/valyala/fasthttp v1.45.0
+	github.com/valyala/fasthttp v1.47.0
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
@@ -48,6 +48,7 @@ require (
 require (
 	github.com/bep/debounce v1.2.1
 	github.com/docker/distribution v2.8.0+incompatible
+	github.com/fasthttp/websocket v1.5.3
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nitrictech/nitric/cloud/common v0.0.0-20230616021604-4036d005db63
 	github.com/olahol/melody v1.1.3
@@ -244,7 +245,7 @@ require (
 	github.com/kisielk/errcheck v1.6.3 // indirect
 	github.com/kisielk/gotool v1.0.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.4 // indirect
-	github.com/klauspost/compress v1.16.3 // indirect
+	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.0 // indirect
 	github.com/klauspost/reedsolomon v1.11.3 // indirect
 	github.com/kulti/thelper v0.6.3 // indirect

@@ -341,44 +341,47 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 		upgrader.CheckOrigin = func(ctx *fasthttp.RequestCtx) bool {
 			return true
 		}
-		err := upgrader.Upgrade(ctx, func(ws *websocket.Conn) {
+
+		connectionId := uuid.New().String()
+
+		connectionRequest := &v1.TriggerRequest{
+			Context: &v1.TriggerRequest_Websocket{
+				Websocket: &v1.WebsocketTriggerContext{
+					Socket:       socketName,
+					Event:        v1.WebsocketEvent_Connect,
+					ConnectionId: connectionId,
+				},
+			},
+		}
+
+		w, err := s.pool.GetWorker(&pool.GetWorkerOptions{
+			Trigger: connectionRequest,
+		})
+		if err != nil {
+			ctx.Error("No worker found to handle connection request", 404)
+			return
+		}
+
+		res, err := w.HandleTrigger(context.TODO(), connectionRequest)
+		// handshake error...
+		if err != nil {
+			return
+		}
+
+		if res.GetWebsocket() == nil || !res.GetWebsocket().Success {
+			// close the connection
+			ctx.Error("Connection Refused", 500)
+			return
+		}
+
+		err = upgrader.Upgrade(ctx, func(ws *websocket.Conn) {
 			// generate a new connection ID for this client
 			defer ws.Close()
 
-			// Register new connection with a refrences to the websocket connection for sending/broadcasting
-			connectionId := uuid.New().String()
-
-			connectionRequest := &v1.TriggerRequest{
-				Context: &v1.TriggerRequest_Websocket{
-					Websocket: &v1.WebsocketTriggerContext{
-						Socket:       socketName,
-						Event:        v1.WebsocketEvent_Connect,
-						ConnectionId: connectionId,
-					},
-				},
-			}
-
-			w, err := s.pool.GetWorker(&pool.GetWorkerOptions{
-				Trigger: connectionRequest,
-			})
-			// handshake error...
-			if err != nil {
-				pterm.Error.Println("unable to find worker for websocket connection request")
-				return
-			}
-
-			_, err = w.HandleTrigger(context.TODO(), connectionRequest)
-			// handshake error...
-			if err != nil {
-				return
-			}
-
-			// Register the socket
 			s.websocketPlugin.RegisterConnection(socketName, connectionId, ws)
 
 			// Handshake successful send a registration message with connection ID to the socket worker
 			for {
-
 				// We have successfully connected a new client
 				// We can read/write messages to/from this client
 				// Need to create a unique ID for this connection and store in a central location

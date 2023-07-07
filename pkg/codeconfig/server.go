@@ -90,6 +90,7 @@ func (s *Server) Declare(ctx context.Context, req *v1.ResourceDeclareRequest) (*
 		s.function.AddApiSecurity(req.Resource.Name, req.GetApi().Security)
 	case v1.ResourceType_Websocket:
 		// TODO: Add websocket configuration here when available
+		break
 	}
 
 	return &v1.ResourceDeclareResponse{}, nil

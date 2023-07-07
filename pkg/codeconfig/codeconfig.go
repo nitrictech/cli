@@ -196,6 +196,8 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 			httpWorkers = append(httpWorkers, &HttpWorker{
 				Port: w.GetPort(),
 			})
+		case *worker.WebsocketWorker:
+			// TODO: Add websocket worker to spec
 		default:
 			return nil, utils.NewIncompatibleWorkerError()
 		}

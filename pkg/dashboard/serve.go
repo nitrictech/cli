@@ -248,11 +248,6 @@ func handleResponseWriter(w http.ResponseWriter, data []byte) {
 }
 
 func (d *Dashboard) sendStackUpdate() error {
-	// ignore if no apis
-	if len(d.apis) == 0 {
-		return nil
-	}
-
 	response := &DashboardResponse{
 		Apis:                d.apis,
 		Topics:              d.topics,

@@ -436,16 +436,14 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 			w, err = s.pool.GetWorker(&pool.GetWorkerOptions{
 				Trigger: disconnectionRequest,
 			})
-			// handshake error...
 			if err != nil {
 				pterm.Error.Println("unable to find worker for websocket disconnection request")
 				return
 			}
 
 			_, err = w.HandleTrigger(context.TODO(), disconnectionRequest)
-
-			// handshake error...
 			if err != nil {
+				pterm.Error.Println(err)
 				return
 			}
 		})

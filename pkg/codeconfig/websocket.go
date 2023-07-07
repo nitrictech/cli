@@ -13,8 +13,7 @@ type Websocket struct {
 	connectWorker    *v1.WebsocketWorker
 	disconnectWorker *v1.WebsocketWorker
 	messageWorker    *v1.WebsocketWorker
-	// workers []*v1.WebsocketWorker
-	lock sync.RWMutex
+	lock             sync.RWMutex
 }
 
 func newWebsocket(name string, function *FunctionDependencies) *Websocket {

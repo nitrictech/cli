@@ -34,6 +34,7 @@ func (r *RunWebsocketService) Send(ctx context.Context, socket string, connectio
 	if !ok {
 		return fmt.Errorf("could not get connection " + connectionId)
 	}
+
 	err := conn.WriteMessage(websocket.TextMessage, message)
 	if err != nil {
 		return err

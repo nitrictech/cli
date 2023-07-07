@@ -34,18 +34,21 @@ func (a *Websocket) AddWorker(worker *v1.WebsocketWorker) {
 			a.function.AddError(fmt.Sprintf("has registered multiple connect workers for socket: %s", a.name))
 			return
 		}
+
 		a.connectWorker = worker
 	case v1.WebsocketEvent_Disconnect:
 		if a.disconnectWorker != nil {
 			a.function.AddError(fmt.Sprintf("has registered multiple disconnect workers for socket: %s", a.name))
 			return
 		}
+
 		a.disconnectWorker = worker
 	case v1.WebsocketEvent_Message:
 		if a.messageWorker != nil {
 			a.function.AddError(fmt.Sprintf("has registered multiple message workers for socket: %s", a.name))
 			return
 		}
+
 		a.messageWorker = worker
 	default:
 		a.function.AddError(fmt.Sprintf("has registered an invalid event type for socket: %s", a.name))

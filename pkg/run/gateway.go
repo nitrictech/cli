@@ -454,6 +454,7 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 			if _, ok := err.(websocket.HandshakeError); ok {
 				pterm.Error.Println(err)
 			}
+
 			return
 		}
 	}

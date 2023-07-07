@@ -102,7 +102,7 @@ const AppLayout: React.FC<Props> = ({
       name: "API Explorer",
       href: "/",
       icon: GlobeAltIcon,
-      count: data?.apis.length,
+      count: data?.apis?.length || 0,
     },
     {
       name: "Schedules",

@@ -24,10 +24,6 @@ func newWebsocket(name string, function *FunctionDependencies) *Websocket {
 	}
 }
 
-func matchingWebsocketWorkers(a *v1.WebsocketWorker, b *v1.WebsocketWorker) bool {
-	return a.Event == b.Event
-}
-
 func (a *Websocket) AddWorker(worker *v1.WebsocketWorker) {
 	a.lock.Lock()
 	defer a.lock.Unlock()

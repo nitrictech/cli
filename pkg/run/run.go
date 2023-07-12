@@ -38,6 +38,7 @@ type LocalServices interface {
 	Refresh() error
 	Apis() map[string]string
 	HttpWorkers() map[int]string
+	Websockets() map[string]string
 	TriggerAddress() string
 	GetWorkerPool() pool.WorkerPool
 	GetDashPort() *int
@@ -135,6 +136,14 @@ func (l *localServices) HttpWorkers() map[int]string {
 	return nil
 }
 
+func (l *localServices) Websockets() map[string]string {
+	if l.gateway != nil {
+		return l.gateway.GetWebsocketAddresses()
+	}
+
+	return nil
+}
+
 func (l *localServices) Status() *LocalServicesStatus {
 	return l.status
 }
@@ -201,8 +210,10 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		return err
 	}
 
+	wsPlugin, _ := NewRunWebsocketService()
+
 	// Start a new gateway plugin
-	l.gateway, err = NewGateway()
+	l.gateway, err = NewGateway(wsPlugin)
 	if err != nil {
 		return err
 	}
@@ -229,6 +240,7 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		GatewayPlugin:           l.gateway,
 		EventsPlugin:            ev,
 		ResourcesPlugin:         NewResources(l, l.isStart),
+		WebsocketPlugin:         wsPlugin,
 		Pool:                    pool,
 		TolerateMissingServices: false,
 	})

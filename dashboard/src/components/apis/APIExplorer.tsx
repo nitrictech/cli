@@ -76,7 +76,7 @@ const bodyTabs = [
 ];
 
 const APIExplorer = () => {
-  const { data } = useWebSocket();
+  const { data, loading } = useWebSocket();
   const [callLoading, setCallLoading] = useState(false);
 
   const { data: history } = useHistory("apis");
@@ -95,7 +95,7 @@ const APIExplorer = () => {
   const [requiredPathParamErrors, setRequiredPathParamErrors] = useState({});
 
   const paths = useMemo(
-    () => data?.apis.map((doc) => flattenPaths(doc)).flat(),
+    () => data?.apis?.map((doc) => flattenPaths(doc)).flat(),
     [data]
   );
 
@@ -338,12 +338,7 @@ const APIExplorer = () => {
         ) : null
       }
     >
-      <Loading
-        delay={400}
-        conditionToShow={Boolean(
-          paths && selectedApiEndpoint && request?.method
-        )}
-      >
+      <Loading delay={400} conditionToShow={!loading}>
         {paths && selectedApiEndpoint && request?.method ? (
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
             <div className="w-full flex flex-col gap-8">
@@ -666,7 +661,20 @@ const APIExplorer = () => {
               />
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div>
+            Please refer to our documentation on{" "}
+            <a
+              className="underline"
+              target="_blank"
+              href="https://nitric.io/docs/apis"
+              rel="noreferrer"
+            >
+              creating APIs
+            </a>{" "}
+            as we are unable to find any existing APIs.
+          </div>
+        )}
       </Loading>
     </AppLayout>
   );

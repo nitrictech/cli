@@ -38,6 +38,7 @@ type BucketNotification struct {
 type RunStackState struct {
 	project             *project.Project
 	apis                map[string]string
+	sockets             map[string]string
 	subs                map[string]string
 	schedules           map[string]string
 	bucketNotifications []*BucketNotification
@@ -48,6 +49,7 @@ func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
 	// reset state maps
 	r.apis = make(map[string]string)
 	r.subs = make(map[string]string)
+	r.sockets = make(map[string]string)
 	r.schedules = make(map[string]string)
 	r.bucketNotifications = []*BucketNotification{}
 	r.httpWorkers = make(map[int]string)
@@ -58,6 +60,10 @@ func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
 
 	for port, address := range ls.HttpWorkers() {
 		r.httpWorkers[port] = address
+	}
+
+	for name, address := range ls.Websockets() {
+		r.sockets[name] = address
 	}
 
 	// TODO: We can probably move this directly into local service state
@@ -85,6 +91,10 @@ func (r *RunStackState) Warnings() []string {
 		warnings = append(warnings, "You are using a preview feature 'http' before deploying you will need to enable this in your project file.")
 	}
 
+	if !r.project.IsPreviewFeatureEnabled(preview.Feature_Websockets) && len(r.sockets) > 0 {
+		warnings = append(warnings, "You are using a preview feature 'websockets' before deploying you will need to enable this in your project file.")
+	}
+
 	return warnings
 }
 
@@ -92,6 +102,11 @@ func (r *RunStackState) Tables(port int, dashPort int) string {
 	tables := []string{}
 
 	table, rows := r.ApiTable(9001)
+	if rows > 0 {
+		tables = append(tables, table)
+	}
+
+	table, rows = r.WebsocketsTable(9001)
 	if rows > 0 {
 		tables = append(tables, table)
 	}
@@ -133,6 +148,20 @@ func (r *RunStackState) ApiTable(port int) (string, int) {
 	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
 
 	return str, len(r.apis)
+}
+
+func (r *RunStackState) WebsocketsTable(port int) (string, int) {
+	tableData := pterm.TableData{{"Websocket", "Endpoint"}}
+
+	for name, address := range r.sockets {
+		tableData = append(tableData, []string{
+			name, fmt.Sprintf("http://%s", address),
+		})
+	}
+
+	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
+
+	return str, len(r.sockets)
 }
 
 func (r *RunStackState) TopicTable() (string, int) {
@@ -203,6 +232,7 @@ func NewStackState(proj *project.Project) *RunStackState {
 	return &RunStackState{
 		project:             proj,
 		apis:                map[string]string{},
+		sockets:             map[string]string{},
 		subs:                map[string]string{},
 		schedules:           map[string]string{},
 		bucketNotifications: []*BucketNotification{},

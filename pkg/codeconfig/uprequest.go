@@ -21,9 +21,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/imdario/mergo"
 	multierror "github.com/missionMeteora/toolkit/errors"
+	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/cron"
 	deploy "github.com/nitrictech/nitric/core/pkg/api/nitric/deploy/v1"
@@ -50,6 +52,26 @@ func (b *upRequestBuilder) set(r *deploy.Resource) {
 
 		b.resources[r.Type][r.Name] = current
 	}
+}
+
+func ValidateUpRequest(request *deploy.DeployUpRequest) error {
+	errors := []string{}
+
+	websockets := lo.Filter(request.Spec.Resources, func(res *deploy.Resource, idx int) bool {
+		return res.Type == v1.ResourceType_Websocket
+	})
+
+	for _, ws := range websockets {
+		if ws.GetWebsocket().ConnectTarget == nil || ws.GetWebsocket().DisconnectTarget == nil || ws.GetWebsocket().MessageTarget == nil {
+			errors = append(errors, fmt.Sprintf("socket: %s, is missing handlers. Sockets must have handlers for connect/disconnect/message events", ws.Name))
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("application contains errors:\n %s", strings.Join(errors, "\n"))
+	}
+
+	return nil
 }
 
 func (b *upRequestBuilder) Output() *deploy.DeployUpRequest {
@@ -198,6 +220,44 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 			})
 		}
 
+		// Create websockets and attach relevant workers for this function
+		for k, ws := range f.websockets {
+			// Collect all sockets organised by name and even type
+			deployWebsocket := &deploy.Websocket{}
+
+			if ws.connectWorker != nil {
+				deployWebsocket.ConnectTarget = &deploy.WebsocketTarget{
+					Target: &deploy.WebsocketTarget_ExecutionUnit{
+						ExecutionUnit: f.name,
+					},
+				}
+			}
+
+			if ws.disconnectWorker != nil {
+				deployWebsocket.DisconnectTarget = &deploy.WebsocketTarget{
+					Target: &deploy.WebsocketTarget_ExecutionUnit{
+						ExecutionUnit: f.name,
+					},
+				}
+			}
+
+			if ws.messageWorker != nil {
+				deployWebsocket.MessageTarget = &deploy.WebsocketTarget{
+					Target: &deploy.WebsocketTarget_ExecutionUnit{
+						ExecutionUnit: f.name,
+					},
+				}
+			}
+
+			builder.set(&deploy.Resource{
+				Name: k,
+				Type: v1.ResourceType_Websocket,
+				Config: &deploy.Resource_Websocket{
+					Websocket: deployWebsocket,
+				},
+			})
+		}
+
 		dedupedPolicies := map[string]*v1.PolicyResource{}
 
 		for _, v := range f.policies {
@@ -308,5 +368,16 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		})
 	}
 
-	return builder.Output(), errs.Err()
+	if errs.Err() != nil {
+		return nil, errs.Err()
+	}
+
+	out := builder.Output()
+
+	err := ValidateUpRequest(out)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }

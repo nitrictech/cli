@@ -344,12 +344,25 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 
 		connectionId := uuid.New().String()
 
+		query := map[string]*v1.QueryValue{}
+
+		ctx.QueryArgs().VisitAll(func(key []byte, val []byte) {
+			k := string(key)
+
+			if query[k] == nil {
+				query[k] = &v1.QueryValue{}
+			}
+
+			query[k].Value = append(query[k].Value, string(val))
+		})
+
 		connectionRequest := &v1.TriggerRequest{
 			Context: &v1.TriggerRequest_Websocket{
 				Websocket: &v1.WebsocketTriggerContext{
 					Socket:       socketName,
 					Event:        v1.WebsocketEvent_Connect,
 					ConnectionId: connectionId,
+					QueryParams:  query,
 				},
 			},
 		}

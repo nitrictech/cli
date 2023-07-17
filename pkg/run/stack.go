@@ -155,7 +155,7 @@ func (r *RunStackState) WebsocketsTable(port int) (string, int) {
 
 	for name, address := range r.sockets {
 		tableData = append(tableData, []string{
-			name, fmt.Sprintf("http://%s", address),
+			name, fmt.Sprintf("ws://%s", address),
 		})
 	}
 

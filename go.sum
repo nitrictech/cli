@@ -1624,12 +1624,16 @@ github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f h1:awate
 github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f/go.mod h1:jqImBS1Tsk12vV2Gk7yP9+jajhpG+cHXrg7UhVxFruQ=
 github.com/nitrictech/nitric/cloud/aws v0.0.0-20230710061936-f8ccb102d31b h1:3hmkpFqiEDggzA4t+nKmAnSDm7OO8MW+rnai9zfcOuc=
 github.com/nitrictech/nitric/cloud/aws v0.0.0-20230710061936-f8ccb102d31b/go.mod h1:HTToJAkzkFpLszJp2Vy9vDoplEOmWcuv86wW1o0J3YY=
+github.com/nitrictech/nitric/cloud/aws v0.0.0-20230718015326-80e1b8640347 h1:/9BIGv7ed6qWkeXchLXX0FIMqDp+7khBY5WlbHcJJEI=
+github.com/nitrictech/nitric/cloud/aws v0.0.0-20230718015326-80e1b8640347/go.mod h1:HTToJAkzkFpLszJp2Vy9vDoplEOmWcuv86wW1o0J3YY=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20230710061936-f8ccb102d31b h1:9pAldJTjky0UlyEpibr355HsZWXwZdy7ZEvctVyV48U=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20230710061936-f8ccb102d31b/go.mod h1:nz8/tXPMb5o2yv8g4+NsvDu0dPyrY6iZyXZ1EprenlM=
 github.com/nitrictech/nitric/core v0.0.0-20230710061936-f8ccb102d31b h1:0jC0xqL/GG2BhvLdUaJX0FISGMd4slhscAHicrfBMtc=
 github.com/nitrictech/nitric/core v0.0.0-20230710061936-f8ccb102d31b/go.mod h1:iz/seHApmfpML52NVjankr+9izPddUUwZHdcSQEvm9E=
 github.com/nitrictech/nitric/core v0.0.0-20230711225513-c010168d6aaf h1:Vnu8XXmBv7b/mRdtxqcuN+K42Y2Le8drms/EKGA+xys=
 github.com/nitrictech/nitric/core v0.0.0-20230711225513-c010168d6aaf/go.mod h1:iz/seHApmfpML52NVjankr+9izPddUUwZHdcSQEvm9E=
+github.com/nitrictech/nitric/core v0.0.0-20230718015326-80e1b8640347 h1:5c6IDgweLzybxniL9OkTdk9AvheDP2F6p1sFOGteICI=
+github.com/nitrictech/nitric/core v0.0.0-20230718015326-80e1b8640347/go.mod h1:iz/seHApmfpML52NVjankr+9izPddUUwZHdcSQEvm9E=
 github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf h1:8MB8W8ylM8sCM2COGfiO39/tB6BTdiawLszaUGCNL5w=
 github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf/go.mod h1:b2lzk2a4o1bvSrSCE6yvTldHuXCJymuDVhdMJGOSslw=
 github.com/nunnatsa/ginkgolinter v0.12.1 h1:vwOqb5Nu05OikTXqhvLdHCGcx5uthIYIl0t79UVrERQ=

@@ -4,7 +4,7 @@ FROM node:alpine as build
 ARG HANDLER
 
 # Python and make are required by certain native package build processes in NPM packages.
-RUN --mount=type=cache,target=/var/cache/apk \
+RUN --mount=type=cache,sharing=locked,target=/var/cache/apk \
     apk --update-cache add git g++ make py3-pip
 
 RUN yarn global add typescript @vercel/ncc

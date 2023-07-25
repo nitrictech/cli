@@ -425,6 +425,7 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 							Socket:       socketName,
 							Event:        v1.WebsocketEvent_Message,
 							ConnectionId: connectionId,
+							QueryParams:  query,
 						},
 					},
 				}
@@ -453,6 +454,7 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 						Socket:       socketName,
 						Event:        v1.WebsocketEvent_Disconnect,
 						ConnectionId: connectionId,
+						QueryParams:  query,
 					},
 				},
 			}

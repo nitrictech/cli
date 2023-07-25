@@ -10,3 +10,4 @@ export * from "./uniq";
 export * from "./get-host";
 export * from "./generate-response";
 export * from "./strings";
+export * from "./cn";

@@ -74,7 +74,7 @@ const Select = <T extends Record<string, any> | string>({
                         {selected ? (
                           <span
                             className={classNames(
-                              active ? "text-white" : "text-blue-600",
+                              active ? "text-white" : "text-primary",
                               "absolute inset-y-0 right-0 flex items-center pr-4"
                             )}
                           >

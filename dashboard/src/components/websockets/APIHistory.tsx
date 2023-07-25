@@ -5,10 +5,9 @@ import { Disclosure } from "@headlessui/react";
 import { ChevronUpIcon } from "@heroicons/react/20/solid";
 import { useState } from "react";
 import { Tabs } from "../shared";
-import CodeEditor from "./CodeEditor";
-import APIResponseContent from "./APIResponseContent";
 import TableGroup from "../shared/TableGroup";
-import { ScrollArea } from "../ui/scroll-area";
+import APIResponseContent from "../apis/APIResponseContent";
+import CodeEditor from "../apis/CodeEditor";
 
 interface Props {
   history: ApiHistoryItem[];
@@ -42,13 +41,11 @@ const APIHistory: React.FC<Props> = ({ history, selectedRequest }) => {
   }
 
   return (
-    <ScrollArea className="h-[30rem]" type="always">
-      <div className="flex flex-col gap-2">
-        {requestHistory.map((h, idx) => (
-          <ApiHistoryAccordion key={idx} {...h} />
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="flex flex-col gap-2 overflow-y-scroll max-h-[40rem]">
+      {requestHistory.map((h, idx) => (
+        <ApiHistoryAccordion key={idx} {...h} />
+      ))}
+    </div>
   );
 };
 

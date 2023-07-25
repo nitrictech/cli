@@ -1,6 +1,8 @@
 import { ExclamationCircleIcon, XMarkIcon } from "@heroicons/react/20/solid";
 import classNames from "classnames";
 import React, { useEffect, useId } from "react";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 
 export interface FieldRow {
   key: string;
@@ -56,11 +58,11 @@ const FieldRows: React.FC<Props> = ({
             className="grid relative group items-center grid-cols-2 gap-4 py-4"
           >
             <div>
-              <label htmlFor={keyId} className="sr-only">
+              <Label htmlFor={keyId} className="sr-only">
                 Key
-              </label>
+              </Label>
               <div className="mt-2 sm:col-span-2 sm:mt-0">
-                <input
+                <Input
                   type="text"
                   data-testid={`${testId}-${i}-key`}
                   readOnly={lockKeys}
@@ -76,18 +78,15 @@ const FieldRows: React.FC<Props> = ({
                   value={r.key}
                   name={keyId}
                   id={keyId}
-                  className={
-                    "block w-full px-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 read-only:cursor-not-allowed read-only:bg-gray-50 read-only:ring-gray-200"
-                  }
                 />
               </div>
             </div>
             <div className="pr-8">
-              <label htmlFor={valueId} className="sr-only">
+              <Label htmlFor={valueId} className="sr-only">
                 {r.value}
-              </label>
+              </Label>
               <div className="mt-2 relative sm:col-span-2 sm:mt-0">
-                <input
+                <Input
                   type="text"
                   placeholder="Value"
                   data-testid={`${testId}-${i}-value`}
@@ -107,9 +106,8 @@ const FieldRows: React.FC<Props> = ({
                   id={valueId}
                   value={r.value}
                   className={classNames(
-                    "block w-full px-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6",
                     valueHasError &&
-                      "ring-red-300 placeholder:text-red-300 text-red-900 focus:ring-red-500"
+                      "placeholder:text-red-300 text-red-900 !ring-red-500"
                   )}
                 />
                 {valueHasError && (

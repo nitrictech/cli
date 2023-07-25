@@ -27,6 +27,7 @@ import { copyToClipboard } from "../../lib/utils/copy-to-clipboard";
 import { ClipboardIcon } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import { capitalize } from "radash";
+import { Button } from "../ui/button";
 
 interface Props {
   workerType: "schedules" | "topics";
@@ -184,9 +185,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
             <div className="w-full flex flex-col gap-8">
               <div className="flex">
-                <h2 className="text-2xl font-medium text-blue-800">
-                  {selectedWorker?.topicKey}
-                </h2>
+                <h2 className="text-2xl">{selectedWorker?.topicKey}</h2>
                 <div className="flex ml-auto items-center md:hidden">
                   <EventsMenu
                     selected={selectedWorker}
@@ -235,14 +234,13 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                   </span>
                   <span className="hidden md:block"></span>
                   <div className="ml-auto">
-                    <button
-                      type="button"
+                    <Button
+                      size="lg"
                       data-testid={`trigger-${workerType}-btn`}
                       onClick={handleSend}
-                      className="inline-flex items-center rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                     >
                       Trigger
-                    </button>
+                    </Button>
                   </div>
                 </nav>
               </div>
@@ -446,9 +444,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               </div>
             </div>
             <div className="w-full flex flex-col gap-8 pb-20">
-              <h3 className="text-2xl font-semibold leading-6 text-blue-800">
-                History
-              </h3>
+              <h3 className="text-2xl font-semibold leading-6">History</h3>
               <EventsHistory
                 history={eventHistory}
                 selectedWorker={selectedWorker}

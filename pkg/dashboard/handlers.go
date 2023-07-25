@@ -210,3 +210,43 @@ func (d *Dashboard) handleHistory() func(http.ResponseWriter, *http.Request) {
 		}
 	}
 }
+
+func (d *Dashboard) handleWebsocketMessagesClear() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method != "DELETE" {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		socketName := r.URL.Query().Get("socket")
+
+		if socketName == "" {
+			http.Error(w, "missing socket param", http.StatusBadRequest)
+			return
+		}
+
+		if d.websocketsInfo[socketName] == nil {
+			http.Error(w, "socket not found", http.StatusNotFound)
+			return
+		}
+
+		d.websocketsInfo[socketName].Messages = []WebsocketMessage{}
+
+		w.WriteHeader(http.StatusOK)
+
+		err := d.sendWebsocketsUpdate()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}

@@ -112,7 +112,7 @@ const TreeView = <T extends Record<string, any>>({
         renderItemArrow={({ item, context }) =>
           item.isFolder ? (
             context.isExpanded ? (
-              <FolderOpenIcon className="w-6 h-6 text-blue-600" />
+              <FolderOpenIcon className="w-6 h-6 text-primary" />
             ) : (
               <FolderIcon className="w-6 h-6 text-gray-500" />
             )

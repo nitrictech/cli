@@ -29,6 +29,23 @@ export interface History {
   topics: EventHistoryItem[];
 }
 
+export interface WebSocket {
+  name: string;
+  events: ("connect" | "disconnect" | "message")[];
+}
+
+export interface WebSocketInfo {
+  connectionCount: number;
+  messages: {
+    data: string;
+    time: string;
+    connectionId: string;
+  }[];
+}
+
+export interface WebSocketsInfo {
+  [socket: string]: WebSocketInfo;
+}
 export interface WebSocketResponse {
   projectName: string;
   buckets: string[];
@@ -36,8 +53,10 @@ export interface WebSocketResponse {
   schedules: WorkerResource[];
   topics: WorkerResource[];
   subscriptions: WorkerResource[];
+  websockets: WebSocket[];
   triggerAddress: string;
   apiAddresses: Record<string, string>;
+  websocketAddresses: Record<string, string>;
   storageAddress: string; // has http:// prefix
 }
 

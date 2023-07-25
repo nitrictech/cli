@@ -1,10 +1,26 @@
-import { api, bucket, collection, faas, schedule, topic } from "@nitric/sdk";
+import {
+  api,
+  bucket,
+  collection,
+  schedule,
+  topic,
+  websocket,
+} from "@nitric/sdk";
 
 const firstApi = api("first-api");
 const secondApi = api("second-api");
 
 const myBucket = bucket("test-bucket").for("reading", "writing", "deleting");
 
+const socket = websocket("socket");
+
+const socket2 = websocket("socket-2");
+
+const connections = collection("connections").for(
+  "reading",
+  "writing",
+  "deleting"
+);
 interface Doc {
   firstCount: number;
   secondCount: number;
@@ -263,4 +279,46 @@ topic("subscribe-tests-2").subscribe(async (ctx) => {
       secondCount: 1,
     });
   }
+});
+
+// web sockets
+socket.on("connect", async (ctx) => {
+  try {
+    await connections.doc(ctx.req.connectionId).set({
+      // store any metadata related to the connection here
+      connectionId: ctx.req.connectionId,
+    });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+socket2.on("connect", async (ctx) => {
+  console.log("TODO");
+});
+
+socket.on("disconnect", async (ctx) => {
+  await connections.doc(ctx.req.connectionId).delete();
+});
+
+const broadcast = async (data: string | Uint8Array, as: string = "server") => {
+  try {
+    const connectionStream = connections.query().stream();
+
+    const streamEnd = new Promise<any>((res) => {
+      connectionStream.on("end", res);
+    });
+
+    connectionStream.on("data", async ({ content }) => {
+      // Send message to a connection
+      await socket.send(content.connectionId, data);
+    });
+
+    await streamEnd;
+  } catch (e) {}
+};
+
+socket.on("message", async (ctx) => {
+  // broadcast message to all clients (including the sender)
+  await broadcast(ctx.req.data);
 });

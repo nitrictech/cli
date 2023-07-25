@@ -23,6 +23,7 @@ module.exports = {
         "react/react-in-jsx-scope": "off",
         "react/prop-types": "off",
         "jsx-a11y/media-has-caption": "off",
+        "jsx-a11y/heading-has-content": "off",
       },
     },
   ],

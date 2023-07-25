@@ -39,6 +39,24 @@ func newWebsocket(name string, function *FunctionDependencies) *Websocket {
 	}
 }
 
+func (a *Websocket) WorkerCount() int {
+	workerCount := 0
+
+	if a.connectWorker != nil {
+		workerCount = workerCount + 1
+	}
+
+	if a.disconnectWorker != nil {
+		workerCount = workerCount + 1
+	}
+
+	if a.messageWorker != nil {
+		workerCount = workerCount + 1
+	}
+
+	return workerCount
+}
+
 func (a *Websocket) AddWorker(worker *v1.WebsocketWorker) {
 	a.lock.Lock()
 	defer a.lock.Unlock()

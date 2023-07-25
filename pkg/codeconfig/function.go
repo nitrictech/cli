@@ -145,6 +145,10 @@ func (a *FunctionDependencies) AddSubscriptionHandler(sw *v1.SubscriptionWorker)
 func (a *FunctionDependencies) WorkerCount() int {
 	workerCount := 0
 
+	for _, v := range a.websockets {
+		workerCount = workerCount + v.WorkerCount()
+	}
+
 	for _, v := range a.apis {
 		workerCount = workerCount + len(v.workers)
 	}

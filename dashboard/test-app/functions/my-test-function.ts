@@ -297,11 +297,18 @@ socket2.on("connect", async (ctx) => {
   console.log("TODO");
 });
 
+socket2.on("message", (ctx) => {
+  console.log(`Message: ${ctx.req.data}`);
+});
+
 socket.on("disconnect", async (ctx) => {
   await connections.doc(ctx.req.connectionId).delete();
 });
 
-const broadcast = async (data: string | Uint8Array, as: string = "server") => {
+const broadcast = async (
+  data: string | Uint8Array,
+  query: Record<string, string[]>
+) => {
   try {
     const connectionStream = connections.query().stream();
 
@@ -311,7 +318,17 @@ const broadcast = async (data: string | Uint8Array, as: string = "server") => {
 
     connectionStream.on("data", async ({ content }) => {
       // Send message to a connection
-      await socket.send(content.connectionId, data);
+      try {
+        // will replace data with a strinified version of query if it exists (for tests)
+        await socket.send(
+          content.connectionId,
+          Object.keys(query).length ? JSON.stringify(query) : data
+        );
+      } catch (e) {
+        if (e.message.startsWith("13 INTERNAL: could not get connection")) {
+          await connections.doc(content.connectionId).delete();
+        }
+      }
     });
 
     await streamEnd;
@@ -320,5 +337,5 @@ const broadcast = async (data: string | Uint8Array, as: string = "server") => {
 
 socket.on("message", async (ctx) => {
   // broadcast message to all clients (including the sender)
-  await broadcast(ctx.req.data);
+  await broadcast(ctx.req.data, ctx.req.query);
 });

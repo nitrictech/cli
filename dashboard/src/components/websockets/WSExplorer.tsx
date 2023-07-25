@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { APIRequest, WebSocket, WebSocketsInfo } from "../../types";
-import { Badge, FieldRows, Loading } from "../shared";
+import { FieldRows, Loading } from "../shared";
 import { generatePath, getHost } from "../../lib/utils";
 
 import { useWebSocket } from "../../lib/hooks/use-web-socket";
@@ -46,6 +46,7 @@ import {
 import { Textarea } from "../ui/textarea";
 import useSWRSubscription from "swr/subscription";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Badge } from "../ui/badge";
 
 export const LOCAL_STORAGE_KEY = "nitric-local-dash-api-history";
 
@@ -247,8 +248,9 @@ const WSExplorer = () => {
     >
       <Loading delay={400} conditionToShow={!loading}>
         {selectedWebsocket ? (
-          <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
+          <div className="flex max-w-6xl flex-col md:pr-8">
             <div className="w-full flex flex-col gap-8">
+              <h2 className="text-2xl">{selectedWebsocket?.name}</h2>
               <div>
                 <nav
                   className="flex h-10 items-end lg:items-center gap-4"
@@ -279,12 +281,11 @@ const WSExplorer = () => {
                       </Select>
                     ) : null}
                   </div>
-                  <div className="hidden lg:flex items-center gap-4">
-                    <span
-                      className="text-lg flex gap-2"
-                      data-testid="generated-request-path"
-                    >
-                      {websocketAddress}
+                  <div className="hidden lg:flex items-center">
+                    <span className="text-lg flex gap-2">
+                      <span data-testid="generated-request-path">
+                        {websocketAddress}
+                      </span>
                       <button
                         type="button"
                         onClick={() => {
@@ -302,7 +303,7 @@ const WSExplorer = () => {
                       <Button
                         onClick={() => setConnected(!connected)}
                         size={"lg"}
-                        data-testid="send-api-btn"
+                        data-testid="connect-btn"
                         variant={connected ? "destructive" : "default"}
                       >
                         {connected ? "Disconnect" : "Connect"}
@@ -313,8 +314,18 @@ const WSExplorer = () => {
               </div>
               <Tabs defaultValue={tab} onValueChange={setTab}>
                 <TabsList>
-                  <TabsTrigger value="monitor">Monitor</TabsTrigger>
-                  <TabsTrigger value="send-messages">Send Messages</TabsTrigger>
+                  <TabsTrigger
+                    value="monitor"
+                    data-testid="monitor-tab-trigger"
+                  >
+                    Monitor
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="send-messages"
+                    data-testid="send-messages-tab-trigger"
+                  >
+                    Send Messages
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="monitor">
                   <Card className="mt-4">
@@ -322,12 +333,12 @@ const WSExplorer = () => {
                       <CardTitle>Messages</CardTitle>
                       <div className="absolute right-0 top-0 p-6 flex gap-2">
                         <Badge
-                          data-testid="response-status"
-                          className="uppercase font-bold"
-                          status={
+                          data-testid="connections-status"
+                          className="uppercase font-semibold"
+                          variant={
                             wsInfo && wsInfo.connectionCount > 0
-                              ? "green"
-                              : "red"
+                              ? "success"
+                              : "destructive"
                           }
                         >
                           Connections: {wsInfo?.connectionCount || 0}
@@ -343,7 +354,11 @@ const WSExplorer = () => {
                           }
                         />
 
-                        <Button variant="outline" onClick={clearMessages}>
+                        <Button
+                          data-testid="clear-messages-btn"
+                          variant="outline"
+                          onClick={clearMessages}
+                        >
                           <TrashIcon className="mr-2 h-4 w-4" />
                           Clear Messages
                         </Button>
@@ -370,7 +385,7 @@ const WSExplorer = () => {
 
                                 return pass;
                               })
-                              .map((message) => (
+                              .map((message, i) => (
                                 <Accordion type="multiple" key={message.time}>
                                   <AccordionItem value={message.time}>
                                     <AccordionTrigger className="flex justify-between">
@@ -384,7 +399,10 @@ const WSExplorer = () => {
                                           }
                                         />
                                       </div>
-                                      <span className="px-2 truncate max-w-4xl">
+                                      <span
+                                        data-testid={`accordion-message-${i}`}
+                                        className="px-2 truncate max-w-4xl"
+                                      >
                                         {message.data}
                                       </span>
                                       <span className="ml-auto px-2">
@@ -451,6 +469,7 @@ const WSExplorer = () => {
                       {payloadType === "text" && (
                         <Textarea
                           placeholder="Enter message"
+                          data-testid="message-text-input"
                           value={currentPayload}
                           onChange={(evt) =>
                             setCurrentPayload(evt.target.value)
@@ -512,9 +531,9 @@ const WSExplorer = () => {
                       <CardTitle>Messages</CardTitle>
                       <div className="absolute right-0 top-0 p-6 flex gap-2">
                         <Badge
-                          data-testid="response-status"
-                          className="uppercase font-bold"
-                          status={connected ? "green" : "red"}
+                          data-testid="connected-status"
+                          className="uppercase font-semibold"
+                          variant={connected ? "success" : "destructive"}
                         >
                           {connected ? "Connected" : "Disconnected"}
                         </Badge>
@@ -574,14 +593,17 @@ const WSExplorer = () => {
 
                                 return pass;
                               })
-                              .map((message) => (
+                              .map((message, i) => (
                                 <Accordion type="multiple" key={message.ts}>
                                   <AccordionItem value={message.ts.toString()}>
                                     <AccordionTrigger className="flex justify-between">
                                       <div>
                                         <MessageIcon type={message.type} />
                                       </div>
-                                      <span className="px-2 truncate">
+                                      <span
+                                        data-testid={`accordion-message-${i}`}
+                                        className="px-2 truncate"
+                                      >
                                         {message.data}
                                       </span>
                                       <span className="ml-auto px-2">

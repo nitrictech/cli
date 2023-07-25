@@ -204,6 +204,7 @@ func Test_specFromWorkerPool(t *testing.T) {
 				},
 				Topics:      []*TopicResult{{WorkerKey: "test-subscription", TopicKey: "test-subscription"}},
 				HttpWorkers: []*HttpWorker{{Port: 3000}, {Port: 8080}},
+				WebSockets:  []*WebsocketResult{},
 			},
 		},
 	}

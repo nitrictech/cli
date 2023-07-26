@@ -13,6 +13,7 @@ interface Props {
   testId: string;
   rows: FieldRow[];
   lockKeys?: boolean;
+  readOnly?: boolean;
   canClearRow?: boolean;
   valueRequired?: boolean;
   valueErrors?: Record<number, FieldRow>;
@@ -23,6 +24,7 @@ const FieldRows: React.FC<Props> = ({
   testId,
   rows,
   lockKeys,
+  readOnly,
   setRows,
   valueErrors,
   valueRequired,
@@ -65,7 +67,7 @@ const FieldRows: React.FC<Props> = ({
                 <Input
                   type="text"
                   data-testid={`${testId}-${i}-key`}
-                  readOnly={lockKeys}
+                  readOnly={lockKeys || readOnly}
                   placeholder="Key"
                   onChange={(e) => {
                     const updatedRow: FieldRow = { ...r, key: e.target.value };
@@ -89,6 +91,7 @@ const FieldRows: React.FC<Props> = ({
                 <Input
                   type="text"
                   placeholder="Value"
+                  readOnly={readOnly}
                   data-testid={`${testId}-${i}-value`}
                   onChange={(e) => {
                     const updatedRow: FieldRow = {

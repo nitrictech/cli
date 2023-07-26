@@ -15,7 +15,7 @@ import {
 import classNames from "classnames";
 import { debounce } from "radash";
 import TextField from "./TextField";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface Props<T>
   extends Omit<ControlledTreeEnvironmentProps<T>, "viewState"> {

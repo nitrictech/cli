@@ -79,7 +79,6 @@ const WSExplorer = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentPayload, setCurrentPayload] = useState<string>();
   const [payloadType, setPayloadType] = useState("text");
-  const [binaryType, setBinaryType] = useState("hex");
   const [monitorMessageFilter, setMonitorMessageFilter] = useState("");
   const [messageFilter, setMessageFilter] = useState("");
   const [messageTypeFilter, setMessageTypeFilter] = useState("all");
@@ -184,7 +183,6 @@ const WSExplorer = () => {
         websocketRef.current = undefined;
       });
     } else if (websocketRef.current) {
-      console.log("closing");
       websocketRef.current.close();
     }
 
@@ -453,6 +451,7 @@ const WSExplorer = () => {
                       <div className="w-full">
                         <FieldRows
                           rows={queryParams}
+                          readOnly={connected}
                           testId="query"
                           setRows={(rows) => {
                             setQueryParams(rows);

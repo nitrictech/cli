@@ -2,6 +2,8 @@ import { FC, useMemo } from "react";
 import type { WebSocket } from "../../types";
 import TreeView, { TreeItemType } from "../shared/TreeView";
 import type { TreeItem, TreeItemIndex } from "react-complex-tree";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export type EventsTreeItemType = TreeItemType<WebSocket>;
 
@@ -10,6 +12,8 @@ interface Props {
   onSelect: (resource: WebSocket) => void;
   initialItem: WebSocket;
 }
+
+const REQUIRED_EVENTS = ["connect", "message", "disconnect"];
 
 const WSTreeView: FC<Props> = ({ websockets, onSelect, initialItem }) => {
   const treeItems: Record<
@@ -56,9 +60,26 @@ const WSTreeView: FC<Props> = ({ websockets, onSelect, initialItem }) => {
           onSelect(items.data.data);
         }
       }}
-      renderItemTitle={({ item }) => (
-        <span className="truncate">{item.data.label}</span>
-      )}
+      renderItemTitle={({ item }) => {
+        const eventsNotRegistered = REQUIRED_EVENTS.filter(
+          (evt) => !item.data.data?.events.includes(evt as any)
+        );
+        return (
+          <div className="flex items-center justify-between w-full">
+            <span className="truncate">{item.data.label}</span>
+            {eventsNotRegistered.length ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ExclamationTriangleIcon className="w-5 h-5 text-destructive" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Missing Events: {eventsNotRegistered.join(", ")}</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
+          </div>
+        );
+      }}
     />
   );
 };

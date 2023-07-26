@@ -24,7 +24,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../shared/Tooltip";
+} from "../ui/tooltip";
 
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,

@@ -114,7 +114,7 @@ func Test_specFromWorkerPool(t *testing.T) {
 		expect *SpecResult
 	}{
 		{
-			name: "Route, Schedule, Subscription and BucketNotification Workers",
+			name: "Route, Schedule, Subscription, Websocket and BucketNotification Workers",
 			pool: func() pool.WorkerPool {
 				workerPool := pool.NewProcessPool(&pool.ProcessPoolOptions{MaxWorkers: 99})
 
@@ -136,6 +136,30 @@ func Test_specFromWorkerPool(t *testing.T) {
 
 				err = workerPool.AddWorker(worker.NewSubscriptionWorker(&adapter.GrpcAdapter{}, &worker.SubscriptionWorkerOptions{
 					Topic: "test-subscription",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = workerPool.AddWorker(worker.NewWebsocketWorker(&adapter.GrpcAdapter{}, &worker.WebsocketWorkerOptions{
+					Socket: "test-socket",
+					Event:  v1.WebsocketEvent_Connect,
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = workerPool.AddWorker(worker.NewWebsocketWorker(&adapter.GrpcAdapter{}, &worker.WebsocketWorkerOptions{
+					Socket: "test-socket",
+					Event:  v1.WebsocketEvent_Message,
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = workerPool.AddWorker(worker.NewWebsocketWorker(&adapter.GrpcAdapter{}, &worker.WebsocketWorkerOptions{
+					Socket: "test-socket",
+					Event:  v1.WebsocketEvent_Disconnect,
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -204,7 +228,7 @@ func Test_specFromWorkerPool(t *testing.T) {
 				},
 				Topics:      []*TopicResult{{WorkerKey: "test-subscription", TopicKey: "test-subscription"}},
 				HttpWorkers: []*HttpWorker{{Port: 3000}, {Port: 8080}},
-				WebSockets:  []*WebsocketResult{},
+				WebSockets:  []*WebsocketResult{{Name: "test-socket", Events: []string{"connect", "message", "disconnect"}}},
 			},
 		},
 	}

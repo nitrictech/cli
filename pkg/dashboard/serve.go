@@ -35,18 +35,32 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
+type WebsocketMessage struct {
+	Data         string    `json:"data,omitempty"`
+	Time         time.Time `json:"time,omitempty"`
+	ConnectionID string    `json:"connectionId,omitempty"`
+}
+type WebsocketInfo struct {
+	ConnectionCount int                `json:"connectionCount,omitempty"`
+	Messages        []WebsocketMessage `json:"messages,omitempty"`
+}
+
 type Dashboard struct {
 	project              *project.Project
 	apis                 []*openapi3.T
 	schedules            []*codeconfig.TopicResult
 	topics               []*codeconfig.TopicResult
 	buckets              []string
+	websockets           []*codeconfig.WebsocketResult
 	envMap               map[string]string
 	stackWebSocket       *melody.Melody
 	historyWebSocket     *melody.Melody
+	wsWebSocket          *melody.Melody
 	triggerAddress       string
 	storageAddress       string
 	apiAddresses         map[string]string
+	websocketAddresses   map[string]string
+	websocketsInfo       map[string]*WebsocketInfo
 	resourcesLastUpdated time.Time
 	bucketNotifications  []*codeconfig.BucketNotification
 }
@@ -61,8 +75,10 @@ type DashboardResponse struct {
 	Buckets             []string                         `json:"buckets,omitempty"`
 	Schedules           []*codeconfig.TopicResult        `json:"schedules,omitempty"`
 	Topics              []*codeconfig.TopicResult        `json:"topics,omitempty"`
+	Websockets          []*codeconfig.WebsocketResult    `json:"websockets,omitempty"`
 	ProjectName         string                           `json:"projectName,omitempty"`
 	ApiAddresses        map[string]string                `json:"apiAddresses,omitempty"`
+	WebsocketAddresses  map[string]string                `json:"websocketAddresses,omitempty"`
 	TriggerAddress      string                           `json:"triggerAddress,omitempty"`
 	StorageAddress      string                           `json:"storageAddress,omitempty"`
 	BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications,omitempty"`
@@ -74,11 +90,12 @@ type Bucket struct {
 }
 
 type RefreshOptions struct {
-	Pool            pool.WorkerPool
-	TriggerAddress  string
-	StorageAddress  string
-	ApiAddresses    map[string]string
-	ServiceListener net.Listener
+	Pool               pool.WorkerPool
+	TriggerAddress     string
+	StorageAddress     string
+	ApiAddresses       map[string]string
+	WebSocketAddresses map[string]string
+	ServiceListener    net.Listener
 }
 
 //go:embed dist/*
@@ -89,15 +106,19 @@ func New(p *project.Project, envMap map[string]string) (*Dashboard, error) {
 
 	historyWebSocket := melody.New()
 
+	wsWebSocket := melody.New()
+
 	return &Dashboard{
 		project:             p,
 		apis:                []*openapi3.T{},
 		envMap:              envMap,
 		stackWebSocket:      stackWebSocket,
 		historyWebSocket:    historyWebSocket,
+		wsWebSocket:         wsWebSocket,
 		bucketNotifications: []*codeconfig.BucketNotification{},
 		schedules:           []*codeconfig.TopicResult{},
 		topics:              []*codeconfig.TopicResult{},
+		websocketsInfo:      map[string]*WebsocketInfo{},
 	}, nil
 }
 
@@ -133,9 +154,11 @@ func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 	d.schedules = spec.Schedules
 	d.topics = spec.Topics
 	d.bucketNotifications = spec.BucketNotifications
+	d.websockets = spec.WebSockets
 
 	d.triggerAddress = opts.TriggerAddress
 	d.apiAddresses = opts.ApiAddresses
+	d.websocketAddresses = opts.WebSocketAddresses
 	d.storageAddress = opts.StorageAddress
 
 	err = d.sendStackUpdate()
@@ -153,6 +176,32 @@ func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 
 func (d *Dashboard) RefreshHistory() error {
 	return d.sendHistoryUpdate()
+}
+
+func (d *Dashboard) UpdateWebsocketInfoCount(socket string, count int) error {
+	if d.websocketsInfo[socket] == nil {
+		d.websocketsInfo[socket] = &WebsocketInfo{}
+	}
+
+	d.websocketsInfo[socket].ConnectionCount = count
+
+	err := d.sendWebsocketsUpdate()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *Dashboard) AddWebsocketInfoMessage(socket string, message WebsocketMessage) error {
+	d.websocketsInfo[socket].Messages = append([]WebsocketMessage{message}, d.websocketsInfo[socket].Messages...)
+
+	err := d.sendWebsocketsUpdate()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *Dashboard) Serve(storagePlugin storage.StorageService) (*int, error) {
@@ -221,6 +270,31 @@ func (d *Dashboard) Serve(storagePlugin storage.StorageService) (*int, error) {
 
 	http.HandleFunc("/api/storage", d.handleStorage(storagePlugin))
 
+	// handle websockets
+	http.HandleFunc("/ws-info", func(w http.ResponseWriter, r *http.Request) {
+		err := d.wsWebSocket.HandleRequest(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	http.HandleFunc("/api/ws-clear-messages", d.handleWebsocketMessagesClear())
+
+	d.wsWebSocket.HandleConnect(func(s *melody.Session) {
+		// Send a welcome message to the client
+		err := d.sendWebsocketsUpdate()
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
+
+	d.wsWebSocket.HandleMessage(func(s *melody.Session, msg []byte) {
+		err := d.wsWebSocket.Broadcast(msg)
+		if err != nil {
+			log.Print(err)
+		}
+	})
+
 	// using ephemeral ports, we will redirect to the dashboard on main api 4000
 	dashListener, err := utils.GetNextListener(utils.MinPort(49152), utils.MaxPort(65535))
 	if err != nil {
@@ -253,8 +327,10 @@ func (d *Dashboard) sendStackUpdate() error {
 		Topics:              d.topics,
 		Buckets:             d.buckets,
 		Schedules:           d.schedules,
+		Websockets:          d.websockets,
 		ProjectName:         d.project.Name,
 		ApiAddresses:        d.apiAddresses,
+		WebsocketAddresses:  d.websocketAddresses,
 		TriggerAddress:      d.triggerAddress,
 		StorageAddress:      d.storageAddress,
 		BucketNotifications: d.bucketNotifications,
@@ -284,6 +360,17 @@ func (d *Dashboard) sendHistoryUpdate() error {
 	}
 
 	err = d.historyWebSocket.Broadcast(jsonData)
+
+	return err
+}
+
+func (d *Dashboard) sendWebsocketsUpdate() error {
+	jsonData, err := json.Marshal(d.websocketsInfo)
+	if err != nil {
+		return err
+	}
+
+	err = d.wsWebSocket.Broadcast(jsonData)
 
 	return err
 }

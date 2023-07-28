@@ -1,6 +1,8 @@
 ---
-import "@fontsource/archivo";
 import "@fontsource/sora";
+import "@fontsource/sora/600.css";
+import "@fontsource/sora/700.css";
+import "../styles/globals.css";
 export interface Props {
   title: string;
 }
@@ -21,26 +23,3 @@ const { title } = Astro.props;
     <slot />
   </body>
 </html>
-<style is:global>
-  html {
-    /* font-family: Archivo, ui-sans-serif, system-ui, -apple-system,
-      BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans,
-      sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol,
-      Noto Color Emoji; */
-    background-color: #f6f6f6;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: "Sora", system-ui, sans-serif;
-  }
-
-  code {
-    font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
-      DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
-  }
-</style>

@@ -91,11 +91,12 @@ func (l *localServices) Refresh() error {
 	}
 
 	err := l.dashboard.Refresh(&dashboard.RefreshOptions{
-		Pool:            l.GetWorkerPool(),
-		TriggerAddress:  l.TriggerAddress(),
-		ApiAddresses:    l.Apis(),
-		StorageAddress:  l.Status().StorageEndpoint,
-		ServiceListener: l.gateway.serviceListener,
+		Pool:               l.GetWorkerPool(),
+		TriggerAddress:     l.TriggerAddress(),
+		ApiAddresses:       l.Apis(),
+		WebSocketAddresses: l.Websockets(),
+		StorageAddress:     l.Status().StorageEndpoint,
+		ServiceListener:    l.gateway.serviceListener,
 	})
 	if err != nil {
 		return err
@@ -210,7 +211,7 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		return err
 	}
 
-	wsPlugin, _ := NewRunWebsocketService()
+	wsPlugin, _ := NewRunWebsocketService(l.dashboard)
 
 	// Start a new gateway plugin
 	l.gateway, err = NewGateway(wsPlugin)

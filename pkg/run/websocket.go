@@ -20,9 +20,12 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
+	"unicode/utf8"
 
 	"github.com/fasthttp/websocket"
 
+	"github.com/nitrictech/cli/pkg/dashboard"
 	nitricws "github.com/nitrictech/nitric/core/pkg/plugins/websocket"
 )
 
@@ -30,9 +33,10 @@ type RunWebsocketService struct {
 	nitricws.WebsocketService
 	connections map[string]map[string]*websocket.Conn
 	lock        sync.RWMutex
+	dash        *dashboard.Dashboard
 }
 
-func (r *RunWebsocketService) RegisterConnection(socket string, connectionId string, connection *websocket.Conn) {
+func (r *RunWebsocketService) RegisterConnection(socket string, connectionId string, connection *websocket.Conn) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -41,6 +45,13 @@ func (r *RunWebsocketService) RegisterConnection(socket string, connectionId str
 	}
 
 	r.connections[socket][connectionId] = connection
+
+	err := r.dash.UpdateWebsocketInfoCount(socket, len(r.connections[socket]))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *RunWebsocketService) Send(ctx context.Context, socket string, connectionId string, message []byte) error {
@@ -52,7 +63,26 @@ func (r *RunWebsocketService) Send(ctx context.Context, socket string, connectio
 		return fmt.Errorf("could not get connection " + connectionId)
 	}
 
+	// Determine if the message is a binary message
+	isBinary := isBinaryString(message)
+
+	if isBinary {
+		// binary is not supported by AWS, so tell user
+		message = []byte("Binary messages are not currently supported by AWS")
+	}
+
 	err := conn.WriteMessage(websocket.TextMessage, message)
+	if err != nil {
+		return err
+	}
+
+	infoMessage := dashboard.WebsocketMessage{
+		Data:         string(message),
+		Time:         time.Now(),
+		ConnectionID: connectionId,
+	}
+
+	err = r.dash.AddWebsocketInfoMessage(socket, infoMessage)
 	if err != nil {
 		return err
 	}
@@ -69,14 +99,8 @@ func (r *RunWebsocketService) Close(ctx context.Context, socket string, connecti
 		return fmt.Errorf("could not get connection")
 	}
 
-	// write a close message
-	err := conn.WriteMessage(websocket.CloseMessage, nil)
-	if err != nil {
-		return err
-	}
-
 	// force close the connection
-	err = conn.Close()
+	err := conn.Close()
 	if err != nil {
 		return err
 	}
@@ -84,12 +108,22 @@ func (r *RunWebsocketService) Close(ctx context.Context, socket string, connecti
 	// delete the connection from the pool
 	delete(r.connections[socket], connectionId)
 
+	err = r.dash.UpdateWebsocketInfoCount(socket, len(r.connections[socket]))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func NewRunWebsocketService() (*RunWebsocketService, error) {
+func NewRunWebsocketService(dash *dashboard.Dashboard) (*RunWebsocketService, error) {
 	return &RunWebsocketService{
 		connections: make(map[string]map[string]*websocket.Conn),
 		lock:        sync.RWMutex{},
+		dash:        dash,
 	}, nil
+}
+
+func isBinaryString(data []byte) bool {
+	return !utf8.Valid(data)
 }

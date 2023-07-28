@@ -389,9 +389,20 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 
 		err = upgrader.Upgrade(ctx, func(ws *websocket.Conn) {
 			// generate a new connection ID for this client
-			defer ws.Close()
+			defer func() {
+				// close within the websocket plugin will also call ws.Close
+				err = s.websocketPlugin.Close(ctx, socketName, connectionId)
+				if err != nil {
+					pterm.Error.Println(err)
+					return
+				}
+			}()
 
-			s.websocketPlugin.RegisterConnection(socketName, connectionId, ws)
+			err = s.websocketPlugin.RegisterConnection(socketName, connectionId, ws)
+			if err != nil {
+				pterm.Error.Println(err)
+				return
+			}
 
 			// Handshake successful send a registration message with connection ID to the socket worker
 			for {
@@ -414,6 +425,7 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 							Socket:       socketName,
 							Event:        v1.WebsocketEvent_Message,
 							ConnectionId: connectionId,
+							QueryParams:  query,
 						},
 					},
 				}
@@ -442,6 +454,7 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 						Socket:       socketName,
 						Event:        v1.WebsocketEvent_Disconnect,
 						ConnectionId: connectionId,
+						QueryParams:  query,
 					},
 				},
 			}

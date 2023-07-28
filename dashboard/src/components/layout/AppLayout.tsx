@@ -14,6 +14,7 @@ import {
   QuestionMarkCircleIcon,
   PaperAirplaneIcon,
   ChatBubbleBottomCenterIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
 import { useWebSocket } from "../../lib/hooks/use-web-socket";
@@ -23,7 +24,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../shared/Tooltip";
+} from "../ui/tooltip";
 
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
@@ -105,6 +106,12 @@ const AppLayout: React.FC<Props> = ({
       count: data?.apis?.length || 0,
     },
     {
+      name: "Websockets",
+      href: "/websockets",
+      icon: ChatBubbleLeftRightIcon,
+      count: data?.websockets?.length || 0,
+    },
+    {
       name: "Schedules",
       href: "/schedules",
       icon: ClockIcon,
@@ -122,7 +129,6 @@ const AppLayout: React.FC<Props> = ({
       icon: MegaphoneIcon,
       count: data?.topics?.length,
     },
-    // { name: "Storage", href: "#", icon: CircleStackIcon, current: false },
     // { name: "Collections", href: "#", icon: FolderIcon, current: false },
     // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
   ];
@@ -202,16 +208,16 @@ const AppLayout: React.FC<Props> = ({
                                   href={item.href}
                                   className={classNames(
                                     item.href === routePath
-                                      ? "bg-gray-50 text-blue-600"
-                                      : "text-gray-700 hover:text-blue-600 hover:bg-gray-50",
+                                      ? "bg-gray-50 text-primary"
+                                      : "text-gray-700 hover:text-primary hover:bg-gray-50",
                                     "group flex gap-x-3 rounded-md p-2 items-center text-sm leading-6 font-semibold"
                                   )}
                                 >
                                   <item.icon
                                     className={classNames(
                                       item.href === routePath
-                                        ? "text-blue-600"
-                                        : "text-gray-400 group-hover:text-blue-600",
+                                        ? "text-primary"
+                                        : "text-gray-400 group-hover:text-primary",
                                       "h-6 w-6 shrink-0"
                                     )}
                                     aria-hidden="true"
@@ -243,7 +249,7 @@ const AppLayout: React.FC<Props> = ({
                                     target="_blank"
                                     rel="noreferrer"
                                     className={classNames(
-                                      "text-gray-700 hover:text-blue-600 items-center hover:bg-gray-50",
+                                      "text-gray-700 hover:text-primary items-center hover:bg-gray-50",
                                       "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
                                     )}
                                   >
@@ -284,8 +290,8 @@ const AppLayout: React.FC<Props> = ({
                         href={item.href}
                         className={classNames(
                           item.href === routePath
-                            ? "bg-gray-100 text-blue-600"
-                            : "text-gray-400 hover:text-blue-600 hover:bg-gray-100",
+                            ? "bg-gray-100 text-primary"
+                            : "text-gray-400 hover:text-primary hover:bg-gray-100",
                           "group relative flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
                         )}
                       >
@@ -333,7 +339,7 @@ const AppLayout: React.FC<Props> = ({
               className="h-6 w-px bg-gray-900/10 lg:hidden"
               aria-hidden="true"
             />
-            <div className="flex gap-2 items-center md:text-lg font-semibold leading-6 text-blue-800">
+            <div className="flex gap-2 items-center md:text-lg font-semibold leading-6 text-gray-900">
               Nitric Dashboard <span className="text-gray-300">/</span> {title}
             </div>
 
@@ -379,7 +385,7 @@ const AppLayout: React.FC<Props> = ({
                                 >
                                   <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
                                     <item.icon
-                                      className="h-6 w-6 text-gray-600 group-hover:text-blue-600"
+                                      className="h-6 w-6 text-gray-600 group-hover:text-primary"
                                       aria-hidden="true"
                                     />
                                   </div>
@@ -437,9 +443,7 @@ const AppLayout: React.FC<Props> = ({
 
           <div className="lg:pl-80">
             <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
-              <h1 className="text-4xl text-blue-800 font-bold mb-12">
-                {title}
-              </h1>
+              <h1 className="text-4xl font-bold mb-12">{title}</h1>
               {children}
             </div>
           </div>

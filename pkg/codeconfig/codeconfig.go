@@ -38,6 +38,7 @@ import (
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/moby/moby/pkg/stdcopy"
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	"google.golang.org/grpc"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
@@ -72,12 +73,18 @@ type HttpWorker struct {
 	Port int `json:"port,omitempty"`
 }
 
+type WebsocketResult struct {
+	Name   string   `json:"name,omitempty"`
+	Events []string `json:"events,omitempty"`
+}
+
 type SpecResult struct {
 	Apis                []*openapi3.T
 	Schedules           []*TopicResult
 	Topics              []*TopicResult
 	BucketNotifications []*BucketNotification
 	HttpWorkers         []*HttpWorker
+	WebSockets          []*WebsocketResult
 }
 
 func New(p *project.Project, envMap map[string]string) (*codeConfig, error) {
@@ -144,6 +151,7 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 	topics := []*TopicResult{}
 	bucketNotifications := []*BucketNotification{}
 	httpWorkers := []*HttpWorker{}
+	websockets := []*WebsocketResult{}
 
 	// transform worker pool into apiHandlers
 	for _, wrkr := range pool.GetWorkers(nil) {
@@ -197,7 +205,30 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 				Port: w.GetPort(),
 			})
 		case *worker.WebsocketWorker:
-			// TODO: Add websocket worker to spec
+			reflectedValue := reflect.ValueOf(w).Elem()
+			event := reflectedValue.FieldByName("event").Int()
+
+			// check if websocket already exists and add event to it
+			websocket, _ := lo.Find(websockets, func(existingSocket *WebsocketResult) bool {
+				return existingSocket.Name == w.Socket()
+			})
+
+			if websocket == nil {
+				websocket = &WebsocketResult{
+					Name: w.Socket(),
+				}
+
+				websockets = append(websockets, websocket)
+			}
+
+			switch event {
+			case int64(v1.WebsocketEvent_Connect):
+				websocket.Events = append(websocket.Events, "connect")
+			case int64(v1.WebsocketEvent_Disconnect):
+				websocket.Events = append(websocket.Events, "disconnect")
+			case int64(v1.WebsocketEvent_Message):
+				websocket.Events = append(websocket.Events, "message")
+			}
 		default:
 			return nil, utils.NewIncompatibleWorkerError()
 		}
@@ -224,11 +255,12 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 		return schedules[i].TopicKey < schedules[j].TopicKey
 	})
 
+	// sort topics by topic key
 	sort.Slice(topics, func(i, j int) bool {
 		return topics[i].TopicKey < topics[j].TopicKey
 	})
 
-	// sort schedules by topic key
+	// sort topics by bucket
 	sort.Slice(bucketNotifications, func(i, j int) bool {
 		return bucketNotifications[i].Bucket < bucketNotifications[j].Bucket
 	})
@@ -237,12 +269,18 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 		return i < j
 	})
 
+	// sort webSockets by name
+	sort.Slice(websockets, func(i, j int) bool {
+		return websockets[i].Name < websockets[j].Name
+	})
+
 	return &SpecResult{
 		Apis:                apiSpecs,
 		Schedules:           schedules,
 		BucketNotifications: bucketNotifications,
 		Topics:              topics,
 		HttpWorkers:         httpWorkers,
+		WebSockets:          websockets,
 	}, nil
 }
 

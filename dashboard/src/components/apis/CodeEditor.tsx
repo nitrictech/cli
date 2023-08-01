@@ -162,7 +162,7 @@ const CodeEditor: React.FC<Props> = ({
   };
 
   return (
-    <div className="rounded-lg relative overflow-hidden">
+    <div className="relative">
       {enableCopy ? (
         <button
           aria-label="Copy Code"
@@ -174,8 +174,7 @@ const CodeEditor: React.FC<Props> = ({
         </button>
       ) : null}
       {!readOnly && contentType === "application/json" && (
-        <div className="flex mb-2">
-          <h4 className="text-lg font-medium text-gray-900">JSON Content</h4>
+        <div className="flex py-2 rounded-lg">
           <button
             onClick={handleFormat}
             type="button"
@@ -185,41 +184,43 @@ const CodeEditor: React.FC<Props> = ({
           </button>
         </div>
       )}
-      <CodeMirror
-        ref={editor}
-        height="350px"
-        theme="dark"
-        basicSetup={{
-          foldGutter: true,
-          lineNumbers: true,
-        }}
-        editable={!readOnly}
-        readOnly={readOnly}
-        extensions={extensions}
-        onChange={handleOnChange}
-        {...props}
-      />
-      {errors.length > 0 && (
-        <div className="rounded-md bottom-0 right-0 m-2 absolute bg-red-50 p-2.5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <XCircleIcon
-                className="h-5 w-5 text-red-400"
-                aria-hidden="true"
-              />
-            </div>
-            <div className="ml-1">
-              <div className="text-sm text-red-700">
-                Error Invalid JSON at line{" "}
-                {getLineNumber(
-                  editor.current?.view?.state.doc.toString() || "",
-                  errors[0].from
-                )}
+      <div className="overflow-hidden rounded-lg">
+        <CodeMirror
+          ref={editor}
+          height="350px"
+          theme="dark"
+          basicSetup={{
+            foldGutter: true,
+            lineNumbers: true,
+          }}
+          editable={!readOnly}
+          readOnly={readOnly}
+          extensions={extensions}
+          onChange={handleOnChange}
+          {...props}
+        />
+        {errors.length > 0 && (
+          <div className="rounded-md bottom-0 right-0 m-2 absolute bg-red-50 p-2.5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <XCircleIcon
+                  className="h-5 w-5 text-red-400"
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="ml-1">
+                <div className="text-sm text-red-700">
+                  Error Invalid JSON at line{" "}
+                  {getLineNumber(
+                    editor.current?.view?.state.doc.toString() || "",
+                    errors[0].from
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

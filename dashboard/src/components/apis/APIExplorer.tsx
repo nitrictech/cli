@@ -39,6 +39,7 @@ import { copyToClipboard } from "../../lib/utils/copy-to-clipboard";
 import toast from "react-hot-toast";
 import { ClipboardIcon } from "@heroicons/react/24/outline";
 import { APIMethodBadge } from "./APIMethodBadge";
+import { Button } from "../ui/button";
 
 const getTabCount = (rows: FieldRow[]) => {
   if (!rows) return 0;
@@ -178,7 +179,7 @@ const APIExplorer = () => {
   useEffect(() => {
     if (selectedApiEndpoint) {
       const generatedPath = generatePath(
-        selectedApiEndpoint,
+        selectedApiEndpoint.path,
         request.pathParams,
         request.queryParams
       );
@@ -318,7 +319,7 @@ const APIExplorer = () => {
                   setRequest({
                     ...requestDefault,
                     method: selectedApiEndpoint.method,
-                    path: generatePath(selectedApiEndpoint, [], []),
+                    path: generatePath(selectedApiEndpoint.path, [], []),
                     pathParams: generatePathParams(
                       selectedApiEndpoint,
                       requestDefault
@@ -344,9 +345,7 @@ const APIExplorer = () => {
             <div className="w-full flex flex-col gap-8">
               <div>
                 <div className="flex md:hidden">
-                  <h2 className="text-2xl font-medium text-blue-800">
-                    API - {selectedApiEndpoint.api}
-                  </h2>
+                  <h2 className="text-2xl">API - {selectedApiEndpoint.api}</h2>
                   <APIMenu
                     selected={selectedApiEndpoint}
                     onAfterClear={() => {
@@ -354,7 +353,7 @@ const APIExplorer = () => {
                       setRequest({
                         ...requestDefault,
                         method: selectedApiEndpoint.method,
-                        path: generatePath(selectedApiEndpoint, [], []),
+                        path: generatePath(selectedApiEndpoint.path, [], []),
                         pathParams: generatePathParams(
                           selectedApiEndpoint,
                           requestDefault
@@ -415,14 +414,13 @@ const APIExplorer = () => {
                     </span>
                   </div>
                   <div className="ml-auto">
-                    <button
-                      type="button"
+                    <Button
+                      size="lg"
                       data-testid="send-api-btn"
                       onClick={handleSend}
-                      className="inline-flex items-center rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                     >
                       Send
-                    </button>
+                    </Button>
                   </div>
                 </nav>
               </div>
@@ -649,7 +647,7 @@ const APIExplorer = () => {
               </div>
             </div>
             <div className="w-full flex flex-col gap-8 pb-20">
-              <h3 className="text-2xl font-semibold leading-6 text-blue-800">
+              <h3 className="text-2xl font-semibold leading-6">
                 Request History
               </h3>
               <APIHistory

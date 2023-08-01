@@ -4,6 +4,7 @@ import { formatJSON, getDateString } from "../../lib/utils";
 import { Disclosure } from "@headlessui/react";
 import { ChevronUpIcon } from "@heroicons/react/20/solid";
 import CodeEditor from "../apis/CodeEditor";
+import { ScrollArea } from "../ui/scroll-area";
 
 interface Props {
   history: EventHistoryItem[];
@@ -22,11 +23,13 @@ const EventsHistory: React.FC<Props> = ({ selectedWorker, history }) => {
 
   return (
     <div className="pb-10">
-      <div className="flex flex-col gap-2 overflow-y-scroll max-h-[40rem]">
-        {requestHistory.map((h, idx) => (
-          <EventHistoryAccordion key={idx} {...h} />
-        ))}
-      </div>
+      <ScrollArea className="h-[30rem]" type="always">
+        <div className="flex flex-col gap-2">
+          {requestHistory.map((h, idx) => (
+            <EventHistoryAccordion key={idx} {...h} />
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 };

@@ -79,7 +79,7 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round, pill }) => {
                 <span
                   className={classNames(
                     tabIdx === index
-                      ? "bg-indigo-100 text-blue-600"
+                      ? "bg-indigo-100 text-primary"
                       : "bg-gray-100 text-gray-900",
                     "ml-3 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block"
                   )}

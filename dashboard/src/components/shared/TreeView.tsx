@@ -15,7 +15,7 @@ import {
 import classNames from "classnames";
 import { debounce } from "radash";
 import TextField from "./TextField";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface Props<T>
   extends Omit<ControlledTreeEnvironmentProps<T>, "viewState"> {
@@ -112,7 +112,7 @@ const TreeView = <T extends Record<string, any>>({
         renderItemArrow={({ item, context }) =>
           item.isFolder ? (
             context.isExpanded ? (
-              <FolderOpenIcon className="w-6 h-6 text-blue-600" />
+              <FolderOpenIcon className="w-6 h-6 text-primary" />
             ) : (
               <FolderIcon className="w-6 h-6 text-gray-500" />
             )

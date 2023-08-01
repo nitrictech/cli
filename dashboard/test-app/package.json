@@ -5,7 +5,7 @@
   "main": "index.js",
   "private": true,
   "dependencies": {
-    "@nitric/sdk": "latest"
+    "@nitric/sdk": "^0.15.0"
   },
   "devDependencies": {
     "dotenv": "^16.0.2",

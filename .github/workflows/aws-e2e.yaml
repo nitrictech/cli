@@ -16,6 +16,7 @@ concurrency:
 env:
   GOPROXY: https://proxy.golang.org
   AWS_REGION: us-east-1
+  FATHOM_SITE: ${{ vars.FATHOM_SITE }}
 
 jobs:
   e2e-aws:

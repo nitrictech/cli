@@ -14,6 +14,7 @@ concurrency:
 
 env:
   GOPROXY: https://proxy.golang.org
+  FATHOM_SITE: FAKE1234
 
 jobs:
   nitric-dashboard:

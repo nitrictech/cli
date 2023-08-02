@@ -3,8 +3,11 @@ name: Release Docker images
 on:
   push:
     branches:
-      - 'develop'
-      - 'main'
+      - "develop"
+      - "main"
+
+env:
+  FATHOM_SITE: ${{ vars.FATHOM_SITE }}
 
 jobs:
   push_to_registry:

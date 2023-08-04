@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { APIRequest, WebSocket, WebSocketsInfo } from "../../types";
 import { FieldRows, Loading } from "../shared";
-import { generatePath, getHost } from "../../lib/utils";
+import { formatJSON, generatePath, getHost } from "../../lib/utils";
 
 import { useWebSocket } from "../../lib/hooks/use-web-socket";
 import AppLayout from "../layout/AppLayout";
@@ -47,6 +47,7 @@ import { Textarea } from "../ui/textarea";
 import useSWRSubscription from "swr/subscription";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export const LOCAL_STORAGE_KEY = "nitric-local-dash-api-history";
 
@@ -281,19 +282,37 @@ const WSExplorer = () => {
                   </div>
                   <div className="hidden lg:flex items-center">
                     <span className="text-lg flex gap-2">
-                      <span data-testid="generated-request-path">
-                        {websocketAddress}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          copyToClipboard(websocketAddress);
-                          toast.success("Copied Websocket URL");
-                        }}
-                      >
-                        <span className="sr-only">Copy Route URL</span>
-                        <ClipboardIcon className="w-5 h-5 text-gray-500" />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            data-testid="generated-request-path"
+                            className="truncate max-w-xl"
+                          >
+                            {websocketAddress}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{websocketAddress}</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(websocketAddress);
+                              toast.success("Copied Websocket URL");
+                            }}
+                          >
+                            <span className="sr-only">Copy Route URL</span>
+                            <ClipboardIcon className="w-5 h-5 text-gray-500" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Copy</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </span>
                   </div>
                   {tab === "send-messages" && (
@@ -365,7 +384,10 @@ const WSExplorer = () => {
                     <CardContent>
                       <div className="my-4 max-w-full text-sm">
                         {wsInfo?.messages?.length ? (
-                          <ScrollArea className="h-[50vh] px-6" type="always">
+                          <ScrollArea
+                            className="h-[50vh] w-full px-6"
+                            type="always"
+                          >
                             {wsInfo.messages
                               .filter((message) => {
                                 let pass = true;
@@ -383,55 +405,69 @@ const WSExplorer = () => {
 
                                 return pass;
                               })
-                              .map((message, i) => (
-                                <Accordion type="multiple" key={message.time}>
-                                  <AccordionItem value={message.time}>
-                                    <AccordionTrigger className="flex justify-between">
-                                      <div>
-                                        <MessageIcon
-                                          type={
-                                            message.data ===
-                                            "Binary messages are not currently supported by AWS"
-                                              ? "error"
-                                              : "message-in"
-                                          }
-                                        />
-                                      </div>
-                                      <span
-                                        data-testid={`accordion-message-${i}`}
-                                        className="px-2 truncate max-w-4xl"
-                                      >
-                                        {message.data}
-                                      </span>
-                                      <span className="ml-auto px-2">
-                                        {format(
-                                          new Date(message.time),
-                                          "HH:mm:ss"
+                              .map((message, i) => {
+                                const shouldBeJSON = /^[{[]/.test(
+                                  message.data.trim()
+                                );
+
+                                return (
+                                  <Accordion type="multiple" key={i}>
+                                    <AccordionItem value={message.time}>
+                                      <AccordionTrigger className="flex justify-between">
+                                        <div>
+                                          <MessageIcon
+                                            type={
+                                              message.data ===
+                                              "Binary messages are not currently supported by AWS"
+                                                ? "error"
+                                                : "message-in"
+                                            }
+                                          />
+                                        </div>
+                                        <span
+                                          data-testid={`accordion-message-${i}`}
+                                          className="px-2 truncate max-w-3xl"
+                                        >
+                                          {message.data}
+                                        </span>
+                                        <span className="ml-auto px-2">
+                                          {format(
+                                            new Date(message.time),
+                                            "HH:mm:ss"
+                                          )}
+                                        </span>
+                                      </AccordionTrigger>
+                                      <AccordionContent>
+                                        {message.data ===
+                                        "Binary messages are not currently supported by AWS" ? (
+                                          <p>
+                                            Binary messages are not currently
+                                            supported by AWS. Util this is
+                                            supported, use a text-based payload.
+                                          </p>
+                                        ) : (
+                                          <CodeEditor
+                                            id="message-viewer"
+                                            contentType={
+                                              shouldBeJSON
+                                                ? "application/json"
+                                                : "text/html"
+                                            }
+                                            readOnly
+                                            value={
+                                              shouldBeJSON
+                                                ? formatJSON(message.data)
+                                                : message.data
+                                            }
+                                            height="208px"
+                                            className="h-52"
+                                          />
                                         )}
-                                      </span>
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                      {message.data ===
-                                      "Binary messages are not currently supported by AWS" ? (
-                                        <p>
-                                          Binary messages are not currently
-                                          supported by AWS. Util this is
-                                          supported, use a text-based payload.
-                                        </p>
-                                      ) : (
-                                        <CodeEditor
-                                          id="message-viewer"
-                                          contentType={"text/html"}
-                                          readOnly
-                                          value={message.data}
-                                          height="208px"
-                                          className="h-52"
-                                        />
-                                      )}
-                                    </AccordionContent>
-                                  </AccordionItem>
-                                </Accordion>
-                              ))}
+                                      </AccordionContent>
+                                    </AccordionItem>
+                                  </Accordion>
+                                );
+                              })}
                           </ScrollArea>
                         ) : (
                           <span className="text-gray-500 text-lg">
@@ -592,38 +628,55 @@ const WSExplorer = () => {
 
                                 return pass;
                               })
-                              .map((message, i) => (
-                                <Accordion type="multiple" key={message.ts}>
-                                  <AccordionItem value={message.ts.toString()}>
-                                    <AccordionTrigger className="flex justify-between">
-                                      <div>
-                                        <MessageIcon type={message.type} />
-                                      </div>
-                                      <span
-                                        data-testid={`accordion-message-${i}`}
-                                        className="px-2 truncate"
-                                      >
-                                        {message.data}
-                                      </span>
-                                      <span className="ml-auto px-2">
-                                        {format(
-                                          new Date(message.ts),
-                                          "HH:mm:ss"
-                                        )}
-                                      </span>
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                      <CodeEditor
-                                        id="message-viewer"
-                                        contentType={"text/html"}
-                                        readOnly
-                                        value={message.data}
-                                        height="200px"
-                                      />
-                                    </AccordionContent>
-                                  </AccordionItem>
-                                </Accordion>
-                              ))}
+                              .map((message, i) => {
+                                const shouldBeJSON = /^[{[]/.test(
+                                  message.data.trim()
+                                );
+
+                                return (
+                                  <Accordion type="multiple" key={i}>
+                                    <AccordionItem
+                                      value={message.ts.toString()}
+                                    >
+                                      <AccordionTrigger className="flex justify-between">
+                                        <div>
+                                          <MessageIcon type={message.type} />
+                                        </div>
+                                        <span
+                                          data-testid={`accordion-message-${i}`}
+                                          className="px-2 truncate"
+                                        >
+                                          {message.data}
+                                        </span>
+                                        <span className="ml-auto px-2">
+                                          {format(
+                                            new Date(message.ts),
+                                            "HH:mm:ss"
+                                          )}
+                                        </span>
+                                      </AccordionTrigger>
+                                      <AccordionContent>
+                                        <CodeEditor
+                                          id="message-viewer"
+                                          contentType={
+                                            shouldBeJSON
+                                              ? "application/json"
+                                              : "text/html"
+                                          }
+                                          readOnly
+                                          value={
+                                            shouldBeJSON
+                                              ? formatJSON(message.data)
+                                              : message.data
+                                          }
+                                          height="208px"
+                                          className="h-52"
+                                        />
+                                      </AccordionContent>
+                                    </AccordionItem>
+                                  </Accordion>
+                                );
+                              })}
                           </ScrollArea>
                         ) : (
                           <span className="text-gray-500 text-lg">

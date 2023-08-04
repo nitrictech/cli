@@ -96,4 +96,9 @@
   h6 {
     @apply font-display text-gray-900;
   }
+
+  /* fix for radix scroll using table */
+  [data-radix-scroll-area-viewport] > div {
+    @apply !block;
+  }
 }

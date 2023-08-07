@@ -60,9 +60,7 @@ const StorageExplorer = () => {
         {buckets && selectedBucket ? (
           <div className="flex max-w-7xl flex-col md:flex-row gap-8 md:pr-8">
             <div className="w-full flex flex-col gap-8">
-              <h2 className="text-2xl font-medium text-blue-800">
-                {selectedBucket}
-              </h2>
+              <h2 className="text-2xl font-medium">{selectedBucket}</h2>
               <div className="md:hidden">
                 <nav className="flex items-end gap-4" aria-label="Breadcrumb">
                   <ol className="flex min-w-[200px] items-center gap-4">

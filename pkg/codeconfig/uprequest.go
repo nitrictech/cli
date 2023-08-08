@@ -26,6 +26,7 @@ import (
 	"github.com/imdario/mergo"
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/samber/lo"
+	"golang.org/x/exp/slices"
 
 	"github.com/nitrictech/cli/pkg/cron"
 	deploy "github.com/nitrictech/nitric/core/pkg/api/nitric/deploy/v1"
@@ -258,9 +259,40 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 			})
 		}
 
+		// This will produce a compacted map of policy resources with colliding principals and actions
+		// we'll compact all these resources into a single policy object
+		compactedPoliciesByKey := lo.GroupBy(f.policies, func(item *v1.PolicyResource) string {
+			// get the princpals and actions as a unique key (make sure they're sorted for consistency)
+			principalNames := lo.Reduce(item.Principals, func(agg []string, principal *v1.Resource, idx int) []string {
+				return append(agg, principal.Name)
+			}, []string{})
+			slices.Sort(principalNames)
+
+			principals := strings.Join(principalNames, ":")
+
+			slices.Sort(item.Actions)
+			actions := lo.Reduce(item.Actions, func(agg string, action v1.Action, idx int) string {
+				return agg + action.String()
+			}, "")
+
+			return principals + "-" + actions
+		})
+
+		compactedPolicies := []*v1.PolicyResource{}
+		// for each key of the compacted policies we want to make a single policy object that appends all of the policies resources together
+		for _, pols := range compactedPoliciesByKey {
+			newPol := pols[0]
+
+			for _, pol := range pols[1:] {
+				newPol.Resources = append(newPol.Resources, pol.Resources...)
+			}
+
+			compactedPolicies = append(compactedPolicies, newPol)
+		}
+
 		dedupedPolicies := map[string]*v1.PolicyResource{}
 
-		for _, v := range f.policies {
+		for _, v := range compactedPolicies {
 			policyName, err := policyResourceName(v)
 			if err != nil {
 				return nil, err

@@ -40,6 +40,7 @@ import toast from "react-hot-toast";
 import { ClipboardIcon } from "@heroicons/react/24/outline";
 import { APIMethodBadge } from "./APIMethodBadge";
 import { Button } from "../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 const getTabCount = (rows: FieldRow[]) => {
   if (!rows) return 0;
@@ -398,19 +399,35 @@ const APIExplorer = () => {
                       className="text-lg flex gap-2"
                       data-testid="generated-request-path"
                     >
-                      {request.path}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          copyToClipboard(
-                            `http://${apiAddress}${request.path}`
-                          );
-                          toast.success("Copied Route URL");
-                        }}
-                      >
-                        <span className="sr-only">Copy Route URL</span>
-                        <ClipboardIcon className="w-5 h-5 text-gray-500" />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="truncate max-w-xl">
+                            {request.path}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{request.path}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(
+                                `http://${apiAddress}${request.path}`
+                              );
+                              toast.success("Copied Route URL");
+                            }}
+                          >
+                            <span className="sr-only">Copy Route URL</span>
+                            <ClipboardIcon className="w-5 h-5 text-gray-500" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Copy Route URL</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </span>
                   </div>
                   <div className="ml-auto">

@@ -28,6 +28,7 @@ import { ClipboardIcon } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import { capitalize } from "radash";
 import { Button } from "../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface Props {
   workerType: "schedules" | "topics";
@@ -150,6 +151,9 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
     setTimeout(() => setCallLoading(false), 300);
   };
 
+  const workerTitleSingle = capitalize(workerType).slice(0, -1);
+  const generatedURL = `http://${data?.triggerAddress}/topic/${selectedWorker?.topicKey}`;
+
   return (
     <AppLayout
       title={capitalize(workerType)}
@@ -218,19 +222,35 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                     </li>
                   </ol>
                   <span className="text-lg hidden md:flex gap-2">
-                    {`http://${data.triggerAddress}/topic/${selectedWorker?.topicKey}`}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        copyToClipboard(
-                          `http://${data.triggerAddress}/topic/${selectedWorker?.topicKey}`
-                        );
-                        toast.success("Copied Schedule URL");
-                      }}
-                    >
-                      <span className="sr-only">Copy Route URL</span>
-                      <ClipboardIcon className="w-5 h-5 text-gray-500" />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="truncate max-w-lg">
+                          {generatedURL}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{generatedURL}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            copyToClipboard(generatedURL);
+                            toast.success(`Copied ${workerTitleSingle} URL`);
+                          }}
+                        >
+                          <span className="sr-only">
+                            Copy {workerTitleSingle} URL
+                          </span>
+                          <ClipboardIcon className="w-5 h-5 text-gray-500" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Copy {workerTitleSingle} URL</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </span>
                   <span className="hidden md:block"></span>
                   <div className="ml-auto">

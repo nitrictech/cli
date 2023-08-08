@@ -14,6 +14,7 @@ concurrency:
 
 env:
   GOPROXY: https://proxy.golang.org
+  FATHOM_SITE: ${{ vars.FATHOM_SITE }}
 
 jobs:
   nitric-run:

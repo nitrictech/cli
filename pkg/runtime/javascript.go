@@ -20,7 +20,6 @@ import (
 	_ "embed"
 	"io"
 	"path/filepath"
-	"strings"
 )
 
 type javascript struct {
@@ -37,7 +36,7 @@ var (
 )
 
 func (t *javascript) ContainerName() string {
-	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
+	return normalizeFileName(t.handler)
 }
 
 func (t *javascript) BuildIgnore(additional ...string) []string {

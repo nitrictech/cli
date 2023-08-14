@@ -20,7 +20,6 @@ import (
 	_ "embed"
 	"io"
 	"path/filepath"
-	"strings"
 )
 
 type typescript struct {
@@ -34,7 +33,7 @@ var _ Runtime = &typescript{}
 var typescriptDockerfile string
 
 func (t *typescript) ContainerName() string {
-	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
+	return normalizeFileName(t.handler)
 }
 
 func (t *typescript) BuildIgnore(additional ...string) []string {

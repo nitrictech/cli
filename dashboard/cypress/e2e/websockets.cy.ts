@@ -102,7 +102,7 @@ describe("Websockets Spec", () => {
 
     cy.getTestEl("accordion-message-0").should(
       "have.text",
-      `{"firstParam":["myValue"],"secondParam":["mySecondValue"]}`
+      "My awesome test message!"
     );
   });
 

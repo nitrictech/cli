@@ -305,10 +305,7 @@ socket.on("disconnect", async (ctx) => {
   await connections.doc(ctx.req.connectionId).delete();
 });
 
-const broadcast = async (
-  data: string | Uint8Array,
-  query: Record<string, string[]>
-) => {
+const broadcast = async (data: string | Uint8Array) => {
   try {
     const connectionStream = connections.query().stream();
 
@@ -320,10 +317,7 @@ const broadcast = async (
       // Send message to a connection
       try {
         // will replace data with a strinified version of query if it exists (for tests)
-        await socket.send(
-          content.connectionId,
-          Object.keys(query).length ? JSON.stringify(query) : data
-        );
+        await socket.send(content.connectionId, data);
       } catch (e) {
         if (e.message.startsWith("13 INTERNAL: could not get connection")) {
           await connections.doc(content.connectionId).delete();
@@ -337,5 +331,5 @@ const broadcast = async (
 
 socket.on("message", async (ctx) => {
   // broadcast message to all clients (including the sender)
-  await broadcast(ctx.req.data, ctx.req.query);
+  await broadcast(ctx.req.data);
 });

@@ -84,7 +84,7 @@ const WSExplorer = () => {
   const [messageFilter, setMessageFilter] = useState("");
   const [messageTypeFilter, setMessageTypeFilter] = useState("all");
   const [tab, setTab] = useState("monitor");
-  const [selectedWebsocket, setselectedWebsocket] = useState<WebSocket>();
+  const [selectedWebsocket, setSelectedWebsocket] = useState<WebSocket>();
 
   const [connected, setConnected] = useState(false);
   const [queryParams, setQueryParams] = useState<APIRequest["queryParams"]>([
@@ -95,8 +95,58 @@ const WSExplorer = () => {
   ]);
 
   useEffect(() => {
+    if (selectedWebsocket) {
+      setMonitorMessageFilter("");
+      setMessageFilter("");
+
+      // restore data
+      const dataStr = localStorage.getItem(
+        `nitric-local-ws-history-${selectedWebsocket?.name}`
+      );
+
+      if (dataStr) {
+        const data = JSON.parse(dataStr);
+
+        setQueryParams(data.queryParams);
+        setMessages(data.messages);
+        setTab(data.tab);
+        setPayloadType(data.payloadType);
+        setCurrentPayload(data.currentPayload);
+      } else {
+        setQueryParams([
+          {
+            key: "",
+            value: "",
+          },
+        ]);
+        setMessages([]);
+        setTab("monitor");
+        setPayloadType("text");
+        setCurrentPayload("");
+      }
+
+      if (connected) {
+        websocketRef.current?.close(4001); // to indicate in close callback to not add close message
+      }
+    }
+  }, [selectedWebsocket]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      `nitric-local-ws-history-${selectedWebsocket?.name}`,
+      JSON.stringify({
+        queryParams,
+        messages,
+        payloadType,
+        currentPayload,
+        tab,
+      })
+    );
+  }, [queryParams, messages, payloadType, currentPayload, tab]);
+
+  useEffect(() => {
     if (!selectedWebsocket && data?.websockets.length) {
-      setselectedWebsocket(data?.websockets[0]);
+      setSelectedWebsocket(data?.websockets[0]);
     }
   }, [data?.websockets]);
 
@@ -172,16 +222,21 @@ const WSExplorer = () => {
       });
 
       socket.addEventListener("close", (event) => {
-        setMessages((prev) => [
-          {
-            data: `Disconnected from ${websocketAddress}`,
-            ts: new Date().getTime(),
-            type: "disconnect",
-          },
-          ...prev,
-        ]);
+        if (event.code !== 4001) {
+          // code from switching websockets in dash, ignore disconnect message
+          setMessages((prev) => [
+            {
+              data: `Disconnected from ${websocketAddress}`,
+              ts: new Date().getTime(),
+              type: "disconnect",
+            },
+            ...prev,
+          ]);
+        }
 
         websocketRef.current = undefined;
+
+        setConnected(false);
       });
     } else if (websocketRef.current) {
       websocketRef.current.close();
@@ -237,7 +292,7 @@ const WSExplorer = () => {
             <WSTreeView
               initialItem={selectedWebsocket}
               onSelect={(ws) => {
-                setselectedWebsocket(ws);
+                setSelectedWebsocket(ws);
               }}
               websockets={data.websockets}
             />
@@ -264,7 +319,7 @@ const WSExplorer = () => {
                             (ws) => ws.name === socketName
                           );
 
-                          setselectedWebsocket(ws);
+                          setSelectedWebsocket(ws);
                         }}
                       >
                         <SelectTrigger>
@@ -329,7 +384,7 @@ const WSExplorer = () => {
                   )}
                 </nav>
               </div>
-              <Tabs defaultValue={tab} onValueChange={setTab}>
+              <Tabs value={tab} onValueChange={setTab}>
                 <TabsList>
                   <TabsTrigger
                     value="monitor"

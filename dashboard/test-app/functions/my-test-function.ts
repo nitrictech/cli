@@ -16,6 +16,8 @@ const socket = websocket("socket");
 
 const socket2 = websocket("socket-2");
 
+const socket3 = websocket("socket-3");
+
 const connections = collection("connections").for(
   "reading",
   "writing",
@@ -332,4 +334,16 @@ const broadcast = async (data: string | Uint8Array) => {
 socket.on("message", async (ctx) => {
   // broadcast message to all clients (including the sender)
   await broadcast(ctx.req.data);
+});
+
+socket3.on("connect", (ctx) => {
+  ctx.res.success = false;
+});
+
+socket3.on("disconnect", (ctx) => {
+  ctx.res.success = false;
+});
+
+socket3.on("message", (ctx) => {
+  ctx.res.success = false;
 });

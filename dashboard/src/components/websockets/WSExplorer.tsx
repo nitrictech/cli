@@ -201,7 +201,7 @@ const WSExplorer = () => {
       socket.addEventListener("error", (event: any) => {
         setMessages((prev) => [
           {
-            data: event.error,
+            data: `Error connecting to ${websocketAddress}, check your connect callback`,
             ts: new Date().getTime(),
             type: "error",
           },

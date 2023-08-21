@@ -17,36 +17,25 @@
 package runtime
 
 import (
-	_ "embed"
-	"io"
-	"path/filepath"
+	"testing"
 )
 
-type typescript struct {
-	rte     RuntimeExt
-	handler string
-}
+func TestNormalizeExtension(t *testing.T) {
+	handler := "test.ts"
 
-var _ Runtime = &typescript{}
+	result := normalizeFileName(handler)
 
-//go:embed typescript.dockerfile
-var typescriptDockerfile string
-
-func (t *typescript) ContainerName() string {
-	return normalizeFileName(t.handler)
-}
-
-func (t *typescript) BuildIgnore(additional ...string) []string {
-	return append(additional, javascriptIgnoreList...)
-}
-
-func (t *typescript) BuildArgs() map[string]string {
-	return map[string]string{
-		"HANDLER": filepath.ToSlash(t.handler),
+	if result != "test" {
+		t.Error("expected ", result, "to equal test")
 	}
 }
 
-func (t *typescript) BaseDockerFile(w io.Writer) error {
-	_, err := w.Write([]byte(typescriptDockerfile))
-	return err
+func TestNormalizeWithDots(t *testing.T) {
+	handler := "test.api.ts"
+
+	result := normalizeFileName(handler)
+
+	if result != "test-api" {
+		t.Error("expected ", result, "to equal test-api")
+	}
 }

@@ -20,7 +20,6 @@ import (
 	_ "embed"
 	"io"
 	"path/filepath"
-	"strings"
 )
 
 //go:embed python.dockerfile
@@ -34,7 +33,7 @@ type python struct {
 var _ Runtime = &python{}
 
 func (t *python) ContainerName() string {
-	return strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1)
+	return normalizeFileName(t.handler)
 }
 
 func (t *python) BuildIgnore(additional ...string) []string {

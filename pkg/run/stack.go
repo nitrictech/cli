@@ -18,9 +18,10 @@ package run
 
 import (
 	"fmt"
-	"github.com/samber/lo"
 	"sort"
 	"strings"
+
+	"github.com/samber/lo"
 
 	"github.com/pterm/pterm"
 

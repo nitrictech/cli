@@ -18,7 +18,10 @@ package run
 
 import (
 	"fmt"
+	"sort"
 	"strings"
+
+	"github.com/samber/lo"
 
 	"github.com/pterm/pterm"
 
@@ -167,9 +170,12 @@ func (r *RunStackState) WebsocketsTable(port int) (string, int) {
 func (r *RunStackState) TopicTable() (string, int) {
 	tableData := pterm.TableData{{"Topic", "Endpoint"}}
 
-	for k, address := range r.subs {
+	topicKeys := lo.Keys[string, string](r.subs)
+	sort.Strings(topicKeys)
+
+	for _, k := range topicKeys {
 		tableData = append(tableData, []string{
-			k, address,
+			k, r.subs[k],
 		})
 	}
 

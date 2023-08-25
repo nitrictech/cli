@@ -6,9 +6,9 @@ describe("Websockets Spec", () => {
 
   it("should retrieve correct websockets", () => {
     cy.get("h2").should("contain.text", "socket");
-    cy.getTestEl("Topics-count").should("have.text", "2");
+    cy.getTestEl("Websockets-count").should("have.text", "3");
 
-    const expectedWebsockets = ["socket", "socket-2"];
+    const expectedWebsockets = ["socket", "socket-2", "socket-3"];
 
     expectedWebsockets.forEach((id) => {
       cy.get(`[data-rct-item-id="${id}"]`).should("exist");
@@ -71,6 +71,26 @@ describe("Websockets Spec", () => {
     cy.getTestEl("accordion-message-0").should("not.exist");
   });
 
+  it("should handle errors in the connect callback", () => {
+    cy.get(`[data-rct-item-id="socket-3"]`).click();
+
+    cy.getTestEl("send-messages-tab-trigger", 5000).click();
+
+    cy.getTestEl("connect-btn").click();
+
+    cy.getTestEl("connected-status").should("have.text", "Disconnected");
+
+    cy.getTestEl("accordion-message-0").should(
+      "have.text",
+      "Disconnected from ws://localhost:4005"
+    );
+
+    cy.getTestEl("accordion-message-1").should(
+      "have.text",
+      "Error connecting to ws://localhost:4005, check your connect callback"
+    );
+  });
+
   it("should handle query params", () => {
     cy.getTestEl("send-messages-tab-trigger", 5000).click();
 
@@ -102,7 +122,7 @@ describe("Websockets Spec", () => {
 
     cy.getTestEl("accordion-message-0").should(
       "have.text",
-      `{"firstParam":["myValue"],"secondParam":["mySecondValue"]}`
+      "My awesome test message!"
     );
   });
 

@@ -34,7 +34,7 @@ type csharp struct {
 var _ Runtime = &csharp{}
 
 func (t *csharp) ContainerName() string {
-	return strings.ToLower(strings.Replace(filepath.Base(t.handler), filepath.Ext(t.handler), "", 1))
+	return normalizeFileName(t.handler)
 }
 
 func (t *csharp) BuildIgnore(additional ...string) []string {

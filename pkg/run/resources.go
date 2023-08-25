@@ -47,7 +47,7 @@ func (r *RunResourcesService) getApiDetails(name string) (*resource.DetailsRespo
 		Provider: "dev",
 		Service:  "Api",
 		Detail: resource.ApiDetails{
-			URL: gatewayUri,
+			URL: fmt.Sprintf("http://%s", gatewayUri),
 		},
 	}, nil
 }

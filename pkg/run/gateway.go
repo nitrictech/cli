@@ -482,6 +482,10 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 	}
 }
 
+func (s *BaseHttpGateway) handleBucketUpload(ctx *fasthttp.RequestCtx) {
+
+}
+
 func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 	topicName := ctx.UserValue("name").(string)
 
@@ -761,6 +765,10 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 
 	// Setup routes
 	r := router.New()
+
+	// Proxy presign URLs for writing
+	r.PUT("/upload/{bucket}/{name}", s.handleBucketUpload)
+
 	// Publish to a topic
 	r.POST("/topic/{name}", s.handleTopicRequest)
 

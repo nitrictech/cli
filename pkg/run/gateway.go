@@ -68,6 +68,7 @@ type BaseHttpGateway struct {
 	socketServer     map[string]*socketServer
 	serviceServer    *fasthttp.Server
 	websocketPlugin  *RunWebsocketService
+	storagePlugin    *RunStorageService
 	serviceListener  net.Listener
 	gateway.UnimplementedGatewayPlugin
 	stop     chan bool
@@ -483,7 +484,20 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 }
 
 func (s *BaseHttpGateway) handleBucketUpload(ctx *fasthttp.RequestCtx) {
+	bucketName := ctx.UserValue("bucket").(string)
+	file := ctx.UserValue("file").(string)
 
+	// Read the body
+	body := ctx.Request.Body()
+
+	// write the file
+	err := s.storagePlugin.Write(context.TODO(), bucketName, file, body)
+	if err != nil {
+		ctx.Error("error uploading file", 500)
+		return
+	}
+
+	ctx.SuccessString("text/plain", "successful upload")
 }
 
 func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
@@ -767,7 +781,7 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 	r := router.New()
 
 	// Proxy presign URLs for writing
-	r.PUT("/upload/{bucket}/{name}", s.handleBucketUpload)
+	r.PUT("/upload/{bucket}/{file:*}", s.handleBucketUpload)
 
 	// Publish to a topic
 	r.POST("/topic/{name}", s.handleTopicRequest)
@@ -816,8 +830,9 @@ func (s *BaseHttpGateway) Stop() error {
 
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
-func NewGateway(wsPlugin *RunWebsocketService) (*BaseHttpGateway, error) {
+func NewGateway(wsPlugin *RunWebsocketService, storagePlugin *RunStorageService) (*BaseHttpGateway, error) {
 	return &BaseHttpGateway{
 		websocketPlugin: wsPlugin,
+		storagePlugin:   storagePlugin,
 	}, nil
 }

@@ -159,6 +159,11 @@ func (r *RunStorageService) PreSignUrl(ctx context.Context, bucket string, key s
 		return "", err
 	}
 
+	if operation == storage.WRITE {
+		// return proxy address
+		return fmt.Sprintf("http://localhost:4000/upload/%s/%s", bucket, key), nil
+	}
+
 	return r.StorageService.PreSignUrl(ctx, bucket, key, operation, expiry)
 }
 

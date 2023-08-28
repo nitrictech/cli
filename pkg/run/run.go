@@ -214,7 +214,7 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 	wsPlugin, _ := NewRunWebsocketService(l.dashboard)
 
 	// Start a new gateway plugin
-	l.gateway, err = NewGateway(wsPlugin)
+	l.gateway, err = NewGateway(wsPlugin, l.storageService)
 	if err != nil {
 		return err
 	}

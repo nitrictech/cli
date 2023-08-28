@@ -56,7 +56,7 @@ func NewCustomRuntime(handler string, dockerfile string, args map[string]string)
 // normalizeFileName - Normalizes a file name to a usable container name
 func normalizeFileName(handler string) string {
 	baseName := strings.Replace(filepath.Base(handler), filepath.Ext(handler), "", 1)
-	return strings.Replace(baseName, ".", "-", -1)
+	return strings.ToLower(strings.Replace(baseName, ".", "-", -1))
 }
 
 func NewRunTimeFromHandler(handler string) (Runtime, error) {

@@ -18,14 +18,11 @@ package project
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/utils"
-
-	"github.com/docker/distribution/reference"
 )
 
 var stackPath string
@@ -74,16 +71,7 @@ func FromConfig(c *Config) (*Project, error) {
 }
 
 func FunctionFromHandler(handlerFile string, config *HandlerConfig) (Function, error) {
-	_, err := reference.Parse(filepath.Base(handlerFile))
-	if err != nil {
-		return Function{}, fmt.Errorf("handler filepath \"%s\" is invalid, must be valid ASCII containing lowercase and uppercase letters, digits, underscores, periods and hyphens", handlerFile)
-	}
-
 	pterm.Debug.Println("Using function from " + handlerFile)
-
-	if err != nil {
-		return Function{}, err
-	}
 
 	return Function{
 		Handler: handlerFile,

@@ -70,7 +70,7 @@ var runCmd = &cobra.Command{
 			utils.CheckErr(err)
 		}
 
-		dash, err := dashboard.New(proj, envMap)
+		dash, err := dashboard.New(proj, envMap, true)
 		if err != nil {
 			utils.CheckErr(err)
 		}

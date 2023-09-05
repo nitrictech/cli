@@ -4,13 +4,13 @@ import {
   FileToolbar,
   FileList,
   setChonkyDefaults,
-  FileArray,
+  type FileArray,
   ChonkyActions,
-  ChonkyFileActionData,
-  FileData,
+  type ChonkyFileActionData,
+  type FileData,
   FileContextMenu,
 } from "chonky";
-import { FC, useCallback, useEffect, useMemo, useState } from "react";
+import { type FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useWebSocket } from "../../lib/hooks/use-web-socket";
 import { useBucket } from "../../lib/hooks/use-bucket";
 

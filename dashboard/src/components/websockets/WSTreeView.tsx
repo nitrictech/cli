@@ -1,6 +1,6 @@
-import { FC, useMemo } from "react";
+import { type FC, useMemo } from "react";
 import type { WebSocket } from "../../types";
-import TreeView, { TreeItemType } from "../shared/TreeView";
+import TreeView, { type TreeItemType } from "../shared/TreeView";
 import type { TreeItem, TreeItemIndex } from "react-complex-tree";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";

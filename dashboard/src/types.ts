@@ -58,6 +58,8 @@ export interface WebSocketResponse {
   apiAddresses: Record<string, string>;
   websocketAddresses: Record<string, string>;
   storageAddress: string; // has http:// prefix
+  currentVersion: string;
+  latestVersion: string;
 }
 
 export interface Param {

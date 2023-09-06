@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { ArrowUpOnSquareIcon } from "@heroicons/react/24/outline";
-import { DropzoneOptions, useDropzone } from "react-dropzone";
+import { type DropzoneOptions, useDropzone } from "react-dropzone";
 import type { FC } from "react";
 
 type Props = DropzoneOptions;

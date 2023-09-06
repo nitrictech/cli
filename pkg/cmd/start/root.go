@@ -38,6 +38,8 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
+var noBrowser bool
+
 var startCmd = &cobra.Command{
 	Use:         "start",
 	Short:       "Run nitric services locally for development and testing",
@@ -58,7 +60,7 @@ var startCmd = &cobra.Command{
 		proj, err := project.FromConfig(config)
 		utils.CheckErr(err)
 
-		dash, err := dashboard.New(proj, map[string]string{})
+		dash, err := dashboard.New(proj, map[string]string{}, noBrowser || output.CI)
 		utils.CheckErr(err)
 
 		ls := run.NewLocalServices(&project.Project{
@@ -146,5 +148,7 @@ var startCmd = &cobra.Command{
 }
 
 func RootCommand() *cobra.Command {
+	startCmd.PersistentFlags().BoolVar(&noBrowser, "no-browser", false, "disable browser opening for local dashboard, note: in CI mode the browser opening feature is disabled")
+
 	return startCmd
 }

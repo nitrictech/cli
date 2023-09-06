@@ -145,7 +145,7 @@ const WSExplorer = () => {
   }, [queryParams, messages, payloadType, currentPayload, tab]);
 
   useEffect(() => {
-    if (!selectedWebsocket && data?.websockets.length) {
+    if (!selectedWebsocket && data?.websockets?.length) {
       setSelectedWebsocket(data?.websockets[0]);
     }
   }, [data?.websockets]);

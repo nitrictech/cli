@@ -1,7 +1,7 @@
-import { FC, useMemo } from "react";
+import { type FC, useMemo } from "react";
 import type { Endpoint, Method } from "../../types";
 import { APIMethodBadge } from "./APIMethodBadge";
-import TreeView, { TreeItemType } from "../shared/TreeView";
+import TreeView, { type TreeItemType } from "../shared/TreeView";
 import type { TreeItem, TreeItemIndex } from "react-complex-tree";
 
 export interface APITreeItemType extends TreeItemType<Endpoint> {

@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/docker/distribution/reference"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
@@ -100,6 +101,14 @@ func BuildBaseImages(s *project.Project) error {
 		}
 
 		maxConcurrency = newVal
+	}
+
+	// check functions for valid names
+	for _, fun := range s.Functions {
+		_, err := reference.Parse(fun.Name)
+		if err != nil {
+			return fmt.Errorf("invalid handler name \"%s\". Names can only include alphanumeric characters, underscores, periods and hyphens", fun.Handler)
+		}
 	}
 
 	pterm.Debug.Printfln("running builds %d at a time", maxConcurrency)

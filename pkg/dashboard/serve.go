@@ -19,10 +19,15 @@ package dashboard
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"os/exec"
+	"runtime"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -30,6 +35,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/update"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
@@ -63,6 +69,7 @@ type Dashboard struct {
 	websocketsInfo       map[string]*WebsocketInfo
 	resourcesLastUpdated time.Time
 	bucketNotifications  []*codeconfig.BucketNotification
+	noBrowser            bool
 }
 
 type Api struct {
@@ -82,6 +89,8 @@ type DashboardResponse struct {
 	TriggerAddress      string                           `json:"triggerAddress,omitempty"`
 	StorageAddress      string                           `json:"storageAddress,omitempty"`
 	BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications,omitempty"`
+	CurrentVersion      string                           `json:"currentVersion,omitempty"`
+	LatestVersion       string                           `json:"latestVersion,omitempty"`
 }
 
 type Bucket struct {
@@ -101,7 +110,7 @@ type RefreshOptions struct {
 //go:embed dist/*
 var content embed.FS
 
-func New(p *project.Project, envMap map[string]string) (*Dashboard, error) {
+func New(p *project.Project, envMap map[string]string, noBrowser bool) (*Dashboard, error) {
 	stackWebSocket := melody.New()
 
 	historyWebSocket := melody.New()
@@ -119,6 +128,7 @@ func New(p *project.Project, envMap map[string]string) (*Dashboard, error) {
 		schedules:           []*codeconfig.TopicResult{},
 		topics:              []*codeconfig.TopicResult{},
 		websocketsInfo:      map[string]*WebsocketInfo{},
+		noBrowser:           noBrowser,
 	}, nil
 }
 
@@ -311,6 +321,14 @@ func (d *Dashboard) Serve(storagePlugin storage.StorageService) (*int, error) {
 
 	port := dashListener.Addr().(*net.TCPAddr).Port
 
+	// open browser
+	if !d.noBrowser {
+		err = openBrowser(fmt.Sprintf("http://localhost:%s", strconv.Itoa(port)))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &port, nil
 }
 
@@ -322,6 +340,9 @@ func handleResponseWriter(w http.ResponseWriter, data []byte) {
 }
 
 func (d *Dashboard) sendStackUpdate() error {
+	currentVersion := strings.TrimPrefix(utils.Version, "v")
+	latestVersion := update.FetchLatestVersion()
+
 	response := &DashboardResponse{
 		Apis:                d.apis,
 		Topics:              d.topics,
@@ -334,6 +355,8 @@ func (d *Dashboard) sendStackUpdate() error {
 		TriggerAddress:      d.triggerAddress,
 		StorageAddress:      d.storageAddress,
 		BucketNotifications: d.bucketNotifications,
+		CurrentVersion:      currentVersion,
+		LatestVersion:       latestVersion,
 	}
 
 	// Encode the response as JSON
@@ -373,4 +396,26 @@ func (d *Dashboard) sendWebsocketsUpdate() error {
 	err = d.wsWebSocket.Broadcast(jsonData)
 
 	return err
+}
+
+func openBrowser(url string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "linux":
+		cmd = exec.Command("xdg-open", url)
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+
+	err := cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

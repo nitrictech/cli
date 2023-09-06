@@ -1,16 +1,18 @@
-import { Fragment, PropsWithChildren, ReactNode, useState } from "react";
-import { Dialog, Menu, Popover, Transition } from "@headlessui/react";
+import {
+  Fragment,
+  type PropsWithChildren,
+  type ReactNode,
+  useState,
+} from "react";
+import { Dialog, Popover, Transition } from "@headlessui/react";
 import {
   DocumentDuplicateIcon,
   Bars3Icon,
   GlobeAltIcon,
   XMarkIcon,
   ClockIcon,
-  ChatBubbleLeftIcon,
   CircleStackIcon,
   MegaphoneIcon,
-  ChevronDownIcon,
-  BellIcon,
   QuestionMarkCircleIcon,
   PaperAirplaneIcon,
   ChatBubbleBottomCenterIcon,
@@ -25,6 +27,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import { Button } from "../ui/button";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
@@ -56,7 +60,7 @@ const resourceLinks = [
     href: "https://nitric.io/docs",
     icon: DocumentDuplicateIcon,
     description:
-      "Unlock the power of knowledge! Dive into our docs for helpful tips, tricks, and all the information you need to make the most out of Nitric.",
+      "Unlock the power of knowledge! Dive into our docs for helpful tips, tricks, and all the information you need to make the most out of Nitric",
   },
   {
     name: "Send Feedback",
@@ -345,13 +349,113 @@ const AppLayout: React.FC<Props> = ({
 
             <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
               <div className="flex ml-auto items-center gap-x-4 lg:gap-x-6">
+                {data?.currentVersion &&
+                data?.latestVersion &&
+                data?.currentVersion < data?.latestVersion ? (
+                  <Popover className="relative">
+                    {({ open }) => (
+                      <>
+                        <Popover.Button
+                          as={Button}
+                          variant={"destructive"}
+                          className={classNames(
+                            open && "text-opacity-90",
+                            "font-semibold bg-orange-500 hover:bg-orange-600"
+                          )}
+                        >
+                          <span>Update Available</span>
+                          <ExclamationCircleIcon
+                            className={classNames(
+                              "ml-2 h-5 w-5 transition duration-150 ease-in-out group-hover:text-opacity-80",
+                              open && "text-opacity-70"
+                            )}
+                            aria-hidden="true"
+                          />
+                        </Popover.Button>
+                        <Transition
+                          as={Fragment}
+                          enter="transition ease-out duration-200"
+                          enterFrom="opacity-0 translate-y-1"
+                          enterTo="opacity-100 translate-y-0"
+                          leave="transition ease-in duration-150"
+                          leaveFrom="opacity-100 translate-y-0"
+                          leaveTo="opacity-0 translate-y-1"
+                        >
+                          <Popover.Panel className="absolute left-1/2 z-10 mt-3 w-screen max-w-sm -translate-x-1/2 transform px-4 sm:px-0 lg:max-w-3xl">
+                            <div className="w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
+                              <div className="p-4">
+                                <h3 className="text-sm font mb-2 text-center font-semibold leading-6 text-gray-500">
+                                  A new version of Nitric is available
+                                </h3>
+                                <div className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50">
+                                  <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
+                                    <DocumentDuplicateIcon
+                                      className="h-6 w-6 text-gray-600 group-hover:text-primary"
+                                      aria-hidden="true"
+                                    />
+                                  </div>
+                                  <div>
+                                    <a
+                                      href={
+                                        "https://nitric.io/docs/installation"
+                                      }
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="font-semibold text-gray-900"
+                                    >
+                                      Upgrade from version &apos;
+                                      {data.currentVersion}&apos; to &apos;
+                                      {data.latestVersion}&apos;
+                                      <span className="absolute inset-0" />
+                                    </a>
+                                    <p className="mt-1 text-gray-600">
+                                      To upgrade, visit the installation docs
+                                      for instructions and release notes
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="bg-gray-50">
+                                <div className="flex flex-col justify-between">
+                                  <h3 className="text-sm font p-4 text-center font-semibold leading-6 text-gray-500">
+                                    Reach out to the community
+                                  </h3>
+                                  <div className="grid grid-cols-2 divide-x divide-gray-900/5">
+                                    {communityLinks.map((item) => (
+                                      <a
+                                        key={item.name}
+                                        href={item.href}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
+                                      >
+                                        <item.icon
+                                          className="h-5 w-5 flex-none text-gray-400"
+                                          aria-hidden="true"
+                                        />
+                                        {item.name}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </Popover.Panel>
+                        </Transition>
+                      </>
+                    )}
+                  </Popover>
+                ) : null}
                 <Popover className="relative">
                   {({ open }) => (
                     <>
                       <Popover.Button
+                        as={Button}
+                        variant={"outline"}
                         className={classNames(
-                          "rounded-md bg-white flex px-2.5 py-1.5 text-sm font-semibold text-gray-800 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50",
-                          open && "text-opacity-90"
+                          open && "text-opacity-90",
+                          "font-semibold"
                         )}
                       >
                         <span>Help</span>
@@ -429,6 +533,9 @@ const AppLayout: React.FC<Props> = ({
                                     </a>
                                   ))}
                                 </div>
+                                <p className="truncate w-full text-center border-t px-4 py-2 ml-auto text-gray-400">
+                                  CLI Version: v{data?.currentVersion}
+                                </p>
                               </div>
                             </div>
                           </div>

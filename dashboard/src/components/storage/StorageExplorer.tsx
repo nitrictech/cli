@@ -1,11 +1,10 @@
-import { lazy, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Loading, Select } from "../shared";
 import { useWebSocket } from "../../lib/hooks/use-web-socket";
 import AppLayout from "../layout/AppLayout";
 import StorageTreeView from "./StorageTreeView";
-
-const FileBrowser = lazy(() => import("./FileBrowser"));
+import FileBrowser from "./FileBrowser";
 
 const LOCAL_STORAGE_KEY = "nitric-local-dash-storage-history";
 

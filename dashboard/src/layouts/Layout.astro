@@ -1,5 +1,6 @@
 ---
 import { Fathom } from "astro-fathom";
+import { ViewTransitions } from "astro:transitions";
 import "@fontsource/sora";
 import "@fontsource/sora/600.css";
 import "@fontsource/sora/700.css";
@@ -20,6 +21,7 @@ const { title } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     {process.env.FATHOM_SITE && <Fathom honorDnt />}
+    <ViewTransitions />
   </head>
   <body class="h-full">
     <slot />

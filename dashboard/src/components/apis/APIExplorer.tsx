@@ -11,7 +11,7 @@ import {
   Spinner,
   Tabs,
   FieldRows,
-  FieldRow,
+  type FieldRow,
   Loading,
 } from "../shared";
 import {

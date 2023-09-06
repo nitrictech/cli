@@ -1,5 +1,5 @@
-import { FC, useMemo } from "react";
-import TreeView, { TreeItemType } from "../shared/TreeView";
+import { type FC, useMemo } from "react";
+import TreeView, { type TreeItemType } from "../shared/TreeView";
 import type { TreeItem, TreeItemIndex } from "react-complex-tree";
 
 export type StorageTreeItemType = TreeItemType<string>;

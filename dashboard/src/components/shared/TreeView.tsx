@@ -1,11 +1,10 @@
-import { FC, useId, useRef, useState } from "react";
-//import "react-complex-tree/lib/style-modern.css";
+import { useId, useState } from "react";
 import {
   ControlledTreeEnvironment,
-  ControlledTreeEnvironmentProps,
+  type ControlledTreeEnvironmentProps,
   Tree,
-  TreeItem,
-  TreeItemIndex,
+  type TreeItem,
+  type TreeItemIndex,
 } from "react-complex-tree";
 import {
   FolderIcon,

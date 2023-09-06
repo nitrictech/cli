@@ -3,7 +3,7 @@ export const getHost = () => {
     return null;
   }
 
-  return window && window.location.host.startsWith("127.0.0.1")
+  return window && window.location.host.startsWith("localhost")
     ? "localhost:49152"
     : window.location.host;
 };

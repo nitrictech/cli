@@ -1,10 +1,10 @@
 import CodeMirror, {
-  ReactCodeMirrorProps,
-  ReactCodeMirrorRef,
+  type ReactCodeMirrorProps,
+  type ReactCodeMirrorRef,
 } from "@uiw/react-codemirror";
 import { StreamLanguage } from "@codemirror/language";
 import { parse } from "@prantlf/jsonlint";
-import { linter, Diagnostic } from "@codemirror/lint";
+import { linter, type Diagnostic } from "@codemirror/lint";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ClipboardDocumentCheckIcon,

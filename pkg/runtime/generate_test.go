@@ -29,6 +29,7 @@ func TestGenerate(t *testing.T) {
 	goFile, _ := os.ReadFile("golang.dockerfile")
 	pythonFile, _ := os.ReadFile("python.dockerfile")
 	jsFile, _ := os.ReadFile("javascript.dockerfile")
+	jvmFile, _ := os.ReadFile("jvm.dockerfile")
 
 	tests := []struct {
 		name        string
@@ -54,6 +55,11 @@ func TestGenerate(t *testing.T) {
 			name:        "js",
 			handler:     "functions/list.js",
 			wantFwriter: string(jsFile),
+		},
+		{
+			name:        "jar",
+			handler:     "outout/fat.jar",
+			wantFwriter: string(jvmFile),
 		},
 	}
 	for _, tt := range tests {

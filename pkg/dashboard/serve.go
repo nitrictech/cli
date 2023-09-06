@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -34,6 +35,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/update"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
@@ -87,6 +89,8 @@ type DashboardResponse struct {
 	TriggerAddress      string                           `json:"triggerAddress,omitempty"`
 	StorageAddress      string                           `json:"storageAddress,omitempty"`
 	BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications,omitempty"`
+	CurrentVersion      string                           `json:"currentVersion,omitempty"`
+	LatestVersion       string                           `json:"latestVersion,omitempty"`
 }
 
 type Bucket struct {
@@ -336,6 +340,9 @@ func handleResponseWriter(w http.ResponseWriter, data []byte) {
 }
 
 func (d *Dashboard) sendStackUpdate() error {
+	currentVersion := strings.TrimPrefix(utils.Version, "v")
+	latestVersion := update.FetchLatestVersion()
+
 	response := &DashboardResponse{
 		Apis:                d.apis,
 		Topics:              d.topics,
@@ -348,6 +355,8 @@ func (d *Dashboard) sendStackUpdate() error {
 		TriggerAddress:      d.triggerAddress,
 		StorageAddress:      d.storageAddress,
 		BucketNotifications: d.bucketNotifications,
+		CurrentVersion:      currentVersion,
+		LatestVersion:       latestVersion,
 	}
 
 	// Encode the response as JSON

@@ -29,6 +29,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cmd/start"
 	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/update"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
@@ -70,6 +71,11 @@ var rootCmd = &cobra.Command{
 				utils.CheckErr(fmt.Errorf("Failed to create nitric home directory. %w", err))
 			}
 		}
+
+		update.FetchLatestVersion()
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		update.PrintOutdatedWarning()
 	},
 }
 

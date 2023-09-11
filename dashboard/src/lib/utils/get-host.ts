@@ -1,9 +1,9 @@
+const isDev = import.meta.env.DEV;
+
 export const getHost = () => {
   if (typeof window === "undefined") {
     return null;
   }
 
-  return window && window.location.host.startsWith("localhost")
-    ? "localhost:49152"
-    : window.location.host;
+  return isDev ? "localhost:49152" : window.location.host;
 };

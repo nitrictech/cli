@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/nitrictech/cli/pkg/history"
@@ -133,15 +134,15 @@ func (d *Dashboard) handleCallProxy() func(http.ResponseWriter, *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/call/")
 
 		// Build proxy request URL with query parameters
-		query := r.URL.RawQuery
-		if query != "" {
-			query = "?" + query
+		targetURL := &url.URL{
+			Scheme:   "http",
+			Host:     callAddress,
+			Path:     path,
+			RawQuery: r.URL.RawQuery,
 		}
 
-		url := fmt.Sprintf("http://%s/%s%s", callAddress, path, query)
-
 		// Create a new request object
-		req, err := http.NewRequest(r.Method, url, r.Body)
+		req, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

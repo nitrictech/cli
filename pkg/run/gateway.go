@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -240,12 +241,20 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 			query[k].Value = append(query[k].Value, string(val))
 		})
 
+		path := string(ctx.URI().Path())
+
+		_, err := url.Parse(path)
+		if err != nil {
+			ctx.Error(fmt.Sprintf("Bad Request: %v", err), 400)
+			return
+		}
+
 		httpTrigger := &v1.TriggerRequest{
 			Data: ctx.Request.Body(),
 			Context: &v1.TriggerRequest_Http{
 				Http: &v1.HttpTriggerContext{
 					Method:      string(ctx.Request.Header.Method()),
-					Path:        string(ctx.URI().PathOriginal()),
+					Path:        path,
 					Headers:     headers,
 					QueryParams: query,
 				},

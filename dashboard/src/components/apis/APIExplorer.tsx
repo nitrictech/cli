@@ -23,6 +23,7 @@ import {
   fieldRowArrToHeaders,
   getHost,
   generateResponse,
+  isValidUrl,
 } from "../../lib/utils";
 import APIResponseContent from "./APIResponseContent";
 import CodeEditor from "./CodeEditor";
@@ -265,6 +266,21 @@ const APIExplorer = () => {
         setCallLoading(false);
         toast.error(
           `Required path parameter(s) missing: ${emptyParams
+            .map((p) => p.key)
+            .join(", ")}`
+        );
+
+        return;
+      }
+
+      const invalidValues = request.pathParams.filter(
+        (param) => !isValidUrl(param.value)
+      );
+
+      if (invalidValues.length) {
+        setCallLoading(false);
+        toast.error(
+          `Invalid path parameter value for: ${invalidValues
             .map((p) => p.key)
             .join(", ")}`
         );

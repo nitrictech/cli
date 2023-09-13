@@ -57,18 +57,20 @@ var startCmd = &cobra.Command{
 		config, err := project.ConfigFromProjectPath("")
 		utils.CheckErr(err)
 
-		proj, err := project.FromConfig(config)
-		utils.CheckErr(err)
+		history := &history.History{
+			ProjectDir: config.Dir,
+		}
+
+		proj := &project.Project{
+			Name:    config.Name,
+			Dir:     config.Dir,
+			History: history,
+		}
 
 		dash, err := dashboard.New(proj, map[string]string{}, noBrowser || output.CI)
 		utils.CheckErr(err)
 
-		ls := run.NewLocalServices(&project.Project{
-			Name: "local",
-			History: &history.History{
-				ProjectDir: proj.Dir,
-			},
-		}, true, dash)
+		ls := run.NewLocalServices(proj, true, dash)
 		if ls.Running() {
 			pterm.Error.Println("Only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again")
 			os.Exit(2)

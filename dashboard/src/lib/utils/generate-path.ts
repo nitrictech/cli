@@ -6,7 +6,7 @@ export function generatePath(
   queryParams: FieldRow[]
 ) {
   pathParams.forEach((p) => {
-    path = path.replace(`{${p.key}}`, encodeURIComponent(p.value));
+    path = path.replace(`{${p.key}}`, p.value);
   });
 
   if (queryParams.length) {

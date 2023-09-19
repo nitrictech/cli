@@ -62,8 +62,6 @@ Documentation for all available commands:
 - nitric stack : Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)
 - nitric stack down [-s stack] : Undeploy a previously deployed stack, deleting resources
   (alias: nitric down)
-- nitric stack list [-s stack] : List all project stacks and their status
-  (alias: nitric list)
 - nitric stack new : Create a new Nitric stack
 - nitric stack update [-s stack] : Create or update a deployed stack
   (alias: nitric up)
@@ -81,5 +79,8 @@ Documentation for all available commands:
 - Send us an [email](mailto:maintainers@nitric.io)
 
 ## Get Started
+
+Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.
+ted
 
 Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.

@@ -17,27 +17,20 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/ghissue"
-	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/operations/version"
 )
 
-var infoCmd = &cobra.Command{
-	Use:   "info",
-	Short: "Gather information about Nitric and the environment",
-	Long:  `Gather information about Nitric and the environment.`,
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of this CLI",
+	Long:  `All software has versions. This is Nitric's`,
 	Run: func(cmd *cobra.Command, args []string) {
-		d := ghissue.Gather()
-
-		s, err := json.MarshalIndent(d, "", "  ")
-		if err != nil {
-			output.Print(d)
-		} else {
-			fmt.Println(string(s))
-		}
+		version.Run(cmd.Context())
 	},
+}
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
 }

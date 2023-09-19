@@ -21,7 +21,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/nitrictech/cli/pkg/cmd"
+	"github.com/nitrictech/cli/cmd"
 )
 
 type section struct {

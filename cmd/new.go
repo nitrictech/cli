@@ -17,28 +17,12 @@
 package cmd
 
 import (
-	"errors"
-	"regexp"
-	"strings"
-
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/operations/project_new"
 )
 
-var (
-	force         bool
-	nameRegex     = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
-	projectNameQu = survey.Question{
-		Name:     "projectName",
-		Prompt:   &survey.Input{Message: "What is the name of the project?"},
-		Validate: validateName,
-	}
-	templateNameQu = survey.Question{
-		Name: "templateName",
-	}
-)
+var force bool
 
 var newCmd = &cobra.Command{
 	Use:   "new [projectName] [templateName]",
@@ -53,23 +37,6 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		project_new.Run(cmd.Context(), args)
 	},
 	Args: cobra.MaximumNArgs(2),
-}
-
-func validateName(val interface{}) error {
-	name, ok := val.(string)
-	if !ok {
-		return errors.New("project name must be a string")
-	}
-
-	if name == "" {
-		return errors.New("project name can not be empty")
-	}
-
-	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") || !nameRegex.MatchString(name) {
-		return errors.New("invalid project name, only letters, numbers and dashes are supported")
-	}
-
-	return nil
 }
 
 func init() {

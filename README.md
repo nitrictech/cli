@@ -81,6 +81,3 @@ Documentation for all available commands:
 ## Get Started
 
 Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.
-ted
-
-Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.

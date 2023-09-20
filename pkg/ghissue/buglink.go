@@ -29,6 +29,7 @@ import (
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/provider"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/version"
 )
 
 type Diagnostics struct {
@@ -53,7 +54,7 @@ var diag = Diagnostics{
 	OS:             runtime.GOOS,
 	Arch:           runtime.GOARCH,
 	GoVersion:      runtime.Version(),
-	CliVersion:     utils.Version,
+	CliVersion:     version.Version,
 	FabricVersion:  provider.DefaultNitricVersion,
 	DetectedErrors: make([]string, 0),
 }

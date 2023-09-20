@@ -37,6 +37,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/update"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/version"
 	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
@@ -340,7 +341,7 @@ func handleResponseWriter(w http.ResponseWriter, data []byte) {
 }
 
 func (d *Dashboard) sendStackUpdate() error {
-	currentVersion := strings.TrimPrefix(utils.Version, "v")
+	currentVersion := strings.TrimPrefix(version.Version, "v")
 	latestVersion := update.FetchLatestVersion()
 
 	response := &DashboardResponse{

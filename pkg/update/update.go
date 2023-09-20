@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/version"
 )
 
 func FetchLatestVersion() string {
@@ -74,7 +75,7 @@ func FetchLatestVersion() string {
 }
 
 func PrintOutdatedWarning() {
-	currentVersion := strings.TrimPrefix(utils.Version, "v")
+	currentVersion := strings.TrimPrefix(version.Version, "v")
 	latestVersion := FetchLatestVersion()
 
 	if currentVersion < latestVersion {

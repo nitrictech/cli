@@ -14,19 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package logger
 
-var (
-	// Raw is the string representation of the version. This will be replaced
-	// with the calculated version at build time.
-	// set in the Makefile.
-	Version = "was not built with version info"
+import (
+	"os"
 
-	// Commit is the commit hash from which the software was built.
-	// Set via LDFLAGS in Makefile.
-	Commit = "unknown"
+	"github.com/charmbracelet/log"
+)
 
-	// BuildTime is the string representation of build time.
-	// Set via LDFLAGS in Makefile.
-	BuildTime = "unknown"
+// Simple logger for printing out to the command line
+var Simple = log.NewWithOptions(
+	os.Stdout,
+	log.Options{
+		ReportTimestamp: false,
+	},
 )

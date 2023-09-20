@@ -16,13 +16,17 @@
 
 package version
 
-import (
-	"context"
+var (
+	// Raw is the string representation of the version. This will be replaced
+	// with the calculated version at build time.
+	// set in the Makefile.
+	Version = "was not built with version info"
 
-	"github.com/nitrictech/cli/pkg/logger"
-	"github.com/nitrictech/cli/pkg/version"
+	// Commit is the commit hash from which the software was built.
+	// Set via LDFLAGS in Makefile.
+	Commit = "unknown"
+
+	// BuildTime is the string representation of build time.
+	// Set via LDFLAGS in Makefile.
+	BuildTime = "unknown"
 )
-
-func Run(ctx context.Context) {
-	logger.Simple.Print(version.Version)
-}

@@ -17,27 +17,34 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/ghissue"
-	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/operations/start"
 )
 
-var infoCmd = &cobra.Command{
-	Use:   "info",
-	Short: "Gather information about Nitric and the environment",
-	Long:  `Gather information about Nitric and the environment.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		d := ghissue.Gather()
+var noBrowser bool
 
-		s, err := json.MarshalIndent(d, "", "  ")
-		if err != nil {
-			output.Print(d)
-		} else {
-			fmt.Println(string(s))
-		}
+var startCmd = &cobra.Command{
+	Use:         "start",
+	Short:       "Run nitric services locally for development and testing",
+	Long:        `Run nitric services locally for development and testing`,
+	Example:     `nitric start`,
+	Annotations: map[string]string{"commonCommand": "yes"},
+	Run: func(cmd *cobra.Command, args []string) {
+		start.Run(context.TODO(), noBrowser)
 	},
+	Args: cobra.ExactArgs(0),
+}
+
+func init() {
+	startCmd.PersistentFlags().BoolVar(
+		&noBrowser,
+		"no-browser",
+		false,
+		"disable browser opening for local dashboard, note: in CI mode the browser opening feature is disabled",
+	)
+
+	rootCmd.AddCommand(startCmd)
 }

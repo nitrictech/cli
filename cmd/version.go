@@ -14,10 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cmd
 
-import "github.com/nitrictech/cli/cmd"
+import (
+	"github.com/spf13/cobra"
 
-func main() {
-	cmd.Execute()
+	"github.com/nitrictech/cli/pkg/operations/version"
+)
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of this CLI",
+	Long:  `All software has versions. This is Nitric's`,
+	Run: func(cmd *cobra.Command, args []string) {
+		version.Run(cmd.Context())
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
 }

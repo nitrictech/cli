@@ -14,10 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package info
 
-import "github.com/nitrictech/cli/cmd"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
 
-func main() {
-	cmd.Execute()
+	"github.com/nitrictech/cli/pkg/ghissue"
+	"github.com/nitrictech/cli/pkg/output"
+)
+
+func Run(ctx context.Context) {
+	d := ghissue.Gather()
+
+	s, err := json.MarshalIndent(d, "", "  ")
+	if err != nil {
+		output.Print(d)
+	} else {
+		fmt.Println(string(s))
+	}
 }

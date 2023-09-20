@@ -24,9 +24,6 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/cmd/run"
-	cmdstack "github.com/nitrictech/cli/pkg/cmd/stack"
-	"github.com/nitrictech/cli/pkg/cmd/start"
 	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/update"
@@ -101,18 +98,9 @@ func init() {
 		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
 	})
 	utils.CheckErr(err)
-
-	newProjectCmd.Flags().BoolVarP(&force, "force", "f", false, "force project creation, even in non-empty directories.")
-	rootCmd.AddCommand(newProjectCmd)
-	rootCmd.AddCommand(cmdstack.RootCommand())
-	rootCmd.AddCommand(run.RootCommand())
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(feedbackCmd)
-	rootCmd.AddCommand(infoCmd)
-	rootCmd.AddCommand(start.RootCommand())
-	addAlias("stack update", "up", true)
-	addAlias("stack down", "down", true)
-	addAlias("stack list", "list", false)
+	// addAlias("stack update", "up", true)
+	// addAlias("stack down", "down", true)
+	// addAlias("stack list", "list", false)
 
 	rootCmd.Long = usageString()
 }

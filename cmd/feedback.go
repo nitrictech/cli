@@ -14,10 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cmd
 
-import "github.com/nitrictech/cli/cmd"
+import (
+	"github.com/spf13/cobra"
 
-func main() {
-	cmd.Execute()
+	"github.com/nitrictech/cli/pkg/operations/feedback"
+)
+
+var feedbackCmd = &cobra.Command{
+	Use:     "feedback",
+	Short:   "Provide feedback on your experience with nitric",
+	Long:    `Provide feedback on your experience with nitric.`,
+	Example: `nitric feedback`,
+	Run: func(cmd *cobra.Command, args []string) {
+		feedback.Run(cmd.Context())
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(feedbackCmd)
 }

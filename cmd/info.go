@@ -17,23 +17,20 @@
 package cmd
 
 import (
-	"fmt"
-	"runtime"
-
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/operations/info"
 )
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of this CLI",
-	Long:  `All software has versions. This is Nitric's`,
+var infoCmd = &cobra.Command{
+	Use:   "info",
+	Short: "Gather information about Nitric and the environment",
+	Long:  `Gather information about Nitric and the environment.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Go Version: %s\n", runtime.Version())
-		fmt.Printf("Go OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
-		fmt.Printf("Git commit: %s\n", utils.Commit)
-		fmt.Printf("Build time: %s\n", utils.BuildTime)
-		fmt.Printf("Nitric CLI: %s\n", utils.Version)
+		info.Run(cmd.Context())
 	},
+}
+
+func init() {
+	rootCmd.AddCommand(infoCmd)
 }

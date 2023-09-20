@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package version
 
 var (
 	// Raw is the string representation of the version. This will be replaced

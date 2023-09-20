@@ -20,9 +20,9 @@ import (
 	"context"
 
 	"github.com/nitrictech/cli/pkg/logger"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/version"
 )
 
 func Run(ctx context.Context) {
-	logger.Simple.Print(utils.Version)
+	logger.Simple.Print(version.Version)
 }

@@ -58,6 +58,7 @@ func Run(ctx context.Context) {
 	utils.CheckErr(err)
 
 	envFiles := utils.FilesExisting(".env", ".env.development", envFile)
+
 	envMap := map[string]string{}
 
 	if len(envFiles) > 0 {

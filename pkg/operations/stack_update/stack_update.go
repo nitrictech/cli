@@ -44,6 +44,7 @@ func Run(envFile string, s *stack.Config, force bool) {
 	log.SetFlags(0)
 
 	envFiles := utils.FilesExisting(".env", ".env.production", envFile)
+
 	envMap := map[string]string{}
 
 	if len(envFiles) > 0 {

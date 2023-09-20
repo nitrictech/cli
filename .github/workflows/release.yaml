@@ -18,12 +18,9 @@ jobs:
       new-release-published: ${{ steps.semantic-release.outputs.new_release_published }}
       new-release-version: ${{ steps.semantic-release.outputs.new_release_version }}
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v4
       - id: semantic-release
-        uses: cycjimmy/semantic-release-action@v2
-        with:
-          semantic_version: 17
+        uses: cycjimmy/semantic-release-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.NITRIC_BOT_TOKEN }}
 
@@ -34,7 +31,7 @@ jobs:
     if: needs.release.outputs.new-release-published == 'true'
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

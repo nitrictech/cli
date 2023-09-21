@@ -78,6 +78,11 @@ func PrintOutdatedWarning() {
 	currentVersion := strings.TrimPrefix(version.Version, "v")
 	latestVersion := FetchLatestVersion()
 
+	// don't generate warning for locally build CLI versions
+	if strings.HasSuffix(currentVersion, "dirty") {
+		return
+	}
+
 	if currentVersion < latestVersion {
 		msg := fmt.Sprintf(`A new version of Nitric is available. To upgrade from version '%s' to '%s'`, currentVersion, latestVersion)
 		msg += ", visit https://nitric.io/docs/installation for instructions and release notes.\n"

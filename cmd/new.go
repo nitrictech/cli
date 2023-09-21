@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/operations/project_new"
@@ -33,8 +34,12 @@ nitric new
 
 # For a non-interactive command use the arguments.
 nitric new hello-world "official/TypeScript - Starter" `,
-	Run: func(cmd *cobra.Command, args []string) {
-		project_new.Run(cmd.Context(), args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// project_new.Run(cmd.Context(), args)
+		if err := tea.NewProgram(project_new.New()).Start(); err != nil {
+			return err
+		}
+		return nil
 	},
 	Args: cobra.MaximumNArgs(2),
 }

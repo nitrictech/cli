@@ -15,7 +15,7 @@ builds:
     id: nitric
     binary: nitric
     ldflags:
-      - -s -w -X github.com/nitrictech/cli/pkg/utils.Version={{.Version}} -X github.com/nitrictech/cli/pkg/utils.Commit={{.Commit}} -X github.com/nitrictech/cli/pkg/utils.BuildTime={{.Date}}
+      - -s -w -X github.com/nitrictech/cli/pkg/version.Version={{.Version}} -X github.com/nitrictech/cli/pkg/version.Commit={{.Commit}} -X github.com/nitrictech/cli/pkg/version.BuildTime={{.Date}}
     goos:
       - linux
       - windows

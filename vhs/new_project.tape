@@ -1,5 +1,5 @@
 # Where should we write the GIF?
-Output new_project_demo.gif
+Output new_project.gif
 
 Set Framerate 16
 

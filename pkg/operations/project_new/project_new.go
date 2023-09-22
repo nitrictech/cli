@@ -21,11 +21,9 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
-	"github.com/AlecAivazis/survey/v2"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/goombaio/namegenerator"
@@ -50,34 +48,33 @@ const (
 	Error
 )
 
-var (
-	force         bool
-	nameRegex     = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
-	projectNameQu = survey.Question{
-		Name:   "projectName",
-		Prompt: &survey.Input{Message: "What is the name of the project?"},
-		// Validate: validateName,
-	}
-	templateNameQu = survey.Question{
-		Name: "templateName",
-	}
-)
-
 type Model struct {
-	Name        string
-	Template    string
-	isValidName bool
-	// textInput   textinput.Model
+	isValidName    bool
 	namePrompt     textprompt.Model
 	templatePrompt listprompt.Model
 	projectStatus  ProjectCreationStatus
+	nonInteractive bool
 
 	spinner spinner.Model
 
 	err error
 }
 
+func (m Model) ProjectName() string {
+	return m.namePrompt.Value()
+}
+
+func (m Model) TemplateName() string {
+	return m.templatePrompt.Choice()
+}
+
 func (m Model) Init() tea.Cmd {
+	if m.err != nil {
+		return tea.Quit
+	}
+	if m.nonInteractive {
+		return tea.Batch(m.spinner.Tick, m.createProject())
+	}
 	return tea.Batch(tea.ClearScreen, m.namePrompt.Init(), m.templatePrompt.Init())
 }
 
@@ -100,10 +97,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	// We handle errors just like any other message
 	case errMsg:
 		m.err = msg
-		return m, nil
+		return m, tea.Quit
 	}
 
 	if !m.namePrompt.IsComplete() {
@@ -111,8 +107,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	} else if m.namePrompt.IsComplete() && !m.templatePrompt.IsComplete() {
 		m.templatePrompt, cmd = m.templatePrompt.Update(msg)
 		if m.templatePrompt.Choice() != "" {
-			m.Name = m.namePrompt.Value()
-			m.Template = m.templatePrompt.Choice()
 			m.projectStatus = Pending
 			return m, tea.Batch(m.spinner.Tick, m.createProject())
 		}
@@ -157,18 +151,26 @@ func successMessage(projectPath string) string {
 }
 
 func (m Model) View() string {
-
 	var view strings.Builder
 
-	// Title
-	view.WriteString(fmt.Sprintf("%sLet's get going!\n\n", titleStyle.Render("nitric")))
+	if m.err != nil {
+		view.WriteString(lipgloss.NewStyle().Background(tui.Colors.Red).Foreground(tui.Colors.White).PaddingLeft(2).PaddingRight(2).Align(lipgloss.Center).Render("error"))
+		view.WriteString(lipgloss.NewStyle().PaddingLeft(2).Foreground(tui.Colors.Red).Render(m.err.Error()))
+		view.WriteString("\n")
+		return view.String()
+	}
 
-	// Name input
-	view.WriteString(m.namePrompt.View())
+	if !m.nonInteractive {
+		// Title
+		view.WriteString(fmt.Sprintf("%sLet's get going!\n\n", titleStyle.Render("nitric")))
 
-	// Template selection input
-	if m.namePrompt.IsComplete() {
-		view.WriteString(m.templatePrompt.View())
+		// Name input
+		view.WriteString(m.namePrompt.View())
+
+		// Template selection input
+		if m.namePrompt.IsComplete() {
+			view.WriteString(m.templatePrompt.View())
+		}
 	}
 
 	// Creating Status
@@ -181,7 +183,7 @@ func (m Model) View() string {
 	// Done!
 	if m.projectStatus == Done {
 		view.WriteString("\n\n")
-		view.WriteString(successMessage(fmt.Sprintf("./%s", m.Name)))
+		view.WriteString(successMessage(fmt.Sprintf("./%s", m.ProjectName())))
 		view.WriteString("\n\n")
 	} else {
 		view.WriteString("\n\n(esc to quit)\n")
@@ -190,7 +192,12 @@ func (m Model) View() string {
 	return view.String()
 }
 
-func New() *Model {
+type Args struct {
+	ProjectName  string
+	TemplateName string
+}
+
+func New(args Args) Model {
 	seed := time.Now().UTC().UnixNano()
 	nameGenerator := namegenerator.NewNameGenerator(seed)
 	placeholderName := nameGenerator.Generate()
@@ -201,6 +208,7 @@ func New() *Model {
 		Placeholder: placeholderName,
 		Validate:    validateName,
 	})
+	namePrompt.Focus()
 
 	downloadr := templates.NewDownloader()
 	templateNames, err := downloadr.Names()
@@ -217,11 +225,31 @@ func New() *Model {
 	s.Spinner = spinner.Dot
 	s.Style = spinnerStyle
 
-	namePrompt.Focus()
+	// prefill values from commandline args
+	if args.ProjectName != "" {
+		namePrompt.SetValue(args.ProjectName)
+	}
+	if args.TemplateName != "" {
+		if downloadr.Get(args.TemplateName) == nil {
+			return Model{
+				err: fmt.Errorf("template \"%s\" could not be found", args.TemplateName),
+			}
+		}
+		templatePrompt.SetChoice(args.TemplateName)
+	}
 
-	return &Model{
-		namePrompt:     *namePrompt,
-		templatePrompt: *templatePrompt,
+	isNonInteractive := false
+	projectStatus := ToDo
+	if namePrompt.IsComplete() && templatePrompt.IsComplete() {
+		isNonInteractive = true
+		projectStatus = Pending
+	}
+
+	return Model{
+		namePrompt:     namePrompt,
+		templatePrompt: templatePrompt,
+		nonInteractive: isNonInteractive,
+		projectStatus:  projectStatus,
 		spinner:        s,
 		err:            nil,
 	}
@@ -231,15 +259,17 @@ type projectCreateResultMsg struct {
 	err error
 }
 
+// createProject creates the project on disk using the inputs gathered
+// then returns a command that will return a message when the creation is done
 func (m Model) createProject() tea.Cmd {
 	return func() tea.Msg {
 		cd, err := filepath.Abs(".")
 		utils.CheckErr(err)
 
-		projDir := path.Join(cd, m.Name)
+		projDir := path.Join(cd, m.ProjectName())
 
 		downloadr := templates.NewDownloader()
-		err = downloadr.DownloadDirectoryContents(m.Template, projDir, force)
+		err = downloadr.DownloadDirectoryContents(m.TemplateName(), projDir, false)
 		utils.CheckErr(err)
 
 		var p *project.Config
@@ -247,78 +277,8 @@ func (m Model) createProject() tea.Cmd {
 		// Load and update the project name in the template's nitric.yaml
 		p, err = project.ConfigFromProjectPath(projDir)
 		utils.CheckErr(err)
-		p.Name = m.Name
+		p.Name = m.ProjectName()
 
 		return projectCreateResultMsg{err: p.ToFile()}
 	}
 }
-
-//
-//func Run(ctx context.Context, args []string) {
-//	answers := struct {
-//		ProjectName  string
-//		TemplateName string
-//		FeedbackName string
-//		Handlers     string
-//	}{}
-//
-//	downloadr := templates.NewDownloader()
-//	dirs, err := downloadr.Names()
-//	utils.CheckErr(err)
-//
-//	templateNameQu.Prompt = &survey.Select{
-//		Message: "Choose a template:",
-//		Options: dirs,
-//	}
-//	templateNameQu.Validate = func(ans interface{}) error {
-//		if len(args) < 2 {
-//			return nil
-//		}
-//
-//		a, ok := ans.(string)
-//		if !ok {
-//			return errors.New("wrong type, need a string")
-//		}
-//
-//		if downloadr.Get(a) == nil {
-//			return fmt.Errorf("%s not in %v", a, dirs)
-//		}
-//
-//		return nil
-//	}
-//
-//	qs := []*survey.Question{}
-//
-//	if len(args) > 0 {
-//		if err := projectNameQu.Validate(args[0]); err != nil {
-//			pterm.Error.PrintOnError(err)
-//
-//			qs = append(qs, &projectNameQu)
-//		} else {
-//			answers.ProjectName = args[0]
-//		}
-//	} else {
-//		qs = append(qs, &projectNameQu)
-//	}
-//
-//	if len(args) > 1 {
-//		if err := templateNameQu.Validate(args[1]); err != nil {
-//			pterm.Error.PrintOnError(err)
-//
-//			qs = append(qs, &templateNameQu)
-//		} else {
-//			answers.TemplateName = args[1]
-//		}
-//	} else {
-//		qs = append(qs, &templateNameQu)
-//		args = []string{} // reassign args to ensure validation works correctly.
-//	}
-//
-//	if len(qs) > 0 {
-//		err = survey.Ask(qs, &answers)
-//		utils.CheckErr(err)
-//	}
-//
-//	err = createNewProject(answers.ProjectName, answers.TemplateName)
-//	utils.CheckErr(err)
-//}

@@ -110,3 +110,7 @@ func (m Model) refreshViewCursor() Model {
 func (m Model) Choice() string {
 	return m.choice
 }
+
+func (m *Model) SetChoice(choice string) {
+	m.choice = choice
+}

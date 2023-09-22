@@ -78,8 +78,8 @@ func PrintOutdatedWarning() {
 	currentVersion := strings.TrimPrefix(version.Version, "v")
 	latestVersion := FetchLatestVersion()
 
-	// don't generate warning for locally build CLI versions
-	if strings.HasSuffix(currentVersion, "dirty") {
+	// don't generate warning for non-production versions
+	if strings.Contains(currentVersion, "-") {
 		return
 	}
 

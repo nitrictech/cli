@@ -2,8 +2,11 @@ package project_new
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 )
+
+var nameRegex = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
 
 // validateName validates whether the input string is a valid project name.
 //

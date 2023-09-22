@@ -35,10 +35,23 @@ nitric new
 # For a non-interactive command use the arguments.
 nitric new hello-world "official/TypeScript - Starter" `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// project_new.Run(cmd.Context(), args)
-		if err := tea.NewProgram(project_new.New()).Start(); err != nil {
+		projectName := ""
+		if len(args) >= 1 {
+			projectName = args[0]
+		}
+
+		templateName := ""
+		if len(args) >= 2 {
+			templateName = args[1]
+		}
+
+		if _, err := tea.NewProgram(project_new.New(project_new.Args{
+			ProjectName:  projectName,
+			TemplateName: templateName,
+		})).Run(); err != nil {
 			return err
 		}
+
 		return nil
 	},
 	Args: cobra.MaximumNArgs(2),

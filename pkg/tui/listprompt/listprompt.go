@@ -45,6 +45,10 @@ func (m Model) Choice() string {
 	return m.listInput.Choice()
 }
 
+func (m *Model) SetChoice(choice string) {
+	m.listInput.SetChoice(choice)
+}
+
 var (
 	labelStyle  = lipgloss.NewStyle().MarginTop(1)
 	tagStyle    = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
@@ -80,7 +84,7 @@ type Args struct {
 	Tag               string
 }
 
-func New(args Args) *Model {
+func New(args Args) Model {
 	if args.MaxDisplayedItems < 1 {
 		args.MaxDisplayedItems = 5
 	}
@@ -90,7 +94,7 @@ func New(args Args) *Model {
 		MaxDisplayedItems: args.MaxDisplayedItems,
 	})
 
-	return &Model{
+	return Model{
 		Prompt:    args.Prompt,
 		listInput: listInput,
 		Tag:       args.Tag,

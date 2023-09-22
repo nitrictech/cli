@@ -45,7 +45,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 			m.err = m.Validate(m.textInput.Value(), false)
 			if m.err == nil {
-				m.Complete()
+				m.markComplete()
 			}
 		}
 
@@ -119,9 +119,14 @@ func (m *Model) Blur() {
 	m.textInput.Blur()
 }
 
-func (m *Model) Complete() {
+func (m *Model) markComplete() {
 	m.complete = true
 	m.Blur()
+}
+
+func (m *Model) SetValue(value string) {
+	m.textInput.SetValue(value)
+	m.markComplete()
 }
 
 func (m Model) IsComplete() bool {
@@ -142,14 +147,14 @@ type TextPromptArgs struct {
 	Tag         string
 }
 
-func NewTextPrompt(args TextPromptArgs) *Model {
+func NewTextPrompt(args TextPromptArgs) Model {
 
 	ti := textinput.New()
 	ti.CharLimit = 156
 	ti.Width = 20
 	ti.Placeholder = args.Placeholder
 
-	return &Model{
+	return Model{
 		textInput: ti,
 		complete:  false,
 		Prompt:    args.Prompt,

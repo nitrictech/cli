@@ -73,6 +73,8 @@ var rootCmd = &cobra.Command{
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		update.PrintOutdatedWarning()
+		// an unstyled \n is always needed at the end of the view to ensure the last line renders
+		fmt.Println()
 	},
 }
 

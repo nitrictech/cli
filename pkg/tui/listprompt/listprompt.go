@@ -1,14 +1,12 @@
 package listprompt
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nitrictech/cli/pkg/tui"
 	"github.com/nitrictech/cli/pkg/tui/inlinelist"
+	"github.com/nitrictech/cli/pkg/tui/view"
 )
 
 type Model struct {
@@ -59,22 +57,25 @@ var (
 )
 
 func (m Model) View() string {
-	var view strings.Builder
+	listView := view.New()
 
-	// Label
-	tag := tagStyle.Render(m.Tag)
-	prompt := promptStyle.Render(m.Prompt)
-	view.WriteString(labelStyle.Render(fmt.Sprintf("%s%s", tag, prompt)))
-	view.WriteString("\n\n")
+	// render the list header
+	listView.AddRow(
+		view.NewFragment(m.Tag).WithStyle(tagStyle),
+		view.NewFragment(m.Prompt).WithStyle(promptStyle),
+		view.Break(),
+	).WithStyle(labelStyle)
 
-	// Input/Text
-	if m.listInput.Choice() == "" {
-		view.WriteString(inputStyle.Render(m.listInput.View()))
-	} else {
-		view.WriteString(textStyle.Render(m.listInput.Choice()))
-	}
+	// render the list view
+	listView.AddRow(
+		view.WhenOr(
+			m.Choice() == "",
+			view.NewFragment(m.listInput.View()).WithStyle(inputStyle),
+			view.NewFragment(m.Choice()).WithStyle(textStyle),
+		),
+	)
 
-	return view.String()
+	return listView.Render()
 }
 
 type Args struct {

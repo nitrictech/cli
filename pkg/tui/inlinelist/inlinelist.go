@@ -2,12 +2,12 @@ package inlinelist
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nitrictech/cli/pkg/tui"
+	"github.com/nitrictech/cli/pkg/tui/view"
 )
 
 type Model struct {
@@ -44,21 +44,23 @@ func (m Model) Init() tea.Cmd {
 }
 
 var (
-	listItemStyle     = lipgloss.NewStyle().Foreground(tui.Colors.Gray)
-	selectedItemStyle = listItemStyle.Copy().Bold(true).Foreground(tui.Colors.White)
+	textGrayStyle = lipgloss.NewStyle().Foreground(tui.Colors.Gray)
+	selectedStyle = lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.White)
 )
 
 func (m Model) View() string {
-	var view strings.Builder
+	listView := view.New().WithStyle(textGrayStyle)
+
 	for i := 0; i < min(m.MaxDisplayedItems, len(m.Items)); i++ {
-		if i+m.firstDisplayedItem == m.cursor {
-			view.WriteString(selectedItemStyle.Render(fmt.Sprintf("→ %s", m.Items[i+m.firstDisplayedItem])))
-		} else {
-			view.WriteString(listItemStyle.Render(fmt.Sprintf("  %s", m.Items[i+m.firstDisplayedItem])))
-		}
-		view.WriteString("\n")
+		listView.AddRow(
+			view.WhenOr(
+				i+m.firstDisplayedItem == m.cursor,
+				view.NewFragment(fmt.Sprintf("→ %s", m.Items[i+m.firstDisplayedItem])).WithStyle(selectedStyle),
+				view.NewFragment(fmt.Sprintf("  %s", m.Items[i+m.firstDisplayedItem])),
+			),
+		)
 	}
-	return fmt.Sprintf("%s\n", view.String())
+	return listView.Render()
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {

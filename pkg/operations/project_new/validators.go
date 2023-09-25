@@ -1,34 +1,21 @@
 package project_new
 
 import (
-	"errors"
 	"regexp"
-	"strings"
+
+	"github.com/nitrictech/cli/pkg/tui/validation"
 )
 
 var nameRegex = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
+var suffixRegex = regexp.MustCompile(`[^-]$`)
+var prefixRegex = regexp.MustCompile(`^[^-]`)
 
-// validateName validates whether the input string is a valid project name.
-//
-// inFlight: indicates whether to use the inflight validation (loose) or not (strict)
-//   - true: inFlight mode, name endings are not validated since the text is assumed incomplete.
-//   - false: strict mode, all characters are validated.
-func validateName(projectName string, inFlight bool) error {
-	if projectName == "" {
-		return errors.New("name can't be empty")
-	}
-
-	if strings.HasPrefix(projectName, "-") {
-		return errors.New("name can't start with a dash")
-	}
-
-	if !inFlight && strings.HasSuffix(projectName, "-") {
-		return errors.New("name can't end with a dash")
-	}
-
-	if !nameRegex.MatchString(projectName) {
-		return errors.New("name must only contain letters, numbers and dashes")
-	}
-
-	return nil
+var projectNameInFlightValidators = []validation.StringValidator{
+	validation.RegexValidator(prefixRegex, "name can't start with a dash"),
+	validation.RegexValidator(nameRegex, "name must only contain letters, numbers and dashes"),
 }
+
+var projectNameValidators = append([]validation.StringValidator{
+	validation.RegexValidator(suffixRegex, "name can't end with a dash"),
+	validation.NotBlankValidator("name can't be blank"),
+}, projectNameInFlightValidators...)

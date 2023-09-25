@@ -1,14 +1,13 @@
 package textprompt
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nitrictech/cli/pkg/tui"
+	"github.com/nitrictech/cli/pkg/tui/validation"
+	"github.com/nitrictech/cli/pkg/tui/view"
 )
 
 type (
@@ -16,19 +15,34 @@ type (
 )
 
 type Model struct {
-	textInput textinput.Model
-	Prompt    string
-	Tag       string
-	Validate  ValidateFunc
-	focus     bool
-	complete  bool
-	previous  string
+	ID               string
+	textInput        textinput.Model
+	Prompt           string
+	Tag              string
+	validate         validation.StringValidator
+	validateInFlight validation.StringValidator
+	focus            bool
+	previous         string
 
 	err error
 }
 
 func (m Model) Init() tea.Cmd {
 	return textinput.Blink
+}
+
+type CompleteMsg struct {
+	ID    string
+	Value string
+}
+
+func (m *Model) submit() tea.Cmd {
+	return func() tea.Msg {
+		return CompleteMsg{
+			ID:    m.ID,
+			Value: m.textInput.Value(),
+		}
+	}
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -43,9 +57,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if m.textInput.Value() == "" {
 				m.textInput.SetValue(m.textInput.Placeholder)
 			}
-			m.err = m.Validate(m.textInput.Value(), false)
+			m.err = m.validate(m.textInput.Value())
 			if m.err == nil {
-				m.markComplete()
+				m.textInput.Blur()
+				return m, m.submit()
 			}
 		}
 
@@ -60,7 +75,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	// only clear/update error messages if the input has changed
 	if m.previous != m.textInput.Value() {
 		if m.textInput.Value() != "" {
-			m.err = m.Validate(m.textInput.Value(), true)
+			m.err = m.validateInFlight(m.textInput.Value())
 		} else {
 			m.err = nil
 		}
@@ -71,38 +86,33 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 var (
-	labelStyle  = lipgloss.NewStyle().MarginTop(1)
-	tagStyle    = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
-	promptStyle = lipgloss.NewStyle().MarginLeft(2)
-	inputStyle  = lipgloss.NewStyle().MarginLeft(10)
-	textStyle   = lipgloss.NewStyle().Foreground(tui.Colors.Gray).MarginLeft(10)
-	errorStyle  = lipgloss.NewStyle().Foreground(tui.Colors.Red).Margin(1, 0, 0, 10).Italic(true)
+	labelStyle      = lipgloss.NewStyle().MarginTop(1)
+	tagStyle        = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
+	promptStyle     = lipgloss.NewStyle().MarginLeft(2)
+	shiftRightStyle = lipgloss.NewStyle().MarginLeft(10)
+	textStyle       = lipgloss.NewStyle().Foreground(tui.Colors.Gray)
+	errorStyle      = lipgloss.NewStyle().Foreground(tui.Colors.Red).Italic(true).MarginTop(1)
 )
 
 func (m Model) View() string {
-	var view strings.Builder
+	renderer := view.New()
 
-	// Label
-	tag := tagStyle.Render(m.Tag)
-	prompt := promptStyle.Render(m.Prompt)
-	view.WriteString(labelStyle.Render(fmt.Sprintf("%s%s", tag, prompt)))
+	renderer.AddRow(
+		view.NewFragment(m.Tag).WithStyle(tagStyle),
+		view.NewFragment(m.Prompt).WithStyle(promptStyle),
+		view.Break(),
+	).WithStyle(labelStyle)
 
-	view.WriteString("\n\n")
+	renderer.AddRow(view.WhenOr(
+		m.textInput.Focused(),
+		view.NewFragment(m.textInput.View()),
+		view.NewFragment(m.textInput.Value()).WithStyle(textStyle),
+	), view.When(
+		m.err != nil,
+		view.NewFragment(m.err).WithStyle(errorStyle),
+	)).WithStyle(shiftRightStyle)
 
-	// Input/Text
-	if m.complete {
-		view.WriteString(textStyle.Render(m.textInput.Value()))
-	} else {
-		view.WriteString(inputStyle.Render(m.textInput.View()))
-	}
-
-	// Error
-	if m.err != nil {
-		view.WriteString(errorStyle.Render(m.err.Error()))
-	}
-
-	view.WriteString("\n")
-	return view.String()
+	return renderer.Render()
 }
 
 // Focus sets the focus state on the model. When the model is in focus it can
@@ -119,35 +129,24 @@ func (m *Model) Blur() {
 	m.textInput.Blur()
 }
 
-func (m *Model) markComplete() {
-	m.complete = true
-	m.Blur()
-}
-
 func (m *Model) SetValue(value string) {
 	m.textInput.SetValue(value)
-	m.markComplete()
-}
-
-func (m Model) IsComplete() bool {
-	return m.complete
 }
 
 func (m Model) Value() string {
 	return m.textInput.Value()
 }
 
-// ValidateFunc is a function that returns an error if the input is invalid.
-type ValidateFunc func(string, bool) error
-
 type TextPromptArgs struct {
-	Placeholder string
-	Validate    ValidateFunc
-	Prompt      string
-	Tag         string
+	ID                 string
+	Placeholder        string
+	Validators         []validation.StringValidator
+	InFlightValidators []validation.StringValidator
+	Prompt             string
+	Tag                string
 }
 
-func NewTextPrompt(args TextPromptArgs) Model {
+func NewTextPrompt(id string, args TextPromptArgs) Model {
 
 	ti := textinput.New()
 	ti.CharLimit = 156
@@ -155,11 +154,12 @@ func NewTextPrompt(args TextPromptArgs) Model {
 	ti.Placeholder = args.Placeholder
 
 	return Model{
-		textInput: ti,
-		complete:  false,
-		Prompt:    args.Prompt,
-		Tag:       args.Tag,
-		Validate:  args.Validate,
-		err:       nil,
+		ID:               id,
+		textInput:        ti,
+		Prompt:           args.Prompt,
+		Tag:              args.Tag,
+		validate:         validation.ComposeValidators(args.Validators...),
+		validateInFlight: validation.ComposeValidators(args.InFlightValidators...),
+		err:              nil,
 	}
 }

@@ -18,11 +18,11 @@ package project_new
 
 import (
 	"fmt"
-	"github.com/charmbracelet/bubbles/spinner"
 	"path"
 	"path/filepath"
-	"strings"
 	"time"
+
+	"github.com/charmbracelet/bubbles/spinner"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -32,6 +32,7 @@ import (
 	"github.com/nitrictech/cli/pkg/tui"
 	"github.com/nitrictech/cli/pkg/tui/listprompt"
 	"github.com/nitrictech/cli/pkg/tui/textprompt"
+	"github.com/nitrictech/cli/pkg/tui/view"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
@@ -39,20 +40,22 @@ type (
 	errMsg error
 )
 
-type ProjectCreationStatus int
+type NewProjectStatus int
 
 const (
-	ToDo ProjectCreationStatus = iota
+	NameInput NewProjectStatus = iota
+	TemplateInput
 	Pending
 	Done
 	Error
 )
 
+// Model - represents the state of the new project creation operation
 type Model struct {
 	isValidName    bool
 	namePrompt     textprompt.Model
 	templatePrompt listprompt.Model
-	projectStatus  ProjectCreationStatus
+	status         NewProjectStatus
 	nonInteractive bool
 
 	spinner spinner.Model
@@ -60,14 +63,17 @@ type Model struct {
 	err error
 }
 
+// ProjectName - returns the project name entered by the user
 func (m Model) ProjectName() string {
 	return m.namePrompt.Value()
 }
 
+// TemplateName returns the project template name selected by the user
 func (m Model) TemplateName() string {
 	return m.templatePrompt.Choice()
 }
 
+// Init initializes the model, used by Bubbletea
 func (m Model) Init() tea.Cmd {
 	if m.err != nil {
 		return tea.Quit
@@ -78,6 +84,7 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(tea.ClearScreen, m.namePrompt.Init(), m.templatePrompt.Init())
 }
 
+// Update the model based on a message
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -90,9 +97,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case projectCreateResultMsg:
 		if msg.err == nil {
-			m.projectStatus = Done
+			m.status = Done
 		} else {
-			m.projectStatus = Error
+			m.status = Error
 			m.err = msg.err
 		}
 		return m, nil
@@ -100,21 +107,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case errMsg:
 		m.err = msg
 		return m, tea.Quit
+	case textprompt.CompleteMsg:
+		if msg.ID == m.namePrompt.ID {
+			m.namePrompt.Blur()
+			m.status = TemplateInput
+		}
+		return m, nil
 	}
 
-	if !m.namePrompt.IsComplete() {
+	// Deal with the various steps in the process from data capture to building the project
+	switch m.status {
+	case NameInput:
 		m.namePrompt, cmd = m.namePrompt.Update(msg)
-	} else if m.namePrompt.IsComplete() && !m.templatePrompt.IsComplete() {
+	case TemplateInput:
 		m.templatePrompt, cmd = m.templatePrompt.Update(msg)
 		if m.templatePrompt.Choice() != "" {
-			m.projectStatus = Pending
+			m.status = Pending
 			return m, tea.Batch(m.spinner.Tick, m.createProject())
 		}
-	} else if m.projectStatus == Pending {
+	case Pending:
 		m.spinner, cmd = m.spinner.Update(msg)
-	}
-
-	if m.projectStatus == Done {
+	case Done:
 		return m, tea.Quit
 	}
 
@@ -131,65 +144,88 @@ var (
 	highlightStyle = lipgloss.NewStyle().Foreground(tui.Colors.Purple)
 )
 
-func tag(tag string) string {
-	return lipgloss.NewStyle().Width(8).Background(tui.Colors.Purple).Foreground(tui.Colors.White).Align(lipgloss.Center).Render(tag)
-}
-
-func successMessage(projectPath string) string {
-	var message strings.Builder
-
-	message.WriteString(tag("proj"))
-	message.WriteString(lipgloss.NewStyle().Bold(true).MarginLeft(2).Render("Project created!"))
-	message.WriteString("\n\n")
-
-	path := highlightStyle.Render(fmt.Sprintf("cd %s", projectPath))
-	chatLink := highlightStyle.Render("https://nitric.io/chat")
-
-	message.WriteString(lipgloss.NewStyle().MarginLeft(10).Render(fmt.Sprintf("Navigate to your project with %s\nInstall dependencies and you're ready to rock!\n\nNeed help? Come and chat %s", path, chatLink)))
-
-	return message.String()
-}
+var (
+	errorTagStyle           = lipgloss.NewStyle().Background(tui.Colors.Red).Foreground(tui.Colors.White).PaddingLeft(2).PaddingRight(2).Align(lipgloss.Center)
+	errorTextStyle          = lipgloss.NewStyle().PaddingLeft(2).Foreground(tui.Colors.Red)
+	tagStyle                = lipgloss.NewStyle().Width(8).Background(tui.Colors.Purple).Foreground(tui.Colors.White).Align(lipgloss.Center)
+	projCreatedHeadingStyle = lipgloss.NewStyle().Bold(true).MarginLeft(2)
+)
 
 func (m Model) View() string {
-	var view strings.Builder
+	projectView := view.New()
 
 	if m.err != nil {
-		view.WriteString(lipgloss.NewStyle().Background(tui.Colors.Red).Foreground(tui.Colors.White).PaddingLeft(2).PaddingRight(2).Align(lipgloss.Center).Render("error"))
-		view.WriteString(lipgloss.NewStyle().PaddingLeft(2).Foreground(tui.Colors.Red).Render(m.err.Error()))
-		view.WriteString("\n")
-		return view.String()
+		projectView.AddRow(
+			view.NewFragment("error").WithStyle(errorTagStyle),
+			view.NewFragment(m.err.Error()).WithStyle(errorTextStyle),
+		)
+		return projectView.Render()
 	}
 
 	if !m.nonInteractive {
-		// Title
-		view.WriteString(fmt.Sprintf("%sLet's get going!\n\n", titleStyle.Render("nitric")))
+		projectView.AddRow(
+			view.NewFragment("nitric").WithStyle(titleStyle),
+			view.NewFragment("Let's get going!"),
+			view.Break(),
+		)
 
-		// Name input
-		view.WriteString(m.namePrompt.View())
+		projectView.AddRow(
+			view.NewFragment(m.namePrompt.View()),
+		)
 
 		// Template selection input
-		if m.namePrompt.IsComplete() {
-			view.WriteString(m.templatePrompt.View())
+		if m.status >= TemplateInput {
+			projectView.AddRow(
+				view.NewFragment(m.templatePrompt.View()),
+			)
 		}
 	}
 
 	// Creating Status
-	if m.projectStatus == Pending {
-		view.WriteString("\n\n")
-		view.WriteString(tag("proj"))
-		view.WriteString(fmt.Sprintf("  %s creating project...\n\n", m.spinner.View()))
+	if m.status == Pending {
+		projectView.AddRow(
+			view.Break(),
+			view.NewFragment("proj").WithStyle(tagStyle),
+			view.NewFragment(m.spinner.View()).WithStyle(lipgloss.NewStyle().MarginLeft(2)),
+			view.NewFragment(" creating project..."),
+			view.Break(),
+		)
 	}
 
 	// Done!
-	if m.projectStatus == Done {
-		view.WriteString("\n\n")
-		view.WriteString(successMessage(fmt.Sprintf("./%s", m.ProjectName())))
-		view.WriteString("\n\n")
+	if m.status == Done {
+		projectView.AddRow(
+			view.Break(),
+			view.NewFragment("proj").WithStyle(tagStyle),
+			view.NewFragment("Project Created!").WithStyle(projCreatedHeadingStyle),
+			view.Break(),
+		)
+
+		shiftRight := lipgloss.NewStyle().MarginLeft(10)
+
+		projectView.AddRow(
+			view.NewFragment("Navigate to your project with "),
+			view.NewFragment(fmt.Sprintf("cd ./%s", m.ProjectName())).WithStyle(highlightStyle),
+		).WithStyle(shiftRight)
+
+		projectView.AddRow(
+			view.NewFragment("Install dependencies and you're ready to rock! 🪨"),
+			view.Break(),
+		).WithStyle(shiftRight)
+
+		projectView.AddRow(
+			view.NewFragment("Need help? Come and chat "),
+			view.NewFragment("https://nitric.io/chat").WithStyle(highlightStyle),
+			view.Break(),
+		).WithStyle(shiftRight)
 	} else {
-		view.WriteString("\n\n(esc to quit)\n")
+		projectView.AddRow(
+			view.Break(),
+			view.NewFragment("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray)),
+		)
 	}
 
-	return view.String()
+	return projectView.Render()
 }
 
 type Args struct {
@@ -202,11 +238,12 @@ func New(args Args) Model {
 	nameGenerator := namegenerator.NewNameGenerator(seed)
 	placeholderName := nameGenerator.Generate()
 
-	namePrompt := textprompt.NewTextPrompt(textprompt.TextPromptArgs{
-		Prompt:      "What should we name this project?",
-		Tag:         "name",
-		Placeholder: placeholderName,
-		Validate:    validateName,
+	namePrompt := textprompt.NewTextPrompt("projectName", textprompt.TextPromptArgs{
+		Prompt:             "What should we name this project?",
+		Tag:                "name",
+		Placeholder:        placeholderName,
+		Validators:         projectNameValidators,
+		InFlightValidators: projectNameInFlightValidators,
 	})
 	namePrompt.Focus()
 
@@ -225,7 +262,7 @@ func New(args Args) Model {
 	s.Spinner = spinner.Dot
 	s.Style = spinnerStyle
 
-	// prefill values from commandline args
+	// prefill values from CLI args
 	if args.ProjectName != "" {
 		namePrompt.SetValue(args.ProjectName)
 	}
@@ -239,8 +276,13 @@ func New(args Args) Model {
 	}
 
 	isNonInteractive := false
-	projectStatus := ToDo
-	if namePrompt.IsComplete() && templatePrompt.IsComplete() {
+	projectStatus := NameInput
+
+	if args.ProjectName != "" {
+		projectStatus = TemplateInput
+	}
+
+	if args.TemplateName != "" {
 		isNonInteractive = true
 		projectStatus = Pending
 	}
@@ -249,7 +291,7 @@ func New(args Args) Model {
 		namePrompt:     namePrompt,
 		templatePrompt: templatePrompt,
 		nonInteractive: isNonInteractive,
-		projectStatus:  projectStatus,
+		status:         projectStatus,
 		spinner:        s,
 		err:            nil,
 	}
@@ -259,8 +301,7 @@ type projectCreateResultMsg struct {
 	err error
 }
 
-// createProject creates the project on disk using the inputs gathered
-// then returns a command that will return a message when the creation is done
+// createProject returns a command that will create the project on disk using the inputs gathered
 func (m Model) createProject() tea.Cmd {
 	return func() tea.Msg {
 		cd, err := filepath.Abs(".")

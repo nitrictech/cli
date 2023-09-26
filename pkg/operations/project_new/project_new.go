@@ -265,7 +265,7 @@ func New(args Args) Model {
 		Prompt:            "Which template should we start with?",
 		Tag:               "tmpl",
 		Items:             templateNames,
-		MaxDisplayedItems: 5,
+		MaxDisplayedItems: len(templateNames),
 	})
 
 	s := spinner.New()

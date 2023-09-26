@@ -33,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkg/tui"
 	"github.com/nitrictech/cli/pkg/tui/listprompt"
 	"github.com/nitrictech/cli/pkg/tui/textprompt"
+	"github.com/nitrictech/cli/pkg/tui/validation"
 	"github.com/nitrictech/cli/pkg/tui/view"
 	"github.com/nitrictech/cli/pkg/utils"
 )
@@ -161,6 +162,8 @@ func (m Model) View() string {
 		projectView.AddRow(
 			view.NewFragment("error").WithStyle(errorTagStyle),
 			view.NewFragment(m.err.Error()).WithStyle(errorTextStyle),
+			// TODO: this shouldn't be needed but without it the line doesn't print
+			view.Break(),
 		)
 
 		return projectView.Render()
@@ -242,12 +245,15 @@ func New(args Args) Model {
 	nameGenerator := namegenerator.NewNameGenerator(seed)
 	placeholderName := nameGenerator.Generate()
 
+	nameValidator := validation.ComposeValidators(projectNameValidators...)
+	nameInFlightValidator := validation.ComposeValidators(projectNameInFlightValidators...)
+
 	namePrompt := textprompt.NewTextPrompt("projectName", textprompt.TextPromptArgs{
-		Prompt:             "What should we name this project?",
-		Tag:                "name",
-		Placeholder:        placeholderName,
-		Validators:         projectNameValidators,
-		InFlightValidators: projectNameInFlightValidators,
+		Prompt:            "What should we name this project?",
+		Tag:               "name",
+		Placeholder:       placeholderName,
+		Validator:         nameValidator,
+		InFlightValidator: nameInFlightValidator,
 	})
 	namePrompt.Focus()
 
@@ -268,6 +274,12 @@ func New(args Args) Model {
 
 	// prefill values from CLI args
 	if args.ProjectName != "" {
+		if err := nameValidator(args.ProjectName); err != nil {
+			return Model{
+				err: err,
+			}
+		}
+
 		namePrompt.SetValue(args.ProjectName)
 	}
 

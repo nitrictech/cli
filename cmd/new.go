@@ -48,7 +48,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		if _, err := tea.NewProgram(project_new.New(project_new.Args{
 			ProjectName:  projectName,
 			TemplateName: templateName,
-		})).Run(); err != nil {
+		}), tea.WithANSICompressor()).Run(); err != nil {
 			return err
 		}
 

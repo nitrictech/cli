@@ -158,12 +158,12 @@ func (m Model) Value() string {
 }
 
 type TextPromptArgs struct {
-	ID                 string
-	Placeholder        string
-	Validators         []validation.StringValidator
-	InFlightValidators []validation.StringValidator
-	Prompt             string
-	Tag                string
+	ID                string
+	Placeholder       string
+	Validator         validation.StringValidator
+	InFlightValidator validation.StringValidator
+	Prompt            string
+	Tag               string
 }
 
 func NewTextPrompt(id string, args TextPromptArgs) Model {
@@ -177,8 +177,8 @@ func NewTextPrompt(id string, args TextPromptArgs) Model {
 		textInput:        ti,
 		Prompt:           args.Prompt,
 		Tag:              args.Tag,
-		validate:         validation.ComposeValidators(args.Validators...),
-		validateInFlight: validation.ComposeValidators(args.InFlightValidators...),
+		validate:         args.Validator,
+		validateInFlight: args.InFlightValidator,
 		err:              nil,
 	}
 }

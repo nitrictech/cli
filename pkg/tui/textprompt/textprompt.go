@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package textprompt
 
 import (
@@ -5,6 +21,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/nitrictech/cli/pkg/tui"
 	"github.com/nitrictech/cli/pkg/tui/validation"
 	"github.com/nitrictech/cli/pkg/tui/view"
@@ -57,7 +74,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if m.textInput.Value() == "" {
 				m.textInput.SetValue(m.textInput.Placeholder)
 			}
+
 			m.err = m.validate(m.textInput.Value())
+
 			if m.err == nil {
 				m.textInput.Blur()
 				return m, m.submit()
@@ -80,6 +99,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.err = nil
 		}
 	}
+
 	m.previous = m.textInput.Value()
 
 	return m, cmd
@@ -147,7 +167,6 @@ type TextPromptArgs struct {
 }
 
 func NewTextPrompt(id string, args TextPromptArgs) Model {
-
 	ti := textinput.New()
 	ti.CharLimit = 156
 	ti.Width = 20

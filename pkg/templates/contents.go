@@ -77,6 +77,7 @@ func (d *downloader) lazyLoadTemplates() error {
 			return err
 		}
 	}
+
 	return nil
 }
 

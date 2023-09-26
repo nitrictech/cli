@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package inlinelist
 
 import (
@@ -6,6 +22,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/nitrictech/cli/pkg/tui"
 	"github.com/nitrictech/cli/pkg/tui/view"
 )
@@ -36,6 +53,7 @@ func min(a, b int) int {
 	if a < b {
 		return a
 	}
+
 	return b
 }
 
@@ -60,6 +78,7 @@ func (m Model) View() string {
 			),
 		)
 	}
+
 	return listView.Render()
 }
 
@@ -86,11 +105,13 @@ func (m Model) CursorUp() Model {
 	if m.cursor < 0 {
 		m.cursor = len(m.Items) - 1
 	}
+
 	return m.refreshViewCursor()
 }
 
 func (m Model) CursorDown() Model {
 	m.cursor = (m.cursor + 1) % len(m.Items)
+
 	return m.refreshViewCursor()
 }
 
@@ -103,9 +124,11 @@ func (m Model) refreshViewCursor() Model {
 	for m.cursor > m.lastDisplayedItem() {
 		m.firstDisplayedItem++
 	}
+
 	for m.cursor < m.firstDisplayedItem {
 		m.firstDisplayedItem--
 	}
+
 	return m
 }
 

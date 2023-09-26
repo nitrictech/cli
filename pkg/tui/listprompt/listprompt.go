@@ -1,9 +1,26 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package listprompt
 
 import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/nitrictech/cli/pkg/tui"
 	"github.com/nitrictech/cli/pkg/tui/inlinelist"
 	"github.com/nitrictech/cli/pkg/tui/view"
@@ -53,7 +70,6 @@ var (
 	promptStyle = lipgloss.NewStyle().MarginLeft(2)
 	inputStyle  = lipgloss.NewStyle().MarginLeft(8)
 	textStyle   = lipgloss.NewStyle().Foreground(tui.Colors.Gray).MarginLeft(10)
-	errorStyle  = lipgloss.NewStyle().Foreground(tui.Colors.Red).Margin(1, 0, 0, 10).Italic(true)
 )
 
 func (m Model) View() string {

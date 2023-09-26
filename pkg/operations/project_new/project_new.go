@@ -27,6 +27,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/goombaio/namegenerator"
+
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/templates"
 	"github.com/nitrictech/cli/pkg/tui"
@@ -52,13 +53,11 @@ const (
 
 // Model - represents the state of the new project creation operation
 type Model struct {
-	isValidName    bool
 	namePrompt     textprompt.Model
 	templatePrompt listprompt.Model
+	spinner        spinner.Model
 	status         NewProjectStatus
 	nonInteractive bool
-
-	spinner spinner.Model
 
 	err error
 }
@@ -78,9 +77,11 @@ func (m Model) Init() tea.Cmd {
 	if m.err != nil {
 		return tea.Quit
 	}
+
 	if m.nonInteractive {
 		return tea.Batch(m.spinner.Tick, m.createProject())
 	}
+
 	return tea.Batch(tea.ClearScreen, m.namePrompt.Init(), m.templatePrompt.Init())
 }
 
@@ -102,6 +103,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = Error
 			m.err = msg.err
 		}
+
 		return m, nil
 
 	case errMsg:
@@ -112,6 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.namePrompt.Blur()
 			m.status = TemplateInput
 		}
+
 		return m, nil
 	}
 
@@ -159,6 +162,7 @@ func (m Model) View() string {
 			view.NewFragment("error").WithStyle(errorTagStyle),
 			view.NewFragment(m.err.Error()).WithStyle(errorTextStyle),
 		)
+
 		return projectView.Render()
 	}
 
@@ -266,12 +270,14 @@ func New(args Args) Model {
 	if args.ProjectName != "" {
 		namePrompt.SetValue(args.ProjectName)
 	}
+
 	if args.TemplateName != "" {
 		if downloadr.Get(args.TemplateName) == nil {
 			return Model{
 				err: fmt.Errorf("template \"%s\" could not be found", args.TemplateName),
 			}
 		}
+
 		templatePrompt.SetChoice(args.TemplateName)
 	}
 
@@ -318,6 +324,7 @@ func (m Model) createProject() tea.Cmd {
 		// Load and update the project name in the template's nitric.yaml
 		p, err = project.ConfigFromProjectPath(projDir)
 		utils.CheckErr(err)
+
 		p.Name = m.ProjectName()
 
 		return projectCreateResultMsg{err: p.ToFile()}

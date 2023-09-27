@@ -30,12 +30,12 @@ import (
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/templates"
-	"github.com/nitrictech/cli/pkg/tui"
-	"github.com/nitrictech/cli/pkg/tui/listprompt"
-	"github.com/nitrictech/cli/pkg/tui/textprompt"
-	"github.com/nitrictech/cli/pkg/tui/validation"
-	"github.com/nitrictech/cli/pkg/tui/view"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/pearls/pkg/tui"
+	"github.com/nitrictech/pearls/pkg/tui/listprompt"
+	"github.com/nitrictech/pearls/pkg/tui/textprompt"
+	"github.com/nitrictech/pearls/pkg/tui/validation"
+	"github.com/nitrictech/pearls/pkg/tui/view"
 )
 
 type (
@@ -122,9 +122,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Deal with the various steps in the process from data capture to building the project
 	switch m.status {
 	case NameInput:
-		m.namePrompt, cmd = m.namePrompt.Update(msg)
+		m.namePrompt, cmd = m.namePrompt.UpdateTextPrompt(msg)
 	case TemplateInput:
-		m.templatePrompt, cmd = m.templatePrompt.Update(msg)
+		m.templatePrompt, cmd = m.templatePrompt.UpdateListPrompt(msg)
 		if m.templatePrompt.Choice() != "" {
 			m.status = Pending
 			return m, tea.Batch(m.spinner.Tick, m.createProject())

@@ -19,7 +19,7 @@ package project_new
 import (
 	"regexp"
 
-	"github.com/nitrictech/cli/pkg/tui/validation"
+	"github.com/nitrictech/pearls/pkg/tui/validation"
 )
 
 var (

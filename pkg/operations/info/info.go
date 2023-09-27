@@ -23,7 +23,6 @@ import (
 
 	"github.com/nitrictech/cli/pkg/ghissue"
 	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/tui"
 )
 
 func Run(ctx context.Context) {
@@ -35,6 +34,4 @@ func Run(ctx context.Context) {
 	} else {
 		fmt.Println(string(s))
 	}
-
-	fmt.Println(tui.DebugColors())
 }

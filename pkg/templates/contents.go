@@ -66,18 +66,27 @@ func NewDownloader() Downloader {
 	}
 }
 
-func (d *downloader) Names() ([]string, error) {
-	names := []string{}
-
+func (d *downloader) lazyLoadTemplates() error {
 	if len(d.repo) == 0 {
 		err := d.repository()
 		if err != nil {
 			if strings.Contains(err.Error(), "git must be available and on the PATH") {
-				return nil, errors.WithMessage(err, "please refer to the installation instructions - https://nitric.io/docs/installation")
+				return errors.WithMessage(err, "please refer to the installation instructions - https://nitric.io/docs/installation")
 			}
 
-			return nil, err
+			return err
 		}
+	}
+
+	return nil
+}
+
+func (d *downloader) Names() ([]string, error) {
+	names := []string{}
+
+	err := d.lazyLoadTemplates()
+	if err != nil {
+		return nil, err
 	}
 
 	for _, ti := range d.repo {
@@ -88,6 +97,11 @@ func (d *downloader) Names() ([]string, error) {
 }
 
 func (d *downloader) Get(name string) *TemplateInfo {
+	err := d.lazyLoadTemplates()
+	if err != nil {
+		return nil
+	}
+
 	for _, ti := range d.repo {
 		if ti.Name == name {
 			return &ti

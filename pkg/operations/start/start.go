@@ -60,7 +60,7 @@ func Run(ctx context.Context, noBrowser bool) {
 		History: history,
 	}
 
-	dash, err := dashboard.New(proj, map[string]string{}, noBrowser || output.CI)
+	dash, err := dashboard.New(proj, map[string]string{})
 	utils.CheckErr(err)
 
 	ls := run.NewLocalServices(proj, true, dash)
@@ -118,9 +118,15 @@ func Run(ctx context.Context, noBrowser bool) {
 				cobra.CheckErr(err)
 			}
 
+			if !dash.HasStarted() {
+				// Start local dashboard
+				err = dash.Serve(ls.GetStorageService(), noBrowser || output.CI)
+				utils.CheckErr(err)
+			}
+
 			stackState.Update(pool, ls)
 
-			area.Update(stackState.Tables(9001, *ls.GetDashPort()))
+			area.Update(stackState.Tables(9001, dash.GetPort()))
 
 			for _, warning := range stackState.Warnings() {
 				pterm.Warning.Println(warning)

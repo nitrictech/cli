@@ -66,7 +66,7 @@ func Run(ctx context.Context) {
 		utils.CheckErr(err)
 	}
 
-	dash, err := dashboard.New(proj, envMap, true)
+	dash, err := dashboard.New(proj, envMap)
 	if err != nil {
 		utils.CheckErr(err)
 	}
@@ -155,10 +155,14 @@ func Run(ctx context.Context) {
 		utils.CheckErr(err)
 	}
 
+	// Start local dashboard
+	err = dash.Serve(ls.GetStorageService(), true)
+	utils.CheckErr(err)
+
 	stackState.Update(pool, ls)
 
 	area, _ := pterm.DefaultArea.Start()
-	area.Update(stackState.Tables(9001, *ls.GetDashPort()))
+	area.Update(stackState.Tables(9001, dash.GetPort()))
 
 	// Create a debouncer for the refresh and remove locking
 	debounced := debounce.New(500 * time.Millisecond)
@@ -173,7 +177,7 @@ func Run(ctx context.Context) {
 
 			stackState.Update(pool, ls)
 
-			area.Update(stackState.Tables(9001, *ls.GetDashPort()))
+			area.Update(stackState.Tables(9001, dash.GetPort()))
 
 			for _, warning := range stackState.Warnings() {
 				pterm.Warning.Println(warning)

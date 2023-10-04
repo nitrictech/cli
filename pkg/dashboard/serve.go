@@ -70,7 +70,8 @@ type Dashboard struct {
 	websocketsInfo       map[string]*WebsocketInfo
 	resourcesLastUpdated time.Time
 	bucketNotifications  []*codeconfig.BucketNotification
-	noBrowser            bool
+	port                 int
+	hasStarted           bool
 }
 
 type Api struct {
@@ -111,7 +112,7 @@ type RefreshOptions struct {
 //go:embed dist/*
 var content embed.FS
 
-func New(p *project.Project, envMap map[string]string, noBrowser bool) (*Dashboard, error) {
+func New(p *project.Project, envMap map[string]string) (*Dashboard, error) {
 	stackWebSocket := melody.New()
 
 	historyWebSocket := melody.New()
@@ -129,7 +130,7 @@ func New(p *project.Project, envMap map[string]string, noBrowser bool) (*Dashboa
 		schedules:           []*codeconfig.TopicResult{},
 		topics:              []*codeconfig.TopicResult{},
 		websocketsInfo:      map[string]*WebsocketInfo{},
-		noBrowser:           noBrowser,
+		hasStarted:          false,
 	}, nil
 }
 
@@ -215,11 +216,11 @@ func (d *Dashboard) AddWebsocketInfoMessage(socket string, message WebsocketMess
 	return nil
 }
 
-func (d *Dashboard) Serve(storagePlugin storage.StorageService) (*int, error) {
+func (d *Dashboard) Serve(storagePlugin storage.StorageService, noBrowser bool) error {
 	// Get the embedded files from the 'dist' directory
 	staticFiles, err := fs.Sub(content, "dist")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fs := http.FileServer(http.FS(staticFiles))
@@ -309,7 +310,7 @@ func (d *Dashboard) Serve(storagePlugin storage.StorageService) (*int, error) {
 	// using ephemeral ports, we will redirect to the dashboard on main api 4000
 	dashListener, err := utils.GetNextListener(utils.MinPort(49152), utils.MaxPort(65535))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	serveFn := func() {
@@ -320,17 +321,27 @@ func (d *Dashboard) Serve(storagePlugin storage.StorageService) (*int, error) {
 	}
 	go serveFn()
 
-	port := dashListener.Addr().(*net.TCPAddr).Port
+	d.port = dashListener.Addr().(*net.TCPAddr).Port
 
 	// open browser
-	if !d.noBrowser {
-		err = openBrowser(fmt.Sprintf("http://localhost:%s", strconv.Itoa(port)))
+	if !noBrowser {
+		err = openBrowser(fmt.Sprintf("http://localhost:%s", strconv.Itoa(d.port)))
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return &port, nil
+	d.hasStarted = true
+
+	return nil
+}
+
+func (d *Dashboard) GetPort() int {
+	return d.port
+}
+
+func (d *Dashboard) HasStarted() bool {
+	return d.hasStarted
 }
 
 func handleResponseWriter(w http.ResponseWriter, data []byte) {

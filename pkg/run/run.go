@@ -41,7 +41,7 @@ type LocalServices interface {
 	Websockets() map[string]string
 	TriggerAddress() string
 	GetWorkerPool() pool.WorkerPool
-	GetDashPort() *int
+	GetStorageService() *RunStorageService
 }
 
 type LocalServicesStatus struct {
@@ -149,14 +149,6 @@ func (l *localServices) Status() *LocalServicesStatus {
 	return l.status
 }
 
-func (l *localServices) GetDashPort() *int {
-	if l.gateway != nil {
-		return &l.gateway.dashPort
-	}
-
-	return nil
-}
-
 func (l *localServices) Start(pool pool.WorkerPool) error {
 	var err error
 
@@ -219,13 +211,6 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		return err
 	}
 
-	// Start local dashboard
-	port, err := l.dashboard.Serve(l.storageService)
-	if err != nil {
-		return err
-	}
-
-	l.gateway.dashPort = *port
 	l.gateway.project = l.project
 	l.gateway.dash = l.dashboard
 
@@ -254,4 +239,8 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 
 func (l *localServices) GetWorkerPool() pool.WorkerPool {
 	return l.gateway.pool
+}
+
+func (l *localServices) GetStorageService() *RunStorageService {
+	return l.storageService
 }

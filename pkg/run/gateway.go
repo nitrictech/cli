@@ -71,11 +71,10 @@ type BaseHttpGateway struct {
 	websocketPlugin  *RunWebsocketService
 	serviceListener  net.Listener
 	gateway.UnimplementedGatewayPlugin
-	stop     chan bool
-	pool     pool.WorkerPool
-	dashPort int
-	project  *project.Project
-	dash     *dashboard.Dashboard
+	stop    chan bool
+	pool    pool.WorkerPool
+	project *project.Project
+	dash    *dashboard.Dashboard
 }
 
 var _ gateway.GatewayService = &BaseHttpGateway{}
@@ -183,7 +182,7 @@ func (s *BaseHttpGateway) handleHttpProxyRequest(idx int) fasthttp.RequestHandle
 			Filter:  httpWorkerFilter(port),
 		})
 		if err != nil {
-			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dashPort), fasthttp.StatusTemporaryRedirect)
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dash.GetPort()), fasthttp.StatusTemporaryRedirect)
 			return
 		}
 
@@ -266,7 +265,7 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 			Filter:  apiWorkerFilter(apiName),
 		})
 		if err != nil {
-			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dashPort), fasthttp.StatusTemporaryRedirect)
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dash.GetPort()), fasthttp.StatusTemporaryRedirect)
 			return
 		}
 
@@ -775,9 +774,9 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 
 	r.NotFound = func(ctx *fasthttp.RequestCtx) {
 		if string(ctx.Path()) == "/" {
-			ctx.Redirect(fmt.Sprintf("http://localhost:%v", s.dashPort), fasthttp.StatusMovedPermanently)
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v", s.dash.GetPort()), fasthttp.StatusMovedPermanently)
 		} else {
-			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dashPort), fasthttp.StatusTemporaryRedirect)
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dash.GetPort()), fasthttp.StatusTemporaryRedirect)
 		}
 	}
 

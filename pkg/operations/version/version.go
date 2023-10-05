@@ -18,11 +18,11 @@ package version
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/nitrictech/cli/pkg/logger"
 	"github.com/nitrictech/cli/pkg/version"
 )
 
 func Run(ctx context.Context) {
-	logger.Simple.Print(version.Version)
+	fmt.Println(version.Version)
 }

@@ -89,6 +89,7 @@ func Run(args Args) {
 	d, err = p.Up()
 
 	if err != nil {
+		pterm.Error.Println(err)
 		os.Exit(1)
 	}
 	// deploy := tasklet.Runner{

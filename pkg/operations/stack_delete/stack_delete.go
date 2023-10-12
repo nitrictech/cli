@@ -57,6 +57,7 @@ func Run(args Args) {
 	_, err = p.Down()
 
 	if err != nil {
+		pterm.Error.Println(err)
 		os.Exit(1)
 	}
 }

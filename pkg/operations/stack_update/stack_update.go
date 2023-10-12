@@ -92,14 +92,6 @@ func Run(args Args) {
 		pterm.Error.Println(err)
 		os.Exit(1)
 	}
-	// deploy := tasklet.Runner{
-	// 	StartMsg: "Deploying..",
-	// 	Runner: func(progress output.Progress) error {
-
-	// 	},
-	// 	StopMsg: "Stack",
-	// }
-	// tasklet.MustRun(deploy, tasklet.Opts{SuccessPrefix: "Deployed"})
 
 	// Print callable APIs if any were deployed
 	if len(d.ApiEndpoints) > 0 {

@@ -85,9 +85,7 @@ func Run(args Args) {
 	p, err := provider.ProviderFromFile(cc, args.Stack.Name, args.Stack.Provider, envMap, &types.ProviderOpts{Force: args.Force, Interactive: args.Interactive})
 	utils.CheckErr(err)
 
-	d := &types.Deployment{}
-	d, err = p.Up()
-
+	d, err := p.Up()
 	if err != nil {
 		pterm.Error.Println(err)
 		os.Exit(1)

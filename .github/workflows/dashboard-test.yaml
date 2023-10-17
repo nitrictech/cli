@@ -46,7 +46,6 @@ jobs:
       - name: Run nitric start with test-app in the background
         run: |
           cd ${{ github.workspace }}/cli/dashboard/test-app
-          npm install -g node-gyp
           yarn install
           nitric start &
           yarn dev:functions &

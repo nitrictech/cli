@@ -376,7 +376,7 @@ func (c *codeConfig) apiSpec(api string, workers []*apiHandler) (*openapi3.T, er
 				// If the operation already exists we should fail
 				// NOTE: This should not happen as operations are stored in a map
 				// in the api state for functions
-				return nil, fmt.Errorf("found conflicting operations")
+				return nil, fmt.Errorf("found conflicting operations, you may already have a running instance of your project")
 			}
 
 			exts := map[string]interface{}{

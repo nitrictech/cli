@@ -371,12 +371,10 @@ func (c *codeConfig) apiSpec(api string, workers []*apiHandler) (*openapi3.T, er
 		}
 
 		for _, m := range w.worker.Methods {
-			// TODO FIX
+			// conflicting operations typically arise from 'nitric start'
+			//  when the same/similar projects are run at the same time.
 			if pathItem.Operations() != nil && pathItem.Operations()[m] != nil {
-				// If the operation already exists we should fail
-				// NOTE: This should not happen as operations are stored in a map
-				// in the api state for functions
-				return nil, fmt.Errorf("found conflicting operations")
+				return nil, fmt.Errorf("found conflicting operations, you may already have a running instance of your project")
 			}
 
 			exts := map[string]interface{}{

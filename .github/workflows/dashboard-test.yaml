@@ -47,7 +47,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/cli/dashboard/test-app
           yarn install
-          nitric start &
+          nitric start --ci &
           yarn dev:functions &
 
       - name: Run Tests

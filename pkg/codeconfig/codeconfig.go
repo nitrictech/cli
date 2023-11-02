@@ -104,7 +104,7 @@ func (c *codeConfig) Collect() error {
 		wg.Add(1)
 
 		// run files in parallel
-		go func(fn project.Function) {
+		go func(fn *project.Function) {
 			defer wg.Done()
 
 			var err error
@@ -494,14 +494,14 @@ func useDockerInternal(hc *container.HostConfig, port int) []string {
 
 // collectOne - Collects information about a function for a nitric stack
 // handler - the specific handler for the application
-func (c *codeConfig) collectOne(projectFunction project.Function) error {
+func (c *codeConfig) collectOne(projectFunction *project.Function) error {
 	rt, err := projectFunction.GetRuntime()
 	if err != nil {
 		return errors.WithMessage(err, "error getting the runtime from handler "+projectFunction.Handler)
 	}
 
 	name := rt.ContainerName()
-	fun := NewFunction(name, projectFunction)
+	fun := NewFunction(name, *projectFunction)
 
 	srv := NewServer(name, fun)
 	grpcSrv := grpc.NewServer()

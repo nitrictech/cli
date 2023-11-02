@@ -19,12 +19,14 @@ package cmd
 import (
 	"context"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/operations/start"
+	"github.com/nitrictech/cli/pkg/output"
 )
 
-var noBrowser bool
+var startNoBrowser bool
 
 var startCmd = &cobra.Command{
 	Use:         "start",
@@ -32,15 +34,25 @@ var startCmd = &cobra.Command{
 	Long:        `Run nitric services locally for development and testing`,
 	Example:     `nitric start`,
 	Annotations: map[string]string{"commonCommand": "yes"},
-	Run: func(cmd *cobra.Command, args []string) {
-		start.Run(context.TODO(), noBrowser)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if output.CI {
+			return start.RunNonInteractive(startNoBrowser)
+		}
+
+		if _, err := tea.NewProgram(start.New(context.TODO(), start.ModelArgs{
+			NoBrowser: startNoBrowser,
+		}), tea.WithAltScreen()).Run(); err != nil {
+			return err
+		}
+
+		return nil
 	},
 	Args: cobra.ExactArgs(0),
 }
 
 func init() {
 	startCmd.PersistentFlags().BoolVar(
-		&noBrowser,
+		&startNoBrowser,
 		"no-browser",
 		false,
 		"disable browser opening for local dashboard, note: in CI mode the browser opening feature is disabled",

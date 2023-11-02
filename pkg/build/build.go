@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/docker/distribution/reference"
-	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
@@ -39,9 +39,7 @@ func dynamicDockerfile(dir, name string) (*os.File, error) {
 	return os.Create(filepath.Join(dir, fmt.Sprintf("%s.nitric.dynamic.dockerfile", name)))
 }
 
-func buildFunction(s *project.Project, f project.Function) func() error {
-	fun := &f
-
+func buildFunction(s *project.Project, fun *project.Function) func() error {
 	return func() error {
 		ce, err := containerengine.Discover()
 		if err != nil {
@@ -67,17 +65,17 @@ func buildFunction(s *project.Project, f project.Function) func() error {
 			return err
 		}
 
-		ingoreFunctions := lo.Filter(lo.Values(s.Functions), func(item project.Function, index int) bool {
+		ignoreFunctions := lo.Filter(lo.Values(s.Functions), func(item *project.Function, index int) bool {
 			return item.Name != fun.Name
 		})
 
-		ignoreHandlers := lo.Map(ingoreFunctions, func(item project.Function, index int) string {
+		ignoreHandlers := lo.Map(ignoreFunctions, func(item *project.Function, index int) string {
 			return item.Handler
 		})
 
 		ignores := rt.BuildIgnore(ignoreHandlers...)
 
-		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), ignores); err != nil {
+		if err := ce.Build(filepath.Base(f.Name()), s.Dir, fmt.Sprintf("%s-%s", s.Name, fun.Name), rt.BuildArgs(), ignores, fun.BuildLogger); err != nil {
 			return err
 		}
 
@@ -111,7 +109,7 @@ func BuildBaseImages(s *project.Project) error {
 		}
 	}
 
-	pterm.Debug.Printfln("running builds %d at a time", maxConcurrency)
+	tea.Printf("running builds %d at a time\n", maxConcurrency)
 
 	errs.SetLimit(maxConcurrency)
 

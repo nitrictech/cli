@@ -18,6 +18,7 @@ package project
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/samber/lo"
 
@@ -35,6 +36,8 @@ type Function struct {
 	Handler string `yaml:"handler"`
 	// The functions type
 	Config *HandlerConfig `yaml:"-"`
+	// The writer for the build logs, defaults to stdout
+	BuildLogger io.Writer
 }
 
 func (f *Function) GetRuntime() (runtime.Runtime, error) {
@@ -51,11 +54,11 @@ func (f *Function) GetRuntime() (runtime.Runtime, error) {
 }
 
 type Project struct {
-	Dir             string              `yaml:"-"`
-	Name            string              `yaml:"name"`
-	Functions       map[string]Function `yaml:"functions,omitempty"`
-	PreviewFeatures []preview.Feature   `yaml:"-"`
-	History         *history.History    `yaml:"-"`
+	Dir             string               `yaml:"-"`
+	Name            string               `yaml:"name"`
+	Functions       map[string]*Function `yaml:"functions,omitempty"`
+	PreviewFeatures []preview.Feature    `yaml:"-"`
+	History         *history.History     `yaml:"-"`
 }
 
 func (p *Project) IsPreviewFeatureEnabled(feat preview.Feature) bool {
@@ -66,7 +69,7 @@ func New(config BaseConfig) *Project {
 	return &Project{
 		Name:            config.Name,
 		Dir:             config.Dir,
-		Functions:       map[string]Function{},
+		Functions:       map[string]*Function{},
 		PreviewFeatures: config.PreviewFeatures,
 		History: &history.History{
 			ProjectDir: config.Dir,

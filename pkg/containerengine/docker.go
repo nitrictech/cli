@@ -96,7 +96,7 @@ func (d *docker) createBuider() error {
 	return cmd.Run()
 }
 
-func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string) error {
+func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string, buildLogger io.Writer) error {
 	err := d.createBuider()
 	if err != nil {
 		return err
@@ -165,10 +165,13 @@ func (d *docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	}
 
 	cmd := exec.Command("docker", args...)
-	cmd.Stderr = output.NewPtermWriter(pterm.Debug)
-	cmd.Stdout = output.NewPtermWriter(pterm.Debug)
 
-	pterm.Debug.Println("running command: " + cmd.String())
+	if buildLogger == nil {
+		buildLogger = output.NewPtermWriter(pterm.Debug)
+	}
+
+	cmd.Stdout = buildLogger
+	cmd.Stderr = buildLogger
 
 	return cmd.Run()
 }

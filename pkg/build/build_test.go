@@ -17,6 +17,7 @@
 package build
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -39,18 +40,45 @@ func TestBuildBaseImages(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	s := project.New(project.BaseConfig{Name: "", Dir: dir, PreviewFeatures: []string{"dockerfile"}})
-	s.Functions = map[string]project.Function{"foo": {Project: s, Handler: "functions/list.ts", Name: "foo", Config: &project.HandlerConfig{
+	s.Functions = map[string]*project.Function{"foo": {Project: s, Handler: "functions/list.ts", Name: "foo", Config: &project.HandlerConfig{
 		Type:  "default",
 		Match: "functions/list.ts",
 	}}}
 
 	me.EXPECT().Build(gomock.Any(), dir, "-foo", gomock.Any(), []string{
 		".nitric/", "!.nitric/*.yaml", ".git/", ".idea/", ".vscode/", ".github/", "*.dockerfile", "*.dockerignore", "node_modules/",
-	})
+	}, gomock.Any())
 
 	containerengine.DiscoveredEngine = me
 
 	if err := BuildBaseImages(s); err != nil {
 		t.Errorf("CreateBaseDev() error = %v", err)
 	}
+}
+
+func TestBuildBaseImagesThrowsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	me := mock_containerengine.NewMockContainerEngine(ctrl)
+
+	dir, err := os.MkdirTemp("", "test-nitric-build")
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer os.RemoveAll(dir)
+
+	s := project.New(project.BaseConfig{Name: "", Dir: dir, PreviewFeatures: []string{"dockerfile"}})
+	s.Functions = map[string]*project.Function{"foo": {Project: s, Handler: "functions/list.ts", Name: "foo", Config: &project.HandlerConfig{
+		Type:  "default",
+		Match: "functions/list.ts",
+	}}}
+
+	me.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("an error occurred building the functions"))
+
+	containerengine.DiscoveredEngine = me
+
+	err = BuildBaseImages(s)
+
+	gomock.Not(gomock.Nil().Matches(err))
+	gomock.Eq(err.Error()).Matches("an error occurred building the functions")
 }

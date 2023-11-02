@@ -17,10 +17,12 @@
 package codeconfig
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/nitrictech/cli/pkg/project"
@@ -252,4 +254,29 @@ func Test_specFromWorkerPool(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_Collect(t *testing.T) {
+	dir, err := os.MkdirTemp("", "test-nitric-build")
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer os.RemoveAll(dir)
+
+	proj := project.New(project.BaseConfig{Name: "", Dir: dir, PreviewFeatures: []string{"dockerfile"}})
+	proj.Functions = map[string]*project.Function{"foo": {Project: proj, Handler: "functions/list.ts", Name: "foo", Config: &project.HandlerConfig{
+		Type:  "default",
+		Match: "functions/list.ts",
+	}}}
+
+	functions := make(map[string]*FunctionDependencies)
+	functions["foo"] = &FunctionDependencies{}
+
+	cc := codeConfig{
+		initialProject: proj,
+	}
+
+	err = cc.Collect()
+	gomock.Nil().Matches(err)
 }

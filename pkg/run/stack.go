@@ -21,15 +21,20 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
-
-	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/worker"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
+)
+
+const (
+	urlWidth     = 35
+	defaultWidth = 15
 )
 
 type BucketNotification struct {
@@ -46,6 +51,7 @@ type RunStackState struct {
 	schedules           map[string]string
 	bucketNotifications []*BucketNotification
 	httpWorkers         map[int]string
+	dashboardPort       int
 }
 
 func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
@@ -56,6 +62,7 @@ func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
 	r.schedules = make(map[string]string)
 	r.bucketNotifications = []*BucketNotification{}
 	r.httpWorkers = make(map[int]string)
+	r.dashboardPort = ls.GetDashboard().GetPort()
 
 	for name, address := range ls.Apis() {
 		r.apis[name] = address
@@ -101,15 +108,36 @@ func (r *RunStackState) Warnings() []string {
 	return warnings
 }
 
-func (r *RunStackState) Tables(port int, dashPort int) string {
-	tables := []string{}
+func createTable(columns []table.Column, rows []table.Row) table.Model {
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(false),
+		table.WithHeight(len(rows)+1),
+	)
 
-	table, rows := r.ApiTable(9001)
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("260")).
+		BorderBottom(true).
+		Bold(false)
+	s.Selected = lipgloss.NewStyle()
+	t.SetStyles(s)
+
+	return t
+}
+
+func (r *RunStackState) Tables() []table.Model {
+	port := 9001
+	tables := []table.Model{}
+
+	table, rows := r.ApiTable(port)
 	if rows > 0 {
 		tables = append(tables, table)
 	}
 
-	table, rows = r.WebsocketsTable(9001)
+	table, rows = r.WebsocketsTable(port)
 	if rows > 0 {
 		tables = append(tables, table)
 	}
@@ -134,104 +162,118 @@ func (r *RunStackState) Tables(port int, dashPort int) string {
 		tables = append(tables, table)
 	}
 
-	tables = append(tables, r.DashboardTable(dashPort))
+	tables = append(tables, r.DashboardTable(r.dashboardPort))
 
-	return strings.Join(tables, "\n\n")
+	return tables
 }
 
-func (r *RunStackState) ApiTable(port int) (string, int) {
-	tableData := pterm.TableData{{"Api", "Endpoint"}}
+func (r *RunStackState) ApiTable(port int) (table.Model, int) {
+	columns := []table.Column{
+		{Title: "Api", Width: defaultWidth},
+		{Title: "Endpoint", Width: urlWidth},
+	}
+	rows := make([]table.Row, 0)
 
 	for name, address := range r.apis {
-		tableData = append(tableData, []string{
+		rows = append(rows, []string{
 			name, fmt.Sprintf("http://%s", address),
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str, len(r.apis)
+	return createTable(columns, rows), len(rows)
 }
 
-func (r *RunStackState) WebsocketsTable(port int) (string, int) {
-	tableData := pterm.TableData{{"Websocket", "Endpoint"}}
+func (r *RunStackState) WebsocketsTable(port int) (table.Model, int) {
+	columns := []table.Column{
+		{Title: "Websocket", Width: defaultWidth},
+		{Title: "Endpoint", Width: urlWidth},
+	}
+	rows := make([]table.Row, 0)
 
 	for name, address := range r.sockets {
-		tableData = append(tableData, []string{
+		rows = append(rows, []string{
 			name, fmt.Sprintf("ws://%s", address),
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str, len(r.sockets)
+	return createTable(columns, rows), len(rows)
 }
 
-func (r *RunStackState) TopicTable() (string, int) {
-	tableData := pterm.TableData{{"Topic", "Endpoint"}}
+func (r *RunStackState) TopicTable() (table.Model, int) {
+	columns := []table.Column{
+		{Title: "Topic", Width: defaultWidth},
+		{Title: "Endpoint", Width: urlWidth},
+	}
+	rows := make([]table.Row, 0)
 
-	topicKeys := lo.Keys[string, string](r.subs)
+	topicKeys := lo.Keys(r.subs)
 	sort.Strings(topicKeys)
 
 	for _, k := range topicKeys {
-		tableData = append(tableData, []string{
+		rows = append(rows, []string{
 			k, r.subs[k],
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str, len(r.subs)
+	return createTable(columns, rows), len(r.subs)
 }
 
-func (r *RunStackState) SchedulesTable() (string, int) {
-	tableData := pterm.TableData{{"Schedule", "Endpoint"}}
+func (r *RunStackState) SchedulesTable() (table.Model, int) {
+	columns := []table.Column{
+		{Title: "Schedule", Width: defaultWidth},
+		{Title: "Endpoint", Width: urlWidth},
+	}
+	rows := make([]table.Row, 0)
 
 	for k, address := range r.schedules {
-		tableData = append(tableData, []string{
+		rows = append(rows, []string{
 			k, address,
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str, len(r.schedules)
+	return createTable(columns, rows), len(r.schedules)
 }
 
-func (r *RunStackState) HttpTable() (string, int) {
-	tableData := pterm.TableData{{"Proxy", "Endpoint"}}
+func (r *RunStackState) HttpTable() (table.Model, int) {
+	columns := []table.Column{
+		{Title: "Proxy", Width: defaultWidth},
+		{Title: "Endpoint", Width: urlWidth},
+	}
+	rows := make([]table.Row, 0)
 
 	for port, address := range r.httpWorkers {
-		tableData = append(tableData, []string{
+		rows = append(rows, []string{
 			fmt.Sprintf("%d", port), fmt.Sprintf("http://%s", address),
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str, len(r.httpWorkers)
+	return createTable(columns, rows), len(r.httpWorkers)
 }
 
-func (r *RunStackState) BucketNotificationsTable() (string, int) {
-	tableData := pterm.TableData{{"Bucket", "Notification Type", "Notification Prefix Filter"}}
+func (r *RunStackState) BucketNotificationsTable() (table.Model, int) {
+	columns := []table.Column{
+		{Title: "Bucket", Width: defaultWidth},
+		{Title: "Type", Width: defaultWidth},
+		{Title: "Filter", Width: defaultWidth},
+	}
+	rows := make([]table.Row, 0)
 
 	for _, notification := range r.bucketNotifications {
-		tableData = append(tableData, []string{
+		rows = append(rows, []string{
 			notification.Bucket, notification.NotificationType.String(), notification.NotificationPrefixFilter,
 		})
 	}
 
-	str, _ := pterm.DefaultTable.WithHasHeader().WithData(tableData).Srender()
-
-	return str, len(r.bucketNotifications)
+	return createTable(columns, rows), len(r.bucketNotifications)
 }
 
-func (r *RunStackState) DashboardTable(port int) string {
-	tableData := pterm.TableData{{pterm.LightCyan("Dev Dashboard"), fmt.Sprintf("http://localhost:%v", port)}}
+func (r *RunStackState) DashboardTable(port int) table.Model {
+	columns := []table.Column{{Title: "Dev Dashboard", Width: urlWidth}}
+	rows := make([]table.Row, 0)
 
-	str, _ := pterm.DefaultTable.WithData(tableData).Srender()
+	rows = append(rows, []string{fmt.Sprintf("http://localhost:%v", port)})
 
-	return str
+	return createTable(columns, rows)
 }
 
 func NewStackState(proj *project.Project) *RunStackState {

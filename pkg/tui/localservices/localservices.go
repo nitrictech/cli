@@ -53,8 +53,8 @@ type Model struct {
 	envMap    map[string]string
 	project   *project.Project
 	noBrowser bool
-	started   bool
 	quitting  bool
+	started   bool
 
 	Ready      FunctionsReadyMessage
 	StackState *run.RunStackState
@@ -86,7 +86,6 @@ func New(args ModelArgs) Model {
 		project:   args.Project,
 		sub:       args.Sub,
 		noBrowser: args.NoBrowser,
-		started:   false,
 		viewport:  vp,
 		Error:     err,
 	}
@@ -157,11 +156,6 @@ func startLocalServices(sub chan tea.Msg, project *project.Project, envMap map[s
 		return ErrorMessage{Error: err}
 	}
 
-	err = dash.Serve(ls.GetStorageService(), noBrowser || output.CI)
-	if err != nil {
-		return ErrorMessage{Error: err}
-	}
-
 	stackState.Update(pool, ls)
 	sub <- StackUpdateMessage{
 		StackState: stackState,
@@ -170,8 +164,20 @@ func startLocalServices(sub chan tea.Msg, project *project.Project, envMap map[s
 	// Create a debouncer for the refresh and remove locking
 	debounced := debounce.New(500 * time.Millisecond)
 
+	dashboardStarted := false
+
 	// React to worker pool state and update services table
 	pool.Listen(func(we run.WorkerEvent) {
+		// Serve the dashboard and open up the browser
+		if !dashboardStarted {
+			err = dash.Serve(ls.GetStorageService(), noBrowser || output.CI)
+			if err != nil {
+				sub <- ErrorMessage{Error: err}
+			}
+
+			dashboardStarted = true
+		}
+
 		debounced(func() {
 			err := ls.Refresh()
 			if err != nil {
@@ -211,10 +217,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Error = msg.Error
 		cmds = append(cmds, subscribeToChannel(m.sub))
 	case StartingFunctionsMessage:
-		m.started = true
 		cmds = append(cmds, subscribeToChannel(m.sub))
 	case FunctionsStartedMessage:
-		m.started = true
 		cmds = append(cmds, subscribeToChannel(m.sub))
 	case WarningMessage:
 		m.Warnings = append(m.Warnings, msg.Warning)
@@ -297,17 +301,20 @@ func (m Model) View() string {
 		return renderer.Render()
 	}
 
-	if m.started && m.StackState == nil {
-		renderer.AddRow(
-			view.NewFragment("Waiting for application to start..."),
-		)
+	tables := 0
+	if m.StackState != nil {
+		tables = len(m.StackState.Tables())
 	}
 
 	if m.StackState != nil {
 		count, _ := m.getViewportContent()
 
 		renderer.AddRow(
-			view.NewFragment("Application is running!"),
+			view.WhenOr(
+				tables != 0,
+				view.NewFragment("Application is running!"),
+				view.NewFragment("Waiting for your application to start..."),
+			),
 			view.Break(),
 			view.Break(),
 			view.NewFragment(m.viewport.View()),

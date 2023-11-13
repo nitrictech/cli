@@ -30,6 +30,7 @@ import (
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/worker"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
+	"github.com/nitrictech/pearls/pkg/tui"
 )
 
 const (
@@ -119,7 +120,7 @@ func createTable(columns []table.Column, rows []table.Row) table.Model {
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("260")).
+		BorderForeground(tui.Colors.White).
 		BorderBottom(true).
 		Bold(false)
 	s.Selected = lipgloss.NewStyle()
@@ -162,7 +163,11 @@ func (r *RunStackState) Tables() []table.Model {
 		tables = append(tables, table)
 	}
 
-	tables = append(tables, r.DashboardTable(r.dashboardPort))
+	// Only add the dashboard table if theres more resources
+	table = r.DashboardTable(r.dashboardPort)
+	if len(tables) > 0 {
+		tables = append(tables, table)
+	}
 
 	return tables
 }

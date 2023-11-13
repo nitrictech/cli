@@ -18,8 +18,10 @@ package cmd
 
 import (
 	"context"
+	"log"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/operations/start"
@@ -35,13 +37,19 @@ var startCmd = &cobra.Command{
 	Example:     `nitric start`,
 	Annotations: map[string]string{"commonCommand": "yes"},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Divert default log output to pterm debug
+		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
+
 		if output.CI {
 			return start.RunNonInteractive(startNoBrowser)
 		}
 
-		if _, err := tea.NewProgram(start.New(context.TODO(), start.ModelArgs{
+		model := start.New(context.TODO(), start.ModelArgs{
 			NoBrowser: startNoBrowser,
-		}), tea.WithAltScreen()).Run(); err != nil {
+		})
+
+		if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
 			return err
 		}
 

@@ -159,11 +159,6 @@ func startLocalServices(sub chan tea.Msg, project *project.Project, envMap map[s
 		StackState: stackState,
 	}
 
-	err = dash.Serve(ls.GetStorageService(), noBrowser || output.CI)
-	if err != nil {
-		sub <- ErrorMessage{Error: err}
-	}
-
 	// Create a debouncer for the refresh and remove locking
 	debounced := debounce.New(500 * time.Millisecond)
 

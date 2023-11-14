@@ -27,7 +27,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/output"
@@ -161,27 +160,30 @@ func startLocalServices(sub chan tea.Msg, project *project.Project, envMap map[s
 		StackState: stackState,
 	}
 
+	err = dash.Serve(ls.GetStorageService(), noBrowser || output.CI)
+	if err != nil {
+		sub <- ErrorMessage{Error: err}
+	}
+
 	// Create a debouncer for the refresh and remove locking
 	debounced := debounce.New(500 * time.Millisecond)
 
-	dashboardStarted := false
-
 	// React to worker pool state and update services table
 	pool.Listen(func(we run.WorkerEvent) {
-		// Serve the dashboard and open up the browser
-		if !dashboardStarted {
-			err = dash.Serve(ls.GetStorageService(), noBrowser || output.CI)
-			if err != nil {
-				sub <- ErrorMessage{Error: err}
-			}
-
-			dashboardStarted = true
-		}
-
 		debounced(func() {
 			err := ls.Refresh()
 			if err != nil {
-				cobra.CheckErr(err)
+				sub <- ErrorMessage{Error: err}
+				return
+			}
+
+			if !dash.HasStarted() {
+				// Start local dashboard
+				err = dash.Serve(ls.GetStorageService(), noBrowser || output.CI)
+				if err != nil {
+					sub <- ErrorMessage{Error: err}
+					return
+				}
 			}
 
 			stackState.Update(pool, ls)
@@ -322,7 +324,7 @@ func (m Model) View() string {
 			view.Break(),
 			view.WhenOr(count > m.viewport.Height,
 				view.NewFragment(m.help.FullHelpView(LocalServicesKeys.FullHelp())).WithStyle(helpStyle),
-				view.NewFragment("q quit").WithStyle(helpStyle),
+				view.NewFragment(m.help.ShortHelpView(LocalServicesKeys.ShortHelp())).WithStyle(helpStyle),
 			),
 			view.Break(),
 		)

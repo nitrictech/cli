@@ -35,8 +35,8 @@ var BuildLogKeys = keyMap{
 		key.WithHelp("↓", "scroll down"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q", "quit"),
+		key.WithKeys("esc", "ctrl+c"),
+		key.WithHelp("esc", "quit"),
 	),
 	Continue: key.NewBinding(
 		key.WithKeys("a"),

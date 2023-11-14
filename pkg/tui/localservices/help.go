@@ -34,15 +34,15 @@ var LocalServicesKeys = keyMap{
 		key.WithHelp("↓", "scroll table down"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q", "quit"),
+		key.WithKeys("esc", "ctrl+c"),
+		key.WithHelp("esc", "quit"),
 	),
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
 // of the key.Map interface.
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Quit}
+	return []key.Binding{k.Quit}
 }
 
 // FullHelp returns keybindings for the expanded help view. It's part of the

@@ -17,11 +17,19 @@
 package cmd
 
 import (
+	"context"
+	"log"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/command"
 	"github.com/nitrictech/cli/pkg/operations/local_run"
+	"github.com/nitrictech/cli/pkg/output"
 )
+
+var runNoBrowser bool
 
 var runCmd = &cobra.Command{
 	Use:         "run",
@@ -29,13 +37,33 @@ var runCmd = &cobra.Command{
 	Long:        `Run your project locally for development and testing`,
 	Example:     `nitric run`,
 	Annotations: map[string]string{"commonCommand": "yes"},
-	Run: func(cmd *cobra.Command, args []string) {
-		local_run.Run(cmd.Context())
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Divert default log output to pterm debug
+		log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		log.SetFlags(0)
+
+		if output.CI {
+			return local_run.RunNonInteractive(runNoBrowser)
+		}
+
+		if _, err := tea.NewProgram(local_run.New(context.TODO(), local_run.ModelArgs{
+			NoBrowser: runNoBrowser,
+		}), tea.WithAltScreen()).Run(); err != nil {
+			return err
+		}
+
+		return nil
 	},
 	Args: cobra.ExactArgs(0),
 }
 
 func init() {
 	runCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
+	runCmd.PersistentFlags().BoolVar(
+		&runNoBrowser,
+		"no-browser",
+		false,
+		"disable browser opening for local dashboard, note: in CI mode the browser opening feature is disabled",
+	)
 	rootCmd.AddCommand(command.AddDependencyCheck(runCmd, command.Docker))
 }

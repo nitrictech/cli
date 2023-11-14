@@ -136,6 +136,10 @@ func newFunction(opts FunctionOpts) (*Function, error) {
 func FunctionsFromHandlers(p *project.Project) ([]*Function, error) {
 	funcs := make([]*Function, 0, len(p.Functions))
 
+	if len(p.Functions) == 0 {
+		return funcs, nil
+	}
+
 	ce, err := containerengine.Discover()
 	if err != nil {
 		return nil, err

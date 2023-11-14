@@ -52,7 +52,7 @@ func FromConfig(c *Config) (*Project, error) {
 			fn.Name = rt.ContainerName()
 			fn.Project = p
 
-			p.Functions[rt.ContainerName()] = fn
+			p.Functions[rt.ContainerName()] = &fn
 		}
 	}
 

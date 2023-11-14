@@ -2,6 +2,8 @@ module github.com/nitrictech/cli
 
 go 1.19
 
+replace github.com/mattn/go-ieproxy => github.com/darthShadow/go-ieproxy v0.0.0-20220916090656-69928ad83ed6
+
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible
@@ -454,5 +456,3 @@ require (
 	mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b // indirect
 	mvdan.cc/unparam v0.0.0-20221223090309-7455f1af531d // indirect
 )
-
-replace github.com/mattn/go-ieproxy => github.com/darthShadow/go-ieproxy v0.0.0-20220916090656-69928ad83ed6

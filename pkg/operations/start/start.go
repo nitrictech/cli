@@ -19,13 +19,13 @@ package start
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/bep/debounce"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -36,16 +36,82 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/tasklet"
+	"github.com/nitrictech/cli/pkg/tui/localservices"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
-func Run(ctx context.Context, noBrowser bool) {
+type Model struct {
+	sub           chan tea.Msg
+	localServices localservices.Model
+}
+
+func subscribeToChannel(sub chan tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		return <-sub
+	}
+}
+
+func (m Model) Init() tea.Cmd {
+	return m.localServices.Init()
+}
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	ls, cmd := m.localServices.Update(msg)
+	m.localServices = ls.(localservices.Model)
+
+	return m, tea.Batch(cmd, subscribeToChannel(m.sub))
+}
+
+func (m Model) View() string {
+	return m.localServices.View()
+}
+
+type ModelArgs struct {
+	NoBrowser bool
+}
+
+func New(ctx context.Context, args ModelArgs) Model {
+	sub := make(chan tea.Msg)
+
+	proj, err := getProjectConfig()
+	utils.CheckErr(err)
+
+	ls := localservices.New(localservices.ModelArgs{
+		Project:   proj,
+		Sub:       sub,
+		NoBrowser: args.NoBrowser,
+	})
+
+	m := Model{
+		localServices: ls,
+		sub:           sub,
+	}
+
+	return m
+}
+
+func getProjectConfig() (*project.Project, error) {
+	config, err := project.ConfigFromProjectPath("")
+	if err != nil {
+		return nil, err
+	}
+
+	history := &history.History{
+		ProjectDir: config.Dir,
+	}
+
+	proj := &project.Project{
+		Name:    config.Name,
+		Dir:     config.Dir,
+		History: history,
+	}
+
+	return proj, nil
+}
+
+func RunNonInteractive(noBrowser bool) error {
 	term := make(chan os.Signal, 1)
 	signal.Notify(term, syscall.SIGTERM, syscall.SIGINT)
-
-	// Divert default log output to pterm debug
-	log.SetOutput(output.NewPtermWriter(pterm.Debug))
-	log.SetFlags(0)
 
 	config, err := project.ConfigFromProjectPath("")
 	utils.CheckErr(err)
@@ -76,7 +142,7 @@ func Run(ctx context.Context, noBrowser bool) {
 		StartMsg: "Starting Local Services",
 		Runner: func(progress output.Progress) error {
 			go func(errch chan error) {
-				errch <- ls.Start(pool)
+				errch <- ls.Start(pool, false)
 			}(memerr)
 
 			for {
@@ -126,7 +192,7 @@ func Run(ctx context.Context, noBrowser bool) {
 
 			stackState.Update(pool, ls)
 
-			area.Update(stackState.Tables(9001, dash.GetPort()))
+			area.Update(stackState.Tables())
 
 			for _, warning := range stackState.Warnings() {
 				pterm.Warning.Println(warning)
@@ -142,6 +208,6 @@ func Run(ctx context.Context, noBrowser bool) {
 	}
 
 	_ = area.Stop()
-	// Stop the membrane
-	utils.CheckErr(ls.Stop())
+
+	return ls.Stop()
 }

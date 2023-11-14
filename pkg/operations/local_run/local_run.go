@@ -19,13 +19,14 @@ package local_run
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/bep/debounce"
+	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -38,18 +39,146 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/tasklet"
+	"github.com/nitrictech/cli/pkg/tui/buildlog"
+	"github.com/nitrictech/cli/pkg/tui/localservices"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/pearls/pkg/tui/view"
 )
 
 var envFile string
 
-func Run(ctx context.Context) {
+type State int
+
+const (
+	BuildingImages State = iota
+	StartingLocalServices
+	RunningFunctions
+)
+
+type Model struct {
+	state         State
+	buildLog      buildlog.Model
+	localServices localservices.Model
+	sub           chan tea.Msg
+}
+
+func (m Model) nextState() (Model, tea.Cmd) {
+	switch m.state {
+	case BuildingImages:
+		m.state = StartingLocalServices
+		return m, m.localServices.Init()
+	case StartingLocalServices:
+		m.state = RunningFunctions
+		return m, nil
+	case RunningFunctions:
+		return m, tea.Quit
+	}
+
+	return m, nil
+}
+
+func (m Model) Init() tea.Cmd {
+	return m.buildLog.Init()
+}
+
+func (m Model) View() string {
+	renderer := view.New()
+
+	renderer.AddRow(
+		view.NewFragment(m.buildLog.View()),
+		view.Break(),
+		view.Break(),
+		view.NewFragment(m.localServices.View()),
+	)
+
+	return renderer.Render()
+}
+
+func subscribeToChannel(sub chan tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		return <-sub
+	}
+}
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	var cmds []tea.Cmd
+
+	switch m.state {
+	case BuildingImages:
+		bl, cmd := m.buildLog.Update(msg)
+		m.buildLog = bl.(buildlog.Model)
+
+		cmds = append(cmds, cmd)
+	case StartingLocalServices, RunningFunctions:
+		ls, cmd := m.localServices.Update(msg)
+		m.localServices = ls.(localservices.Model)
+
+		cmds = append(cmds, cmd)
+	}
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, key.NewBinding(key.WithKeys("q", "ctrl+c"))):
+			return m, tea.Quit
+		}
+	case buildlog.FunctionsBuiltMessage, localservices.FunctionsStartedMessage:
+		m, cmd = m.nextState()
+		cmds = append(cmds, cmd, subscribeToChannel(m.sub))
+
+		return m, tea.Batch(cmds...)
+	}
+
+	return m, tea.Batch(cmds...)
+}
+
+type ModelArgs struct {
+	NoBrowser      bool
+	NonInteractive bool
+}
+
+func New(ctx context.Context, args ModelArgs) Model {
+	proj, err := getProjectConfig()
+	utils.CheckErr(err)
+
+	envMap, err := getEnvironmentVariables()
+	utils.CheckErr(err)
+
+	ce, err := containerengine.Discover()
+	utils.CheckErr(err)
+
+	logger := ce.Logger(proj.Dir)
+	utils.CheckErr(logger.Start())
+
+	sub := make(chan tea.Msg)
+
+	buildLog := buildlog.New(buildlog.ModelArgs{
+		Envs:    envMap,
+		Project: proj,
+		Sub:     sub,
+	})
+
+	localServices := localservices.New(localservices.ModelArgs{
+		Envs:      envMap,
+		Project:   proj,
+		Sub:       sub,
+		NoBrowser: args.NoBrowser,
+	})
+
+	m := Model{
+		buildLog:      buildLog,
+		localServices: localServices,
+		state:         BuildingImages,
+	}
+
+	return m
+}
+
+func RunNonInteractive(noBrowser bool) error {
 	term := make(chan os.Signal, 1)
 	signal.Notify(term, syscall.SIGTERM, syscall.SIGINT)
-
-	// Divert default log output to pterm debug
-	log.SetOutput(output.NewPtermWriter(pterm.Debug))
-	log.SetFlags(0)
 
 	config, err := project.ConfigFromProjectPath("")
 	utils.CheckErr(err)
@@ -99,7 +228,7 @@ func Run(ctx context.Context) {
 		StartMsg: "Starting local services",
 		Runner: func(progress output.Progress) error {
 			go func(errch chan error) {
-				errch <- ls.Start(pool)
+				errch <- ls.Start(pool, false)
 			}(memerr)
 
 			for {
@@ -162,7 +291,7 @@ func Run(ctx context.Context) {
 	stackState.Update(pool, ls)
 
 	area, _ := pterm.DefaultArea.Start()
-	area.Update(stackState.Tables(9001, dash.GetPort()))
+	area.Update(stackState.Tables())
 
 	// Create a debouncer for the refresh and remove locking
 	debounced := debounce.New(500 * time.Millisecond)
@@ -177,7 +306,7 @@ func Run(ctx context.Context) {
 
 			stackState.Update(pool, ls)
 
-			area.Update(stackState.Tables(9001, dash.GetPort()))
+			area.Update(stackState.Tables())
 
 			for _, warning := range stackState.Warnings() {
 				pterm.Warning.Println(warning)
@@ -200,6 +329,38 @@ func Run(ctx context.Context) {
 
 	_ = area.Stop()
 	_ = logger.Stop()
+
 	// Stop the membrane
-	utils.CheckErr(ls.Stop())
+	return ls.Stop()
+}
+
+func getProjectConfig() (*project.Project, error) {
+	config, err := project.ConfigFromProjectPath("")
+	if err != nil {
+		return nil, err
+	}
+
+	proj, err := project.FromConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return proj, err
+}
+
+func getEnvironmentVariables() (map[string]string, error) {
+	envFiles := utils.FilesExisting(".env", ".env.development", envFile)
+
+	var err error
+
+	envMap := map[string]string{}
+
+	if len(envFiles) > 0 {
+		envMap, err = godotenv.Read(envFiles...)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return envMap, nil
 }

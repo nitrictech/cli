@@ -31,7 +31,7 @@ import (
 )
 
 type LocalServices interface {
-	Start(pool pool.WorkerPool) error
+	Start(pool pool.WorkerPool, suppressLogs bool) error
 	Stop() error
 	Running() bool
 	Status() *LocalServicesStatus
@@ -42,6 +42,7 @@ type LocalServices interface {
 	TriggerAddress() string
 	GetWorkerPool() pool.WorkerPool
 	GetStorageService() *RunStorageService
+	GetDashboard() *dashboard.Dashboard
 }
 
 type LocalServicesStatus struct {
@@ -149,7 +150,7 @@ func (l *localServices) Status() *LocalServicesStatus {
 	return l.status
 }
 
-func (l *localServices) Start(pool pool.WorkerPool) error {
+func (l *localServices) Start(pool pool.WorkerPool, suppressLogs bool) error {
 	var err error
 
 	l.storage, err = NewSeaweed(l.status.RunDir)
@@ -229,6 +230,7 @@ func (l *localServices) Start(pool pool.WorkerPool) error {
 		WebsocketPlugin:         wsPlugin,
 		Pool:                    pool,
 		TolerateMissingServices: false,
+		SuppressLogs:            suppressLogs,
 	})
 	if err != nil {
 		return err
@@ -243,4 +245,8 @@ func (l *localServices) GetWorkerPool() pool.WorkerPool {
 
 func (l *localServices) GetStorageService() *RunStorageService {
 	return l.storageService
+}
+
+func (l *localServices) GetDashboard() *dashboard.Dashboard {
+	return l.dashboard
 }

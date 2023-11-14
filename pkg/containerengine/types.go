@@ -43,7 +43,7 @@ type ContainerLogger interface {
 
 type ContainerEngine interface {
 	Type() string
-	Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string) error
+	Build(dockerfile, path, imageTag string, buildArgs map[string]string, excludes []string, buildLogger io.Writer) error
 	ListImages(stackName, containerName string) ([]Image, error)
 	Inspect(imageName string) (types.ImageInspect, error)
 	ImagePull(rawImage string, opts types.ImagePullOptions) error
@@ -55,6 +55,11 @@ type ContainerEngine interface {
 	ContainerLogs(containerID string, opts types.ContainerLogsOptions) (io.ReadCloser, error)
 	Logger(stackPath string) ContainerLogger
 	Version() string
+}
+
+type ContainerEngineArgs struct {
+	Output io.Writer
+	Errors io.Writer
 }
 
 func Discover() (ContainerEngine, error) {

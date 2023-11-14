@@ -112,6 +112,7 @@ func (r *RunStackState) Warnings() []string {
 func createTable(columns []table.Column, rows []table.Row) table.Model {
 	headerStyle := lipgloss.NewStyle().Bold(true)
 	headers := []table.Column{}
+
 	for _, column := range columns {
 		headers = append(headers, table.Column{Title: headerStyle.Render(column.Title), Width: column.Width})
 	}

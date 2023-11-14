@@ -53,7 +53,6 @@ type Model struct {
 	project   *project.Project
 	noBrowser bool
 	quitting  bool
-	started   bool
 
 	Ready      FunctionsReadyMessage
 	StackState *run.RunStackState

@@ -57,7 +57,7 @@ require (
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nitrictech/nitric/cloud/common v0.0.0-20230710061936-f8ccb102d31b
-	github.com/nitrictech/pearls v0.0.0-20230927035425-dc9ec468bb24
+	github.com/nitrictech/pearls v0.0.0-20231011053212-77f78229fb97
 	github.com/olahol/melody v1.1.3
 	github.com/samber/lo v1.38.1
 	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e

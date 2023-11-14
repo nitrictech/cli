@@ -141,14 +141,16 @@ func NewBinaryRemoteDeployment(cfc types.ConfigFromCode, sc *StackConfig, prov *
 	// See if the binary exists in NITRIC_HOME/providers
 	providerPath := providerFilePath(prov)
 
-	fi, err := os.Stat(providerPath)
-	if err != nil {
-		return nil, err
-	}
+	if opts != nil && !opts.SkipChecks {
+		fi, err := os.Stat(providerPath)
+		if err != nil {
+			return nil, err
+		}
 
-	// Ensure the file is executable
-	if !isExecAny(fi.Mode()) {
-		return nil, fmt.Errorf("provider exists but is not executable")
+		// Ensure the file is executable
+		if !isExecAny(fi.Mode()) {
+			return nil, fmt.Errorf("provider exists but is not executable")
+		}
 	}
 
 	// return a valid binary deployment

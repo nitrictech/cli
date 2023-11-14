@@ -32,6 +32,7 @@ import (
 	"github.com/nitrictech/cli/pkg/templates"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/pearls/pkg/tui"
+	"github.com/nitrictech/pearls/pkg/tui/inlinelist"
 	"github.com/nitrictech/pearls/pkg/tui/listprompt"
 	"github.com/nitrictech/pearls/pkg/tui/textprompt"
 	"github.com/nitrictech/pearls/pkg/tui/validation"
@@ -240,6 +241,19 @@ type Args struct {
 	TemplateName string
 }
 
+type TemplateItem struct {
+	Value       string
+	Description string
+}
+
+func (m *TemplateItem) GetItemValue() string {
+	return m.Value
+}
+
+func (m *TemplateItem) GetItemDescription() string {
+	return ""
+}
+
 func New(args Args) Model {
 	seed := time.Now().UTC().UnixNano()
 	nameGenerator := namegenerator.NewNameGenerator(seed)
@@ -261,10 +275,16 @@ func New(args Args) Model {
 	templateNames, err := downloadr.Names()
 	utils.CheckErr(err)
 
+	templateItems := []inlinelist.ListItem{}
+
+	for _, name := range templateNames {
+		templateItems = append(templateItems, &TemplateItem{Value: name})
+	}
+
 	templatePrompt := listprompt.New(listprompt.Args{
 		Prompt:            "Which template should we start with?",
 		Tag:               "tmpl",
-		Items:             templateNames,
+		Items:             templateItems,
 		MaxDisplayedItems: len(templateNames),
 	})
 

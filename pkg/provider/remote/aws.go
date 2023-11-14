@@ -21,8 +21,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/AlecAivazis/survey/v2"
 	"gopkg.in/yaml.v2"
+
+	"github.com/nitrictech/cli/pkg/provider/types"
 )
 
 // TODO: Move this into remote provider logic
@@ -31,45 +32,26 @@ type awsProvider struct {
 	*nitricDeployment
 }
 
-var awsSupportedRegions = []string{
-	"us-east-1",
-	"us-west-1",
-	"us-west-2",
-	"eu-west-1",
-	"eu-central-1",
-	"ap-southeast-1",
-	"ap-northeast-1",
-	"ap-southeast-2",
-	"ap-northeast-2",
-	"sa-east-1",
-	"cn-north-1",
-	"ap-south-1",
+var awsSupportedRegions = []types.RegionItem{
+	{Value: "us-east-1", Description: "N. Virginia, USA"},
+	{Value: "us-west-1", Description: "N. California, USA"},
+	{Value: "us-west-2", Description: "Oregon, USA"},
+	{Value: "eu-west-1", Description: "Ireland"},
+	{Value: "eu-central-1", Description: "Frankfurt, Germany"},
+	{Value: "ap-southeast-1", Description: "Singapore"},
+	{Value: "ap-northeast-1", Description: "Tokyo, Japan"},
+	{Value: "ap-southeast-2", Description: "Sydney, Australia"},
+	{Value: "ap-northeast-2", Description: "Seoul, South Korea"},
+	{Value: "sa-east-1", Description: "Sao Paulo, Brazil"},
+	{Value: "cn-north-1", Description: "Beijing, China"},
+	{Value: "ap-south-1", Description: "Mumbai, India"},
 }
 
-// FIXME: Prompting to create a new stack state and memory and persisting to a file should be two separte functions
-func (g *awsProvider) AskAndSave() error {
-	answers := struct {
-		Region  string
-		Project string
-	}{}
+func (g *awsProvider) SupportedRegions() []types.RegionItem {
+	return awsSupportedRegions
+}
 
-	qs := []*survey.Question{
-		{
-			Name: "region",
-			Prompt: &survey.Select{
-				Message: "select the region",
-				Options: awsSupportedRegions,
-			},
-		},
-	}
-
-	err := survey.Ask(qs, &answers)
-	if err != nil {
-		return err
-	}
-
-	g.sfc.Props["region"] = answers.Region
-
+func (g *awsProvider) ToFile() error {
 	b, err := yaml.Marshal(g.sfc)
 	if err != nil {
 		return err

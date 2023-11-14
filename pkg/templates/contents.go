@@ -176,7 +176,7 @@ func (d *downloader) repository() error {
 func (d *downloader) DownloadDirectoryContents(name string, destDir string, force bool) error {
 	_, err := os.Stat(destDir)
 	if err == nil && !force {
-		return errors.New("stack directory already exists and isn't empty, choose a different name or use the --force flag to create in a non-empty directory")
+		return errors.New("project directory already exists and isn't empty, choose a different name or use the --force flag to create in a non-empty directory")
 	}
 
 	template := d.Get(name)

@@ -21,8 +21,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/AlecAivazis/survey/v2"
 	"gopkg.in/yaml.v2"
+
+	"github.com/nitrictech/cli/pkg/provider/types"
 )
 
 // TODO: Move this into remote provider logic
@@ -31,50 +32,24 @@ type gcpProvider struct {
 	*nitricDeployment
 }
 
-var gcpSupportedRegions = []string{
-	"us-west2",
-	"us-west3",
-	"us-west4",
-	"us-central1",
-	"us-east1",
-	"us-east4",
-	"europe-west1",
-	"europe-west2",
-	"asia-east1",
-	"australia-southeast1",
+var gcpSupportedRegions = []types.RegionItem{
+	{Value: "us-west2", Description: "US West (Los Angeles)"},
+	{Value: "us-west3", Description: "US West (Salt Lake City)"},
+	{Value: "us-west4", Description: "US West (Las Vegas)"},
+	{Value: "us-central1", Description: "US Central (Iowa)"},
+	{Value: "us-east1", Description: "US East (South Carolina)"},
+	{Value: "us-east4", Description: "US East (Northern Virginia)"},
+	{Value: "europe-west1", Description: "Europe West (Belgium)"},
+	{Value: "europe-west2", Description: "Europe West (London)"},
+	{Value: "asia-east1", Description: "Asia East (Taiwan)"},
+	{Value: "australia-southeast1", Description: "Australia Southeast (Sydney)"},
 }
 
-// FIXME: Prompting to create a new stack state and memory and persisting to a file should be two separte functions
-func (g *gcpProvider) AskAndSave() error {
-	answers := struct {
-		Region  string
-		Project string
-	}{}
+func (g *gcpProvider) SupportedRegions() []types.RegionItem {
+	return gcpSupportedRegions
+}
 
-	qs := []*survey.Question{
-		{
-			Name: "region",
-			Prompt: &survey.Select{
-				Message: "select the region",
-				Options: gcpSupportedRegions,
-			},
-		},
-		{
-			Name: "project",
-			Prompt: &survey.Input{
-				Message: "Provide the gcp project to use",
-			},
-		},
-	}
-
-	err := survey.Ask(qs, &answers)
-	if err != nil {
-		return err
-	}
-
-	g.sfc.Props["region"] = answers.Region
-	g.sfc.Props["gcp-project-id"] = answers.Project
-
+func (g *gcpProvider) ToFile() error {
 	b, err := yaml.Marshal(g.sfc)
 	if err != nil {
 		return err

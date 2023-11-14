@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
@@ -36,9 +37,10 @@ import (
 )
 
 var (
-	confirmDown bool
-	forceStack  bool
-	envFile     string
+	confirmDown   bool
+	forceStack    bool
+	forceNewStack bool
+	envFile       string
 )
 
 var stackCmd = &cobra.Command{
@@ -78,13 +80,29 @@ nitric stack list
 }
 
 var newStackCmd = &cobra.Command{
-	Use:   "new",
+	Use:   "new [stackName] [providerName]",
 	Short: "Create a new Nitric stack",
 	Long:  `Creates a new Nitric stack.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		err := stack_new.Run()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		stackName := ""
+		if len(args) >= 1 {
+			stackName = args[0]
+		}
 
-		utils.CheckErr(err)
+		providerName := ""
+		if len(args) >= 2 {
+			providerName = args[1]
+		}
+
+		if _, err := tea.NewProgram(stack_new.New(stack_new.Args{
+			StackName:    stackName,
+			ProviderName: providerName,
+			Force:        forceNewStack,
+		}), tea.WithANSICompressor()).Run(); err != nil {
+			return err
+		}
+
+		return nil
 	},
 	Args:        cobra.MaximumNArgs(2),
 	Annotations: map[string]string{"commonCommand": "yes"},
@@ -110,8 +128,8 @@ var stackUpdateCmd = &cobra.Command{
 				pterm.Info.Println("You can run `nitric stack new` to create a new stack.")
 				os.Exit(0)
 			}
-			err = stack_new.Run()
-			utils.CheckErr(err)
+			// err = stack_new.Run()
+			// utils.CheckErr(err)
 
 			_, err = stack.ConfigFromOptions()
 			utils.CheckErr(err)
@@ -160,6 +178,7 @@ nitric stack down -s aws -y`,
 
 func init() {
 	stackCmd.AddCommand(newStackCmd)
+	newStackCmd.Flags().BoolVarP(&forceNewStack, "force", "f", false, "force stack creation.")
 
 	stackCmd.AddCommand(command.AddDependencyCheck(stackUpdateCmd, command.Pulumi, command.Docker))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")

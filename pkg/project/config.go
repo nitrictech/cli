@@ -130,7 +130,7 @@ func ConfigFromProjectPath(projPath string) (*Config, error) {
 
 	yamlFile, err := os.ReadFile(filepath.Join(projPath, "nitric.yaml"))
 	if err != nil {
-		return nil, errors.WithMessage(err, "No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
+		return nil, errors.Errorf("No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
 	}
 
 	err = yaml.Unmarshal(yamlFile, &p)

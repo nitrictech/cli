@@ -23,6 +23,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"gopkg.in/yaml.v2"
+
+	"github.com/nitrictech/cli/pkg/provider/types"
 )
 
 // TODO: Move this into remote provider logic
@@ -31,20 +33,32 @@ type azureProvider struct {
 	*nitricDeployment
 }
 
-var azureSupportedRegions = []string{
-	"canadacentral",
-	"eastasia",
-	"eastus",
-	"eastus2",
-	"germanywestcentral",
-	"japaneast",
-	"northeurope",
-	"uksouth",
-	"westeurope",
-	"westus",
+var azureSupportedRegions = []types.RegionItem{
+	{Value: "canadacentral", Description: "Central Canada"},
+	{Value: "eastasia", Description: "East Asia"},
+	{Value: "eastus", Description: "Eastern United States"},
+	{Value: "eastus2", Description: "Eastern United States 2"},
+	{Value: "germanywestcentral", Description: "Central Germany"},
+	{Value: "japaneast", Description: "Japan East"},
+	{Value: "northeurope", Description: "Northern Europe"},
+	{Value: "uksouth", Description: "Southern United Kingdom"},
+	{Value: "westeurope", Description: "Western Europe"},
+	{Value: "westus", Description: "Western United States"},
 }
 
-// FIXME: Prompting to create a new stack state and memory and persisting to a file should be two separte functions
+func (g *azureProvider) SupportedRegions() []types.RegionItem {
+	return azureSupportedRegions
+}
+
+func (g *azureProvider) ToFile() error {
+	b, err := yaml.Marshal(g.sfc)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(g.cfc.ProjectDir(), fmt.Sprintf("nitric-%s.yaml", g.sfc.Name)), b, 0o644)
+}
+
 func (a *azureProvider) AskAndSave() error {
 	answers := struct {
 		Region     string
@@ -52,13 +66,6 @@ func (a *azureProvider) AskAndSave() error {
 		AdminEmail string
 	}{}
 	qs := []*survey.Question{
-		{
-			Name: "region",
-			Prompt: &survey.Select{
-				Message: "select the region",
-				Options: azureSupportedRegions,
-			},
-		},
 		{
 			Name: "org",
 			Prompt: &survey.Input{

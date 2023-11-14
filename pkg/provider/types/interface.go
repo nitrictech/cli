@@ -46,14 +46,30 @@ type Deployment struct {
 type ProviderOpts struct {
 	Force       bool
 	Interactive bool
+	SkipChecks  bool
+}
+
+type RegionItem struct {
+	Value       string
+	Description string
+}
+
+func (s RegionItem) GetItemValue() string {
+	return s.Value
+}
+
+func (s RegionItem) GetItemDescription() string {
+	return s.Description
 }
 
 type Provider interface {
 	Up() (*Deployment, error)
 	Down() (*Summary, error)
 	List() (interface{}, error)
+	ToFile() error
 	AskAndSave() error
-	SupportedRegions() []string
+	SupportedRegions() []RegionItem
+	SetStackConfigProp(key string, value any)
 	// Status()
 }
 

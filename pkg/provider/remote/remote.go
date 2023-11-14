@@ -45,8 +45,16 @@ func (p *remoteDeployment) AskAndSave() error {
 	return errors.New("not supported on remote deployment servers")
 }
 
-func (p *remoteDeployment) SupportedRegions() []string {
-	return []string{}
+func (p *remoteDeployment) ToFile() error {
+	return errors.New("not supported on remote deployment servers")
+}
+
+func (p *remoteDeployment) SetStackConfigProp(key string, value any) {
+	p.sfc.Props[key] = value
+}
+
+func (p *remoteDeployment) SupportedRegions() []types.RegionItem {
+	return []types.RegionItem{}
 }
 
 func (p *remoteDeployment) List() (interface{}, error) {

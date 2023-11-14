@@ -118,17 +118,22 @@ func checkPulumiLoginState() (bool, error) {
 }
 
 func NewNitricDeployment(cfc types.ConfigFromCode, sc *StackConfig, prov *provider, envMap map[string]string, opts *types.ProviderOpts) (types.Provider, error) {
-	// Check and validate that the nitric provider exists before creating a new binary provider
-	// This will also attempt to automatically retrieve the provider if it doesn't already exist
-	_, err := checkProvider(prov)
-	if err != nil {
-		return nil, err
-	}
+	autoPulumiLogin := false
 
-	// check that a pulumi config exists, if not prompt with auto-config question and doc link
-	autoPulumiLogin, err := checkPulumiLoginState()
-	if err != nil {
-		return nil, err
+	// used to skip checks on stack new
+	if opts != nil && !opts.SkipChecks {
+		// Check and validate that the nitric provider exists before creating a new binary provider
+		// This will also attempt to automatically retrieve the provider if it doesn't already exist
+		_, err := checkProvider(prov)
+		if err != nil {
+			return nil, err
+		}
+
+		// check that a pulumi config exists, if not prompt with auto-config question and doc link
+		autoPulumiLogin, err = checkPulumiLoginState()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	baseBinaryDeployment, err := NewBinaryRemoteDeployment(cfc, sc, prov, envMap, opts)

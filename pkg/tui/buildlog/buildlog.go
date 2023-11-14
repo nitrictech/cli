@@ -163,7 +163,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.help.Width = msg.Width
 
 		// the number of lines that content other than the viewport fills.
-		otherContentLines := 12
+		otherContentLines := 14
 
 		if !m.viewportReady {
 			m.viewport = viewport.New(msg.Width, msg.Height-otherContentLines)

@@ -70,7 +70,6 @@ type Model struct {
 	provider              types.Provider
 	projectConfig         *project.Config
 	nonInteractive        bool
-	force                 bool
 
 	err error
 }
@@ -130,12 +129,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case textprompt.CompleteMsg:
 		if msg.ID == m.namePrompt.ID {
 			m.namePrompt.Blur()
-
-			// check if exists
-			if !m.force {
-				err := checkStackExists(m.projectConfig.Dir, m.StackName())
-				utils.CheckErr(err)
-			}
 
 			m.status = ProviderInput
 		}
@@ -347,6 +340,17 @@ func (m *RegionItem) GetItemDescription() string {
 	return ""
 }
 
+func stackNameExistsValidator(projectDir string) validation.StringValidator {
+	return func(stackName string) error {
+		_, err := os.Stat(filepath.Join(projectDir, fmt.Sprintf("nitric-%s.yaml", stackName)))
+		if err == nil {
+			return fmt.Errorf(`stack with the name "%s" already exists. Choose a different name or use the --force flag to create`, stackName)
+		}
+
+		return nil
+	}
+}
+
 func New(args Args) Model {
 	// check if in a nitric project directory
 	projDir, err := filepath.Abs(".")
@@ -355,6 +359,10 @@ func New(args Args) Model {
 	// Load and update the project name in the template's nitric.yaml
 	projectConfig, err := project.ConfigFromProjectPath(projDir)
 	utils.CheckErr(err)
+
+	if !args.Force {
+		projectNameValidators = append(projectNameValidators, stackNameExistsValidator(projectConfig.Dir))
+	}
 
 	nameValidator := validation.ComposeValidators(projectNameValidators...)
 	nameInFlightValidator := validation.ComposeValidators(projectNameInFlightValidators...)
@@ -421,12 +429,6 @@ func New(args Args) Model {
 			}
 		}
 
-		// check if exists
-		if !args.Force {
-			err := checkStackExists(projectConfig.Dir, args.StackName)
-			utils.CheckErr(err)
-		}
-
 		namePrompt.SetValue(args.StackName)
 	}
 
@@ -471,7 +473,6 @@ func New(args Args) Model {
 		projectConfig:         projectConfig,
 		provider:              provider,
 		spinner:               s,
-		force:                 args.Force,
 		err:                   nil,
 	}
 }
@@ -499,15 +500,6 @@ func getRegionList(provider types.Provider) []inlinelist.ListItem {
 	}
 
 	return listItems
-}
-
-func checkStackExists(projectDir, stackName string) error {
-	_, err := os.Stat(filepath.Join(projectDir, fmt.Sprintf("nitric-%s.yaml", stackName)))
-	if err == nil {
-		return fmt.Errorf(`stack with the name "%s" already exists. Choose a different name or use the --force flag to create`, stackName)
-	}
-
-	return nil
 }
 
 // createStack returns a command that will create the stack on disk using the inputs gathered

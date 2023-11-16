@@ -46,6 +46,8 @@ type HistoryRecord struct {
 	Success bool  `json:"success,omitempty"`
 	EventHistoryItem
 	ApiHistoryItem
+	RecordType RecordType `json:"-"`
+	Callback   func()     `json:"-"`
 }
 
 type EventRecord struct {
@@ -88,41 +90,68 @@ type ResponseHistory struct {
 }
 
 type History struct {
-	ProjectDir string
+	projectDir string
+	writeQueue chan *HistoryRecord
+}
+
+func NewHistory(projectDir string) *History {
+	h := &History{
+		projectDir: projectDir,
+		writeQueue: make(chan *HistoryRecord),
+	}
+
+	// Start the goroutine to handle write operations
+	go h.startWorker()
+
+	return h
+}
+
+func (h *History) startWorker() {
+	for historyRecord := range h.writeQueue {
+		if err := h.writeHistoryRecord(historyRecord); err != nil {
+			fmt.Println("Error:", err)
+		} else if historyRecord.Callback != nil {
+			historyRecord.Callback()
+		}
+	}
 }
 
 func NewHistoryError(recordType RecordType, historyFile string) error {
 	return fmt.Errorf("could not write %s history to the JSON file '%s' due to a formatting issue. Please check the file's formatting and ensure it follows the correct JSON structure, or reset the history by deleting the file", recordType, historyFile)
 }
 
-func (h *History) WriteHistoryRecord(recordType RecordType, historyRecord *HistoryRecord) error {
-	historyFile, err := utils.NitricHistoryFile(h.ProjectDir, string(recordType))
+func (h *History) EnqueueHistoryRecord(historyRecord *HistoryRecord) {
+	h.writeQueue <- historyRecord
+}
+
+func (h *History) writeHistoryRecord(historyRecord *HistoryRecord) error {
+	historyFile, err := utils.NitricHistoryFile(h.projectDir, string(historyRecord.RecordType))
 	if err != nil {
 		return err
 	}
 
-	existingRecords, err := h.ReadHistoryRecords(recordType)
+	existingRecords, err := h.ReadHistoryRecords(historyRecord.RecordType)
 	if err != nil {
-		return NewHistoryError(recordType, historyFile)
+		return NewHistoryError(historyRecord.RecordType, historyFile)
 	}
 
 	existingRecords = append(existingRecords, historyRecord)
 
 	data, err := json.Marshal(existingRecords)
 	if err != nil {
-		return NewHistoryError(recordType, historyFile)
+		return NewHistoryError(historyRecord.RecordType, historyFile)
 	}
 
 	err = os.WriteFile(historyFile, data, fs.ModePerm)
 	if err != nil {
-		return NewHistoryError(recordType, historyFile)
+		return NewHistoryError(historyRecord.RecordType, historyFile)
 	}
 
 	return nil
 }
 
 func (h *History) DeleteHistoryRecord(recordType RecordType) error {
-	historyFile, err := utils.NitricHistoryFile(h.ProjectDir, string(recordType))
+	historyFile, err := utils.NitricHistoryFile(h.projectDir, string(recordType))
 	if err != nil {
 		return err
 	}
@@ -154,7 +183,7 @@ func (h *History) ReadAllHistoryRecords() (*HistoryRecords, error) {
 }
 
 func (h *History) ReadHistoryRecords(recordType RecordType) ([]*HistoryRecord, error) {
-	historyFile, err := utils.NitricHistoryFile(h.ProjectDir, string(recordType))
+	historyFile, err := utils.NitricHistoryFile(h.projectDir, string(recordType))
 	if err != nil {
 		return nil, err
 	}

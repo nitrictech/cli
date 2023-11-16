@@ -62,9 +62,10 @@ func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *v1.Trigg
 				fmt.Println(err)
 			}
 
-			err = s.project.History.WriteHistoryRecord(history.TOPIC, &history.HistoryRecord{
-				Success: resp.GetTopic().Success,
-				Time:    time.Now().UnixMilli(),
+			s.project.History.EnqueueHistoryRecord(&history.HistoryRecord{
+				Success:    resp.GetTopic().Success,
+				Time:       time.Now().UnixMilli(),
+				RecordType: history.TOPIC,
 				EventHistoryItem: history.EventHistoryItem{
 					Event: &history.EventRecord{
 						TopicKey:  strings.ToLower(strings.ReplaceAll(topic.Topic, " ", "-")),
@@ -73,9 +74,6 @@ func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *v1.Trigg
 					Payload: string(evt.Data),
 				},
 			})
-			if err != nil {
-				fmt.Printf("error occurred writing history: %v", err)
-			}
 		}(target)
 	}
 }

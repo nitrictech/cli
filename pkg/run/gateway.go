@@ -300,7 +300,7 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 			}
 
 			// Write history if it was an API request
-			err = s.project.History.WriteHistoryRecord(history.API, &history.HistoryRecord{
+			s.project.History.EnqueueHistoryRecord(&history.HistoryRecord{
 				Success: http.Status < 400,
 				Time:    time.Now().UnixMilli(),
 				ApiHistoryItem: history.ApiHistoryItem{
@@ -325,15 +325,14 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 						Size:   len(resp.Data),
 					},
 				},
+				RecordType: history.API,
+				Callback: func() {
+					err = s.dash.RefreshHistory()
+					if err != nil {
+						fmt.Println(err.Error())
+					}
+				},
 			})
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-
-			err = s.dash.RefreshHistory()
-			if err != nil {
-				fmt.Println(err.Error())
-			}
 
 			return
 		}
@@ -531,9 +530,10 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 			topicType = history.TOPIC
 		}
 
-		err = s.project.History.WriteHistoryRecord(topicType, &history.HistoryRecord{
-			Success: resp.GetTopic().Success,
-			Time:    time.Now().UnixMilli(),
+		s.project.History.EnqueueHistoryRecord(&history.HistoryRecord{
+			Success:    resp.GetTopic().Success,
+			Time:       time.Now().UnixMilli(),
+			RecordType: topicType,
 			EventHistoryItem: history.EventHistoryItem{
 				Event: &history.EventRecord{
 					TopicKey:  strings.ToLower(strings.ReplaceAll(topicName, " ", "-")),
@@ -542,9 +542,6 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 				Payload: string(ctx.Request.Body()),
 			},
 		})
-		if err != nil {
-			fmt.Println(err.Error())
-		}
 	}
 
 	statusCode := 200

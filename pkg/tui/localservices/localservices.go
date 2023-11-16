@@ -37,9 +37,10 @@ import (
 )
 
 var (
-	textStyle    = lipgloss.NewStyle().Foreground(tui.Colors.White).Align(lipgloss.Left)
-	warningStyle = lipgloss.NewStyle().Foreground(tui.Colors.Blue)
-	helpStyle    = lipgloss.NewStyle().Foreground(tui.Colors.Gray)
+	textStyle      = lipgloss.NewStyle().Foreground(tui.Colors.White).Align(lipgloss.Left)
+	warningStyle   = lipgloss.NewStyle().Foreground(tui.Colors.Blue)
+	errorTextStyle = lipgloss.NewStyle().Foreground(tui.Colors.Red)
+	helpStyle      = lipgloss.NewStyle().Foreground(tui.Colors.Gray)
 )
 
 type Model struct {
@@ -281,8 +282,11 @@ func (m Model) View() string {
 		renderer.AddRow(
 			view.NewFragment("An error occurred whilst starting local services:"),
 			view.Break(),
-			view.NewFragment(m.Error),
 			view.Break(),
+			view.NewFragment(m.Error).WithStyle(errorTextStyle),
+			view.Break(),
+			view.Break(),
+			view.NewFragment(m.help.ShortHelpView(LocalServicesKeys.ShortHelp())).WithStyle(helpStyle),
 		)
 
 		return renderer.Render()

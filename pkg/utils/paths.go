@@ -134,7 +134,7 @@ func NewNitricLogFile(stackPath string) (string, error) {
 func NitricHistoryFile(stackPath string, historyType string) (string, error) {
 	logDir := NitricLogDir(stackPath)
 
-	fileName := fmt.Sprintf("%s/history-%s.json", logDir, historyType)
+	fileName := filepath.Clean(fmt.Sprintf("%s/history-%s.json", logDir, historyType))
 
 	// ensure .nitric exists
 	err := os.MkdirAll(logDir, os.ModePerm)

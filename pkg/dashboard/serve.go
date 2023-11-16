@@ -34,6 +34,7 @@ import (
 	"github.com/olahol/melody"
 
 	"github.com/nitrictech/cli/pkg/codeconfig"
+	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/update"
 	"github.com/nitrictech/cli/pkg/utils"
@@ -186,7 +187,7 @@ func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 	return nil
 }
 
-func (d *Dashboard) RefreshHistory() error {
+func (d *Dashboard) RefreshHistory(_ *history.HistoryRecord) error {
 	return d.sendHistoryUpdate()
 }
 

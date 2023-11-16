@@ -22,8 +22,11 @@ import (
 	"io/fs"
 	"os"
 
+	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkg/utils"
 )
+
+const AddRecordTopic = "history:addrecord"
 
 type HistoryRecords struct {
 	ScheduleHistory []*HistoryRecord `json:"schedules"`
@@ -47,7 +50,7 @@ type HistoryRecord struct {
 	EventHistoryItem
 	ApiHistoryItem
 	RecordType RecordType `json:"-"`
-	Callback   func()     `json:"-"`
+	// Callback   func()     `json:"-"`
 }
 
 type EventRecord struct {
@@ -91,37 +94,21 @@ type ResponseHistory struct {
 
 type History struct {
 	projectDir string
-	writeQueue chan *HistoryRecord
 }
 
 func NewHistory(projectDir string) *History {
 	h := &History{
 		projectDir: projectDir,
-		writeQueue: make(chan *HistoryRecord),
 	}
 
-	// Start the goroutine to handle write operations
-	go h.startWorker()
+	// Start the goroutine to handle write operation
+	eventbus.Bus().Subscribe(AddRecordTopic, h.writeHistoryRecord)
 
 	return h
 }
 
-func (h *History) startWorker() {
-	for historyRecord := range h.writeQueue {
-		if err := h.writeHistoryRecord(historyRecord); err != nil {
-			fmt.Println("Error:", err)
-		} else if historyRecord.Callback != nil {
-			historyRecord.Callback()
-		}
-	}
-}
-
 func NewHistoryError(recordType RecordType, historyFile string) error {
 	return fmt.Errorf("could not write %s history to the JSON file '%s' due to a formatting issue. Please check the file's formatting and ensure it follows the correct JSON structure, or reset the history by deleting the file", recordType, historyFile)
-}
-
-func (h *History) EnqueueHistoryRecord(historyRecord *HistoryRecord) {
-	h.writeQueue <- historyRecord
 }
 
 func (h *History) writeHistoryRecord(historyRecord *HistoryRecord) error {

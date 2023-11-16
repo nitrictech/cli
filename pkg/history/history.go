@@ -172,6 +172,11 @@ func (h *History) ReadHistoryRecords(recordType RecordType) ([]*HistoryRecord, e
 
 	err = json.Unmarshal(data, &history)
 	if err != nil {
+		// Check if the error is a JSON syntax error
+		if _, ok := err.(*json.SyntaxError); ok {
+			return nil, fmt.Errorf("JSON syntax issue detected.\nTo fix, delete the file '%s'", historyFile)
+		}
+
 		return nil, err
 	}
 

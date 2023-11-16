@@ -328,41 +328,6 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 				RecordType: history.API,
 			})
 
-			// Write history if it was an API request
-			// s.project.History.EnqueueHistoryRecord(&history.HistoryRecord{
-			// 	Success: http.Status < 400,
-			// 	Time:    time.Now().UnixMilli(),
-			// 	ApiHistoryItem: history.ApiHistoryItem{
-			// 		Api: s.GetApiAddresses()[apiName],
-			// 		Request: &history.RequestHistory{
-			// 			Method:      string(ctx.Request.Header.Method()),
-			// 			Path:        string(ctx.URI().PathOriginal()),
-			// 			QueryParams: queryParams,
-			// 			Headers: lo.MapEntries(headers, func(k string, v *v1.HeaderValue) (string, []string) {
-			// 				return k, v.Value
-			// 			}),
-			// 			Body:       ctx.Request.Body(),
-			// 			PathParams: []history.Param{},
-			// 		},
-			// 		Response: &history.ResponseHistory{
-			// 			Headers: lo.MapEntries(http.Headers, func(k string, v *v1.HeaderValue) (string, []string) {
-			// 				return k, v.Value
-			// 			}),
-			// 			Time:   time.Since(ctx.ConnTime()).Milliseconds(),
-			// 			Status: http.Status,
-			// 			Data:   resp.Data,
-			// 			Size:   len(resp.Data),
-			// 		},
-			// 	},
-			// 	RecordType: history.API,
-			// 	Callback: func() {
-			// 		err = s.dash.RefreshHistory()
-			// 		if err != nil {
-			// 			fmt.Println(err.Error())
-			// 		}
-			// 	},
-			// })
-
 			return
 		}
 
@@ -571,19 +536,6 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 				Payload: string(ctx.Request.Body()),
 			},
 		})
-
-		// s.project.History.EnqueueHistoryRecord(&history.HistoryRecord{
-		// 	Success:    resp.GetTopic().Success,
-		// 	Time:       time.Now().UnixMilli(),
-		// 	RecordType: topicType,
-		// 	EventHistoryItem: history.EventHistoryItem{
-		// 		Event: &history.EventRecord{
-		// 			TopicKey:  strings.ToLower(strings.ReplaceAll(topicName, " ", "-")),
-		// 			WorkerKey: topicName,
-		// 		},
-		// 		Payload: string(ctx.Request.Body()),
-		// 	},
-		// })
 	}
 
 	statusCode := 200

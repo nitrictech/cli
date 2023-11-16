@@ -75,19 +75,6 @@ func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *v1.Trigg
 					Payload: string(evt.Data),
 				},
 			})
-
-			// s.project.History.EnqueueHistoryRecord(&history.HistoryRecord{
-			// 	Success:    resp.GetTopic().Success,
-			// 	Time:       time.Now().UnixMilli(),
-			// 	RecordType: history.TOPIC,
-			// 	EventHistoryItem: history.EventHistoryItem{
-			// 		Event: &history.EventRecord{
-			// 			TopicKey:  strings.ToLower(strings.ReplaceAll(topic.Topic, " ", "-")),
-			// 			WorkerKey: topic.Topic,
-			// 		},
-			// 		Payload: string(evt.Data),
-			// 	},
-			// })
 		}(target)
 	}
 }

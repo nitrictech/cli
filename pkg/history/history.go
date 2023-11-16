@@ -50,7 +50,6 @@ type HistoryRecord struct {
 	EventHistoryItem
 	ApiHistoryItem
 	RecordType RecordType `json:"-"`
-	// Callback   func()     `json:"-"`
 }
 
 type EventRecord struct {

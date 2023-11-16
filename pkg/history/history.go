@@ -101,7 +101,7 @@ func NewHistory(projectDir string) *History {
 	}
 
 	// Start the goroutine to handle write operation
-	eventbus.Bus().Subscribe(AddRecordTopic, h.writeHistoryRecord)
+	_ = eventbus.Bus().Subscribe(AddRecordTopic, h.writeHistoryRecord)
 
 	return h
 }

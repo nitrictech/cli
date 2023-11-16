@@ -778,7 +778,7 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 		Handler:         r.Handler,
 	}
 
-	eventbus.Bus().Subscribe(history.AddRecordTopic, s.dash.RefreshHistory)
+	_ = eventbus.Bus().Subscribe(history.AddRecordTopic, s.dash.RefreshHistory)
 
 	s.serviceListener, err = utils.GetNextListener()
 	if err != nil {

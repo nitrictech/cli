@@ -34,6 +34,7 @@ import (
 	"github.com/valyala/fasthttp"
 
 	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
@@ -299,8 +300,7 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 				}
 			}
 
-			// Write history if it was an API request
-			err = s.project.History.WriteHistoryRecord(history.API, &history.HistoryRecord{
+			eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryRecord{
 				Success: http.Status < 400,
 				Time:    time.Now().UnixMilli(),
 				ApiHistoryItem: history.ApiHistoryItem{
@@ -325,15 +325,8 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 						Size:   len(resp.Data),
 					},
 				},
+				RecordType: history.API,
 			})
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-
-			err = s.dash.RefreshHistory()
-			if err != nil {
-				fmt.Println(err.Error())
-			}
 
 			return
 		}
@@ -531,9 +524,10 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 			topicType = history.TOPIC
 		}
 
-		err = s.project.History.WriteHistoryRecord(topicType, &history.HistoryRecord{
-			Success: resp.GetTopic().Success,
-			Time:    time.Now().UnixMilli(),
+		eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryRecord{
+			Success:    resp.GetTopic().Success,
+			Time:       time.Now().UnixMilli(),
+			RecordType: topicType,
 			EventHistoryItem: history.EventHistoryItem{
 				Event: &history.EventRecord{
 					TopicKey:  strings.ToLower(strings.ReplaceAll(topicName, " ", "-")),
@@ -542,9 +536,6 @@ func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 				Payload: string(ctx.Request.Body()),
 			},
 		})
-		if err != nil {
-			fmt.Println(err.Error())
-		}
 	}
 
 	statusCode := 200
@@ -786,6 +777,8 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 		CloseOnShutdown: true,
 		Handler:         r.Handler,
 	}
+
+	_ = eventbus.Bus().Subscribe(history.AddRecordTopic, s.dash.RefreshHistory)
 
 	s.serviceListener, err = utils.GetNextListener()
 	if err != nil {

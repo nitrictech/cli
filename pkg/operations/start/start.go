@@ -96,9 +96,7 @@ func getProjectConfig() (*project.Project, error) {
 		return nil, err
 	}
 
-	history := &history.History{
-		ProjectDir: config.Dir,
-	}
+	history := history.NewHistory(config.Dir)
 
 	proj := &project.Project{
 		Name:    config.Name,
@@ -116,9 +114,7 @@ func RunNonInteractive(noBrowser bool) error {
 	config, err := project.ConfigFromProjectPath("")
 	utils.CheckErr(err)
 
-	history := &history.History{
-		ProjectDir: config.Dir,
-	}
+	history := history.NewHistory(config.Dir)
 
 	proj := &project.Project{
 		Name:    config.Name,

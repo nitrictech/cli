@@ -71,8 +71,6 @@ func New(config BaseConfig) *Project {
 		Dir:             config.Dir,
 		Functions:       map[string]*Function{},
 		PreviewFeatures: config.PreviewFeatures,
-		History: &history.History{
-			ProjectDir: config.Dir,
-		},
+		History:         history.NewHistory(config.Dir),
 	}
 }

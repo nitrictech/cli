@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
@@ -62,9 +63,10 @@ func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *v1.Trigg
 				fmt.Println(err)
 			}
 
-			err = s.project.History.WriteHistoryRecord(history.TOPIC, &history.HistoryRecord{
-				Success: resp.GetTopic().Success,
-				Time:    time.Now().UnixMilli(),
+			eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryRecord{
+				Success:    resp.GetTopic().Success,
+				Time:       time.Now().UnixMilli(),
+				RecordType: history.TOPIC,
 				EventHistoryItem: history.EventHistoryItem{
 					Event: &history.EventRecord{
 						TopicKey:  strings.ToLower(strings.ReplaceAll(topic.Topic, " ", "-")),
@@ -73,9 +75,6 @@ func (s *WorkerPoolEventService) deliverEvent(ctx context.Context, evt *v1.Trigg
 					Payload: string(evt.Data),
 				},
 			})
-			if err != nil {
-				fmt.Printf("error occurred writing history: %v", err)
-			}
 		}(target)
 	}
 }

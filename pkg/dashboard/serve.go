@@ -326,7 +326,7 @@ func (d *Dashboard) Serve(storagePlugin storage.StorageService, noBrowser bool) 
 
 	// open browser
 	if !noBrowser {
-		err = openBrowser(fmt.Sprintf("http://localhost:%s", strconv.Itoa(d.port)))
+		err = browser.Open(fmt.Sprintf("http://localhost:%s", strconv.Itoa(d.port)))
 		if err != nil {
 			return err
 		}
@@ -409,26 +409,4 @@ func (d *Dashboard) sendWebsocketsUpdate() error {
 	err = d.wsWebSocket.Broadcast(jsonData)
 
 	return err
-}
-
-func openBrowser(url string) error {
-	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "linux":
-		cmd = exec.Command("xdg-open", url)
-	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
-	default:
-		return fmt.Errorf("unsupported platform")
-	}
-
-	err := cmd.Start()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

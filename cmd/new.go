@@ -17,10 +17,13 @@
 package cmd
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/operations/project_new"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 var force bool
@@ -43,6 +46,10 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		templateName := ""
 		if len(args) >= 2 {
 			templateName = args[1]
+		}
+
+		if !utils.IsTerminal() && (templateName == "" || projectName == "") {
+			return fmt.Errorf(`non-terminal detected, for a non-interactive environment use the arguments: nitric new hello-world "official/TypeScript - Starter"`)
 		}
 
 		if _, err := tea.NewProgram(project_new.New(project_new.Args{

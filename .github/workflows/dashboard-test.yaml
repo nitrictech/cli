@@ -25,6 +25,10 @@ jobs:
         with:
           path: cli
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: current
+
       - name: Lint Dashboard
         working-directory: cli/dashboard
         run: |

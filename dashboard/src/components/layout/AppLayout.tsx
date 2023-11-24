@@ -564,8 +564,8 @@ const AppLayout: React.FC<Props> = ({
               </AlertTitle>
               <AlertDescription className="text-lg text-center">
                 {!data
-                  ? "Ensure Nitric is running by executing `nitric start` and start your application using its appropriate command"
-                  : "Ensure your application is running by executing its appropriate command"}
+                  ? "Dashboard disconnected from nitric server, ensure nitric is running by executing `nitric start`."
+                  : "Nitric is running but hasn't received a connection from your application, ensure your application is running."}
               </AlertDescription>
             </Alert>
           )}

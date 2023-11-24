@@ -45,7 +45,7 @@ var startCmd = &cobra.Command{
 
 		if !utils.IsTerminal() && !output.CI {
 			fmt.Println("")
-			pterm.Warning.Println("Non-terminal detected, switching to non-interactive mode")
+			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode.")
 			output.CI = true
 		}
 

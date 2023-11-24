@@ -49,7 +49,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		}
 
 		if !utils.IsTerminal() && (templateName == "" || projectName == "") {
-			return fmt.Errorf(`non-terminal detected, for a non-interactive environment use the arguments: nitric new hello-world "official/TypeScript - Starter"`)
+			return fmt.Errorf(`non-interactive environment detected, please provide all mandatory arguments e.g. nitric new hello-world "official/TypeScript - Starter"`)
 		}
 
 		if _, err := tea.NewProgram(project_new.New(project_new.Args{

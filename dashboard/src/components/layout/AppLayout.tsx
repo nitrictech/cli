@@ -3,6 +3,7 @@ import {
   type PropsWithChildren,
   type ReactNode,
   useState,
+  useEffect,
 } from "react";
 import { Dialog, Popover, Transition } from "@headlessui/react";
 import {
@@ -29,6 +30,9 @@ import {
 } from "../ui/tooltip";
 import { Button } from "../ui/button";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { Spinner } from "../shared";
+import { cn } from "@/lib/utils";
 
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
@@ -38,17 +42,15 @@ const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
     className={className}
     viewBox="0 0 127.14 96.36"
   >
-    <g id="图层_2" data-name="图层 2">
-      <g id="Discord_Logos" data-name="Discord Logos">
-        <g
-          id="Discord_Logo_-_Large_-_White"
-          data-name="Discord Logo - Large - White"
-        >
-          <path
-            fill="#5865f2"
-            d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"
-          />
-        </g>
+    <g id="Discord_Logos" data-name="Discord Logos">
+      <g
+        id="Discord_Logo_-_Large_-_White"
+        data-name="Discord Logo - Large - White"
+      >
+        <path
+          fill="#5865f2"
+          d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"
+        />
       </g>
     </g>
   </svg>
@@ -96,7 +98,7 @@ const AppLayout: React.FC<Props> = ({
   secondLevelNav,
   routePath = "/",
 }) => {
-  const { data } = useWebSocket();
+  const { data, state } = useWebSocket();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // remove trailing slash
@@ -136,6 +138,8 @@ const AppLayout: React.FC<Props> = ({
     // { name: "Collections", href: "#", icon: FolderIcon, current: false },
     // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
   ];
+
+  const showAlert = data?.connected === false || state === "error";
 
   return (
     <>
@@ -324,7 +328,12 @@ const AppLayout: React.FC<Props> = ({
           </nav>
         </div>
 
-        <aside className="fixed inset-y-0 left-20 pt-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 py-6 lg:block">
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-20 pt-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 pb-6 lg:block",
+            showAlert && "lg:mt-24"
+          )}
+        >
           {secondLevelNav}
         </aside>
 
@@ -547,7 +556,19 @@ const AppLayout: React.FC<Props> = ({
               </div>
             </div>
           </div>
-
+          {showAlert && (
+            <Alert className="flex rounded-none flex-col items-center bg-primary/90 text-white justify-center">
+              <AlertTitle className="text-xl flex items-center text-white gap-4 justify-center">
+                Waiting for your application to start
+                <Spinner color="info" className="mb-0.5" />
+              </AlertTitle>
+              <AlertDescription className="text-lg text-center">
+                {!data
+                  ? "Ensure Nitric is running by executing `nitric start` and start your application using its appropriate command"
+                  : "Ensure your application is running by executing its appropriate command"}
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="lg:pl-80">
             <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
               <h1 className="text-4xl font-bold mb-12">{title}</h1>

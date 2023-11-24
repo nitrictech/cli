@@ -24,8 +24,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +31,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
 
+	"github.com/nitrictech/cli/pkg/browser"
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
@@ -73,6 +72,7 @@ type Dashboard struct {
 	bucketNotifications  []*codeconfig.BucketNotification
 	port                 int
 	hasStarted           bool
+	connected            bool
 }
 
 type Api struct {
@@ -94,6 +94,7 @@ type DashboardResponse struct {
 	BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications,omitempty"`
 	CurrentVersion      string                           `json:"currentVersion,omitempty"`
 	LatestVersion       string                           `json:"latestVersion,omitempty"`
+	Connected           bool                             `json:"connected"`
 }
 
 type Bucket struct {
@@ -215,6 +216,10 @@ func (d *Dashboard) AddWebsocketInfoMessage(socket string, message WebsocketMess
 	}
 
 	return nil
+}
+
+func (d *Dashboard) SetConnected(connected bool) {
+	d.connected = connected
 }
 
 func (d *Dashboard) Serve(storagePlugin storage.StorageService, noBrowser bool) error {
@@ -370,6 +375,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		BucketNotifications: d.bucketNotifications,
 		CurrentVersion:      currentVersion,
 		LatestVersion:       latestVersion,
+		Connected:           d.connected,
 	}
 
 	// Encode the response as JSON

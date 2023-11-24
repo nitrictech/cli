@@ -166,6 +166,8 @@ func startLocalServices(sub chan tea.Msg, project *project.Project, envMap map[s
 	// React to worker pool state and update services table
 	pool.Listen(func(we run.WorkerEvent) {
 		debounced(func() {
+			dash.SetConnected(we.Type == "add")
+
 			err := ls.Refresh()
 			if err != nil {
 				sub <- ErrorMessage{Error: err}

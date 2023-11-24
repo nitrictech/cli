@@ -60,6 +60,7 @@ export interface WebSocketResponse {
   storageAddress: string; // has http:// prefix
   currentVersion: string;
   latestVersion: string;
+  connected: boolean;
 }
 
 export interface Param {

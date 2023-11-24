@@ -85,7 +85,7 @@ var newStackCmd = &cobra.Command{
 	Long:  `Creates a new Nitric stack.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !utils.IsTerminal() {
-			return fmt.Errorf("non-terminal detected, the stack new command does not support non-interactive mode")
+			return fmt.Errorf("the stack new command does not support non-interactive environments")
 		}
 
 		stackName := ""

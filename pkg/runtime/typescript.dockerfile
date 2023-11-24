@@ -7,7 +7,7 @@ ARG HANDLER
 RUN --mount=type=cache,sharing=locked,target=/var/cache/apk \
     apk --update-cache add git g++ make py3-pip
 
-RUN yarn global add typescript @vercel/ncc
+RUN yarn global add typescript @vercel/ncc clean-modules
 
 WORKDIR /usr/app
 
@@ -17,7 +17,9 @@ RUN yarn import || echo ""
 
 RUN --mount=type=cache,sharing=locked,target=/tmp/.yarn_cache \
     set -ex && \
-    yarn install --production --prefer-offline --frozen-lockfile --cache-folder /tmp/.yarn_cache
+    yarn install --production --prefer-offline --frozen-lockfile --cache-folder /tmp/.yarn_cache && \
+    # cleanup / prune modules
+    clean-modules -y
 
 RUN test -f tsconfig.json || echo "{\"compilerOptions\":{\"esModuleInterop\":true,\"target\":\"es2015\",\"moduleResolution\":\"node\"}}" > tsconfig.json
 

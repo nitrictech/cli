@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/operations/start"
 	"github.com/nitrictech/cli/pkg/output"
+	"github.com/nitrictech/cli/pkg/utils"
 )
 
 var startNoBrowser bool
@@ -40,6 +42,12 @@ var startCmd = &cobra.Command{
 		// Divert default log output to pterm debug
 		log.SetOutput(output.NewPtermWriter(pterm.Debug))
 		log.SetFlags(0)
+
+		if !utils.IsTerminal() && !output.CI {
+			fmt.Println("")
+			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode.")
+			output.CI = true
+		}
 
 		if output.CI {
 			return start.RunNonInteractive(startNoBrowser)

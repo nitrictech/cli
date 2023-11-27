@@ -84,6 +84,10 @@ var newStackCmd = &cobra.Command{
 	Short: "Create a new Nitric stack",
 	Long:  `Creates a new Nitric stack.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if !utils.IsTerminal() {
+			return fmt.Errorf("the stack new command does not support non-interactive environments")
+		}
+
 		stackName := ""
 		if len(args) >= 1 {
 			stackName = args[0]
@@ -135,6 +139,12 @@ var stackUpdateCmd = &cobra.Command{
 			utils.CheckErr(err)
 		}
 
+		if !utils.IsTerminal() && !output.CI {
+			fmt.Println("")
+			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode.")
+			output.CI = true
+		}
+
 		stack_update.Run(stack_update.Args{
 			EnvFile:     envFile,
 			Stack:       s,
@@ -167,6 +177,12 @@ nitric stack down -s aws -y`,
 				pterm.Info.Println("Cancelling command")
 				os.Exit(0)
 			}
+		}
+
+		if !utils.IsTerminal() && !output.CI {
+			fmt.Println("")
+			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode.")
+			output.CI = true
 		}
 
 		stack_delete.Run(stack_delete.Args{

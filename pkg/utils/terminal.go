@@ -23,10 +23,5 @@ import (
 )
 
 func IsTerminal() bool {
-	if isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd()) {
-		return true
-	}
-
-	// show message so user knows it is non-interactive
-	return false
+	return isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd())
 }

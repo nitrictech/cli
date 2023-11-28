@@ -24,8 +24,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +31,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
 
+	"github.com/nitrictech/cli/pkg/browser"
 	"github.com/nitrictech/cli/pkg/codeconfig"
 	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
@@ -73,6 +72,7 @@ type Dashboard struct {
 	bucketNotifications  []*codeconfig.BucketNotification
 	port                 int
 	hasStarted           bool
+	connected            bool
 }
 
 type Api struct {
@@ -94,6 +94,7 @@ type DashboardResponse struct {
 	BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications,omitempty"`
 	CurrentVersion      string                           `json:"currentVersion,omitempty"`
 	LatestVersion       string                           `json:"latestVersion,omitempty"`
+	Connected           bool                             `json:"connected"`
 }
 
 type Bucket struct {
@@ -217,6 +218,10 @@ func (d *Dashboard) AddWebsocketInfoMessage(socket string, message WebsocketMess
 	return nil
 }
 
+func (d *Dashboard) SetConnected(connected bool) {
+	d.connected = connected
+}
+
 func (d *Dashboard) Serve(storagePlugin storage.StorageService, noBrowser bool) error {
 	// Get the embedded files from the 'dist' directory
 	staticFiles, err := fs.Sub(content, "dist")
@@ -326,7 +331,7 @@ func (d *Dashboard) Serve(storagePlugin storage.StorageService, noBrowser bool) 
 
 	// open browser
 	if !noBrowser {
-		err = openBrowser(fmt.Sprintf("http://localhost:%s", strconv.Itoa(d.port)))
+		err = browser.Open(fmt.Sprintf("http://localhost:%s", strconv.Itoa(d.port)))
 		if err != nil {
 			return err
 		}
@@ -370,6 +375,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		BucketNotifications: d.bucketNotifications,
 		CurrentVersion:      currentVersion,
 		LatestVersion:       latestVersion,
+		Connected:           d.connected,
 	}
 
 	// Encode the response as JSON
@@ -409,26 +415,4 @@ func (d *Dashboard) sendWebsocketsUpdate() error {
 	err = d.wsWebSocket.Broadcast(jsonData)
 
 	return err
-}
-
-func openBrowser(url string) error {
-	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "linux":
-		cmd = exec.Command("xdg-open", url)
-	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
-	default:
-		return fmt.Errorf("unsupported platform")
-	}
-
-	err := cmd.Start()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

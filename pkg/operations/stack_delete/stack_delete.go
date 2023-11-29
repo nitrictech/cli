@@ -32,13 +32,11 @@ import (
 )
 
 type Args struct {
+	Stack       *stack.Config
 	Interactive bool
 }
 
 func Run(args Args) {
-	s, err := stack.ConfigFromOptions()
-	utils.CheckErr(err)
-
 	log.SetOutput(output.NewPtermWriter(pterm.Debug))
 	log.SetFlags(0)
 
@@ -51,7 +49,7 @@ func Run(args Args) {
 	cc, err := codeconfig.New(proj, map[string]string{})
 	utils.CheckErr(err)
 
-	p, err := provider.ProviderFromFile(cc, s.Name, s.Provider, map[string]string{}, &types.ProviderOpts{Force: true, Interactive: args.Interactive})
+	p, err := provider.ProviderFromFile(cc, args.Stack.Name, args.Stack.Provider, map[string]string{}, &types.ProviderOpts{Force: true, Interactive: args.Interactive})
 	utils.CheckErr(err)
 
 	_, err = p.Down()

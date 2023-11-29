@@ -18,11 +18,10 @@ package remote
 
 import (
 	"context"
-	"fmt"
 	"io"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -118,6 +117,20 @@ func (p *remoteDeployment) Up() (*types.Deployment, error) {
 		ApiEndpoints: map[string]string{},
 	}
 
+	model, err := NewOutputModel()
+	if err != nil {
+		return nil, err
+	}
+
+	program := tea.NewProgram(model)
+
+	go func() {
+		_, err = program.Run()
+		if err != nil {
+			return
+		}
+	}()
+
 	for {
 		evt, err := op.Recv()
 		if err != nil {
@@ -125,18 +138,16 @@ func (p *remoteDeployment) Up() (*types.Deployment, error) {
 				return res, nil
 			}
 
-			return res, err
+			return res, nil
 		}
 
-		switch t := evt.Content.(type) {
-		case *deploy.DeployUpEvent_Message:
-			fmt.Print(t.Message.Message)
-		case *deploy.DeployUpEvent_Result:
-			if !t.Result.Success {
-				return res, errors.New("failed to deploy")
+		program.Send(evt.Content)
+
+		eventResult, ok := evt.Content.(*deploy.DeployUpEvent_Result)
+		if ok {
+			if !eventResult.Result.Success {
+				return res, errors.New("deployment failed")
 			}
-			// Print the deployment output
-			pterm.Success.Print(t.Result.Result.GetStringResult())
 
 			return res, nil
 		}
@@ -178,6 +189,20 @@ func (p *remoteDeployment) Down() (*types.Summary, error) {
 
 	res := &types.Summary{}
 
+	model, err := NewOutputModel()
+	if err != nil {
+		return nil, err
+	}
+
+	program := tea.NewProgram(model)
+
+	go func() {
+		_, err = program.Run()
+		if err != nil {
+			return
+		}
+	}()
+
 	for {
 		evt, err := op.Recv()
 		if err != nil {
@@ -185,13 +210,13 @@ func (p *remoteDeployment) Down() (*types.Summary, error) {
 				return res, nil
 			}
 
-			return res, err
+			return res, nil
 		}
 
-		switch t := evt.Content.(type) {
-		case *deploy.DeployDownEvent_Message:
-			fmt.Print(t.Message.Message)
-		case *deploy.DeployDownEvent_Result: // TODO - handle errors
+		program.Send(evt.Content)
+
+		_, ok := evt.Content.(*deploy.DeployDownEvent_Result)
+		if ok {
 			return res, nil
 		}
 	}

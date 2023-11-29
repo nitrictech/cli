@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
@@ -98,15 +97,11 @@ var newStackCmd = &cobra.Command{
 			providerName = args[1]
 		}
 
-		if _, err := tea.NewProgram(stack_new.New(stack_new.Args{
+		return stack_new.Run(stack_new.Args{
 			StackName:    stackName,
 			ProviderName: providerName,
 			Force:        forceNewStack,
-		}), tea.WithANSICompressor()).Run(); err != nil {
-			return err
-		}
-
-		return nil
+		})
 	},
 	Args:        cobra.MaximumNArgs(2),
 	Annotations: map[string]string{"commonCommand": "yes"},
@@ -128,12 +123,14 @@ var stackUpdateCmd = &cobra.Command{
 				Options: []string{"Yes", "No"},
 			}, &confirm)
 			utils.CheckErr(err)
+
 			if confirm != "Yes" {
 				pterm.Info.Println("You can run `nitric stack new` to create a new stack.")
 				os.Exit(0)
 			}
-			// err = stack_new.Run()
-			// utils.CheckErr(err)
+
+			err = stack_new.Run(stack_new.Args{})
+			utils.CheckErr(err)
 
 			_, err = stack.ConfigFromOptions()
 			utils.CheckErr(err)
@@ -165,6 +162,14 @@ var stackDeleteCmd = &cobra.Command{
 # To not be prompted, use -y
 nitric stack down -s aws -y`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Check a stack exists
+		s, err := stack.ConfigFromOptions()
+
+		if err != nil && strings.Contains(err.Error(), "No nitric stacks found") {
+			pterm.Info.Println("No stack was found. Have you previously deployed this project using Nitric?")
+			os.Exit(0)
+		}
+
 		if !confirmDown && !output.CI {
 			confirm := ""
 			err := survey.AskOne(&survey.Select{
@@ -173,6 +178,7 @@ nitric stack down -s aws -y`,
 				Options: []string{"Yes", "No"},
 			}, &confirm)
 			utils.CheckErr(err)
+
 			if confirm != "Yes" {
 				pterm.Info.Println("Cancelling command")
 				os.Exit(0)
@@ -186,6 +192,7 @@ nitric stack down -s aws -y`,
 		}
 
 		stack_delete.Run(stack_delete.Args{
+			Stack:       s,
 			Interactive: !output.CI,
 		})
 	},

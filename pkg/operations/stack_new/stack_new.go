@@ -477,6 +477,14 @@ func New(args Args) Model {
 	}
 }
 
+func Run(args Args) error {
+	model := New(args)
+
+	_, err := tea.NewProgram(model, tea.WithANSICompressor()).Run()
+
+	return err
+}
+
 type stackCreateResultMsg struct {
 	err error
 }

@@ -99,6 +99,17 @@ func (a *FunctionDependencies) AddApiHandler(aw *v1.ApiWorker) {
 		return
 	}
 
+	// Check that there are no APIs in this function that have the same path
+	// TODO: fix issue with two APIs having the same path causing issues
+	for _, api := range a.apis {
+		for _, wkr := range api.workers {
+			if wkr.Path == aw.Path {
+				a.AddError("APIs cannot share paths within the same function")
+				return
+			}
+		}
+	}
+
 	if a.apis[aw.Api] == nil {
 		a.apis[aw.Api] = newApi(a)
 	}

@@ -103,7 +103,7 @@ func (a *FunctionDependencies) AddApiHandler(aw *v1.ApiWorker) {
 	// TODO: fix issue with two APIs having the same path causing issues
 	for _, api := range a.apis {
 		for _, wkr := range api.workers {
-			if wkr.Path == aw.Path {
+			if matchingWorkers(aw, wkr) {
 				a.AddError("APIs cannot share paths within the same function")
 				return
 			}

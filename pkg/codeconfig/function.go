@@ -100,7 +100,7 @@ func (a *FunctionDependencies) AddApiHandler(aw *v1.ApiWorker) {
 	}
 
 	// Check that there are no APIs in this function that have the same path
-	// TODO: fix issue with two APIs having the same path causing issues
+	// TODO: allow two APIs to support matching paths without issue
 	for _, api := range a.apis {
 		for _, wkr := range api.workers {
 			if matchingWorkers(aw, wkr) {

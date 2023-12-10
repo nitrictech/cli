@@ -75,6 +75,10 @@ func matchingWorkers(a *v1.ApiWorker, b *v1.ApiWorker) bool {
 	return false
 }
 
+func (a *Api) WorkerCount() int {
+	return len(a.workers)
+}
+
 func (a *Api) AddWorker(worker *v1.ApiWorker) {
 	a.lock.Lock()
 	defer a.lock.Unlock()

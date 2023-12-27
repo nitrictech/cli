@@ -100,6 +100,16 @@ func httpWorkerFilter(port int) func(w worker.Worker) bool {
 	}
 }
 
+func createServer(handler fasthttp.RequestHandler) *fasthttp.Server {
+	return &fasthttp.Server{
+		ReadTimeout:     time.Second * 1,
+		IdleTimeout:     time.Second * 1,
+		CloseOnShutdown: true,
+		Handler:         handler,
+		ReadBufferSize:  8096,
+	}
+}
+
 // GetTriggerAddress - Returns the address built-in nitric services
 // this can be used to publishing messages to topics or triggering schedules
 func (s *BaseHttpGateway) GetTriggerAddress() string {
@@ -609,12 +619,8 @@ func (s *BaseHttpGateway) refreshWebsocketWorkers() {
 func (s *BaseHttpGateway) createApiServers() error {
 	// create an api server for every API worker
 	for len(s.apiServers) < len(s.apis) {
-		fhttp := &fasthttp.Server{
-			ReadTimeout:     time.Second * 1,
-			IdleTimeout:     time.Second * 1,
-			CloseOnShutdown: true,
-			Handler:         s.handleApiHttpRequest(len(s.apiServers)),
-		}
+		fhttp := createServer(s.handleApiHttpRequest(len(s.apiServers)))
+
 		// Expand servers to account for apis
 		lis, err := utils.GetNextListener()
 		if err != nil {
@@ -649,12 +655,7 @@ func (s *BaseHttpGateway) createWebsocketServers() error {
 		currSocket, ok := s.socketServer[sock]
 
 		if !ok {
-			fhttp := &fasthttp.Server{
-				ReadTimeout:     time.Second * 1,
-				IdleTimeout:     time.Second * 1,
-				CloseOnShutdown: true,
-				Handler:         s.handleWebsocketRequest(sock),
-			}
+			fhttp := createServer(s.handleWebsocketRequest(sock))
 
 			lis, err := utils.GetNextListener()
 			if err != nil {
@@ -693,12 +694,8 @@ func (s *BaseHttpGateway) createWebsocketServers() error {
 func (s *BaseHttpGateway) createHttpServers() error {
 	// create an api server for every API worker
 	for len(s.httpServers) < len(s.httpWorkers) {
-		fhttp := &fasthttp.Server{
-			ReadTimeout:     time.Second * 1,
-			IdleTimeout:     time.Second * 1,
-			CloseOnShutdown: true,
-			Handler:         s.handleHttpProxyRequest(len(s.httpServers)),
-		}
+		fhttp := createServer(s.handleHttpProxyRequest(len(s.httpServers)))
+
 		// Expand servers to account for apis
 		lis, err := utils.GetNextListener()
 		if err != nil {
@@ -771,12 +768,7 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 		}
 	}
 
-	s.serviceServer = &fasthttp.Server{
-		ReadTimeout:     time.Second * 1,
-		IdleTimeout:     time.Second * 1,
-		CloseOnShutdown: true,
-		Handler:         r.Handler,
-	}
+	s.serviceServer = createServer(r.Handler)
 
 	_ = eventbus.Bus().Subscribe(history.AddRecordTopic, s.dash.RefreshHistory)
 

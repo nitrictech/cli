@@ -283,9 +283,16 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		for _, pols := range compactedPoliciesByKey {
 			newPol := pols[0]
 
+			resources := make(map[string]*v1.Resource)
+
+			// Add all resources, removing duplicates by adding to map
 			for _, pol := range pols[1:] {
-				newPol.Resources = append(newPol.Resources, pol.Resources...)
+				for _, res := range pol.Resources {
+					resources[res.Name] = res
+				}
 			}
+
+			newPol.Resources = lo.Values(resources)
 
 			compactedPolicies = append(compactedPolicies, newPol)
 		}

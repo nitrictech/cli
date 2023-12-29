@@ -259,7 +259,7 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 			})
 		}
 
-		// This will produce a compacted map of policy resources with colliding principals and actions
+		// This will produce a compacted map of policy resources with colliding principals and resources
 		// we'll compact all these resources into a single policy object
 		compactedPoliciesByKey := lo.GroupBy(f.policies, func(item *v1.PolicyResource) string {
 			// get the princpals and actions as a unique key (make sure they're sorted for consistency)
@@ -270,12 +270,15 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 
 			principals := strings.Join(principalNames, ":")
 
-			slices.Sort(item.Actions)
-			actions := lo.Reduce(item.Actions, func(agg string, action v1.Action, idx int) string {
-				return agg + action.String()
-			}, "")
+			resourceNames := lo.Reduce(item.Resources, func(agg []string, resource *v1.Resource, idx int) []string {
+				return append(agg, resource.Name)
+			}, []string{})
 
-			return principals + "-" + actions
+			slices.Sort(resourceNames)
+
+			resources := strings.Join(resourceNames, ":")
+
+			return principals + "-" + resources
 		})
 
 		compactedPolicies := []*v1.PolicyResource{}
@@ -283,16 +286,14 @@ func (c *codeConfig) ToUpRequest() (*deploy.DeployUpRequest, error) {
 		for _, pols := range compactedPoliciesByKey {
 			newPol := pols[0]
 
-			resources := make(map[string]*v1.Resource)
-
-			// Add all resources, removing duplicates by adding to map
 			for _, pol := range pols[1:] {
-				for _, res := range pol.Resources {
-					resources[res.Name] = res
+				for _, a := range pol.Actions {
+					// Won't add duplicate actions
+					if !lo.Contains(newPol.Actions, a) {
+						newPol.Actions = append(newPol.Actions, a)
+					}
 				}
 			}
-
-			newPol.Resources = lo.Values(resources)
 
 			compactedPolicies = append(compactedPolicies, newPol)
 		}

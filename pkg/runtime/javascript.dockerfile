@@ -5,8 +5,6 @@ FROM node:alpine as build
 RUN --mount=type=cache,sharing=locked,target=/var/cache/apk \
     apk --update-cache add git g++ make py3-pip
 
-RUN yarn global add clean-modules
-
 WORKDIR /usr/app
 
 COPY package.json *.lock *-lock.json ./
@@ -15,9 +13,7 @@ RUN yarn import || echo ""
 
 RUN --mount=type=cache,sharing=locked,target=/tmp/.yarn_cache \
     set -ex && \
-    yarn install --production --prefer-offline --frozen-lockfile --cache-folder /tmp/.yarn_cache && \
-    # cleanup / prune modules
-    clean-modules -y
+    yarn install --production --prefer-offline --frozen-lockfile --cache-folder /tmp/.yarn_cache
 
 COPY . .
 

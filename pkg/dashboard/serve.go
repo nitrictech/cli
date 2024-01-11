@@ -29,17 +29,19 @@ import (
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/nitrictech/cli/pkg/dashboard/history"
+	"github.com/nitrictech/cli/pkg/eventbus"
+	"github.com/nitrictech/cli/pkg/eventbus/resourceevts"
 	"github.com/olahol/melody"
 
 	"github.com/nitrictech/cli/pkg/browser"
 	"github.com/nitrictech/cli/pkg/codeconfig"
-	"github.com/nitrictech/cli/pkg/history"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/update"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkg/version"
-	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
-	"github.com/nitrictech/nitric/core/pkg/worker/pool"
+	"github.com/nitrictech/nitric/core/pkg/gateway"
+	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
 
 type WebsocketMessage struct {
@@ -103,7 +105,8 @@ type Bucket struct {
 }
 
 type RefreshOptions struct {
-	Pool               pool.WorkerPool
+	// Pool               pool.WorkerPool
+	GatewayStartOpts   *gateway.GatewayStartOpts
 	TriggerAddress     string
 	StorageAddress     string
 	ApiAddresses       map[string]string
@@ -153,15 +156,17 @@ func (d *Dashboard) AddBucket(name string) {
 	d.resourcesLastUpdated = time.Now()
 }
 
-func (d *Dashboard) Refresh(opts *RefreshOptions) error {
+func (d *Dashboard) Refresh(opts *resourceevts.LocalInfrastructureState) {
 	cc, err := codeconfig.New(d.project, d.envMap)
 	if err != nil {
-		return err
+		fmt.Printf("Error constructing new code config: %v\n", err)
+		return
 	}
 
-	spec, err := cc.SpecFromWorkerPool(opts.Pool)
+	spec, err := cc.SpecFromWorkerPool(opts.GatewayStartOpts)
 	if err != nil {
-		return err
+		fmt.Printf("Error constructing spec from worker pool: %v\n", err)
+		return
 	}
 
 	d.apis = spec.Apis
@@ -177,18 +182,18 @@ func (d *Dashboard) Refresh(opts *RefreshOptions) error {
 
 	err = d.sendStackUpdate()
 	if err != nil {
-		return err
+		fmt.Printf("Error sending history update: %v\n", err)
+		return
 	}
 
 	err = d.sendHistoryUpdate()
 	if err != nil {
-		return err
+		fmt.Printf("Error sending history update: %v\n", err)
+		return
 	}
-
-	return nil
 }
 
-func (d *Dashboard) RefreshHistory(_ *history.HistoryRecord) error {
+func (d *Dashboard) RefreshHistory(_ *history.HistoryEvent[any]) error {
 	return d.sendHistoryUpdate()
 }
 
@@ -222,7 +227,7 @@ func (d *Dashboard) SetConnected(connected bool) {
 	d.connected = connected
 }
 
-func (d *Dashboard) Serve(storagePlugin storage.StorageService, noBrowser bool) error {
+func (d *Dashboard) Serve(storagePlugin storagepb.StorageServer, noBrowser bool) error {
 	// Get the embedded files from the 'dist' directory
 	staticFiles, err := fs.Sub(content, "dist")
 	if err != nil {
@@ -281,10 +286,10 @@ func (d *Dashboard) Serve(storagePlugin storage.StorageService, noBrowser bool) 
 		}
 	})
 
-	http.HandleFunc("/api/history", d.handleHistory())
+	http.HandleFunc("/api/history", d.createHistoryHttpHandler())
 
 	// Define an API route under /call to proxy communication between app and apis
-	http.HandleFunc("/api/call/", d.handleCallProxy())
+	http.HandleFunc("/api/call/", d.createCallProxyHttpHandler())
 
 	http.HandleFunc("/api/storage", d.handleStorage(storagePlugin))
 
@@ -415,4 +420,36 @@ func (d *Dashboard) sendWebsocketsUpdate() error {
 	err = d.wsWebSocket.Broadcast(jsonData)
 
 	return err
+}
+
+func NewDashboard(p *project.Project, envMap map[string]string) (*Dashboard, error) {
+	stackWebSocket := melody.New()
+	historyWebSocket := melody.New()
+	wsWebSocket := melody.New()
+
+	dash := &Dashboard{
+		project:             p,
+		apis:                []*openapi3.T{},
+		envMap:              envMap,
+		stackWebSocket:      stackWebSocket,
+		historyWebSocket:    historyWebSocket,
+		wsWebSocket:         wsWebSocket,
+		bucketNotifications: []*codeconfig.BucketNotification{},
+		schedules:           []*codeconfig.TopicResult{},
+		topics:              []*codeconfig.TopicResult{},
+		websocketsInfo:      map[string]*WebsocketInfo{},
+		hasStarted:          false,
+	}
+
+	err := resourceevts.Subscribe(dash.Refresh)
+	if err != nil {
+		return nil, err
+	}
+
+	err = eventbus.Bus().Subscribe(history.AddRecordTopic, dash.RefreshHistory)
+	if err != nil {
+		return nil, err
+	}
+
+	return dash, nil
 }

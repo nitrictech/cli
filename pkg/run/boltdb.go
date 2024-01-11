@@ -19,7 +19,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -30,11 +29,13 @@ import (
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/q"
 	"go.etcd.io/bbolt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/nitrictech/nitric/core/pkg/plugins/document"
-	"github.com/nitrictech/nitric/core/pkg/plugins/errors"
-	"github.com/nitrictech/nitric/core/pkg/plugins/errors/codes"
-	"github.com/nitrictech/nitric/core/pkg/utils"
+	"errors"
+
+	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
+	documentspb "github.com/nitrictech/nitric/core/pkg/proto/documents/v1"
 )
 
 const DEV_SUB_DIR_COLL = "./collections/"
@@ -45,9 +46,24 @@ const (
 	sortKeyName      = "SortKey"
 )
 
+const subcollectionDelimiter = "+"
+
 type BoltDocService struct {
-	document.UnimplementedDocumentPlugin
 	dbDir string
+}
+
+var _ documentspb.DocumentsServer = (*BoltDocService)(nil)
+
+// GetEndRangeValue - Get end range value to implement "startsWith" expression operator using where clause.
+// For example with sdk.Expression("pk", "startsWith", "Customer#") this translates to:
+// WHERE pk >= {startRangeValue} AND pk < {endRangeValue}
+// WHERE pk >= "Customer#" AND pk < "Customer!"
+func GetEndRangeValue(value string) string {
+	strFrontCode := value[:len(value)-1]
+
+	strEndCode := value[len(value)-1:]
+
+	return strFrontCode + string(strEndCode[0]+1)
 }
 
 type BoltDoc struct {
@@ -61,23 +77,10 @@ func (d BoltDoc) String() string {
 	return fmt.Sprintf("BoltDoc{Id: %v PartitionKey: %v SortKey: %v Value: %v}\n", d.Id, d.PartitionKey, d.SortKey, d.Value)
 }
 
-func (s *BoltDocService) Get(ctx context.Context, key *document.Key) (*document.Document, error) {
-	newErr := errors.ErrorsWithScope(
-		"BoltDocService.Get",
-		map[string]interface{}{
-			"key": key,
-		},
-	)
+func (s *BoltDocService) Get(ctx context.Context, req *documentspb.DocumentGetRequest) (*documentspb.DocumentGetResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Get")
 
-	if err := document.ValidateKey(key); err != nil {
-		return nil, newErr(
-			codes.InvalidArgument,
-			"Invalid Key",
-			err,
-		)
-	}
-
-	db, err := s.createdDb(*key.Collection)
+	db, err := s.getLocalCollectionDB(req.Key.Collection)
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -88,7 +91,7 @@ func (s *BoltDocService) Get(ctx context.Context, key *document.Key) (*document.
 
 	defer db.Close()
 
-	doc := createDoc(key)
+	doc := createDoc(req.Key)
 
 	err = db.One(idName, doc.Id, &doc)
 
@@ -108,36 +111,17 @@ func (s *BoltDocService) Get(ctx context.Context, key *document.Key) (*document.
 		)
 	}
 
-	return toSdkDoc(key.Collection, doc), nil
+	return &documentspb.DocumentGetResponse{
+		Document: toSdkDoc(req.Key.Collection, doc),
+	}, nil
 }
 
-func (s *BoltDocService) Set(ctx context.Context, key *document.Key, content map[string]interface{}) error {
-	newErr := errors.ErrorsWithScope(
-		"BoltDocService.Set",
-		map[string]interface{}{
-			"key": key,
-		},
-	)
+func (s *BoltDocService) Set(ctx context.Context, req *documentspb.DocumentSetRequest) (*documentspb.DocumentSetResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Set")
 
-	if err := document.ValidateKey(key); err != nil {
-		return newErr(
-			codes.InvalidArgument,
-			"Invalid key",
-			err,
-		)
-	}
-
-	if content == nil {
-		return newErr(
-			codes.InvalidArgument,
-			"Invalid content",
-			nil,
-		)
-	}
-
-	db, err := s.createdDb(*key.Collection)
+	db, err := s.getLocalCollectionDB(req.Key.Collection)
 	if err != nil {
-		return newErr(
+		return nil, newErr(
 			codes.FailedPrecondition,
 			"createDb error",
 			err,
@@ -146,39 +130,28 @@ func (s *BoltDocService) Set(ctx context.Context, key *document.Key, content map
 
 	defer db.Close()
 
-	doc := createDoc(key)
-	doc.Value = content
+	doc := createDoc(req.Key)
+	doc.Value = req.Content.AsMap()
 
 	if err := db.Save(&doc); err != nil {
-		return newErr(
+		return nil, newErr(
 			codes.Internal,
 			"Document save error",
 			err,
 		)
 	}
 
-	return nil
+	return &documentspb.DocumentSetResponse{}, nil
 }
 
-func (s *BoltDocService) Delete(ctx context.Context, key *document.Key) error {
-	newErr := errors.ErrorsWithScope(
-		"BoltDocService.Delete",
-		map[string]interface{}{
-			"key": key,
-		},
-	)
+func (s *BoltDocService) Delete(ctx context.Context, req *documentspb.DocumentDeleteRequest) (*documentspb.DocumentDeleteResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Delete")
 
-	if err := document.ValidateKey(key); err != nil {
-		return newErr(
-			codes.InvalidArgument,
-			"Invalid key",
-			err,
-		)
-	}
+	key := req.Key
 
-	db, err := s.createdDb(*key.Collection)
+	db, err := s.getLocalCollectionDB(key.Collection)
 	if err != nil {
-		return newErr(
+		return nil, newErr(
 			codes.FailedPrecondition,
 			"createDb error",
 			err,
@@ -187,11 +160,11 @@ func (s *BoltDocService) Delete(ctx context.Context, key *document.Key) error {
 
 	defer db.Close()
 
-	doc := createDoc(key)
+	doc := createDoc(req.Key)
 
 	err = db.DeleteStruct(&doc)
 	if err != nil {
-		return newErr(
+		return nil, newErr(
 			codes.Internal,
 			"Deletion error",
 			err,
@@ -199,10 +172,10 @@ func (s *BoltDocService) Delete(ctx context.Context, key *document.Key) error {
 	}
 
 	// Delete sub collection documents
-	if key.Collection.Parent == nil {
-		childDocs, err := fetchChildDocs(key, db)
+	if req.Key.Collection.Parent == nil {
+		childDocs, err := fetchChildDocs(req.Key, db)
 		if err != nil {
-			return newErr(
+			return nil, newErr(
 				codes.Internal,
 				"Child Doc fetch error",
 				err,
@@ -212,7 +185,7 @@ func (s *BoltDocService) Delete(ctx context.Context, key *document.Key) error {
 		for _, childDoc := range childDocs {
 			err = db.DeleteStruct(&childDoc)
 			if err != nil {
-				return newErr(
+				return nil, newErr(
 					codes.Internal,
 					"Child Doc deletion error",
 					err,
@@ -221,27 +194,12 @@ func (s *BoltDocService) Delete(ctx context.Context, key *document.Key) error {
 		}
 	}
 
-	return nil
+	return &documentspb.DocumentDeleteResponse{}, nil
 }
 
-func (s *BoltDocService) query(collection *document.Collection, expressions []document.QueryExpression, limit int, pagingToken map[string]string, newErr errors.ErrorFactory) (*document.QueryResult, error) {
-	if err := document.ValidateQueryCollection(collection); err != nil {
-		return nil, newErr(
-			codes.InvalidArgument,
-			"Invalid Collection",
-			err,
-		)
-	}
+func (s *BoltDocService) query(collection *documentspb.Collection, expressions []*documentspb.Expression, limit int32, pagingToken map[string]string, newErr grpc_errors.ScopedErrorFactory) (*documentspb.DocumentQueryResponse, error) {
 
-	if err := document.ValidateExpressions(expressions); err != nil {
-		return nil, newErr(
-			codes.InvalidArgument,
-			"Invalid query expressions",
-			err,
-		)
-	}
-
-	db, err := s.createdDb(*collection)
+	db, err := s.getLocalCollectionDB(collection)
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -264,7 +222,7 @@ func (s *BoltDocService) query(collection *document.Collection, expressions []do
 			matchers = append(matchers, q.Eq(partitionKeyName, parentKey.Id))
 		}
 		matchers = append(matchers, q.Gte(sortKeyName, collection.Name+"#"))
-		matchers = append(matchers, q.Lt(sortKeyName, document.GetEndRangeValue(collection.Name+"#")))
+		matchers = append(matchers, q.Lt(sortKeyName, GetEndRangeValue(collection.Name+"#")))
 	}
 
 	// Create query object
@@ -310,9 +268,9 @@ func (s *BoltDocService) query(collection *document.Collection, expressions []do
 
 		if exp.Operator == "startsWith" {
 			expStr.WriteString(exp.Operand + " >= '" + expValue + "' && ")
-			expStr.WriteString(exp.Operand + " < '" + document.GetEndRangeValue(expValue) + "'")
+			expStr.WriteString(exp.Operand + " < '" + GetEndRangeValue(expValue) + "'")
 		} else {
-			if stringValue, ok := exp.Value.(string); ok {
+			if stringValue := exp.GetValue().GetStringValue(); stringValue != "" {
 				expValue = fmt.Sprintf("'%s'", stringValue)
 			}
 
@@ -333,7 +291,7 @@ func (s *BoltDocService) query(collection *document.Collection, expressions []do
 	}
 
 	// Process query results, applying value filter expressions and fetch limit
-	documents := make([]document.Document, 0)
+	documents := make([]*documentspb.Document, 0)
 	scanCount := 0
 
 	for _, doc := range docs {
@@ -350,98 +308,92 @@ func (s *BoltDocService) query(collection *document.Collection, expressions []do
 		}
 
 		sdkDoc := toSdkDoc(collection, doc)
-		documents = append(documents, *sdkDoc)
+		documents = append(documents, sdkDoc)
 
 		// Break if greater than fetch limit
-		if limit > 0 && len(documents) == limit {
+		if limit > 0 && len(documents) == int(limit) {
 			break
 		}
 	}
 
 	// Provide paging token to skip previous reads
 	var resultPagingToken map[string]string
-	if limit > 0 && len(documents) == limit {
+	if limit > 0 && len(documents) == int(limit) {
 		resultPagingToken = make(map[string]string)
 		resultPagingToken[skipTokenName] = fmt.Sprintf("%v", pagingSkip+scanCount)
 	}
 
-	return &document.QueryResult{
+	return &documentspb.DocumentQueryResponse{
 		Documents:   documents,
 		PagingToken: resultPagingToken,
 	}, nil
 }
 
-func (s *BoltDocService) Query(ctx context.Context, collection *document.Collection, expressions []document.QueryExpression, limit int, pagingToken map[string]string) (*document.QueryResult, error) {
-	newErr := errors.ErrorsWithScope(
-		"BoltDocService.Query",
-		map[string]interface{}{
-			"collection": collection,
-		},
-	)
+func (s *BoltDocService) Query(ctx context.Context, req *documentspb.DocumentQueryRequest) (*documentspb.DocumentQueryResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Query")
 
-	return s.query(collection, expressions, limit, pagingToken, newErr)
+	return s.query(req.Collection, req.Expressions, req.Limit, req.PagingToken, newErr)
 }
 
-func (s *BoltDocService) QueryStream(ctx context.Context, collection *document.Collection, expressions []document.QueryExpression, limit int) document.DocumentIterator {
-	newErr := errors.ErrorsWithScope(
-		"BoltDocService.QueryStream",
-		map[string]interface{}{
-			"collection": collection,
-		},
-	)
+func (s *BoltDocService) QueryStream(req *documentspb.DocumentQueryStreamRequest, stream documentspb.Documents_QueryStreamServer) error {
+	newErr := grpc_errors.ErrorsWithScope("BoltDocService.QueryStream")
 
-	tmpLimit := limit
+	limitCountdown := req.Limit
 
 	var (
-		documents   []document.Document
+		documents   []*documentspb.Document
 		pagingToken map[string]string
 	)
 
 	// Initial fetch
-	res, fetchErr := s.query(collection, expressions, limit, nil, newErr)
+	res, fetchErr := s.query(req.Collection, req.Expressions, limitCountdown, nil, newErr)
 
 	if fetchErr != nil {
-		// Return an error only iterator if the initial fetch failed
-		return func() (*document.Document, error) {
-			return nil, fetchErr
-		}
+		// TODO: determine if this is the correct error code to return
+		return newErr(codes.Unknown, "failed to initiate document query", fetchErr)
 	}
 
 	documents = res.Documents
 	pagingToken = res.PagingToken
 
-	return func() (*document.Document, error) {
+	for {
 		// check the iteration state
-		if tmpLimit == 0 && limit > 0 {
+		if limitCountdown == 0 && req.Limit > 0 {
 			// we've reached the limit of reading
-			return nil, io.EOF
-		} else if pagingToken != nil && len(documents) == 0 {
-			// we've run out of documents and have more pages to read
-			res, fetchErr = s.query(collection, expressions, tmpLimit, pagingToken, newErr)
-			documents = res.Documents
-			pagingToken = res.PagingToken
-		} else if pagingToken == nil && len(documents) == 0 {
-			// we're all out of documents and pages before hitting the limit
-			return nil, io.EOF
+			return nil
 		}
 
-		// We received an error fetching the docs
-		if fetchErr != nil {
-			return nil, fetchErr
+		if pagingToken == nil && len(documents) == 0 {
+			// no more documents to return, regardless of the limit
+			return nil
+		}
+
+		if pagingToken != nil && len(documents) == 0 {
+			// we've run out of documents in our buffer but still have more to read (cursor is still set)
+			res, fetchErr = s.query(req.Collection, req.Expressions, limitCountdown, pagingToken, newErr)
+			// We received an error fetching the docs
+			if fetchErr != nil {
+				return fetchErr
+			}
+
+			documents = res.Documents
+			pagingToken = res.PagingToken
 		}
 
 		// pop the first element
-		var doc document.Document
+		var doc *documentspb.Document
 		doc, documents = documents[0], documents[1:]
-		tmpLimit = tmpLimit - 1
+		limitCountdown = limitCountdown - 1
 
-		return &doc, nil
+		stream.Send(&documentspb.DocumentQueryStreamResponse{
+			Document: doc,
+		})
 	}
 }
 
 // New - Create a new dev KV plugin
 func NewBoltService() (*BoltDocService, error) {
-	dbDir := utils.GetEnv("LOCAL_DB_DIR", utils.GetRelativeDevPath(DEV_SUB_DIR_COLL))
+	dbDir := LOCAL_DB_DIR.String()
 
 	// Check whether file exists
 	_, err := os.Stat(dbDir)
@@ -456,9 +408,9 @@ func NewBoltService() (*BoltDocService, error) {
 	return &BoltDocService{dbDir: dbDir}, nil
 }
 
-func (s *BoltDocService) createdDb(coll document.Collection) (*storm.DB, error) {
+func (s *BoltDocService) getLocalCollectionDB(coll *documentspb.Collection) (*storm.DB, error) {
 	for coll.Parent != nil {
-		coll = *coll.Parent.Collection
+		coll = coll.Parent.Collection
 	}
 
 	dbPath := filepath.Join(s.dbDir, strings.ToLower(coll.Name)+".db")
@@ -473,7 +425,7 @@ func (s *BoltDocService) createdDb(coll document.Collection) (*storm.DB, error) 
 	return db, nil
 }
 
-func createDoc(key *document.Key) BoltDoc {
+func createDoc(key *documentspb.Key) BoltDoc {
 	parentKey := key.Collection.Parent
 
 	// Top Level Collection
@@ -485,28 +437,28 @@ func createDoc(key *document.Key) BoltDoc {
 		}
 	} else {
 		return BoltDoc{
-			Id:           parentKey.Id + document.SubcollectionDelimiter + key.Id,
+			Id:           parentKey.Id + subcollectionDelimiter + key.Id,
 			PartitionKey: parentKey.Id,
 			SortKey:      key.Collection.Name + "#" + key.Id,
 		}
 	}
 }
 
-func toSdkDoc(col *document.Collection, doc BoltDoc) *document.Document {
-	keys := strings.Split(doc.Id, document.SubcollectionDelimiter)
+func toSdkDoc(col *documentspb.Collection, doc BoltDoc) *documentspb.Document {
+	keys := strings.Split(doc.Id, subcollectionDelimiter)
 
 	// Translate the boltdb Id into a nitric document key Id
 	var (
 		id string
-		c  *document.Collection
+		c  *documentspb.Collection
 	)
 
 	if len(keys) > 1 {
 		// sub document
 		id = keys[len(keys)-1]
-		c = &document.Collection{
+		c = &documentspb.Collection{
 			Name: col.Name,
-			Parent: &document.Key{
+			Parent: &documentspb.Key{
 				Collection: col.Parent.Collection,
 				Id:         keys[0],
 			},
@@ -516,16 +468,22 @@ func toSdkDoc(col *document.Collection, doc BoltDoc) *document.Document {
 		c = col
 	}
 
-	return &document.Document{
-		Content: doc.Value,
-		Key: &document.Key{
+	content, err := structpb.NewStruct(doc.Value)
+	if err != nil {
+		// FIXME: Handle error...
+		panic(err)
+	}
+
+	return &documentspb.Document{
+		Content: content,
+		Key: &documentspb.Key{
 			Collection: c,
 			Id:         id,
 		},
 	}
 }
 
-func fetchChildDocs(key *document.Key, db *storm.DB) ([]BoltDoc, error) {
+func fetchChildDocs(key *documentspb.Key, db *storm.DB) ([]BoltDoc, error) {
 	var childDocs []BoltDoc
 
 	err := db.Find(partitionKeyName, key.Id, &childDocs)

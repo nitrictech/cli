@@ -17,7 +17,7 @@
 package run
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -29,23 +29,22 @@ import (
 	"github.com/fasthttp/router"
 	"github.com/fasthttp/websocket"
 	"github.com/google/uuid"
+	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/dashboard/history"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
+	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/eventbus"
-	"github.com/nitrictech/cli/pkg/history"
-	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/utils"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
-	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
-	"github.com/nitrictech/nitric/core/pkg/plugins/gateway"
-	"github.com/nitrictech/nitric/core/pkg/worker"
-	"github.com/nitrictech/nitric/core/pkg/worker/pool"
-)
 
-type HttpMiddleware func(*fasthttp.RequestCtx, pool.WorkerPool) bool
+	"github.com/nitrictech/nitric/core/pkg/gateway"
+	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
+	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
+)
 
 type apiServer struct {
 	lis net.Listener
@@ -61,44 +60,25 @@ type socketServer struct {
 
 var upgrader = websocket.FastHTTPUpgrader{}
 
-type BaseHttpGateway struct {
+type LocalGatewayService struct {
 	apiServers       []*apiServer
 	httpServers      []*apiServer
 	apis             []string
-	httpWorkers      []int
+	httpWorkers      []string
 	websocketWorkers []string
 	socketServer     map[string]*socketServer
 	serviceServer    *fasthttp.Server
 	websocketPlugin  *RunWebsocketService
 	serviceListener  net.Listener
 	gateway.UnimplementedGatewayPlugin
-	stop    chan bool
-	pool    pool.WorkerPool
-	project *project.Project
-	dash    *dashboard.Dashboard
+	stop chan bool
+
+	dash *dashboard.Dashboard
+
+	options *gateway.GatewayStartOpts
 }
 
-var _ gateway.GatewayService = &BaseHttpGateway{}
-
-func apiWorkerFilter(apiName string) func(w worker.Worker) bool {
-	return func(w worker.Worker) bool {
-		if api, ok := w.(*worker.RouteWorker); ok {
-			return api.Api() == apiName
-		}
-
-		return false
-	}
-}
-
-func httpWorkerFilter(port int) func(w worker.Worker) bool {
-	return func(w worker.Worker) bool {
-		if http, ok := w.(*worker.HttpWorker); ok {
-			return http.GetPort() == port
-		}
-
-		return false
-	}
-}
+var _ gateway.GatewayService = &LocalGatewayService{}
 
 func createServer(handler fasthttp.RequestHandler) *fasthttp.Server {
 	return &fasthttp.Server{
@@ -112,7 +92,7 @@ func createServer(handler fasthttp.RequestHandler) *fasthttp.Server {
 
 // GetTriggerAddress - Returns the address built-in nitric services
 // this can be used to publishing messages to topics or triggering schedules
-func (s *BaseHttpGateway) GetTriggerAddress() string {
+func (s *LocalGatewayService) GetTriggerAddress() string {
 	if s.serviceListener != nil {
 		return strings.Replace(s.serviceListener.Addr().String(), "[::]", "localhost", 1)
 	}
@@ -120,7 +100,7 @@ func (s *BaseHttpGateway) GetTriggerAddress() string {
 	return ""
 }
 
-func (s *BaseHttpGateway) GetApiAddresses() map[string]string {
+func (s *LocalGatewayService) GetApiAddresses() map[string]string {
 	addresses := make(map[string]string)
 
 	for idx, api := range s.apis {
@@ -130,17 +110,17 @@ func (s *BaseHttpGateway) GetApiAddresses() map[string]string {
 	return addresses
 }
 
-func (s *BaseHttpGateway) GetHttpWorkerAddresses() map[int]string {
-	addresses := make(map[int]string)
+func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
+	addresses := make(map[string]string)
 
-	for idx, port := range s.httpWorkers {
-		addresses[port] = strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+	for idx, host := range s.httpWorkers {
+		addresses[host] = strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
 	}
 
 	return addresses
 }
 
-func (s *BaseHttpGateway) GetWebsocketAddresses() map[string]string {
+func (s *LocalGatewayService) GetWebsocketAddresses() map[string]string {
 	addresses := make(map[string]string)
 
 	for socket, srv := range s.socketServer {
@@ -153,77 +133,24 @@ func (s *BaseHttpGateway) GetWebsocketAddresses() map[string]string {
 	return addresses
 }
 
-func (s *BaseHttpGateway) handleHttpProxyRequest(idx int) fasthttp.RequestHandler {
+func (s *LocalGatewayService) handleHttpProxyRequest(idx int) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		port := s.httpWorkers[idx]
+		// TODO: Use port to map to the correct http worker
+		// port := s.httpWorkers[idx]
 
-		headerMap := base_http.HttpHeadersToMap(&ctx.Request.Header)
-
-		headers := map[string]*v1.HeaderValue{}
-		for k, v := range headerMap {
-			headers[k] = &v1.HeaderValue{Value: v}
-		}
-
-		query := map[string]*v1.QueryValue{}
-
-		ctx.QueryArgs().VisitAll(func(key []byte, val []byte) {
-			k := string(key)
-
-			if query[k] == nil {
-				query[k] = &v1.QueryValue{}
-			}
-
-			query[k].Value = append(query[k].Value, string(val))
-		})
-
-		httpTrigger := &v1.TriggerRequest{
-			Data: ctx.Request.Body(),
-			Context: &v1.TriggerRequest_Http{
-				Http: &v1.HttpTriggerContext{
-					Method:      string(ctx.Request.Header.Method()),
-					Path:        string(ctx.URI().PathOriginal()),
-					Headers:     headers,
-					QueryParams: query,
-				},
-			},
-		}
-
-		worker, err := s.pool.GetWorker(&pool.GetWorkerOptions{
-			Trigger: httpTrigger,
-			Filter:  httpWorkerFilter(port),
-		})
-		if err != nil {
-			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dash.GetPort()), fasthttp.StatusTemporaryRedirect)
-			return
-		}
-
-		resp, err := worker.HandleTrigger(context.TODO(), httpTrigger)
+		// TODO: Need to support multiple HTTP handlers
+		// so a plugin wrapper will be required for this
+		resp, err := s.options.HttpPlugin.HandleRequest(&ctx.Request)
 		if err != nil {
 			ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
 			return
 		}
 
-		if http := resp.GetHttp(); http != nil {
-			// Copy headers across
-			for k, v := range http.Headers {
-				for _, val := range v.Value {
-					ctx.Response.Header.Add(k, val)
-				}
-			}
-
-			// Avoid content length header duplication
-			ctx.Response.Header.Del("Content-Length")
-			ctx.Response.SetStatusCode(int(http.Status))
-			ctx.Response.SetBody(resp.Data)
-
-			return
-		}
-
-		ctx.Error("Response was not a Http response", 500)
+		resp.CopyTo(&ctx.Response)
 	}
 }
 
-func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler {
+func (s *LocalGatewayService) handleApiHttpRequest(idx int) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		if idx >= len(s.apis) {
 			ctx.Error("Sorry, nitric is listening on this port but is waiting for an API to be available to handle, you may have removed an API during development this port will be assigned to an API when one becomes available", 404)
@@ -234,18 +161,18 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 
 		headerMap := base_http.HttpHeadersToMap(&ctx.Request.Header)
 
-		headers := map[string]*v1.HeaderValue{}
+		headers := map[string]*apispb.HeaderValue{}
 		for k, v := range headerMap {
-			headers[k] = &v1.HeaderValue{Value: v}
+			headers[k] = &apispb.HeaderValue{Value: v}
 		}
 
-		query := map[string]*v1.QueryValue{}
+		query := map[string]*apispb.QueryValue{}
 
 		ctx.QueryArgs().VisitAll(func(key []byte, val []byte) {
 			k := string(key)
 
 			if query[k] == nil {
-				query[k] = &v1.QueryValue{}
+				query[k] = &apispb.QueryValue{}
 			}
 
 			query[k].Value = append(query[k].Value, string(val))
@@ -259,34 +186,25 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 			return
 		}
 
-		httpTrigger := &v1.TriggerRequest{
-			Data: ctx.Request.Body(),
-			Context: &v1.TriggerRequest_Http{
-				Http: &v1.HttpTriggerContext{
+		apiEvent := &apispb.ServerMessage{
+			Content: &apispb.ServerMessage_HttpRequest{
+				HttpRequest: &apispb.HttpRequest{
 					Method:      string(ctx.Request.Header.Method()),
 					Path:        path,
 					Headers:     headers,
 					QueryParams: query,
+					Body:        ctx.Request.Body(),
 				},
 			},
 		}
 
-		worker, err := s.pool.GetWorker(&pool.GetWorkerOptions{
-			Trigger: httpTrigger,
-			Filter:  apiWorkerFilter(apiName),
-		})
-		if err != nil {
-			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", s.dash.GetPort()), fasthttp.StatusTemporaryRedirect)
-			return
-		}
-
-		resp, err := worker.HandleTrigger(context.TODO(), httpTrigger)
+		resp, err := s.options.ApiPlugin.HandleRequest(apiName, apiEvent)
 		if err != nil {
 			ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
 			return
 		}
 
-		if http := resp.GetHttp(); http != nil {
+		if http := resp.GetHttpResponse(); http != nil {
 			// Copy headers across
 			for k, v := range http.Headers {
 				for _, val := range v.Value {
@@ -297,7 +215,7 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 			// Avoid content length header duplication
 			ctx.Response.Header.Del("Content-Length")
 			ctx.Response.SetStatusCode(int(http.Status))
-			ctx.Response.SetBody(resp.Data)
+			ctx.Response.SetBody(resp.GetHttpResponse().GetBody())
 
 			var queryParams []history.Param
 
@@ -310,32 +228,31 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 				}
 			}
 
-			eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryRecord{
-				Success: http.Status < 400,
-				Time:    time.Now().UnixMilli(),
-				ApiHistoryItem: history.ApiHistoryItem{
+			eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryEvent[history.ApiHistoryItem]{
+				Time:       time.Now().UnixMilli(),
+				RecordType: history.API,
+				Event: history.ApiHistoryItem{
 					Api: s.GetApiAddresses()[apiName],
 					Request: &history.RequestHistory{
 						Method:      string(ctx.Request.Header.Method()),
 						Path:        string(ctx.URI().PathOriginal()),
 						QueryParams: queryParams,
-						Headers: lo.MapEntries(headers, func(k string, v *v1.HeaderValue) (string, []string) {
+						Headers: lo.MapEntries(headers, func(k string, v *apispb.HeaderValue) (string, []string) {
 							return k, v.Value
 						}),
 						Body:       ctx.Request.Body(),
 						PathParams: []history.Param{},
 					},
 					Response: &history.ResponseHistory{
-						Headers: lo.MapEntries(http.Headers, func(k string, v *v1.HeaderValue) (string, []string) {
+						Headers: lo.MapEntries(http.Headers, func(k string, v *apispb.HeaderValue) (string, []string) {
 							return k, v.Value
 						}),
 						Time:   time.Since(ctx.ConnTime()).Milliseconds(),
 						Status: http.Status,
-						Data:   resp.Data,
-						Size:   len(resp.Data),
+						Data:   resp.GetHttpResponse().GetBody(),
+						Size:   len(resp.GetHttpResponse().GetBody()),
 					},
 				},
-				RecordType: history.API,
 			})
 
 			return
@@ -347,7 +264,7 @@ func (s *BaseHttpGateway) handleApiHttpRequest(idx int) fasthttp.RequestHandler 
 
 // websocket request handler
 // TODO: Add broadcast capability
-func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fasthttp.RequestCtx) {
+func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx *fasthttp.RequestCtx) {
 	return func(ctx *fasthttp.RequestCtx) {
 		upgrader.CheckOrigin = func(ctx *fasthttp.RequestCtx) bool {
 			return true
@@ -355,44 +272,36 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 
 		connectionId := uuid.New().String()
 
-		query := map[string]*v1.QueryValue{}
+		query := map[string]*websocketspb.QueryValue{}
 
 		ctx.QueryArgs().VisitAll(func(key []byte, val []byte) {
 			k := string(key)
 
 			if query[k] == nil {
-				query[k] = &v1.QueryValue{}
+				query[k] = &websocketspb.QueryValue{}
 			}
 
 			query[k].Value = append(query[k].Value, string(val))
 		})
 
-		connectionRequest := &v1.TriggerRequest{
-			Context: &v1.TriggerRequest_Websocket{
-				Websocket: &v1.WebsocketTriggerContext{
-					Socket:       socketName,
-					Event:        v1.WebsocketEvent_Connect,
+		resp, err := s.options.WebsocketListenerPlugin.HandleRequest(&websocketspb.ServerMessage{
+			Content: &websocketspb.ServerMessage_WebsocketEventRequest{
+				WebsocketEventRequest: &websocketspb.WebsocketEventRequest{
+					SocketName: socketName,
+					WebsocketEvent: &websocketspb.WebsocketEventRequest_Connection{
+						Connection: &websocketspb.WebsocketConnectionEvent{
+							QueryParams: query,
+						},
+					},
 					ConnectionId: connectionId,
-					QueryParams:  query,
 				},
 			},
-		}
-
-		w, err := s.pool.GetWorker(&pool.GetWorkerOptions{
-			Trigger: connectionRequest,
 		})
 		if err != nil {
-			ctx.Error("No worker found to handle connection request", 404)
 			return
 		}
 
-		res, err := w.HandleTrigger(context.TODO(), connectionRequest)
-		// handshake error...
-		if err != nil {
-			return
-		}
-
-		if res.GetWebsocket() == nil || !res.GetWebsocket().Success {
+		if resp.GetWebsocketEventResponse() == nil && resp.GetWebsocketEventResponse().GetConnectionResponse() != nil && resp.GetWebsocketEventResponse().GetConnectionResponse().Reject {
 			// close the connection
 			ctx.Error("Connection Refused", 500)
 			return
@@ -402,7 +311,10 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 			// generate a new connection ID for this client
 			defer func() {
 				// close within the websocket plugin will also call ws.Close
-				err = s.websocketPlugin.Close(ctx, socketName, connectionId)
+				_, err = s.websocketPlugin.Close(ctx, &websocketspb.WebsocketCloseRequest{
+					ConnectionId: connectionId,
+					SocketName:   socketName,
+				})
 				if err != nil {
 					pterm.Error.Println(err)
 					return
@@ -428,55 +340,36 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 					break
 				}
 
-				// Send the message to the worker
-				messageRequest := &v1.TriggerRequest{
-					Data: message,
-					Context: &v1.TriggerRequest_Websocket{
-						Websocket: &v1.WebsocketTriggerContext{
-							Socket:       socketName,
-							Event:        v1.WebsocketEvent_Message,
+				_, err = s.options.WebsocketListenerPlugin.HandleRequest(&websocketspb.ServerMessage{
+					Content: &websocketspb.ServerMessage_WebsocketEventRequest{
+						WebsocketEventRequest: &websocketspb.WebsocketEventRequest{
+							SocketName:   socketName,
 							ConnectionId: connectionId,
+							WebsocketEvent: &websocketspb.WebsocketEventRequest_Message{
+								Message: &websocketspb.WebsocketMessageEvent{
+									Body: message,
+								},
+							},
 						},
 					},
-				}
-
-				w, err := s.pool.GetWorker(&pool.GetWorkerOptions{
-					Trigger: messageRequest,
 				})
-				// error getting worker
-				if err != nil {
-					pterm.Error.Println("unable to find worker for websocket message request")
-					return
-				}
-
-				_, err = w.HandleTrigger(context.TODO(), messageRequest)
-				// handshake error...
 				if err != nil {
 					pterm.Error.Println(err)
 					return
 				}
 			}
 
-			// send disconnection message to the websocket worker
-			disconnectionRequest := &v1.TriggerRequest{
-				Context: &v1.TriggerRequest_Websocket{
-					Websocket: &v1.WebsocketTriggerContext{
-						Socket:       socketName,
-						Event:        v1.WebsocketEvent_Disconnect,
+			_, err = s.options.WebsocketListenerPlugin.HandleRequest(&websocketspb.ServerMessage{
+				Content: &websocketspb.ServerMessage_WebsocketEventRequest{
+					WebsocketEventRequest: &websocketspb.WebsocketEventRequest{
+						SocketName:   socketName,
 						ConnectionId: connectionId,
+						WebsocketEvent: &websocketspb.WebsocketEventRequest_Disconnection{
+							Disconnection: &websocketspb.WebsocketDisconnectionEvent{},
+						},
 					},
 				},
-			}
-
-			w, err = s.pool.GetWorker(&pool.GetWorkerOptions{
-				Trigger: disconnectionRequest,
 			})
-			if err != nil {
-				pterm.Error.Println("unable to find worker for websocket disconnection request")
-				return
-			}
-
-			_, err = w.HandleTrigger(context.TODO(), disconnectionRequest)
 			if err != nil {
 				pterm.Error.Println(err)
 				return
@@ -493,130 +386,109 @@ func (s *BaseHttpGateway) handleWebsocketRequest(socketName string) func(ctx *fa
 	}
 }
 
-func (s *BaseHttpGateway) handleTopicRequest(ctx *fasthttp.RequestCtx) {
+func (s *LocalGatewayService) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 	topicName := ctx.UserValue("name").(string)
 
-	trigger := &v1.TriggerRequest{
-		Data: ctx.Request.Body(),
-		Context: &v1.TriggerRequest_Topic{
-			Topic: &v1.TopicTriggerContext{
-				Topic: topicName,
+	// Get the incoming data as JSON
+	payload := map[string]interface{}{}
+	err := json.Unmarshal(ctx.Request.Body(), &payload)
+	if err != nil {
+		ctx.Error(fmt.Sprintf("Error parsing JSON: %v", err), 400)
+		return
+	}
+
+	structPayload, err := structpb.NewStruct(payload)
+	if err != nil {
+		ctx.Error(fmt.Sprintf("Error serializing topic message from payload: %v", err), 400)
+		return
+	}
+
+	msg := &topicspb.ServerMessage{
+		Content: &topicspb.ServerMessage_MessageRequest{
+			MessageRequest: &topicspb.MessageRequest{
+				TopicName: topicName,
+				Message: &topicspb.Message{
+					Content: &topicspb.Message_StructPayload{
+						StructPayload: structPayload,
+					},
+				},
 			},
 		},
 	}
 
-	ws := s.pool.GetWorkers(&pool.GetWorkerOptions{
-		Trigger: trigger,
-	})
-
-	if len(ws) == 0 {
-		ctx.Error("no subscribers found for topic", 404)
+	_, err = s.options.TopicsListenerPlugin.HandleRequest(msg)
+	if err != nil {
+		ctx.Error(fmt.Sprintf("Error handling topic request: %v", err), 500)
+		return
 	}
 
-	errList := make([]error, 0)
-
-	for _, w := range ws {
-		resp, err := w.HandleTrigger(context.TODO(), trigger)
-		if err != nil {
-			errList = append(errList, err)
-		}
-
-		if !resp.GetTopic().Success {
-			errList = append(errList, fmt.Errorf("topic delivery was unsuccessful"))
-		}
-
-		var topicType history.RecordType
-
-		switch w.(type) {
-		case *worker.ScheduleWorker:
-			topicType = history.SCHEDULE
-		case *worker.SubscriptionWorker:
-			topicType = history.TOPIC
-		}
-
-		eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryRecord{
-			Success:    resp.GetTopic().Success,
-			Time:       time.Now().UnixMilli(),
-			RecordType: topicType,
-			EventHistoryItem: history.EventHistoryItem{
-				Event: &history.EventRecord{
-					TopicKey:  strings.ToLower(strings.ReplaceAll(topicName, " ", "-")),
-					WorkerKey: topicName,
-				},
-				Payload: string(ctx.Request.Body()),
-			},
-		})
-	}
-
-	statusCode := 200
-	if len(errList) > 0 {
-		statusCode = 500
-	}
-
-	ctx.Error(fmt.Sprintf("%d successful & %d failed deliveries", len(ws)-len(errList), len(errList)), statusCode)
+	ctx.SuccessString("text/plain", "Successfully delivered message to topic")
 }
 
-func (s *BaseHttpGateway) refreshApis() {
+func (s *LocalGatewayService) refreshApis() {
 	s.apis = make([]string, 0)
 
-	workers := s.pool.GetWorkers(&pool.GetWorkerOptions{})
-	uniqApis := lo.Reduce(workers, func(agg []string, w worker.Worker, idx int) []string {
-		if api, ok := w.(*worker.RouteWorker); ok {
-			if !lo.Contains(agg, api.Api()) {
-				agg = append(agg, api.Api())
+	// Check if gateway plugin type to ensure we can read the workers
+	if localApiGateway, ok := s.options.ApiPlugin.(*LocalApiGateway); ok {
+		workers := localApiGateway.GetApis()
+		uniqApis := lo.Reduce(lo.Keys(workers), func(agg []string, apiName string, idx int) []string {
+			if !lo.Contains(agg, apiName) {
+				agg = append(agg, apiName)
 			}
-		}
 
-		return agg
-	}, []string{})
+			return agg
+		}, []string{})
 
-	// sort the APIs by alphabetical order
-	sort.Strings(uniqApis)
+		// sort the APIs by alphabetical order
+		sort.Strings(uniqApis)
 
-	s.apis = append(s.apis, uniqApis...)
+		s.apis = append(s.apis, uniqApis...)
+	}
 }
 
-func (s *BaseHttpGateway) refreshHttpWorkers() {
-	s.httpWorkers = make([]int, 0)
+func (s *LocalGatewayService) refreshHttpWorkers() {
+	s.httpWorkers = make([]string, 0)
+	var uniqHttpWorkers []string
 
-	workers := s.pool.GetWorkers(&pool.GetWorkerOptions{})
-	uniqHttpWorkers := lo.Reduce(workers, func(agg []int, w worker.Worker, idx int) []int {
-		if http, ok := w.(*worker.HttpWorker); ok {
-			if !lo.Contains(agg, http.GetPort()) {
-				agg = append(agg, http.GetPort())
+	if localHttpGateway, ok := s.options.HttpPlugin.(*LocalHttpProxy); ok {
+		workers := localHttpGateway.GetHttpWorkers()
+		uniqHttpWorkers = lo.Reduce(lo.Keys(workers), func(agg []string, host string, idx int) []string {
+			if !lo.Contains(agg, host) {
+				agg = append(agg, host)
 			}
-		}
 
-		return agg
-	}, []int{})
+			return agg
+		}, []string{})
+	}
 
 	// sort the Http Worker Ports lowest to highest
-	sort.Ints(uniqHttpWorkers)
+	sort.Strings(uniqHttpWorkers)
 
 	s.httpWorkers = append(s.httpWorkers, uniqHttpWorkers...)
 }
 
-func (s *BaseHttpGateway) refreshWebsocketWorkers() {
+func (s *LocalGatewayService) refreshWebsocketWorkers() {
 	s.websocketWorkers = make([]string, 0)
 
-	workers := s.pool.GetWorkers(&pool.GetWorkerOptions{})
-	websockets := lo.Reduce(workers, func(agg []string, w worker.Worker, idx int) []string {
-		if api, ok := w.(*worker.WebsocketWorker); ok {
-			if !lo.Contains(agg, api.Socket()) {
-				agg = append(agg, api.Socket())
+	if localWebsocketGateway, ok := s.options.WebsocketListenerPlugin.(*RunWebsocketService); ok {
+		workers := localWebsocketGateway.GetWebsocketWorkers()
+
+		websockets := lo.Reduce(lo.Keys(workers), func(agg []string, socketName string, idx int) []string {
+			if !lo.Contains(agg, socketName) {
+				agg = append(agg, socketName)
 			}
-		}
 
-		return agg
-	}, []string{})
+			return agg
+		}, []string{})
 
-	// sort the Http Worker Ports lowest to highest
-	sort.Strings(websockets)
+		// sort the Http Worker Ports lowest to highest
+		sort.Strings(websockets)
 
-	s.websocketWorkers = append(s.websocketWorkers, websockets...)
+		s.websocketWorkers = append(s.websocketWorkers, websockets...)
+	}
 }
 
-func (s *BaseHttpGateway) createApiServers() error {
+func (s *LocalGatewayService) createApiServers() error {
 	// create an api server for every API worker
 	for len(s.apiServers) < len(s.apis) {
 		fhttp := createServer(s.handleApiHttpRequest(len(s.apiServers)))
@@ -646,7 +518,7 @@ func (s *BaseHttpGateway) createApiServers() error {
 	return nil
 }
 
-func (s *BaseHttpGateway) createWebsocketServers() error {
+func (s *LocalGatewayService) createWebsocketServers() error {
 	if s.socketServer == nil {
 		s.socketServer = make(map[string]*socketServer)
 	}
@@ -691,7 +563,7 @@ func (s *BaseHttpGateway) createWebsocketServers() error {
 	return nil
 }
 
-func (s *BaseHttpGateway) createHttpServers() error {
+func (s *LocalGatewayService) createHttpServers() error {
 	// create an api server for every API worker
 	for len(s.httpServers) < len(s.httpWorkers) {
 		fhttp := createServer(s.handleHttpProxyRequest(len(s.httpServers)))
@@ -722,7 +594,7 @@ func (s *BaseHttpGateway) createHttpServers() error {
 }
 
 // Update the gateway and API based on the worker pool
-func (s *BaseHttpGateway) Refresh() error {
+func (s *LocalGatewayService) Refresh() error {
 	s.refreshApis()
 
 	s.refreshHttpWorkers()
@@ -749,10 +621,10 @@ func (s *BaseHttpGateway) Refresh() error {
 	return nil
 }
 
-func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
+func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 	var err error
 	// Assign the pool and block
-	s.pool = pool
+	s.options = opts
 	s.stop = make(chan bool)
 
 	// Setup routes
@@ -770,8 +642,6 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 
 	s.serviceServer = createServer(r.Handler)
 
-	_ = eventbus.Bus().Subscribe(history.AddRecordTopic, s.dash.RefreshHistory)
-
 	s.serviceListener, err = utils.GetNextListener()
 	if err != nil {
 		return err
@@ -787,7 +657,7 @@ func (s *BaseHttpGateway) Start(pool pool.WorkerPool) error {
 	return nil
 }
 
-func (s *BaseHttpGateway) Stop() error {
+func (s *LocalGatewayService) Stop() error {
 	for _, s := range s.apiServers {
 		// shutdown all the servers
 		// this will allow Start to exit
@@ -801,8 +671,8 @@ func (s *BaseHttpGateway) Stop() error {
 
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
-func NewGateway(wsPlugin *RunWebsocketService) (*BaseHttpGateway, error) {
-	return &BaseHttpGateway{
+func NewGateway(wsPlugin *RunWebsocketService) (*LocalGatewayService, error) {
+	return &LocalGatewayService{
 		websocketPlugin: wsPlugin,
 	}, nil
 }

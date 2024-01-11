@@ -17,18 +17,15 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
-	"log"
-
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pterm/pterm"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/command"
-	"github.com/nitrictech/cli/pkg/operations/local_run"
-	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/cloud"
+	"github.com/nitrictech/cli/pkgplus/project"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/services"
 )
 
 var runNoBrowser bool
@@ -41,24 +38,57 @@ var runCmd = &cobra.Command{
 	Annotations: map[string]string{"commonCommand": "yes"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Divert default log output to pterm debug
-		log.SetOutput(output.NewPtermWriter(pterm.Debug))
-		log.SetFlags(0)
+		// log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		// log.SetFlags(0)
 
-		if !utils.IsTerminal() && !output.CI {
-			fmt.Println("")
-			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode")
-			output.CI = true
-		}
+		// if !utils.IsTerminal() && !output.CI {
+		// 	fmt.Println("")
+		// 	pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode")
+		// 	output.CI = true
+		// }
 
-		if output.CI {
-			return local_run.RunNonInteractive(runNoBrowser)
-		}
+		// if output.CI {
+		// 	return local_run.RunNonInteractive(runNoBrowser)
+		// }
 
-		if _, err := tea.NewProgram(local_run.New(context.TODO(), local_run.ModelArgs{
-			NoBrowser: runNoBrowser,
-		}), tea.WithAltScreen()).Run(); err != nil {
-			return err
-		}
+		// Build the project
+		fs := afero.NewOsFs()
+
+		proj, err := project.FromFile(fs, "")
+		cobra.CheckErr(err)
+
+		// Start the local cloud service analogues
+		localCloud, err := cloud.New()
+		cobra.CheckErr(err)
+
+		go localCloud.Start()
+		cobra.CheckErr(err)
+
+		updates, err := proj.BuildServices(fs)
+		cobra.CheckErr(err)
+
+		prog := tea.NewProgram(build.NewModel(updates))
+		// blocks but quits once the above updates channel is closed by the build process
+		_, err = prog.Run()
+		cobra.CheckErr(err)
+
+		// Run the app code (project services)
+		stopChan := make(chan bool)
+		updatesChan := make(chan project.ServiceRunUpdate)
+		go func() {
+			err := proj.RunServices(stopChan, updatesChan)
+			if err != nil {
+				panic(err)
+			}
+		}()
+
+		cobra.CheckErr(err)
+
+		runView := tea.NewProgram(services.NewModel(stopChan, updatesChan, localCloud))
+
+		_, _ = runView.Run()
+		// cobra.CheckErr(err)
+		localCloud.Stop()
 
 		return nil
 	},

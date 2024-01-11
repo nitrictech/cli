@@ -18,8 +18,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkg/operations/feedback"
 )
 
 var feedbackCmd = &cobra.Command{
@@ -28,7 +26,7 @@ var feedbackCmd = &cobra.Command{
 	Long:    `Provide feedback on your experience with nitric.`,
 	Example: `nitric feedback`,
 	Run: func(cmd *cobra.Command, args []string) {
-		feedback.Run(cmd.Context())
+		// feedback.Run(cmd.Context())
 	},
 }
 

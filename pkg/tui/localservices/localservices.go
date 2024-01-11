@@ -29,6 +29,7 @@ import (
 	"github.com/pterm/pterm"
 
 	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/eventbus/resourceevts"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/run"
@@ -44,7 +45,8 @@ var (
 )
 
 type Model struct {
-	sub chan tea.Msg
+	sub                        chan tea.Msg
+	infrastructureSubscription chan resourceevts.LocalInfrastructureState
 
 	viewport viewport.Model
 
@@ -81,12 +83,13 @@ func New(args ModelArgs) Model {
 	vp := viewport.New(w, h-otherContentLines)
 
 	return Model{
-		envMap:    args.Envs,
-		project:   args.Project,
-		sub:       args.Sub,
-		noBrowser: args.NoBrowser,
-		viewport:  vp,
-		Error:     err,
+		envMap:                     args.Envs,
+		project:                    args.Project,
+		sub:                        args.Sub,
+		infrastructureSubscription: resourceevts.NewSubChannel(),
+		noBrowser:                  args.NoBrowser,
+		viewport:                   vp,
+		Error:                      err,
 	}
 }
 
@@ -100,18 +103,16 @@ func startLocalServices(sub chan tea.Msg, project *project.Project, envMap map[s
 		}
 	}
 
-	ls := run.NewLocalServices(project, false, dash)
+	ls := run.NewLocalServices(false)
 	if ls.Running() {
 		return ErrorMessage{
 			Error: fmt.Errorf("only one instance of Nitric can be run locally at a time, please check that you have ended all other instances and try again"),
 		}
 	}
 
-	pool := run.NewRunProcessPool()
-
 	membraneErr := make(chan error)
 	go func(errch chan error) {
-		errch <- ls.Start(pool, true)
+		errch <- ls.Start(false)
 	}(membraneErr)
 
 	for {
@@ -202,10 +203,26 @@ func startLocalServices(sub chan tea.Msg, project *project.Project, envMap map[s
 	}
 }
 
-func (m Model) Init() tea.Cmd {
+func (m Model) ListenForUpdates() tea.Cmd {
 	return func() tea.Msg {
-		return startLocalServices(m.sub, m.project, m.envMap, m.noBrowser)
+		stateChan := make(chan *resourceevts.LocalInfrastructureState)
+
+		resourceevts.SubscribeOnce(func(opts *resourceevts.LocalInfrastructureState) {
+			stateChan <- opts
+		})
+
+		return <-stateChan
 	}
+}
+
+func (m Model) Init() tea.Cmd {
+
+	return tea.Batch(
+		func() tea.Msg {
+			return startLocalServices(m.sub, m.project, m.envMap, m.noBrowser)
+		},
+		subscribeToChannel(m.infrastructureSubscription),
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -228,6 +245,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case FunctionsReadyMessage:
 		m.Ready = msg
 		cmds = append(cmds, subscribeToChannel(m.sub))
+
+	case *resourceevts.LocalInfrastructureState:
+		// update the state the re-subscribe
+		cmds = append(cmds, m.ListenForUpdates())
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, LocalServicesKeys.Quit):

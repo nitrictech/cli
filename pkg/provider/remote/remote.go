@@ -28,7 +28,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/provider/types"
-	deploy "github.com/nitrictech/nitric/core/pkg/api/nitric/deploy/v1"
+	deploy "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
 type remoteDeployment struct {
@@ -105,7 +105,7 @@ func (p *remoteDeployment) Up() (*types.Deployment, error) {
 		return nil, err
 	}
 
-	client := deploy.NewDeployServiceClient(conn)
+	client := deploy.NewDeployClient(conn)
 
 	op, err := client.Up(context.Background(), req)
 	if err != nil {
@@ -180,7 +180,7 @@ func (p *remoteDeployment) Down() (*types.Summary, error) {
 		Interactive: p.interactive,
 	}
 
-	client := deploy.NewDeployServiceClient(conn)
+	client := deploy.NewDeployClient(conn)
 
 	op, err := client.Down(context.Background(), req)
 	if err != nil {

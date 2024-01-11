@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 // Copyright Nitric Pty Ltd.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -24,7 +27,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"reflect"
 	"regexp"
 	osruntime "runtime"
 	"sort"
@@ -38,16 +40,21 @@ import (
 	multierror "github.com/missionMeteora/toolkit/errors"
 	"github.com/moby/moby/pkg/stdcopy"
 	"github.com/pkg/errors"
-	"github.com/samber/lo"
 	"google.golang.org/grpc"
 
 	"github.com/nitrictech/cli/pkg/containerengine"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/run"
 	"github.com/nitrictech/cli/pkg/utils"
-	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
-	"github.com/nitrictech/nitric/core/pkg/worker"
-	"github.com/nitrictech/nitric/core/pkg/worker/pool"
+
+	"github.com/nitrictech/nitric/core/pkg/gateway"
+	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
+	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
+	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
+	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
+	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 )
 
 type codeConfig struct {
@@ -70,7 +77,7 @@ type BucketNotification struct {
 }
 
 type HttpWorker struct {
-	Port int `json:"port,omitempty"`
+	Host string `json:"host,omitempty"`
 }
 
 type WebsocketResult struct {
@@ -139,13 +146,13 @@ func (c *codeConfig) ProjectDir() string {
 }
 
 type apiHandler struct {
-	worker *v1.ApiWorker
+	// worker *apispb.RegistrationRequest
 	target string
 }
 
 var alphanumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 
-func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, error) {
+func (c *codeConfig) SpecFromWorkerPool(gatewayOptions *gateway.GatewayStartOpts) (*SpecResult, error) {
 	apis := map[string][]*apiHandler{}
 	schedules := []*TopicResult{}
 	topics := []*TopicResult{}
@@ -153,97 +160,156 @@ func (c *codeConfig) SpecFromWorkerPool(pool pool.WorkerPool) (*SpecResult, erro
 	httpWorkers := []*HttpWorker{}
 	websockets := []*WebsocketResult{}
 
-	// transform worker pool into apiHandlers
-	for _, wrkr := range pool.GetWorkers(nil) {
-		switch w := wrkr.(type) {
-		case *worker.RouteWorker:
-			api := w.Api()
-			reflectedValue := reflect.ValueOf(w).Elem()
-			path := reflectedValue.FieldByName("path").String()
-			privateMethods := reflectedValue.FieldByName("methods")
-			methods := []string{}
-
-			for i := 0; i < privateMethods.Len(); i++ {
-				elementValue := privateMethods.Index(i)
-
-				methods = append(methods, elementValue.String())
-			}
-
-			handler := apiHandler{
-				worker: &v1.ApiWorker{
-					Api:     api,
-					Path:    path,
-					Methods: methods,
-					Options: &v1.ApiWorkerOptions{},
-				},
-				target: "", // TODO need to get from handler
-			}
-
-			apis[api] = append(apis[api], &handler)
-		case *worker.ScheduleWorker:
-			topicKey := strings.ToLower(strings.ReplaceAll(w.Key(), " ", "-"))
-
-			schedules = append(schedules, &TopicResult{
-				TopicKey:  topicKey,
-				WorkerKey: w.Key(),
-			})
-		case *worker.SubscriptionWorker:
-			topicKey := strings.ToLower(strings.ReplaceAll(w.Topic(), " ", "-"))
-
-			topics = append(topics, &TopicResult{
-				TopicKey:  topicKey,
-				WorkerKey: w.Topic(),
-			})
-		case *worker.BucketNotificationWorker:
-			bucketNotifications = append(bucketNotifications, &BucketNotification{
-				Bucket:                   w.Bucket(),
-				NotificationType:         w.NotificationType().String(),
-				NotificationPrefixFilter: w.NotificationPrefixFilter(),
-			})
-		case *worker.HttpWorker:
-			httpWorkers = append(httpWorkers, &HttpWorker{
-				Port: w.GetPort(),
-			})
-		case *worker.WebsocketWorker:
-			reflectedValue := reflect.ValueOf(w).Elem()
-			event := reflectedValue.FieldByName("event").Int()
-
-			// check if websocket already exists and add event to it
-			websocket, _ := lo.Find(websockets, func(existingSocket *WebsocketResult) bool {
-				return existingSocket.Name == w.Socket()
-			})
-
-			if websocket == nil {
-				websocket = &WebsocketResult{
-					Name: w.Socket(),
-				}
-
-				websockets = append(websockets, websocket)
-			}
-
-			switch event {
-			case int64(v1.WebsocketEvent_Connect):
-				websocket.Events = append(websocket.Events, "connect")
-			case int64(v1.WebsocketEvent_Disconnect):
-				websocket.Events = append(websocket.Events, "disconnect")
-			case int64(v1.WebsocketEvent_Message):
-				websocket.Events = append(websocket.Events, "message")
-			}
-		default:
-			return nil, utils.NewIncompatibleWorkerError()
-		}
-	}
-	// Convert the map of unique API specs to an array
 	apiSpecs := []*openapi3.T{}
 
-	for api, apiHandlers := range apis {
-		spec, err := c.apiSpec(api, apiHandlers)
-		if err != nil {
-			return nil, err
-		}
+	if localApiGateway, ok := gatewayOptions.ApiPlugin.(*run.LocalApiGateway); ok {
+		for apiName, workers := range localApiGateway.GetApis() {
+			apiSpec, err := c.apiSpec(apiName, nil)
+			if err != nil {
+				return nil, err
+			}
 
-		apiSpecs = append(apiSpecs, spec)
+			for _, wrkr := range workers {
+				handler := apiHandler{
+					worker: wrkr,
+					target: "", // TODO need to get from handler
+				}
+
+				apis[apiName] = append(apis[apiName], &handler)
+			}
+
+			apiSpecs = append(apiSpecs, apiSpec)
+		}
+	} else {
+		return nil, fmt.Errorf("APIs: Local run plugin not properly registered")
 	}
+
+	if localHttpGateway, ok := gatewayOptions.HttpPlugin.(*run.LocalHttpProxy); ok {
+		for addr, _ := range localHttpGateway.GetHttpWorkers() {
+			httpWorkers = append(httpWorkers, &HttpWorker{
+				Host: addr,
+			})
+		}
+	} else {
+		return nil, fmt.Errorf("HTTP: Local run plugin not properly registered")
+	}
+
+	if localSchedules, ok := gatewayOptions.SchedulesPlugin.(*run.LocalSchedules); ok {
+		for _, wrkr := range localSchedules.GetSchedules() {
+			scheduleKey := strings.ToLower(strings.ReplaceAll(wrkr.ScheduleName, " ", "-"))
+
+			schedules = append(schedules, &TopicResult{
+				TopicKey:  scheduleKey,
+				WorkerKey: wrkr.ScheduleName,
+			})
+		}
+	} else {
+		return nil, fmt.Errorf("Schedules: Local run plugin not properly registered")
+	}
+
+	if _, ok := gatewayOptions.StorageListenerPlugin.(*run.RunStorageService); ok {
+		// for bucketName, wrkr := range localStorage.GetListeners() {
+		// TODO: do we need this, we only store the listener count currently.
+		// bucketNotifications = append(bucketNotifications, &BucketNotification{
+		// 	Bucket:    bucketName,
+		// 	WorkerKey: wrkr Topic(),
+		// })
+		// }
+	} else {
+		return nil, fmt.Errorf("Storage: Local run plugin not properly registered")
+	}
+
+	// transform worker pool into apiHandlers
+	// for _, wrkr := range pool.GetWorkers(nil) {
+	// 	switch w := wrkr.(type) {
+	// 	case *worker.RouteWorker:
+	// 		api := w.Api()
+	// 		reflectedValue := reflect.ValueOf(w).Elem()
+	// 		path := reflectedValue.FieldByName("path").String()
+	// 		privateMethods := reflectedValue.FieldByName("methods")
+	// 		methods := []string{}
+
+	// 		for i := 0; i < privateMethods.Len(); i++ {
+	// 			elementValue := privateMethods.Index(i)
+
+	// 			methods = append(methods, elementValue.String())
+	// 		}
+
+	// 		handler := apiHandler{
+	// 			worker: &apispb.RegistrationRequest{
+	// 				Api:     api,
+	// 				Path:    path,
+	// 				Methods: methods,
+	// 				// Options: &v1.ApiWorkerOptions{},
+	// 			},
+	// 			target: "", // TODO need to get from handler
+	// 		}
+
+	// 		apis[api] = append(apis[api], &handler)
+	// 	case *worker.ScheduleWorker:
+	// 		topicKey := strings.ToLower(strings.ReplaceAll(w.Key(), " ", "-"))
+
+	// 		schedules = append(schedules, &TopicResult{
+	// 			TopicKey:  topicKey,
+	// 			WorkerKey: w.Key(),
+	// 		})
+	// 	case *worker.SubscriptionWorker:
+	// 		topicKey := strings.ToLower(strings.ReplaceAll(w.Topic(), " ", "-"))
+
+	// 		topics = append(topics, &TopicResult{
+	// 			TopicKey:  topicKey,
+	// 			WorkerKey: w.Topic(),
+	// 		})
+	// 	case *worker.BucketNotificationWorker:
+	// 		bucketNotifications = append(bucketNotifications, &BucketNotification{
+	// 			Bucket:                   w.Bucket(),
+	// 			NotificationType:         w.NotificationType().String(),
+	// 			NotificationPrefixFilter: w.NotificationPrefixFilter(),
+	// 		})
+	// 	case *worker.HttpWorker:
+	// 		httpWorkers = append(httpWorkers, &HttpWorker{
+	// 			Port: w.GetPort(),
+	// 		})
+	// 	case *worker.WebsocketWorker:
+	// 		reflectedValue := reflect.ValueOf(w).Elem()
+	// 		event := reflectedValue.FieldByName("event").Int()
+
+	// 		// check if websocket already exists and add event to it
+	// 		websocket, _ := lo.Find(websockets, func(existingSocket *WebsocketResult) bool {
+	// 			return existingSocket.Name == w.Socket()
+	// 		})
+
+	// 		if websocket == nil {
+	// 			websocket = &WebsocketResult{
+	// 				Name: w.Socket(),
+	// 			}
+
+	// 			websockets = append(websockets, websocket)
+	// 		}
+
+	// 		switch event {
+	// 		case int64(websocketspb.WebsocketEvent_Connect):
+	// 			websocket.Events = append(websocket.Events, "connect")
+	// 		case int64(websocketspb.WebsocketEvent_Disconnect):
+	// 			websocket.Events = append(websocket.Events, "disconnect")
+	// 		case int64(websocketspb.WebsocketEvent_Message):
+	// 			websocket.Events = append(websocket.Events, "message")
+	// 		}
+	// 	default:
+	// 		return nil, utils.NewIncompatibleWorkerError()
+	// 	}
+	// }
+	// Convert the map of unique API specs to an array
+	// apiSpecs := []*openapi3.T{}
+
+	// for api, apiHandlers := range apis {
+	// 	spec, err := c.apiSpec(api, apiHandlers)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	apiSpecs = append(apiSpecs, spec)
+	// }
 
 	// sort apis by title
 	sort.Slice(apiSpecs, func(i, j int) bool {
@@ -327,25 +393,28 @@ func (c *codeConfig) apiSpec(api string, workers []*apiHandler) (*openapi3.T, er
 
 					if f.apis[api].securityDefinitions != nil {
 						for sn, sd := range f.apis[api].securityDefinitions {
-							sd.GetJwt().GetIssuer()
+							switch sd.GetDefinition().(type) {
+							case *resourcespb.ApiSecurityDefinitionResource_Oidc:
+								issuerUrl, err := url.Parse(sd.GetOidc().GetIssuer())
+								if err != nil {
+									return nil, err
+								}
 
-							issuerUrl, err := url.Parse(sd.GetJwt().GetIssuer())
-							if err != nil {
-								return nil, err
-							}
+								if issuerUrl.Path == "" || issuerUrl.Path == "/" {
+									issuerUrl.Path = path.Join(issuerUrl.Path, ".well-known/openid-configuration")
+								}
 
-							if issuerUrl.Path == "" || issuerUrl.Path == "/" {
-								issuerUrl.Path = path.Join(issuerUrl.Path, ".well-known/openid-configuration")
-							}
+								oidSec := openapi3.NewOIDCSecurityScheme(issuerUrl.String())
+								oidSec.Extensions = map[string]interface{}{
+									"x-nitric-audiences": sd.GetOidc().GetAudiences(),
+								}
+								oidSec.Name = sn
 
-							oidSec := openapi3.NewOIDCSecurityScheme(issuerUrl.String())
-							oidSec.Extensions = map[string]interface{}{
-								"x-nitric-audiences": sd.GetJwt().GetAudiences(),
-							}
-							oidSec.Name = sn
-
-							doc.Components.SecuritySchemes[sn] = &openapi3.SecuritySchemeRef{
-								Value: oidSec,
+								doc.Components.SecuritySchemes[sn] = &openapi3.SecuritySchemeRef{
+									Value: oidSec,
+								}
+							default:
+								return nil, fmt.Errorf("unknown security definition type: %T", sd.GetDefinition())
 							}
 						}
 					}
@@ -506,8 +575,13 @@ func (c *codeConfig) collectOne(projectFunction *project.Function) error {
 	srv := NewServer(name, fun)
 	grpcSrv := grpc.NewServer()
 
-	v1.RegisterResourceServiceServer(grpcSrv, srv)
-	v1.RegisterFaasServiceServer(grpcSrv, srv)
+	resourcespb.RegisterResourcesServer(grpcSrv, srv)
+	topicspb.RegisterSubscriberServer(grpcSrv, srv)
+	storagepb.RegisterStorageListenerServer(grpcSrv, srv)
+	websocketspb.RegisterWebsocketHandlerServer(grpcSrv, srv)
+	schedulespb.RegisterSchedulesServer(grpcSrv, srv)
+	// apispb.RegisterApiServer(grpcSrv, srv)
+	httppb.RegisterHttpServer(grpcSrv, srv)
 
 	lis, err := net.Listen("tcp", ":0")
 	if err != nil {

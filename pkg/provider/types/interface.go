@@ -17,7 +17,7 @@
 package types
 
 import (
-	deploy "github.com/nitrictech/nitric/core/pkg/api/nitric/deploy/v1"
+	deploy "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
 const (

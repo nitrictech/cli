@@ -60,11 +60,6 @@ func NitricProviderDir() string {
 	return filepath.Join(NitricHomeDir(), "providers")
 }
 
-// NitricRunDir returns the directory to place runtime data.
-func NitricRunDir() string {
-	return filepath.Join(NitricHomeDir(), "run")
-}
-
 // NitricTemplatesDir returns the directory to place template related data.
 func NitricTemplatesDir() string {
 	return filepath.Join(NitricHomeDir(), "store")

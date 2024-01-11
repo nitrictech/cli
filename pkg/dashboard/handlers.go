@@ -25,11 +25,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/nitrictech/cli/pkg/history"
-	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
+	"github.com/nitrictech/cli/pkg/dashboard/history"
+	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
 
-func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(http.ResponseWriter, *http.Request) {
+func (d *Dashboard) handleStorage(storagePlugin storagepb.StorageServer) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, DELETE, OPTIONS")
@@ -41,10 +41,10 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 		}
 
 		ctx := context.Background()
-		bucket := r.URL.Query().Get("bucket")
+		bucketName := r.URL.Query().Get("bucketName")
 		action := r.URL.Query().Get("action")
 
-		if bucket == "" && action != "list-buckets" {
+		if bucketName == "" && action != "list-buckets" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Header().Set("Content-Type", "application/json")
 			handleResponseWriter(w, []byte(`{"error": "Bucket is required"}`))
@@ -56,7 +56,9 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 
 		switch action {
 		case "list-files":
-			fileList, err := storagePlugin.ListFiles(ctx, bucket, nil)
+			fileList, err := storagePlugin.ListBlobs(ctx, &storagepb.StorageListBlobsRequest{
+				BucketName: bucketName,
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -86,7 +88,11 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 				return
 			}
 
-			err = storagePlugin.Write(ctx, bucket, fileKey, contents)
+			_, err = storagePlugin.Write(ctx, &storagepb.StorageWriteRequest{
+				BucketName: bucketName,
+				Key:        fileKey,
+				Body:       contents,
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -102,7 +108,10 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 				return
 			}
 
-			err := storagePlugin.Delete(ctx, bucket, fileKey)
+			_, err := storagePlugin.Delete(ctx, &storagepb.StorageDeleteRequest{
+				BucketName: bucketName,
+				Key:        fileKey,
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -115,7 +124,7 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 	}
 }
 
-func (d *Dashboard) handleCallProxy() func(http.ResponseWriter, *http.Request) {
+func (d *Dashboard) createCallProxyHttpHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set CORs headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -181,7 +190,7 @@ func (d *Dashboard) handleCallProxy() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func (d *Dashboard) handleHistory() func(http.ResponseWriter, *http.Request) {
+func (d *Dashboard) createHistoryHttpHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "DELETE, OPTIONS")

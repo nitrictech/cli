@@ -20,10 +20,10 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkg/operations/project_new"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/project"
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 )
 
 var force bool
@@ -52,10 +52,13 @@ nitric new hello-world "official/TypeScript - Starter" `,
 			return fmt.Errorf(`non-interactive environment detected, please provide all mandatory arguments e.g. nitric new hello-world "official/TypeScript - Starter"`)
 		}
 
-		if _, err := tea.NewProgram(project_new.New(project_new.Args{
+		projectModel, err := project.New(afero.NewOsFs(), project.Args{
 			ProjectName:  projectName,
 			TemplateName: templateName,
-		}), tea.WithANSICompressor()).Run(); err != nil {
+		})
+		cobra.CheckErr(err)
+
+		if _, err := tea.NewProgram(projectModel, tea.WithANSICompressor()).Run(); err != nil {
 			return err
 		}
 

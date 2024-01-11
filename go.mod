@@ -30,16 +30,15 @@ require (
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/joho/godotenv v1.4.0
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
-	github.com/moby/moby v20.10.22+incompatible
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
-	github.com/nitrictech/nitric/cloud/aws v0.0.0-20230718015326-80e1b8640347
-	github.com/nitrictech/nitric/core v0.0.0-20230928000037-7261774edded
+	github.com/nitrictech/nitric/cloud/aws v0.0.0-20231220231644-a22c6184f20a
+	github.com/nitrictech/nitric/core v0.0.0-20240111014301-3a0f370d529f
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	github.com/valyala/fasthttp v1.51.0
-	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
+	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
 	google.golang.org/grpc v1.54.0
@@ -59,11 +58,13 @@ require (
 	github.com/mattn/go-isatty v0.0.18
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/muesli/reflow v0.3.0
-	github.com/nitrictech/nitric/cloud/common v0.0.0-20230710061936-f8ccb102d31b
+	github.com/nitrictech/nitric/cloud/common v0.0.0-20231206014944-68e146f4f69a
 	github.com/nitrictech/pearls v0.0.0-20231011053212-77f78229fb97
 	github.com/olahol/melody v1.1.3
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/samber/lo v1.38.1
 	github.com/seaweedfs/seaweedfs v0.0.0-20230109022022-51d4a4b28d0e
+	github.com/spf13/afero v1.9.5
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/sync v0.4.0
 	google.golang.org/protobuf v1.30.0
@@ -163,7 +164,6 @@ require (
 	github.com/eapache/go-resiliency v1.3.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/envoyproxy/protoc-gen-validate v0.9.1 // indirect
 	github.com/esimonov/ifshort v1.0.4 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
@@ -309,7 +309,6 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nishanths/exhaustive v0.11.0 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
-	github.com/nitrictech/protoutils v0.0.0-20220321044654-02667a814cdf // indirect
 	github.com/nunnatsa/ginkgolinter v0.14.1 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
@@ -361,7 +360,6 @@ require (
 	github.com/sivchari/tenv v1.7.1 // indirect
 	github.com/sonatard/noctx v0.0.2 // indirect
 	github.com/sourcegraph/go-diff v0.7.0 // indirect
-	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect

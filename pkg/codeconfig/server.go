@@ -18,83 +18,144 @@ package codeconfig
 
 import (
 	"context"
+	"fmt"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
+	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
+	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
+	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
+	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
+	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 )
 
 type Server struct {
 	name     string
 	function *FunctionDependencies
-	v1.UnimplementedFaasServiceServer
-	v1.UnimplementedResourceServiceServer
+
+	// Leave resourcespb::Details unimplemented
+	resourcespb.UnimplementedResourcesServer
 }
 
-// TriggerStream - Starts a new FaaS server stream
-//
-// The deployment server collects information from stream InitRequests, then immediately terminates the stream
-// This behavior captures enough information to identify function handlers, without executing the handler code
-// during the build process.
-func (s *Server) TriggerStream(stream v1.FaasService_TriggerStreamServer) error {
-	cm, err := stream.Recv()
+var _ storagepb.StorageListenerServer = (*Server)(nil)
+var _ topicspb.SubscriberServer = (*Server)(nil)
+var _ websocketspb.WebsocketHandlerServer = (*Server)(nil)
+var _ schedulespb.SchedulesServer = (*Server)(nil)
+var _ apispb.ApiServer = (*Server)(nil)
+var _ httppb.HttpServer = (*Server)(nil)
+var _ resourcespb.ResourcesServer = (*Server)(nil)
+
+// Listen for storage notifications
+func (s *Server) Listen(stream storagepb.StorageListener_ListenServer) error {
+	firstRequest, err := stream.Recv()
 	if err != nil {
-		return status.Errorf(codes.Internal, "error reading message from stream: %v", err)
+		return err
 	}
 
-	ir := cm.GetInitRequest()
-	if ir == nil {
-		// SHUT IT DOWN!!!!
-		// The first message must be an init request from the prospective FaaS worker
-		return status.Error(codes.FailedPrecondition, "first message must be InitRequest")
+	registrationRequest := firstRequest.GetRegistrationRequest()
+	if registrationRequest == nil {
+		return fmt.Errorf("")
 	}
 
-	switch w := ir.Worker.(type) {
-	case *v1.InitRequest_Api:
-		s.function.AddApiHandler(w.Api)
-	case *v1.InitRequest_Schedule:
-		s.function.AddScheduleHandler(w.Schedule)
-	case *v1.InitRequest_Subscription:
-		s.function.AddSubscriptionHandler(w.Subscription)
-	case *v1.InitRequest_BucketNotification:
-		s.function.AddBucketNotificationHandler(w.BucketNotification)
-	case *v1.InitRequest_HttpWorker:
-		s.function.AddHttpWorker(w.HttpWorker)
-	case *v1.InitRequest_Websocket:
-		s.function.AddWebsocketHandler(w.Websocket)
-	default:
-		s.function.AddError("declared unknown worker type, your CLI version may be out of date with your SDK version")
-	}
-
+	s.function.AddBucketNotificationHandler(registrationRequest)
 	return nil
 }
 
-// Declare - Accepts resource declarations, adding them as dependencies to the Function
-func (s *Server) Declare(ctx context.Context, req *v1.ResourceDeclareRequest) (*v1.ResourceDeclareResponse, error) {
+// Subscribe to topics
+func (s *Server) Subscribe(stream topicspb.Subscriber_SubscribeServer) error {
+	firstRequest, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+
+	registrationRequest := firstRequest.GetRegistrationRequest()
+	if registrationRequest == nil {
+		return fmt.Errorf("")
+	}
+
+	s.function.AddSubscriptionHandler(registrationRequest)
+	return nil
+}
+
+// Handle websocket events
+func (s *Server) HandleEvents(stream websocketspb.WebsocketHandler_HandleEventsServer) error {
+	firstRequest, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+
+	registrationRequest := firstRequest.GetRegistrationRequest()
+	if registrationRequest == nil {
+		return fmt.Errorf("")
+	}
+
+	s.function.AddWebsocketHandler(registrationRequest)
+	return nil
+}
+
+// Make schedule
+func (s *Server) Schedule(stream schedulespb.Schedules_ScheduleServer) error {
+	firstRequest, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+
+	registrationRequest := firstRequest.GetRegistrationRequest()
+	if registrationRequest == nil {
+		return fmt.Errorf("")
+	}
+
+	s.function.AddScheduleHandler(registrationRequest)
+	return nil
+}
+
+func (s *Server) Serve(stream apispb.Api_ServeServer) error {
+	firstRequest, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+
+	registrationRequest := firstRequest.GetRegistrationRequest()
+	if registrationRequest == nil {
+		return fmt.Errorf("")
+	}
+
+	s.function.AddApiHandler(registrationRequest)
+	return nil
+}
+
+func (s *Server) Proxy(ctx context.Context, req *httppb.HttpProxyRequest) (*httppb.HttpProxyResponse, error) {
+	s.function.AddHttpWorker(req)
+	return &httppb.HttpProxyResponse{}, nil
+}
+
+// // Declare - Accepts resource declarations, adding them as dependencies to the Function
+func (s *Server) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {
 	switch req.Resource.Type {
-	case v1.ResourceType_Bucket:
+	case resourcespb.ResourceType_Bucket:
 		s.function.AddBucket(req.Resource.Name, req.GetBucket())
-	case v1.ResourceType_Collection:
+	case resourcespb.ResourceType_Collection:
 		s.function.AddCollection(req.Resource.Name, req.GetCollection())
-	case v1.ResourceType_Queue:
-		s.function.AddQueue(req.Resource.Name, req.GetQueue())
-	case v1.ResourceType_Topic:
+	case resourcespb.ResourceType_Topic:
 		s.function.AddTopic(req.Resource.Name, req.GetTopic())
-	case v1.ResourceType_Policy:
+	case resourcespb.ResourceType_Policy:
 		s.function.AddPolicy(req.GetPolicy())
-	case v1.ResourceType_Secret:
+	case resourcespb.ResourceType_Secret:
 		s.function.AddSecret(req.Resource.Name, req.GetSecret())
-	case v1.ResourceType_Api:
-		s.function.AddApiSecurityDefinitions(req.Resource.Name, req.GetApi().SecurityDefinitions)
+	case resourcespb.ResourceType_Api:
+		// FIXME: Make sure this is correct
+		// s.function.AddApiSecurityDefinitions(req.Resource.Name, req.GetApi().SecurityDefinitions)
 		s.function.AddApiSecurity(req.Resource.Name, req.GetApi().Security)
-	case v1.ResourceType_Websocket:
+	case resourcespb.ResourceType_Websocket:
 		// TODO: Add websocket configuration here when available
 		break
 	}
 
-	return &v1.ResourceDeclareResponse{}, nil
+	return &resourcespb.ResourceDeclareResponse{}, nil
 }
+
+// 	return &v1.ResourceDeclareResponse{}, nil
+// }
 
 // NewServer - Creates a new deployment server
 func NewServer(name string, function *FunctionDependencies) *Server {

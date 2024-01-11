@@ -1,0 +1,10 @@
+package localcloud
+
+// LocalCloud represents a collection of locally simulated/alternative cloud services.
+type LocalCloud struct {
+}
+
+// Returns a new Local Cloud
+func New() *LocalCloud {
+
+}

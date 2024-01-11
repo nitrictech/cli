@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 // Copyright Nitric Pty Ltd.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -22,7 +25,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/preview"
@@ -30,7 +32,6 @@ import (
 	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
 	"github.com/nitrictech/nitric/core/pkg/worker"
 	"github.com/nitrictech/nitric/core/pkg/worker/pool"
-	"github.com/nitrictech/pearls/pkg/tui"
 )
 
 const (
@@ -78,7 +79,7 @@ func (r *RunStackState) Update(workerPool pool.WorkerPool, ls LocalServices) {
 	}
 
 	// TODO: We can probably move this directly into local service state
-	for _, wrkr := range workerPool.GetWorkers(&pool.GetWorkerOptions{}) {
+	for _, wrkr := range workerPool.GetWorkers(nil) {
 		switch w := wrkr.(type) {
 		case *worker.SubscriptionWorker:
 			r.subs[w.Topic()] = fmt.Sprintf("http://%s/topic/%s", ls.TriggerAddress(), w.Topic())
@@ -107,33 +108,6 @@ func (r *RunStackState) Warnings() []string {
 	}
 
 	return warnings
-}
-
-func createTable(columns []table.Column, rows []table.Row) table.Model {
-	headerStyle := lipgloss.NewStyle().Bold(true)
-	headers := []table.Column{}
-
-	for _, column := range columns {
-		headers = append(headers, table.Column{Title: headerStyle.Render(column.Title), Width: column.Width})
-	}
-
-	t := table.New(
-		table.WithColumns(headers),
-		table.WithRows(rows),
-		table.WithFocused(false),
-		table.WithHeight(len(rows)+1),
-	)
-
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(tui.Colors.White).
-		BorderBottom(true).
-		Bold(true)
-	s.Selected = lipgloss.NewStyle()
-	t.SetStyles(s)
-
-	return t
 }
 
 func (r *RunStackState) Tables() []table.Model {

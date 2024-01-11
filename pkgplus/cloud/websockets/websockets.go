@@ -1,0 +1,202 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package websockets
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+	"unicode/utf8"
+
+	"github.com/asaskevich/EventBus"
+	"github.com/fasthttp/websocket"
+
+	"github.com/nitrictech/cli/pkg/eventbus"
+	dashboard_events "github.com/nitrictech/cli/pkgplus/dashboard/dashboard_events"
+	"github.com/nitrictech/cli/pkgplus/streams"
+
+	nitricws "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
+	"github.com/nitrictech/nitric/core/pkg/workers/websockets"
+)
+
+type State = map[string][]nitricws.WebsocketEventType
+
+type LocalWebsocketService struct {
+	*websockets.WebsocketManager
+	connections map[string]map[string]*websocket.Conn
+	state       State
+	lock        sync.RWMutex
+
+	bus EventBus.Bus
+}
+
+var _ nitricws.WebsocketServer = (*LocalWebsocketService)(nil)
+var _ nitricws.WebsocketHandlerServer = (*LocalWebsocketService)(nil)
+
+const localWebsocketTopic = "local_websocket_gateway"
+
+func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string][]nitricws.WebsocketEventType)) {
+	r.bus.Subscribe(localWebsocketTopic, subscription)
+}
+
+func (r *LocalWebsocketService) GetState() map[string][]nitricws.WebsocketEventType {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	return r.state
+}
+
+func (r *LocalWebsocketService) registerWebsocketWorker(registration *nitricws.RegistrationRequest) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	if r.state[registration.SocketName] == nil {
+		r.state[registration.SocketName] = make([]nitricws.WebsocketEventType, 0)
+	}
+
+	r.state[registration.SocketName] = append(r.state[registration.SocketName], registration.EventType)
+
+	r.bus.Publish(localWebsocketTopic, r.state)
+}
+
+func (r *LocalWebsocketService) unRegisterWebsocketWorker(registration *nitricws.RegistrationRequest) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	if r.state[registration.SocketName] == nil {
+		return
+	}
+
+	for i, w := range r.state[registration.SocketName] {
+		if w == registration.EventType {
+			r.state[registration.SocketName] = append(r.state[registration.SocketName][:i], r.state[registration.SocketName][i+1:]...)
+			break
+		}
+	}
+
+	if len(r.state[registration.SocketName]) == 0 {
+		delete(r.state, registration.SocketName)
+	}
+
+	r.bus.Publish(localWebsocketTopic, r.state)
+}
+
+func (r *LocalWebsocketService) HandleEvents(stream nitricws.WebsocketHandler_HandleEventsServer) error {
+	peekableStream := streams.NewPeekableStreamServer[*nitricws.ServerMessage, *nitricws.ClientMessage](stream)
+
+	firstRequest, err := peekableStream.Peek()
+	if err != nil {
+		return err
+	}
+
+	if firstRequest.GetRegistrationRequest() == nil {
+		return fmt.Errorf("first request must be a Registration Request")
+	}
+
+	// register the websocket
+	r.registerWebsocketWorker(firstRequest.GetRegistrationRequest())
+	defer r.unRegisterWebsocketWorker(firstRequest.GetRegistrationRequest())
+
+	return r.WebsocketManager.HandleEvents(peekableStream)
+}
+
+func (r *LocalWebsocketService) RegisterConnection(socket string, connectionId string, connection *websocket.Conn) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	if r.connections[socket] == nil {
+		r.connections[socket] = make(map[string]*websocket.Conn)
+	}
+
+	r.connections[socket][connectionId] = connection
+
+	eventbus.Bus().Publish(dashboard_events.UpdateWebsocketInfoCountTopic, socket, len(r.connections[socket]))
+
+	return nil
+}
+
+// TODO not being called or used. Is this still required
+func (r *LocalWebsocketService) Send(ctx context.Context, req *nitricws.WebsocketSendRequest) (*nitricws.WebsocketSendResponse, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	conn, ok := r.connections[req.SocketName][req.ConnectionId]
+	if !ok {
+		return nil, fmt.Errorf("could not get connection " + req.ConnectionId)
+	}
+
+	// Determine if the message is a binary message
+	isBinary := isBinaryString(req.Data)
+
+	if isBinary {
+		// binary is not supported by AWS, so tell user
+		req.Data = []byte("Binary messages are not currently supported by AWS")
+	}
+
+	err := conn.WriteMessage(websocket.TextMessage, req.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	infoMessage := dashboard_events.WebsocketMessage{
+		Data:         string(req.Data),
+		Time:         time.Now(),
+		ConnectionID: req.ConnectionId,
+	}
+
+	eventbus.Bus().Publish(dashboard_events.AddWebsocketInfoTopic, req.SocketName, infoMessage)
+
+	return &nitricws.WebsocketSendResponse{}, nil
+}
+
+func (r *LocalWebsocketService) Close(ctx context.Context, req *nitricws.WebsocketCloseRequest) (*nitricws.WebsocketCloseResponse, error) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	conn, ok := r.connections[req.SocketName][req.ConnectionId]
+	if !ok {
+		return nil, fmt.Errorf("could not get connection")
+	}
+
+	// force close the connection
+	err := conn.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	// delete the connection from the pool
+	delete(r.connections[req.SocketName], req.ConnectionId)
+
+	eventbus.Bus().Publish(dashboard_events.UpdateWebsocketInfoCountTopic, req.SocketName, len(r.connections[req.SocketName]))
+
+	return &nitricws.WebsocketCloseResponse{}, nil
+}
+
+func NewLocalWebsocketService() (*LocalWebsocketService, error) {
+	return &LocalWebsocketService{
+		WebsocketManager: websockets.NewWebsocketManager(),
+		connections:      make(map[string]map[string]*websocket.Conn),
+		lock:             sync.RWMutex{},
+		state:            make(map[string][]nitricws.WebsocketEventType),
+		bus:              EventBus.New(),
+	}, nil
+}
+
+func isBinaryString(data []byte) bool {
+	return !utf8.Valid(data)
+}

@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 // Copyright Nitric Pty Ltd.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -19,59 +22,44 @@ package run
 import (
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/nitrictech/cli/pkg/dashboard"
-	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/eventbus/resourceevts"
 	"github.com/nitrictech/nitric/core/pkg/membrane"
-	"github.com/nitrictech/nitric/core/pkg/worker/pool"
 )
 
 type LocalServices interface {
-	Start(pool pool.WorkerPool, suppressLogs bool) error
+	Start(suppressLogs bool) error
 	Stop() error
 	Running() bool
 	Status() *LocalServicesStatus
 	Refresh() error
 	Apis() map[string]string
-	HttpWorkers() map[int]string
+	HttpWorkers() map[string]string
 	Websockets() map[string]string
 	TriggerAddress() string
-	GetWorkerPool() pool.WorkerPool
-	GetStorageService() *RunStorageService
-	GetDashboard() *dashboard.Dashboard
 }
 
 type LocalServicesStatus struct {
-	RunDir string `yaml:"runDir"`
+	// RunDir string `yaml:"runDir"`
 	// GatewayAddress  string `yaml:"gatewayAddress"`
 	MembraneAddress string `yaml:"membraneAddress"`
-	StorageEndpoint string `yaml:"storageEndpoint"`
 }
 
 type localServices struct {
-	project        *project.Project
-	storage        *SeaweedServer
-	membrane       *membrane.Membrane
-	status         *LocalServicesStatus
-	gateway        *BaseHttpGateway
-	storageService *RunStorageService
-	dashboard      *dashboard.Dashboard
-	isStart        bool
+	membrane   *membrane.Membrane
+	status     *LocalServicesStatus
+	gateway    *LocalGatewayService
+	isStartCmd bool
 }
 
-func NewLocalServices(project *project.Project, isStart bool, dashboard *dashboard.Dashboard) LocalServices {
+func NewLocalServices(isStartCmd bool) LocalServices {
 	return &localServices{
-		project: project,
-		isStart: isStart,
+		isStartCmd: isStartCmd,
 		status: &LocalServicesStatus{
-			RunDir:          filepath.Join(utils.NitricRunDir(), project.Name),
+			// RunDir:          NITRIC_LOCAL_RUN_DIR,
 			MembraneAddress: net.JoinHostPort("localhost", "50051"),
 		},
-		dashboard: dashboard,
 	}
 }
 
@@ -91,24 +79,20 @@ func (l *localServices) Refresh() error {
 		}
 	}
 
-	err := l.dashboard.Refresh(&dashboard.RefreshOptions{
-		Pool:               l.GetWorkerPool(),
+	resourceevts.Publish(resourceevts.LocalInfrastructureState{
 		TriggerAddress:     l.TriggerAddress(),
 		ApiAddresses:       l.Apis(),
 		WebSocketAddresses: l.Websockets(),
 		StorageAddress:     l.Status().StorageEndpoint,
 		ServiceListener:    l.gateway.serviceListener,
 	})
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
 
 func (l *localServices) Stop() error {
 	l.membrane.Stop()
-	return l.storage.Stop()
+	// return l.storageService.StopSeaweed()
 }
 
 func (l *localServices) Running() bool {
@@ -130,7 +114,7 @@ func (l *localServices) Apis() map[string]string {
 	return nil
 }
 
-func (l *localServices) HttpWorkers() map[int]string {
+func (l *localServices) HttpWorkers() map[string]string {
 	if l.gateway != nil {
 		return l.gateway.GetHttpWorkerAddresses()
 	}
@@ -150,13 +134,13 @@ func (l *localServices) Status() *LocalServicesStatus {
 	return l.status
 }
 
-func (l *localServices) Start(pool pool.WorkerPool, suppressLogs bool) error {
+func (l *localServices) Start(suppressLogs bool) error {
 	var err error
 
-	l.storage, err = NewSeaweed(l.status.RunDir)
-	if err != nil {
-		return err
-	}
+	// l.storage, err = NewSeaweed()
+	// if err != nil {
+	// 	return err
+	// }
 
 	// start seaweed server
 	err = l.storage.Start()
@@ -170,41 +154,27 @@ func (l *localServices) Start(pool pool.WorkerPool, suppressLogs bool) error {
 		AccessKey: "dummykey",
 		SecretKey: "dummysecret",
 		Endpoint:  l.status.StorageEndpoint,
-	}, pool)
+	})
 	if err != nil {
 		return err
 	}
-
-	// Connect dev documents
-	os.Setenv("LOCAL_DB_DIR", l.status.RunDir)
 
 	dp, err := NewBoltService()
 	if err != nil {
 		return err
 	}
 
-	// Connect secrets plugin
-	os.Setenv("LOCAL_SEC_DIR", l.status.RunDir)
-
 	secp, err := NewSecretService()
 	if err != nil {
 		return err
 	}
 
-	// Connect queue plugin
-	os.Setenv("LOCAL_QUEUE_DIR", l.status.RunDir)
-
-	qp, err := NewQueueService()
+	ev, err := NewEvents()
 	if err != nil {
 		return err
 	}
 
-	ev, err := NewEvents(pool, l.project)
-	if err != nil {
-		return err
-	}
-
-	wsPlugin, _ := NewRunWebsocketService(l.dashboard)
+	wsPlugin, _ := NewRunWebsocketService()
 
 	// Start a new gateway plugin
 	l.gateway, err = NewGateway(wsPlugin)
@@ -212,23 +182,32 @@ func (l *localServices) Start(pool pool.WorkerPool, suppressLogs bool) error {
 		return err
 	}
 
-	l.gateway.project = l.project
-	l.gateway.dash = l.dashboard
+	events, err := NewEvents()
+	if err != nil {
+		return err
+	}
+	// l.gateway.dash = l.dashboard
 
 	// Prepare development membrane to start
 	// This will start a single membrane that all
 	// running functions will connect to
 	l.membrane, err = membrane.New(&membrane.MembraneOptions{
+		ApiPlugin:               NewLocalApiGateway(),
+		HttpPlugin:              NewLocalHttpGateway(),
+		SchedulesPlugin:         NewLocalSchedules(),
+		TopicsListenerPlugin:    events,
+		StorageListenerPlugin:   l.storageService,
+		WebsocketListenerPlugin: wsPlugin,
+		// HttpPlugin: New,
+
 		ServiceAddress:          "0.0.0.0:50051",
-		SecretPlugin:            secp,
-		QueuePlugin:             qp,
+		SecretManagerPlugin:     secp,
 		StoragePlugin:           l.storageService,
 		DocumentPlugin:          dp,
 		GatewayPlugin:           l.gateway,
-		EventsPlugin:            ev,
-		ResourcesPlugin:         NewResources(l, l.isStart),
+		TopicsPlugin:            ev,
+		ResourcesPlugin:         NewResources(l, l.isStartCmd),
 		WebsocketPlugin:         wsPlugin,
-		Pool:                    pool,
 		TolerateMissingServices: false,
 		SuppressLogs:            suppressLogs,
 	})
@@ -239,14 +218,6 @@ func (l *localServices) Start(pool pool.WorkerPool, suppressLogs bool) error {
 	return l.membrane.Start()
 }
 
-func (l *localServices) GetWorkerPool() pool.WorkerPool {
-	return l.gateway.pool
-}
-
 func (l *localServices) GetStorageService() *RunStorageService {
 	return l.storageService
-}
-
-func (l *localServices) GetDashboard() *dashboard.Dashboard {
-	return l.dashboard
 }

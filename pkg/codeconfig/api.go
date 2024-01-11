@@ -22,14 +22,15 @@ import (
 	"sync"
 
 	"github.com/nitrictech/cli/pkg/utils"
-	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
+	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
 
 type Api struct {
 	parent              *FunctionDependencies
-	securityDefinitions map[string]*v1.ApiSecurityDefinition
+	securityDefinitions map[string]*resourcespb.ApiSecurityDefinitionResource
 	security            map[string][]string
-	workers             []*v1.ApiWorker
+	workers             []*apispb.RegistrationRequest
 	lock                sync.RWMutex
 }
 
@@ -40,8 +41,8 @@ func (a *Api) String() string {
 func newApi(parent *FunctionDependencies) *Api {
 	return &Api{
 		parent:              parent,
-		workers:             make([]*v1.ApiWorker, 0),
-		securityDefinitions: make(map[string]*v1.ApiSecurityDefinition),
+		workers:             make([]*apispb.RegistrationRequest, 0),
+		securityDefinitions: make(map[string]*resourcespb.ApiSecurityDefinitionResource),
 		security:            make(map[string][]string),
 	}
 }
@@ -61,7 +62,7 @@ func normalizePath(path string) string {
 	return strings.Join(parts, "/")
 }
 
-func matchingWorkers(a *v1.ApiWorker, b *v1.ApiWorker) bool {
+func matchingWorkers(a *apispb.RegistrationRequest, b *apispb.RegistrationRequest) bool {
 	if normalizePath(a.GetPath()) == normalizePath(b.GetPath()) {
 		for _, aMethod := range a.GetMethods() {
 			for _, bMethod := range b.GetMethods() {
@@ -94,7 +95,7 @@ func (a *Api) AddWorker(worker *v1.ApiWorker) {
 	a.workers = append(a.workers, worker)
 }
 
-func (a *Api) AddSecurityDefinition(name string, sd *v1.ApiSecurityDefinition) {
+func (a *Api) AddSecurityDefinition(name string, sd *resourcespb.ApiSecurityDefinitionResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 

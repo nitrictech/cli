@@ -26,49 +26,32 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
 
-	"github.com/nitrictech/nitric/core/pkg/plugins/errors"
-	"github.com/nitrictech/nitric/core/pkg/plugins/errors/codes"
-	"github.com/nitrictech/nitric/core/pkg/plugins/secret"
-	"github.com/nitrictech/nitric/core/pkg/utils"
+	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
+	secretspb "github.com/nitrictech/nitric/core/pkg/proto/secrets/v1"
 )
 
-const DEV_SUB_DIR_SECRETS = "./secrets/"
-
 type DevSecretService struct {
-	secret.UnimplementedSecretPlugin
 	secDir string
 }
 
-func (s *DevSecretService) secretFileName(sec *secret.Secret, v string) string {
+var _ secretspb.SecretManagerServer = (*DevSecretService)(nil)
+
+func (s *DevSecretService) secretFileName(sec *secretspb.Secret, v string) string {
 	filename := fmt.Sprintf("%s_%s.txt", sec.Name, v)
 	return filepath.Join(s.secDir, filename)
 }
 
-func (s *DevSecretService) Put(ctx context.Context, sec *secret.Secret, val []byte) (*secret.SecretPutResponse, error) {
-	newErr := errors.ErrorsWithScope(
+func (s *DevSecretService) Put(ctx context.Context, req *secretspb.SecretPutRequest) (*secretspb.SecretPutResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope(
 		"DevSecretService.Put",
-		map[string]interface{}{
-			"secret": sec,
-		},
 	)
-
-	if sec == nil {
-		return nil, newErr(codes.InvalidArgument, "provide non-empty secret", nil)
-	}
-
-	if len(sec.Name) == 0 {
-		return nil, newErr(codes.InvalidArgument, "provide non-blank secret name", nil)
-	}
-
-	if len(val) == 0 {
-		return nil, newErr(codes.InvalidArgument, "provide non-blank secret value", nil)
-	}
 
 	versionId := uuid.New().String()
 	// Creates a new file in the form:
 	// DIR/Name_Version.txt
-	file, err := os.Create(s.secretFileName(sec, versionId))
+	file, err := os.Create(s.secretFileName(req.Secret, versionId))
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -77,7 +60,7 @@ func (s *DevSecretService) Put(ctx context.Context, sec *secret.Secret, val []by
 		)
 	}
 
-	sVal := base64.StdEncoding.EncodeToString(val)
+	sVal := base64.StdEncoding.EncodeToString(req.Value)
 
 	writer := bufio.NewWriter(file)
 
@@ -93,7 +76,7 @@ func (s *DevSecretService) Put(ctx context.Context, sec *secret.Secret, val []by
 	writer.Flush()
 
 	// Creates a new file as latest
-	latestFile, err := os.Create(s.secretFileName(sec, "latest"))
+	latestFile, err := os.Create(s.secretFileName(req.Secret, "latest"))
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -115,41 +98,20 @@ func (s *DevSecretService) Put(ctx context.Context, sec *secret.Secret, val []by
 
 	latestWriter.Flush()
 
-	return &secret.SecretPutResponse{
-		SecretVersion: &secret.SecretVersion{
-			Secret: &secret.Secret{
-				Name: sec.Name,
-			},
+	return &secretspb.SecretPutResponse{
+		SecretVersion: &secretspb.SecretVersion{
+			Secret:  req.Secret,
 			Version: versionId,
 		},
 	}, nil
 }
 
-func (s *DevSecretService) Access(ctx context.Context, sv *secret.SecretVersion) (*secret.SecretAccessResponse, error) {
-	newErr := errors.ErrorsWithScope(
+func (s *DevSecretService) Access(ctx context.Context, req *secretspb.SecretAccessRequest) (*secretspb.SecretAccessResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope(
 		"DevSecretService.Access",
-		map[string]interface{}{
-			"version": sv,
-		},
 	)
 
-	if sv.Secret.Name == "" {
-		return nil, newErr(
-			codes.InvalidArgument,
-			"provide non-blank name",
-			nil,
-		)
-	}
-
-	if sv.Version == "" {
-		return nil, newErr(
-			codes.InvalidArgument,
-			"provide non-blank version",
-			nil,
-		)
-	}
-
-	content, err := os.ReadFile(s.secretFileName(sv.Secret, sv.Version))
+	content, err := os.ReadFile(s.secretFileName(req.SecretVersion.Secret, req.SecretVersion.Version))
 	if err != nil {
 		return nil, newErr(
 			codes.InvalidArgument,
@@ -159,7 +121,7 @@ func (s *DevSecretService) Access(ctx context.Context, sv *secret.SecretVersion)
 	}
 
 	splitContent := strings.Split(string(content), ",")
-	version := sv.Version
+	version := req.SecretVersion.Version
 	// check whether a version number is stored in the file, this indicates the 'latest' version file.
 	if len(splitContent) == 2 {
 		version = splitContent[1]
@@ -170,11 +132,9 @@ func (s *DevSecretService) Access(ctx context.Context, sv *secret.SecretVersion)
 		return nil, err
 	}
 
-	return &secret.SecretAccessResponse{
-		SecretVersion: &secret.SecretVersion{
-			Secret: &secret.Secret{
-				Name: sv.Secret.Name,
-			},
+	return &secretspb.SecretAccessResponse{
+		SecretVersion: &secretspb.SecretVersion{
+			Secret:  req.SecretVersion.Secret,
 			Version: version,
 		},
 		Value: sVal,
@@ -182,9 +142,8 @@ func (s *DevSecretService) Access(ctx context.Context, sv *secret.SecretVersion)
 }
 
 // Create new secret store
-func NewSecretService() (secret.SecretService, error) {
-	secDir := utils.GetEnv("LOCAL_SEC_DIR", utils.GetRelativeDevPath(DEV_SUB_DIR_SECRETS))
-
+func NewSecretService() (*DevSecretService, error) {
+	secDir := LOCAL_SECRETS_DIR.String()
 	// Check whether file exists
 	_, err := os.Stat(secDir)
 	if os.IsNotExist(err) {

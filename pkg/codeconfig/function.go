@@ -22,7 +22,13 @@ import (
 
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project"
-	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
+	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
+	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
+	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
+	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
+	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 )
 
 // FunctionDependencies - Stores information about a Nitric Function, and it's dependencies
@@ -31,16 +37,15 @@ type FunctionDependencies struct {
 	functionConfig      project.Function
 	apis                map[string]*Api
 	websockets          map[string]*Websocket
-	subscriptions       map[string]*v1.SubscriptionWorker
-	schedules           map[string]*v1.ScheduleWorker
-	httpWorkers         map[int]*v1.HttpWorker
-	buckets             map[string]*v1.BucketResource
-	topics              map[string]*v1.TopicResource
-	collections         map[string]*v1.CollectionResource
-	queues              map[string]*v1.QueueResource
-	policies            []*v1.PolicyResource
-	secrets             map[string]*v1.SecretResource
-	bucketNotifications map[string][]*v1.BucketNotificationWorker
+	subscriptions       map[string]*topicspb.RegistrationRequest
+	schedules           map[string]*schedulespb.RegistrationRequest
+	httpWorkers         map[string]*httppb.HttpProxyRequest
+	buckets             map[string]*resourcespb.BucketResource
+	topics              map[string]*resourcespb.TopicResource
+	collections         map[string]*resourcespb.CollectionResource
+	policies            []*resourcespb.PolicyResource
+	secrets             map[string]*resourcespb.SecretResource
+	bucketNotifications map[string][]*storagepb.RegistrationRequest
 	errors              []string
 	lock                sync.RWMutex
 }
@@ -50,13 +55,13 @@ func (a *FunctionDependencies) AddError(err string) {
 }
 
 // AddPolicy - Adds an access policy dependency to the function
-func (a *FunctionDependencies) AddPolicy(p *v1.PolicyResource) {
+func (a *FunctionDependencies) AddPolicy(p *resourcespb.PolicyResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	for _, p := range p.Principals {
 		// If provided a blank function principal assume its for this function
-		if p.Type == v1.ResourceType_Function && p.Name == "" {
+		if p.Type == resourcespb.ResourceType_Function && p.Name == "" {
 			p.Name = a.name
 		}
 	}
@@ -64,7 +69,7 @@ func (a *FunctionDependencies) AddPolicy(p *v1.PolicyResource) {
 	a.policies = append(a.policies, p)
 }
 
-func (a *FunctionDependencies) AddApiSecurityDefinitions(name string, sds map[string]*v1.ApiSecurityDefinition) {
+func (a *FunctionDependencies) AddApiSecurityDefinitions(name string, sds map[string]*resourcespb.ApiSecurityDefinitionResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -77,7 +82,7 @@ func (a *FunctionDependencies) AddApiSecurityDefinitions(name string, sds map[st
 	}
 }
 
-func (a *FunctionDependencies) AddApiSecurity(name string, security map[string]*v1.ApiScopes) {
+func (a *FunctionDependencies) AddApiSecurity(name string, security map[string]*resourcespb.ApiScopes) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -90,7 +95,7 @@ func (a *FunctionDependencies) AddApiSecurity(name string, security map[string]*
 	}
 }
 
-func (a *FunctionDependencies) AddApiHandler(aw *v1.ApiWorker) {
+func (a *FunctionDependencies) AddApiHandler(aw *apispb.RegistrationRequest) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -117,7 +122,7 @@ func (a *FunctionDependencies) AddApiHandler(aw *v1.ApiWorker) {
 	a.apis[aw.Api].AddWorker(aw)
 }
 
-func (a *FunctionDependencies) AddWebsocketHandler(ws *v1.WebsocketWorker) {
+func (a *FunctionDependencies) AddWebsocketHandler(ws *websocketspb.RegistrationRequest) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -131,26 +136,26 @@ to your nitric.yaml file.
 		return
 	}
 
-	if a.websockets[ws.Socket] == nil {
-		a.websockets[ws.Socket] = newWebsocket(ws.Socket, a)
+	if a.websockets[ws.GetSocketName()] == nil {
+		a.websockets[ws.GetSocketName()] = newWebsocket(ws.GetSocketName(), a)
 	}
 
-	a.websockets[ws.Socket].AddWorker(ws)
+	a.websockets[ws.GetSocketName()].AddWorker(ws)
 }
 
 // AddSubscriptionHandler - registers a handler in the function that subscribes to a topic of events
-func (a *FunctionDependencies) AddSubscriptionHandler(sw *v1.SubscriptionWorker) {
+func (a *FunctionDependencies) AddSubscriptionHandler(sw *topicspb.RegistrationRequest) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	// TODO: Determine if this subscription handler has a write policy to the same topic
-	if a.subscriptions[sw.Topic] != nil {
+	if a.subscriptions[sw.TopicName] != nil {
 		// return a new error
-		a.AddError(fmt.Sprintf("declared multiple subscriptions for topic %s, only one subscription per topic is allowed per function", sw.Topic))
+		a.AddError(fmt.Sprintf("declared multiple subscriptions for topic %s, only one subscription per topic is allowed per function", sw.TopicName))
 		return
 	}
 
-	a.subscriptions[sw.Topic] = sw
+	a.subscriptions[sw.TopicName] = sw
 }
 
 func (a *FunctionDependencies) WorkerCount() int {
@@ -170,20 +175,20 @@ func (a *FunctionDependencies) WorkerCount() int {
 }
 
 // AddScheduleHandler - registers a handler in the function that runs on a schedule
-func (a *FunctionDependencies) AddScheduleHandler(sw *v1.ScheduleWorker) {
+func (a *FunctionDependencies) AddScheduleHandler(sw *schedulespb.RegistrationRequest) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	if a.schedules[sw.Key] != nil {
-		a.AddError(fmt.Sprintf("declared schedule %s multiple times", sw.Key))
+	if a.schedules[sw.ScheduleName] != nil {
+		a.AddError(fmt.Sprintf("declared schedule %s multiple times", sw.ScheduleName))
 		return
 	}
 
-	a.schedules[sw.GetKey()] = sw
+	a.schedules[sw.ScheduleName] = sw
 }
 
 // AddHttpWorker - registers a handler in the function that listens on a port
-func (a *FunctionDependencies) AddHttpWorker(hw *v1.HttpWorker) {
+func (a *FunctionDependencies) AddHttpWorker(hw *httppb.HttpProxyRequest) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -206,19 +211,19 @@ to your nitric.yaml file.
 		return
 	}
 
-	a.httpWorkers[int(hw.GetPort())] = hw
+	a.httpWorkers[hw.GetHost()] = hw
 }
 
 // AddBucketNotificationHandler - registers a handler in the function that is triggered by bucket events
-func (a *FunctionDependencies) AddBucketNotificationHandler(nw *v1.BucketNotificationWorker) {
+func (a *FunctionDependencies) AddBucketNotificationHandler(nw *storagepb.RegistrationRequest) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	a.bucketNotifications[nw.GetBucket()] = append(a.bucketNotifications[nw.GetBucket()], nw)
+	a.bucketNotifications[nw.GetBucketName()] = append(a.bucketNotifications[nw.GetBucketName()], nw)
 }
 
 // AddBucket - adds a storage bucket dependency to the function
-func (a *FunctionDependencies) AddBucket(name string, b *v1.BucketResource) {
+func (a *FunctionDependencies) AddBucket(name string, b *resourcespb.BucketResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -226,7 +231,7 @@ func (a *FunctionDependencies) AddBucket(name string, b *v1.BucketResource) {
 }
 
 // AddTopic - adds a pub/sub topic dependency to the function
-func (a *FunctionDependencies) AddTopic(name string, t *v1.TopicResource) {
+func (a *FunctionDependencies) AddTopic(name string, t *resourcespb.TopicResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -234,22 +239,14 @@ func (a *FunctionDependencies) AddTopic(name string, t *v1.TopicResource) {
 }
 
 // AddCollection - adds a document database collection dependency to the function
-func (a *FunctionDependencies) AddCollection(name string, c *v1.CollectionResource) {
+func (a *FunctionDependencies) AddCollection(name string, c *resourcespb.CollectionResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	a.collections[name] = c
 }
 
-// AddQueue - adds a queue dependency to the function
-func (a *FunctionDependencies) AddQueue(name string, q *v1.QueueResource) {
-	a.lock.Lock()
-	defer a.lock.Unlock()
-
-	a.queues[name] = q
-}
-
-func (a *FunctionDependencies) AddSecret(name string, s *v1.SecretResource) {
+func (a *FunctionDependencies) AddSecret(name string, s *resourcespb.SecretResource) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -263,16 +260,15 @@ func NewFunction(name string, projectFunction project.Function) *FunctionDepende
 		functionConfig:      projectFunction,
 		apis:                make(map[string]*Api),
 		websockets:          make(map[string]*Websocket),
-		subscriptions:       make(map[string]*v1.SubscriptionWorker),
-		httpWorkers:         make(map[int]*v1.HttpWorker),
-		schedules:           make(map[string]*v1.ScheduleWorker),
-		buckets:             make(map[string]*v1.BucketResource),
-		topics:              make(map[string]*v1.TopicResource),
-		collections:         make(map[string]*v1.CollectionResource),
-		queues:              make(map[string]*v1.QueueResource),
-		secrets:             make(map[string]*v1.SecretResource),
-		bucketNotifications: make(map[string][]*v1.BucketNotificationWorker),
-		policies:            make([]*v1.PolicyResource, 0),
+		subscriptions:       make(map[string]*topicspb.RegistrationRequest),
+		httpWorkers:         make(map[string]*httppb.HttpProxyRequest),
+		schedules:           make(map[string]*schedulespb.RegistrationRequest),
+		buckets:             make(map[string]*resourcespb.BucketResource),
+		topics:              make(map[string]*resourcespb.TopicResource),
+		collections:         make(map[string]*resourcespb.CollectionResource),
+		secrets:             make(map[string]*resourcespb.SecretResource),
+		bucketNotifications: make(map[string][]*storagepb.RegistrationRequest),
+		policies:            make([]*resourcespb.PolicyResource, 0),
 		errors:              []string{},
 	}
 }

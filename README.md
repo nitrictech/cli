@@ -55,6 +55,7 @@ nitric new --help
 
 Documentation for all available commands:
 
+- nitric build : Build a Nitric project
 - nitric feedback : Provide feedback on your experience with nitric
 - nitric info : Gather information about Nitric and the environment
 - nitric new [projectName] [templateName] : Create a new project

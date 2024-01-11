@@ -21,19 +21,18 @@ import (
 	"fmt"
 	"strings"
 
-	v1 "github.com/nitrictech/nitric/core/pkg/api/nitric/v1"
-	"github.com/nitrictech/nitric/core/pkg/plugins/resource"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
 
 type RunResourcesService struct {
-	ls      *localServices
-	isStart bool
+	localSrvcs *localServices
+	isStart    bool
 }
 
-var _ resource.ResourceService = &RunResourcesService{}
+var _ resourcespb.ResourcesServer = &RunResourcesService{}
 
-func (r *RunResourcesService) getApiDetails(name string) (*resource.DetailsResponse[any], error) {
-	gatewayUri, ok := r.ls.gateway.GetApiAddresses()[name]
+func (r *RunResourcesService) getApiDetails(name string) (*resourcespb.ResourceDetailsResponse, error) {
+	gatewayUri, ok := r.localSrvcs.gateway.GetApiAddresses()[name]
 	if !ok {
 		return nil, fmt.Errorf("api %s does not exist", name)
 	}
@@ -42,18 +41,20 @@ func (r *RunResourcesService) getApiDetails(name string) (*resource.DetailsRespo
 		gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
 	}
 
-	return &resource.DetailsResponse[any]{
+	return &resourcespb.ResourceDetailsResponse{
 		Id:       name,
 		Provider: "dev",
 		Service:  "Api",
-		Detail: resource.ApiDetails{
-			URL: fmt.Sprintf("http://%s", gatewayUri),
+		Details: &resourcespb.ResourceDetailsResponse_Api{
+			Api: &resourcespb.ApiResourceDetails{
+				Url: fmt.Sprintf("http://%s", gatewayUri),
+			},
 		},
 	}, nil
 }
 
-func (r *RunResourcesService) getWebsocketDetails(name string) (*resource.DetailsResponse[any], error) {
-	gatewayUri, ok := r.ls.gateway.GetWebsocketAddresses()[name]
+func (r *RunResourcesService) getWebsocketDetails(name string) (*resourcespb.ResourceDetailsResponse, error) {
+	gatewayUri, ok := r.localSrvcs.gateway.GetWebsocketAddresses()[name]
 	if !ok {
 		return nil, fmt.Errorf("api %s does not exist", name)
 	}
@@ -62,41 +63,43 @@ func (r *RunResourcesService) getWebsocketDetails(name string) (*resource.Detail
 		gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
 	}
 
-	return &resource.DetailsResponse[any]{
+	return &resourcespb.ResourceDetailsResponse{
 		Id:       name,
 		Provider: "dev",
 		Service:  "Websocket",
-		Detail: resource.WebsocketDetails{
-			URL: fmt.Sprintf("ws://%s", gatewayUri),
+		Details: &resourcespb.ResourceDetailsResponse_Websocket{
+			Websocket: &resourcespb.WebsocketResourceDetails{
+				Url: fmt.Sprintf("ws://%s", gatewayUri),
+			},
 		},
 	}, nil
 }
 
-func (r *RunResourcesService) Details(ctx context.Context, typ resource.ResourceType, name string) (*resource.DetailsResponse[any], error) {
-	switch typ {
-	case resource.ResourceType_Api:
-		return r.getApiDetails(name)
-	case resource.ResourceType_Websocket:
-		return r.getWebsocketDetails(name)
+func (r *RunResourcesService) Details(ctx context.Context, req *resourcespb.ResourceDetailsRequest) (*resourcespb.ResourceDetailsResponse, error) {
+	switch req.Resource.Type {
+	case resourcespb.ResourceType_Api:
+		return r.getApiDetails(req.Resource.Name)
+	case resourcespb.ResourceType_Websocket:
+		return r.getWebsocketDetails(req.Resource.Name)
 	default:
-		return nil, fmt.Errorf("unsupported resource type %s", typ)
+		return nil, fmt.Errorf("unsupported resource type %s", req.Resource.Type)
 	}
 }
 
-func (r *RunResourcesService) Declare(ctx context.Context, req resource.ResourceDeclareRequest) error {
-	resource := req.Resource
+func (r *RunResourcesService) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {
+	// resource := req.Resource
 
-	switch resource.Type {
-	case v1.ResourceType_Bucket:
-		r.ls.dashboard.AddBucket(resource.GetName())
-	}
+	// switch resource.Type {
+	// case resourcespb.ResourceType_Bucket:
+	// 	r.localSrvcs.dashboard.AddBucket(resource.GetName())
+	// }
 
-	return nil
+	return &resourcespb.ResourceDeclareResponse{}, nil
 }
 
-func NewResources(ls *localServices, isStart bool) resource.ResourceService {
+func NewResources(ls *localServices, isStart bool) *RunResourcesService {
 	return &RunResourcesService{
-		ls:      ls,
-		isStart: isStart,
+		localSrvcs: ls,
+		isStart:    isStart,
 	}
 }

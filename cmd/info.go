@@ -18,8 +18,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkg/operations/info"
 )
 
 var infoCmd = &cobra.Command{
@@ -27,7 +25,7 @@ var infoCmd = &cobra.Command{
 	Short: "Gather information about Nitric and the environment",
 	Long:  `Gather information about Nitric and the environment.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		info.Run(cmd.Context())
+		// info.Run(cmd.Context())
 	},
 }
 

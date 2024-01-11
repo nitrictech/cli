@@ -45,7 +45,7 @@ type FunctionsReadyMessage struct {
 	Functions     []*run.Function
 }
 
-func subscribeToChannel(sub chan tea.Msg) tea.Cmd {
+func subscribeToChannel[T any](sub chan T) tea.Cmd {
 	return func() tea.Msg {
 		return <-sub
 	}

@@ -27,3 +27,23 @@ func Bus() EventBus.Bus {
 
 	return bus
 }
+
+var topicBus EventBus.Bus
+
+func TopicBus() EventBus.Bus {
+	if topicBus == nil {
+		topicBus = EventBus.New()
+	}
+
+	return topicBus
+}
+
+var storageBus EventBus.Bus
+
+func StorageBus() EventBus.Bus {
+	if storageBus == nil {
+		storageBus = EventBus.New()
+	}
+
+	return storageBus
+}

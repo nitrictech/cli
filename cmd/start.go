@@ -17,17 +17,20 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"log"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pterm/pterm"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/operations/start"
 	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/cloud"
+	"github.com/nitrictech/cli/pkgplus/dashboard"
+	"github.com/nitrictech/cli/pkgplus/project"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
 )
 
 var startNoBrowser bool
@@ -49,17 +52,33 @@ var startCmd = &cobra.Command{
 			output.CI = true
 		}
 
-		if output.CI {
-			return start.RunNonInteractive(startNoBrowser)
-		}
+		// if output.CI {
+		// 	return start.RunNonInteractive(startNoBrowser)
+		// }
 
-		model := start.New(context.TODO(), start.ModelArgs{
-			NoBrowser: startNoBrowser,
-		})
+		localCloud, err := cloud.New()
+		cobra.CheckErr(err)
 
-		if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
-			return err
-		}
+		// TODO: Start the dashboard
+		fs := afero.NewOsFs()
+
+		proj, err := project.FromFile(fs, "")
+		cobra.CheckErr(err)
+		
+		// create dashboard, we will start it once an application is connected
+		dash, err  := dashboard.New(proj, startNoBrowser, localCloud.Storage, localCloud.Gateway)
+		cobra.CheckErr(err)
+		
+		// Start a new tea app
+		go func() {
+			cliView := tea.NewProgram(local.NewTuiModel(localCloud, dash))
+
+			_, _ = cliView.Run()
+			localCloud.Stop()
+		}()
+
+		err = localCloud.Start()
+		cobra.CheckErr(err)
 
 		return nil
 	},

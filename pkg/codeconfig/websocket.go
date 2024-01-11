@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 // Copyright Nitric Pty Ltd.
 //
 // SPDX-License-Identifier: Apache-2.0

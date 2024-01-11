@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/samber/lo"
-
-	"github.com/nitrictech/cli/pkg/history"
+	"github.com/nitrictech/cli/pkg/dashboard/history"
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/runtime"
+
+	"github.com/samber/lo"
 )
 
 type Function struct {

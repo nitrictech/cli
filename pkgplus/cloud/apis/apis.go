@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/asaskevich/EventBus"
+
 	"github.com/nitrictech/cli/pkgplus/streams"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/apis"

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/samber/lo"
+
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
@@ -27,7 +29,6 @@ import (
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
-	"github.com/samber/lo"
 )
 
 // ServiceRequirements - Cloud resource requirements for a Nitric Application Service
@@ -60,12 +61,14 @@ type ServiceRequirements struct {
 	storagepb.UnimplementedStorageListenerServer
 }
 
-var _ apispb.ApiServer = (*ServiceRequirements)(nil)
-var _ schedulespb.SchedulesServer = (*ServiceRequirements)(nil)
-var _ topicspb.SubscriberServer = (*ServiceRequirements)(nil)
-var _ topicspb.TopicsServer = (*ServiceRequirements)(nil)
-var _ storagepb.StorageListenerServer = (*ServiceRequirements)(nil)
-var _ websocketspb.WebsocketHandlerServer = (*ServiceRequirements)(nil)
+var (
+	_ apispb.ApiServer                    = (*ServiceRequirements)(nil)
+	_ schedulespb.SchedulesServer         = (*ServiceRequirements)(nil)
+	_ topicspb.SubscriberServer           = (*ServiceRequirements)(nil)
+	_ topicspb.TopicsServer               = (*ServiceRequirements)(nil)
+	_ storagepb.StorageListenerServer     = (*ServiceRequirements)(nil)
+	_ websocketspb.WebsocketHandlerServer = (*ServiceRequirements)(nil)
+)
 
 var _ resourcespb.ResourcesServer = (*ServiceRequirements)(nil)
 

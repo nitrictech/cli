@@ -20,10 +20,11 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/nitrictech/cli/pkg/utils"
-	"github.com/nitrictech/cli/pkgplus/view/tui/commands/project"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+
+	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/project"
 )
 
 var force bool

@@ -25,7 +25,7 @@ import (
 	"net/url"
 	"strings"
 
-	dashboard_events "github.com/nitrictech/cli/pkgplus/dashboard/dashboard_events"
+	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
 	"github.com/nitrictech/cli/pkgplus/dashboard/history"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
@@ -250,7 +250,7 @@ func (d *Dashboard) handleWebsocketMessagesClear() func(http.ResponseWriter, *ht
 			return
 		}
 
-		d.websocketsInfo[socketName].Messages = []dashboard_events.WebsocketMessage{}
+		d.websocketsInfo[socketName].Messages = []websockets.WebsocketMessage{}
 
 		w.WriteHeader(http.StatusOK)
 

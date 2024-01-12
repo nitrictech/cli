@@ -74,7 +74,6 @@ type ChanMsg[T any] struct {
 
 func AwaitChannel[T any](channel <-chan T) tea.Cmd {
 	return func() tea.Msg {
-
 		msg, ok := <-channel
 
 		return ChanMsg[T]{

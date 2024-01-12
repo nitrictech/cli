@@ -33,5 +33,7 @@ func Glob(fs afero.Fs, pattern string) ([]string, error) {
 
 // Re-export functions that don't directly interact with the file	system.
 
-var Join = filepath.Join
-var Rel = filepath.Rel
+var (
+	Join = filepath.Join
+	Rel  = filepath.Rel
+)

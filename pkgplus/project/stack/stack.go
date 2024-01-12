@@ -6,9 +6,10 @@ import (
 	"os"
 	"regexp"
 
-	filepath "github.com/nitrictech/cli/pkgplus"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
+
+	filepath "github.com/nitrictech/cli/pkgplus"
 )
 
 type StackConfig[T any] struct {

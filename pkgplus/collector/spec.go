@@ -10,12 +10,13 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/samber/lo"
+
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
-	"github.com/samber/lo"
 )
 
 // buildBucketRequirements gathers and deduplicates all bucket requirements
@@ -146,7 +147,6 @@ func buildSecretRequirements(allServiceRequirements []*ServiceRequirements) ([]*
 	}
 
 	return resources, nil
-
 }
 
 func ensureOneTrailingSlash(p string) string {
@@ -298,7 +298,6 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements) ([]*dep
 					})
 				}
 			}
-
 		}
 	}
 
@@ -442,7 +441,7 @@ func buildCollectionsRequirements(allServiceRequirements []*ServiceRequirements)
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
-		for collectionName, _ := range serviceRequirements.collections {
+		for collectionName := range serviceRequirements.collections {
 			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
 				return item.Name == collectionName
 			})
@@ -629,14 +628,14 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 func ApisToOpenApiSpecs(apiRegistrationRequests map[string][]*apispb.RegistrationRequest) ([]*openapi3.T, error) {
 	specs := []*openapi3.T{}
 	apiResources := map[string]*resourcespb.ApiResource{}
-	
+
 	// transform apiRegistrationRequests into routes and apis for ServiceRequirements call
 	for apiName := range apiRegistrationRequests {
 		apiResources[apiName] = &resourcespb.ApiResource{}
 	}
 
 	requirements := []*ServiceRequirements{{routes: apiRegistrationRequests, apis: apiResources}}
-	
+
 	apiRequirements, err := buildApiRequirements(requirements)
 	if err != nil {
 		return nil, err

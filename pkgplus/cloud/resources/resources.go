@@ -21,7 +21,6 @@ import (
 
 	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
-	dashboard_events "github.com/nitrictech/cli/pkgplus/dashboard/dashboard_events"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
 
@@ -32,6 +31,8 @@ type LocalResourcesService struct {
 type LocalResourcesOptions struct {
 	Gateway *gateway.LocalGatewayService
 }
+
+const DeclareBucketTopic = "resources:declarebucket"
 
 // var _ resourcespb.ResourcesServer = &LocalResourcesService{}
 
@@ -97,9 +98,9 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 
 	switch resource.Type {
 	case resourcespb.ResourceType_Bucket:
-		eventbus.Bus().Publish(dashboard_events.AddBucketTopic, resource.GetName())
+		eventbus.Bus().Publish(DeclareBucketTopic, resource.GetName())
 	}
-	
+
 	return &resourcespb.ResourceDeclareResponse{}, nil
 }
 

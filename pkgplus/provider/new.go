@@ -48,9 +48,11 @@ func providerFromId(providerId string) (*Provider, error) {
 
 const nitricOrg = "nitric"
 
-const nitricAwsProvider = "aws"
-const nitricGcpProvider = "gcp"
-const nitricAzureProvider = "azure"
+const (
+	nitricAwsProvider   = "aws"
+	nitricGcpProvider   = "gcp"
+	nitricAzureProvider = "azure"
+)
 
 func providerFilePath(prov *Provider) string {
 	provDir := utils.NitricProviderDir()
@@ -72,7 +74,6 @@ func NewProvider(providerId string) (*Provider, error) {
 	}
 
 	if provider.organization == "nitric" {
-
 	}
 
 	return provider, nil

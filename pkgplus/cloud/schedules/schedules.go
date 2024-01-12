@@ -9,10 +9,11 @@ import (
 	"sync"
 
 	"github.com/asaskevich/EventBus"
+	"github.com/robfig/cron/v3"
+
 	"github.com/nitrictech/cli/pkgplus/streams"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/schedules"
-	"github.com/robfig/cron/v3"
 )
 
 type State = map[string]*schedulespb.RegistrationRequest

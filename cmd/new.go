@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/project"
 )
 
@@ -57,7 +58,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 			ProjectName:  projectName,
 			TemplateName: templateName,
 		})
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		if _, err := tea.NewProgram(projectModel, tea.WithANSICompressor()).Run(); err != nil {
 			return err

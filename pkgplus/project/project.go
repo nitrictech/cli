@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -413,9 +414,10 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	stopChannel := make(chan bool)
 	updatesChannel := make(chan ServiceRunUpdate)
 	go func() {
-		for update := range updatesChannel {
-			// TODO: Provide some updates
-			fmt.Println("container update:", update)
+		for _ = range updatesChannel {
+			// TODO: Provide some updates - bubbletea nice output
+			// fmt.Println("container update:", update)
+			continue
 		}
 	}()
 
@@ -434,26 +436,35 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 
 func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirements, error) {
 	allServiceRequirements := []*collector.ServiceRequirements{}
+	serviceErrors := []error{}
 
 	reqLock := sync.Mutex{}
-	errs, _ := errgroup.WithContext(context.Background())
+	errorLock := sync.Mutex{}
+	wg := sync.WaitGroup{}
 
 	for _, service := range p.Services {
-		errs.Go(func() error {
-			serviceRequirements, err := p.collectServiceRequirements(service)
+		svc := service
+		wg.Add(1)
+		go func(s Service) {
+			defer wg.Done()
+			serviceRequirements, err := p.collectServiceRequirements(s)
 			if err != nil {
-				return err
+				errorLock.Lock()
+				defer errorLock.Unlock()
+				serviceErrors = append(serviceErrors, err)
+				return
 			}
 
 			reqLock.Lock()
 			defer reqLock.Unlock()
 			allServiceRequirements = append(allServiceRequirements, serviceRequirements)
-			return nil
-		})
+		}(svc)
 	}
 
-	if err := errs.Wait(); err != nil {
-		return nil, err
+	wg.Wait()
+
+	if len(serviceErrors) > 0 {
+		return nil, errors.Join(serviceErrors...)
 	}
 
 	return allServiceRequirements, nil

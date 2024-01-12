@@ -28,6 +28,8 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/dashboard"
+	"github.com/nitrictech/cli/pkgplus/project"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
 )
 
@@ -55,11 +57,18 @@ var startCmd = &cobra.Command{
 		// }
 
 		localCloud, err := cloud.New()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		// create dashboard
 		dash, err := dashboard.New(startNoBrowser, localCloud)
 		cobra.CheckErr(err)
+
+		proj, err := project.FromFile(fs, "")
+		tui.CheckErr(err)
+
+		// create dashboard, we will start it once an application is connected
+		dash, err := dashboard.New(proj, startNoBrowser, localCloud.Storage, localCloud.Gateway)
+		tui.CheckErr(err)
 
 		// Start dashboard
 		err = dash.Start()
@@ -74,7 +83,7 @@ var startCmd = &cobra.Command{
 		}()
 
 		err = localCloud.Start()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		return nil
 	},

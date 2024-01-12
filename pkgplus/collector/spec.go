@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/samber/lo"
 
@@ -18,10 +19,36 @@ import (
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
+	"github.com/nitrictech/pearls/pkg/tui/view"
+	"github.com/samber/lo"
 )
 
+type ProjectErrors struct {
+	errors []error
+}
+
+func (pe *ProjectErrors) Add(err error) {
+	pe.errors = append(pe.errors, err)
+}
+
+func (pe ProjectErrors) Error() error {
+	if len(pe.errors) > 0 {
+		errorView := view.New()
+
+		errorView.AddRow(view.NewFragment("Errors found in project:"))
+
+		for _, err := range pe.errors {
+			errorView.AddRow(view.NewFragment(fmt.Sprintf("- %s", err.Error())).WithStyle(lipgloss.NewStyle().MarginLeft(2)))
+		}
+
+		return fmt.Errorf(errorView.Render())
+	}
+
+	return nil
+}
+
 // buildBucketRequirements gathers and deduplicates all bucket requirements
-func buildBucketRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildBucketRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -63,7 +90,7 @@ func buildBucketRequirements(allServiceRequirements []*ServiceRequirements) ([]*
 }
 
 // buildHttpRequirements gathers and deduplicates all http requirements
-func buildHttpRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildHttpRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -88,7 +115,7 @@ func buildHttpRequirements(allServiceRequirements []*ServiceRequirements) ([]*de
 }
 
 // buildTopicRequirements gathers and deduplicates all topic requirements
-func buildTopicRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildTopicRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -124,7 +151,7 @@ func buildTopicRequirements(allServiceRequirements []*ServiceRequirements) ([]*d
 }
 
 // buildSecretRequirements gathers and deduplicates all secret requirements
-func buildSecretRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildSecretRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -197,7 +224,7 @@ func openAPIPathAndParams(workerPath string) (string, openapi3.Parameters) {
 var notAlphaNumeric, _ = regexp.Compile("[^a-zA-Z0-9]+")
 
 // buildApiRequirements gathers and deduplicates all api requirements
-func buildApiRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildApiRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	apis := map[string]*openapi3.T{}
@@ -264,7 +291,16 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements) ([]*dep
 
 				for _, method := range route.Methods {
 					if pathItem.Operations() != nil && pathItem.Operations()[method] != nil {
-						return nil, fmt.Errorf("method %s is defined multiple times for path %s", route.Path, method)
+						operation := pathItem.Operations()[method]
+
+						existingServiceName := operation.Extensions["x-nitric-target"].(map[string]string)["name"]
+
+						existingService, _ := lo.Find(allServiceRequirements, func(item *ServiceRequirements) bool {
+							return existingServiceName == item.serviceName
+						})
+
+						projectErrors.Add(fmt.Errorf("service %s attempted to register duplicate route %s: %s for API '%s' which is already defined in service %s", serviceRequirements.serviceFile, method, route.Path, apiName, existingService.serviceFile))
+						continue
 					}
 
 					exts := map[string]interface{}{
@@ -325,7 +361,7 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements) ([]*dep
 }
 
 // buildWebsocketRequirements gathers and deduplicates all websocket requirements
-func buildWebsocketRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildWebsocketRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -370,11 +406,28 @@ func buildWebsocketRequirements(allServiceRequirements []*ServiceRequirements) (
 		}
 	}
 
+	// loop over all websockets and make sure all methods are handled
+	for _, websocketResource := range resources {
+		ws := websocketResource.GetWebsocket()
+
+		if ws.ConnectTarget == nil {
+			projectErrors.Add(fmt.Errorf("missing connect handler for websocket %s", websocketResource.Name))
+		}
+
+		if ws.DisconnectTarget == nil {
+			projectErrors.Add(fmt.Errorf("missing disconnect handler for websocket %s", websocketResource.Name))
+		}
+
+		if ws.MessageTarget == nil {
+			projectErrors.Add(fmt.Errorf("missing message handler for websocket %s", websocketResource.Name))
+		}
+	}
+
 	return resources, nil
 }
 
 // buildScheduleRequirements gathers all schedule requirements, erroring on duplicate schedule names
-func buildScheduleRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildScheduleRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -416,7 +469,7 @@ func buildScheduleRequirements(allServiceRequirements []*ServiceRequirements) ([
 				}
 				resources = append(resources, res)
 			} else {
-				return nil, fmt.Errorf("duplicate schedule name: %s", scheduleName)
+				projectErrors.Add(fmt.Errorf("multiple schedules registered with name '%s', schedule names must be unique", scheduleName))
 			}
 		}
 	}
@@ -438,7 +491,7 @@ func policyResourceName(policy *resourcespb.PolicyResource) (string, error) {
 }
 
 // buildCollectionsRequirements gathers and deduplicates all collection requirements
-func buildCollectionsRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildCollectionsRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -463,7 +516,7 @@ func buildCollectionsRequirements(allServiceRequirements []*ServiceRequirements)
 // buildPolicyRequirements gathers, compacts, and deduplicates all policy requirements
 // compaction is done by grouping policies by their principals and actions
 // i.e. two or more policies with identical principals and actions, but different resources, will be combined into a single policy covering all resources.
-func buildPolicyRequirements(allServiceRequirements []*ServiceRequirements) ([]*deploymentspb.Resource, error) {
+func buildPolicyRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -567,59 +620,61 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 		return nil, err
 	}
 
+	projectErrors := &ProjectErrors{}
+
 	newSpec := &deploymentspb.Spec{
 		Resources: []*deploymentspb.Resource{},
 	}
 
-	bucketResources, err := buildBucketRequirements(allServiceRequirements)
+	bucketResources, err := buildBucketRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, bucketResources...)
 
-	topicResources, err := buildTopicRequirements(allServiceRequirements)
+	topicResources, err := buildTopicRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, topicResources...)
 
-	secretResrources, err := buildSecretRequirements(allServiceRequirements)
+	secretResrources, err := buildSecretRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, secretResrources...)
 
-	websocketResources, err := buildWebsocketRequirements(allServiceRequirements)
+	websocketResources, err := buildWebsocketRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, websocketResources...)
 
-	scheduleResources, err := buildScheduleRequirements(allServiceRequirements)
+	scheduleResources, err := buildScheduleRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, scheduleResources...)
 
-	httpResources, err := buildHttpRequirements(allServiceRequirements)
+	httpResources, err := buildHttpRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, httpResources...)
 
-	apiResources, err := buildApiRequirements(allServiceRequirements)
+	apiResources, err := buildApiRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, apiResources...)
 
-	collectionResources, err := buildCollectionsRequirements(allServiceRequirements)
+	collectionResources, err := buildCollectionsRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, collectionResources...)
 
-	policyResources, err := buildPolicyRequirements(allServiceRequirements)
+	policyResources, err := buildPolicyRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
@@ -644,10 +699,10 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 		})
 	}
 
-	return newSpec, nil
+	return newSpec, projectErrors.Error()
 }
 
-func ApisToOpenApiSpecs(apiRegistrationRequests map[string][]*apispb.RegistrationRequest) ([]*openapi3.T, error) {
+func ApisToOpenApiSpecs(apiRegistrationRequests map[string][]*apispb.RegistrationRequest, projectErrors *ProjectErrors) ([]*openapi3.T, error) {
 	specs := []*openapi3.T{}
 	apiResources := map[string]*resourcespb.ApiResource{}
 
@@ -658,7 +713,7 @@ func ApisToOpenApiSpecs(apiRegistrationRequests map[string][]*apispb.Registratio
 
 	requirements := []*ServiceRequirements{{routes: apiRegistrationRequests, apis: apiResources}}
 
-	apiRequirements, err := buildApiRequirements(requirements)
+	apiRequirements, err := buildApiRequirements(requirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}

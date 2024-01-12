@@ -29,16 +29,15 @@ import (
 	"github.com/fasthttp/router"
 	"github.com/fasthttp/websocket"
 	"github.com/google/uuid"
-	"github.com/nitrictech/cli/pkgplus/cloud/apis"
-	"github.com/nitrictech/cli/pkgplus/cloud/http"
-	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
-	"github.com/nitrictech/cli/pkgplus/dashboard/history"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/nitrictech/cli/pkg/eventbus"
+	"github.com/nitrictech/cli/pkgplus/cloud/apis"
+	"github.com/nitrictech/cli/pkgplus/cloud/http"
+	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
+
 	"github.com/nitrictech/cli/pkg/utils"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 
@@ -212,43 +211,43 @@ func (s *LocalGatewayService) handleApiHttpRequest(idx int) fasthttp.RequestHand
 			ctx.Response.SetStatusCode(int(http.Status))
 			ctx.Response.SetBody(resp.GetHttpResponse().GetBody())
 
-			var queryParams []history.Param
+			// var queryParams []history.Param
 
-			for k, v := range query {
-				for _, val := range v.Value {
-					queryParams = append(queryParams, history.Param{
-						Key:   k,
-						Value: val,
-					})
-				}
-			}
+			// for k, v := range query {
+			// 	for _, val := range v.Value {
+			// 		queryParams = append(queryParams, history.Param{
+			// 			Key:   k,
+			// 			Value: val,
+			// 		})
+			// 	}
+			// }
 
-			eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryEvent[any]{
-				Time:       time.Now().UnixMilli(),
-				RecordType: history.API,
-				Event: history.ApiHistoryItem{
-					Api: s.GetApiAddresses()[apiName],
-					Request: &history.RequestHistory{
-						Method:      string(ctx.Request.Header.Method()),
-						Path:        string(ctx.URI().PathOriginal()),
-						QueryParams: queryParams,
-						Headers: lo.MapEntries(headers, func(k string, v *apispb.HeaderValue) (string, []string) {
-							return k, v.Value
-						}),
-						Body:       ctx.Request.Body(),
-						PathParams: []history.Param{},
-					},
-					Response: &history.ResponseHistory{
-						Headers: lo.MapEntries(http.Headers, func(k string, v *apispb.HeaderValue) (string, []string) {
-							return k, v.Value
-						}),
-						Time:   time.Since(ctx.ConnTime()).Milliseconds(),
-						Status: http.Status,
-						Data:   resp.GetHttpResponse().GetBody(),
-						Size:   len(resp.GetHttpResponse().GetBody()),
-					},
-				},
-			})
+			// eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryEvent[any]{
+			// 	Time:       time.Now().UnixMilli(),
+			// 	RecordType: history.API,
+			// 	Event: history.ApiHistoryItem{
+			// 		Api: s.GetApiAddresses()[apiName],
+			// 		Request: &history.RequestHistory{
+			// 			Method:      string(ctx.Request.Header.Method()),
+			// 			Path:        string(ctx.URI().PathOriginal()),
+			// 			QueryParams: queryParams,
+			// 			Headers: lo.MapEntries(headers, func(k string, v *apispb.HeaderValue) (string, []string) {
+			// 				return k, v.Value
+			// 			}),
+			// 			Body:       ctx.Request.Body(),
+			// 			PathParams: []history.Param{},
+			// 		},
+			// 		Response: &history.ResponseHistory{
+			// 			Headers: lo.MapEntries(http.Headers, func(k string, v *apispb.HeaderValue) (string, []string) {
+			// 				return k, v.Value
+			// 			}),
+			// 			Time:   time.Since(ctx.ConnTime()).Milliseconds(),
+			// 			Status: http.Status,
+			// 			Data:   resp.GetHttpResponse().GetBody(),
+			// 			Size:   len(resp.GetHttpResponse().GetBody()),
+			// 		},
+			// 	},
+			// })
 
 			return
 		}
@@ -616,8 +615,10 @@ func (s *LocalGatewayService) createHttpServers() error {
 
 const nameParam = "{name}"
 
-const topicPath = "/topic/" + nameParam
-const schedulePath = "/schedules/" + nameParam
+const (
+	topicPath    = "/topic/" + nameParam
+	schedulePath = "/schedules/" + nameParam
+)
 
 func (s *LocalGatewayService) GetTopicTriggerUrl(topicName string) string {
 	// TODO: do the path build with the topicPath var

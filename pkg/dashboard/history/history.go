@@ -75,8 +75,7 @@ type EventResponseRecord struct {
 	Success bool
 }
 
-type EventRequestRecord struct {
-}
+type EventRequestRecord struct{}
 
 type EventHistoryItem struct {
 	Event     *EventRecord `json:"event,omitempty"`

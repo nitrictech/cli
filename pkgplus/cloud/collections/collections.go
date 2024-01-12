@@ -18,6 +18,7 @@ package collections
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,8 +32,6 @@ import (
 	"go.etcd.io/bbolt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/structpb"
-
-	"errors"
 
 	"github.com/nitrictech/cli/pkgplus/cloud/env"
 	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
@@ -199,7 +198,6 @@ func (s *BoltDocService) Delete(ctx context.Context, req *documentspb.DocumentDe
 }
 
 func (s *BoltDocService) query(collection *documentspb.Collection, expressions []*documentspb.Expression, limit int32, pagingToken map[string]string, newErr grpc_errors.ScopedErrorFactory) (*documentspb.DocumentQueryResponse, error) {
-
 	db, err := s.getLocalCollectionDB(collection)
 	if err != nil {
 		return nil, newErr(

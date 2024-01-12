@@ -141,7 +141,7 @@ var stackUpdateCmd = &cobra.Command{
 		}
 
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
-		var stackSelection = stack.GetStackNameFromFileName(stackFiles[0])
+		stackSelection := stack.GetStackNameFromFileName(stackFiles[0])
 		// if len(stackFiles) > 1 {
 		// 	stackNames := make([]inlinelist.ListItem, len(stackFiles))
 		// 	for i, stackFile := range stackFiles {
@@ -242,7 +242,6 @@ var stackUpdateCmd = &cobra.Command{
 				cobra.CheckErr(err)
 			}
 		}
-
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -269,7 +268,7 @@ nitric stack down -s aws -y`,
 		}
 
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
-		var stackSelection = stack.GetStackNameFromFileName(stackFiles[0])
+		stackSelection := stack.GetStackNameFromFileName(stackFiles[0])
 		// if len(stackFiles) > 1 {
 		// 	stackNames := make([]inlinelist.ListItem, len(stackFiles))
 		// 	for i, stackFile := range stackFiles {

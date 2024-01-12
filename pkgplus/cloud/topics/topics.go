@@ -24,9 +24,10 @@ import (
 
 	"github.com/asaskevich/EventBus"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+
 	"github.com/nitrictech/cli/pkg/dashboard/history"
 	"github.com/nitrictech/cli/pkg/eventbus"
-	"google.golang.org/grpc/codes"
 
 	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
@@ -44,8 +45,10 @@ type LocalTopicsAndSubscribersService struct {
 	bus EventBus.Bus
 }
 
-var _ topicspb.TopicsServer = (*LocalTopicsAndSubscribersService)(nil)
-var _ topicspb.SubscriberServer = (*LocalTopicsAndSubscribersService)(nil)
+var (
+	_ topicspb.TopicsServer     = (*LocalTopicsAndSubscribersService)(nil)
+	_ topicspb.SubscriberServer = (*LocalTopicsAndSubscribersService)(nil)
+)
 
 const localTopicsTopic = "local_topics"
 
@@ -184,7 +187,6 @@ func (s *LocalTopicsAndSubscribersService) Publish(ctx context.Context, req *top
 	newErr := grpc_errors.ErrorsWithScope("WorkerPoolEventService.Publish")
 
 	if req.Delay != nil {
-
 		// TODO: Implement a signal from the front end that allows for the early release of delayed events (by their ID)
 		// FIXME: We want the event to appear straight away in the history table (maybe as a new event type that counts down)
 		go func(evt *topicspb.TopicPublishRequest) {

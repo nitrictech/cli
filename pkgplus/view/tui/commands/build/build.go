@@ -6,10 +6,11 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
+
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	"github.com/nitrictech/pearls/pkg/tui/view"
-	"github.com/samber/lo"
 )
 
 type Model struct {

@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/asaskevich/EventBus"
+
 	"github.com/nitrictech/nitric/core/pkg/gateway"
 )
 

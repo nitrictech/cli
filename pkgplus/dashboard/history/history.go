@@ -41,12 +41,13 @@ const (
 	TOPIC    RecordType = "topics"
 	SCHEDULE RecordType = "schedules"
 )
+
 type HistoryItem interface {
-    ApiHistoryItem | TopicEvent | any
+	ApiHistoryItem | TopicEvent | any
 }
 type HistoryEvent[Event HistoryItem] struct {
-	Time int64 `json:"time,omitempty"`
-	Event      Event  `json:"event"`
+	Time       int64      `json:"time,omitempty"`
+	Event      Event      `json:"event"`
 	RecordType RecordType `json:"-"`
 }
 
@@ -74,8 +75,7 @@ type EventResponseRecord struct {
 	Success bool
 }
 
-type EventRequestRecord struct {
-}
+type EventRequestRecord struct{}
 
 type EventHistoryItem struct {
 	Event     *EventRecord `json:"event,omitempty"`

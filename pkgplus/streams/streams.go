@@ -17,8 +17,9 @@
 package streams
 
 import (
-	"github.com/nitrictech/nitric/core/pkg/workers"
 	"github.com/samber/lo"
+
+	"github.com/nitrictech/nitric/core/pkg/workers"
 )
 
 type PeekableStreamServer[ServerMessage workers.IdentifiableMessage, ClientMessage workers.IdentifiableMessage] struct {

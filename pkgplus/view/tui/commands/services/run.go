@@ -3,6 +3,7 @@ package services
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
@@ -54,9 +55,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-var (
-	headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFDF5"))
-)
+var headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFDF5"))
 
 func (m Model) View() string {
 	runView := view.New()
@@ -85,7 +84,7 @@ func (m Model) View() string {
 }
 
 func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUpdate, localCloud *cloud.LocalCloud) Model {
-	localServicesModel := local.NewTuiModel(localCloud, nil) // TODO add dash
+	localServicesModel := local.NewTuiModel(localCloud, "")
 
 	return Model{
 		stopChan:           stopChannel,

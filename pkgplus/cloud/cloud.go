@@ -1,6 +1,8 @@
 package cloud
 
 import (
+	"github.com/samber/lo"
+
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/collections"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
@@ -14,7 +16,6 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/membrane"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
-	"github.com/samber/lo"
 )
 
 type Subscribable[T any] interface {

@@ -14,6 +14,11 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
+	"github.com/samber/lo"
+	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/docker"
@@ -24,10 +29,6 @@ import (
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
-	"github.com/samber/lo"
-	"github.com/spf13/afero"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
 )
 
 type Service struct {
@@ -245,7 +246,6 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			}
 			return len(p), nil
 		}), attachResponse.Reader)
-
 		if err != nil {
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
@@ -499,7 +499,6 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 
 	for _, service := range projectConfig.Services {
 		files, err := filepath.Glob(service.Match)
-
 		if err != nil {
 			return nil, fmt.Errorf("unable to match service files for pattern %s: %v", service.Match, err)
 		}
@@ -528,7 +527,6 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 				if err != nil {
 					return nil, fmt.Errorf("unable to create build context for custom service file %s: %v", f, err)
 				}
-
 			} else {
 				buildContext, err = runtime.NewBuildContext(
 					f,

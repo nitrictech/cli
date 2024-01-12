@@ -7,9 +7,10 @@ import (
 	"sync"
 
 	"github.com/asaskevich/EventBus"
+	"github.com/valyala/fasthttp"
+
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/http"
-	"github.com/valyala/fasthttp"
 )
 
 type HostAddress = string

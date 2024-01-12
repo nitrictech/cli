@@ -18,10 +18,11 @@ package cmd
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/nitrictech/cli/pkgplus/project"
-	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+
+	"github.com/nitrictech/cli/pkgplus/project"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
 )
 
 var buildCmd = &cobra.Command{

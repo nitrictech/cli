@@ -3,13 +3,13 @@ package local
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/http"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
-	"github.com/nitrictech/cli/pkgplus/dashboard"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	"github.com/nitrictech/pearls/pkg/tui"
@@ -53,8 +53,10 @@ type TuiModel struct {
 
 	reactiveSub *reactive.Subscription
 
-	dashboard *dashboard.Dashboard
+	dashboardUrl string
 }
+
+const addDashboardUrlTopic = "add_dashboard_url"
 
 var _ tea.Model = &TuiModel{}
 
@@ -84,8 +86,6 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		t.apis = newApiSummary
-
-		t.dashboard.UpdateApis(state)
 	case websockets.State:
 		// update the api state by getting the latest API addresses
 		newWebsocketsSummary := []WebsocketSummary{}
@@ -98,8 +98,6 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		t.websockets = newWebsocketsSummary
-
-		t.dashboard.UpdateWebsockets(state)
 	case http.State:
 		// update the api state by getting the latest API addresses
 		newHttpProxiesSummary := []HttpProxySummary{}
@@ -125,8 +123,6 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		t.topics = newTopicsSummary
-
-		t.dashboard.UpdateTopics(state)
 	case schedules.State:
 		// update the api state by getting the latest API addresses
 		newSchedulesSummary := []ScheduleSummary{}
@@ -151,20 +147,7 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		t.schedules = newSchedulesSummary
-
-		t.dashboard.UpdateSchedules(state)
 	}
-
-	if !t.dashboard.HasStarted() {
-		err := t.dashboard.Start()
-		if err != nil {
-			// FIXME: Handle error...
-			panic(err)
-		}
-	}
-
-	// TODO need to determine how to know if connected, before I used WorkerEvent type == "add"
-	t.dashboard.SetConnected(true)
 
 	return t, t.reactiveSub.AwaitNextMsg()
 }
@@ -216,10 +199,12 @@ func (t *TuiModel) View() string {
 	topicsRegistered := len(t.topics) > 0
 	schedulesRegistered := len(t.schedules) > 0
 
-	if t.dashboard.HasStarted() {
+	noWorkersRegistered := !apisRegistered && !websocketsRegistered && !httpProxiesRegistered && !topicsRegistered && !schedulesRegistered
+
+	if t.dashboardUrl != "" && !noWorkersRegistered {
 		output.AddRow(
 			pearlsview.NewFragment("Dashboard: ").WithStyle(tagStyle),
-			pearlsview.NewFragment(t.dashboard.GetDashboardUrl()).WithStyle(lipgloss.NewStyle().Bold(true)),
+			pearlsview.NewFragment(t.dashboardUrl).WithStyle(lipgloss.NewStyle().Bold(true)),
 			pearlsview.Break(),
 		)
 	}
@@ -308,7 +293,7 @@ func (t *TuiModel) View() string {
 	}
 
 	// Show waiting message if no workers are connected
-	if !apisRegistered && !websocketsRegistered && !httpProxiesRegistered && !topicsRegistered && !schedulesRegistered {
+	if noWorkersRegistered {
 		output.AddRow(
 			pearlsview.NewFragment("waiting for connections, start your application to connect it with the local nitric server.").WithStyle(lipgloss.NewStyle().Bold(true)),
 			pearlsview.Break(),
@@ -319,9 +304,9 @@ func (t *TuiModel) View() string {
 	return output.Render()
 }
 
-func NewTuiModel(localCloud *cloud.LocalCloud, dashboard *dashboard.Dashboard) *TuiModel {
+func NewTuiModel(localCloud *cloud.LocalCloud, dashboardUrl string) *TuiModel {
 	return &TuiModel{
 		localCloud: localCloud,
-		dashboard:  dashboard,
+		dashboardUrl: dashboardUrl,
 	}
 }

@@ -48,16 +48,18 @@ type State = map[BucketName]int
 type LocalStorageService struct {
 	client *s3.Client
 	storagepb.StorageServer
-	listenersLock sync.RWMutex
-	listeners     State
-	server        *SeaweedServer
+	listenersLock   sync.RWMutex
+	listeners       State
+	server          *SeaweedServer
 	storageEndpoint string
 
 	bus EventBus.Bus
 }
 
-var _ storagepb.StorageServer = (*LocalStorageService)(nil)
-var _ storagepb.StorageListenerServer = (*LocalStorageService)(nil)
+var (
+	_ storagepb.StorageServer         = (*LocalStorageService)(nil)
+	_ storagepb.StorageListenerServer = (*LocalStorageService)(nil)
+)
 
 const localStorageTopic = "local_storage"
 
@@ -280,7 +282,7 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 		return nil, err
 	}
 
-	storageEndpoint :=  fmt.Sprintf("http://localhost:%d", seaweedServer.GetApiPort())
+	storageEndpoint := fmt.Sprintf("http://localhost:%d", seaweedServer.GetApiPort())
 
 	// Connect the S3 client to the local seaweed service
 	cfg, sessionError := config.LoadDefaultConfig(context.TODO(),
@@ -312,9 +314,9 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 	}
 
 	return &LocalStorageService{
-		StorageServer: s3Service,
-		client:        s3Client,
-		server:        seaweedServer,
+		StorageServer:   s3Service,
+		client:          s3Client,
+		server:          seaweedServer,
 		storageEndpoint: storageEndpoint,
 	}, nil
 }

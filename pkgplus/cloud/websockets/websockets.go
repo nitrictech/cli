@@ -27,7 +27,6 @@ import (
 	"github.com/fasthttp/websocket"
 
 	"github.com/nitrictech/cli/pkg/eventbus"
-	dashboard_events "github.com/nitrictech/cli/pkgplus/dashboard/dashboard_events"
 	"github.com/nitrictech/cli/pkgplus/streams"
 
 	nitricws "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
@@ -45,10 +44,26 @@ type LocalWebsocketService struct {
 	bus EventBus.Bus
 }
 
-var _ nitricws.WebsocketServer = (*LocalWebsocketService)(nil)
-var _ nitricws.WebsocketHandlerServer = (*LocalWebsocketService)(nil)
+var (
+	_ nitricws.WebsocketServer        = (*LocalWebsocketService)(nil)
+	_ nitricws.WebsocketHandlerServer = (*LocalWebsocketService)(nil)
+)
 
-const localWebsocketTopic = "local_websocket_gateway"
+const (
+	AddWebsocketInfoTopic         = "dash:addwebsocketinfo"
+	UpdateWebsocketInfoCountTopic = "dash:addwebsocketinfocount"
+	localWebsocketTopic           = "local_websocket_gateway"
+)
+
+type WebsocketMessage struct {
+	Data         string    `json:"data,omitempty"`
+	Time         time.Time `json:"time,omitempty"`
+	ConnectionID string    `json:"connectionId,omitempty"`
+}
+type WebsocketInfo struct {
+	ConnectionCount int                `json:"connectionCount,omitempty"`
+	Messages        []WebsocketMessage `json:"messages,omitempty"`
+}
 
 func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string][]nitricws.WebsocketEventType)) {
 	r.bus.Subscribe(localWebsocketTopic, subscription)
@@ -125,12 +140,11 @@ func (r *LocalWebsocketService) RegisterConnection(socket string, connectionId s
 
 	r.connections[socket][connectionId] = connection
 
-	eventbus.Bus().Publish(dashboard_events.UpdateWebsocketInfoCountTopic, socket, len(r.connections[socket]))
+	eventbus.Bus().Publish(UpdateWebsocketInfoCountTopic, socket, len(r.connections[socket]))
 
 	return nil
 }
 
-// TODO not being called or used. Is this still required
 func (r *LocalWebsocketService) Send(ctx context.Context, req *nitricws.WebsocketSendRequest) (*nitricws.WebsocketSendResponse, error) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
@@ -153,13 +167,13 @@ func (r *LocalWebsocketService) Send(ctx context.Context, req *nitricws.Websocke
 		return nil, err
 	}
 
-	infoMessage := dashboard_events.WebsocketMessage{
+	infoMessage := WebsocketMessage{
 		Data:         string(req.Data),
 		Time:         time.Now(),
 		ConnectionID: req.ConnectionId,
 	}
 
-	eventbus.Bus().Publish(dashboard_events.AddWebsocketInfoTopic, req.SocketName, infoMessage)
+	eventbus.Bus().Publish(AddWebsocketInfoTopic, req.SocketName, infoMessage)
 
 	return &nitricws.WebsocketSendResponse{}, nil
 }
@@ -182,7 +196,7 @@ func (r *LocalWebsocketService) Close(ctx context.Context, req *nitricws.Websock
 	// delete the connection from the pool
 	delete(r.connections[req.SocketName], req.ConnectionId)
 
-	eventbus.Bus().Publish(dashboard_events.UpdateWebsocketInfoCountTopic, req.SocketName, len(r.connections[req.SocketName]))
+	eventbus.Bus().Publish(UpdateWebsocketInfoCountTopic, req.SocketName, len(r.connections[req.SocketName]))
 
 	return &nitricws.WebsocketCloseResponse{}, nil
 }

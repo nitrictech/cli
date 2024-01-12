@@ -26,22 +26,26 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/nitrictech/cli/pkg/eventbus"
-	"github.com/nitrictech/cli/pkgplus/collector"
-	dashboard_events "github.com/nitrictech/cli/pkgplus/dashboard/dashboard_events"
-	"github.com/nitrictech/cli/pkgplus/dashboard/history"
-	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 	"github.com/olahol/melody"
+	"github.com/spf13/afero"
 
 	"github.com/nitrictech/cli/pkg/browser"
+	"github.com/nitrictech/cli/pkg/eventbus"
+	"github.com/nitrictech/cli/pkgplus/cloud"
+	"github.com/nitrictech/cli/pkgplus/collector"
+	"github.com/nitrictech/cli/pkgplus/dashboard/history"
+	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
+
 	"github.com/nitrictech/cli/pkg/update"
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkg/version"
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
+	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/storage"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
@@ -55,11 +59,11 @@ type WebsocketSpec struct {
 }
 
 type Dashboard struct {
-	project              *project.Project
-	history              *history.History
-	storageService       *storage.LocalStorageService
-	gatewayService       *gateway.LocalGatewayService
-	apis                 []*openapi3.T
+	project        *project.Project
+	history        *history.History
+	storageService *storage.LocalStorageService
+	gatewayService *gateway.LocalGatewayService
+	apis           []*openapi3.T
 	// schedules            []*codeconfig.TopicResult
 	// topics               []*codeconfig.TopicResult
 	buckets              []string
@@ -68,36 +72,35 @@ type Dashboard struct {
 	stackWebSocket       *melody.Melody
 	historyWebSocket     *melody.Melody
 	wsWebSocket          *melody.Melody
-	websocketsInfo       map[string]*dashboard_events.WebsocketInfo
+	websocketsInfo       map[string]*websockets.WebsocketInfo
 	resourcesLastUpdated time.Time
 	// bucketNotifications  []*codeconfig.BucketNotification
-	port                 int
-	hasStarted           bool
-	connected            bool
-	noBrowser            bool
+	port       int
+	browserHasOpened bool
+	connected  bool
+	noBrowser  bool
+	browserLock sync.Mutex
 }
-
-
 type Api struct {
 	Name    string                 `json:"name,omitempty"`
 	OpenApi map[string]interface{} `json:"spec,omitempty"` // not sure which spec version yet
 }
 
 type DashboardResponse struct {
-	Apis                []*openapi3.T                    `json:"apis"`
-	Buckets             []string                         `json:"buckets"`
+	Apis    []*openapi3.T `json:"apis"`
+	Buckets []string      `json:"buckets"`
 	// Schedules           []*codeconfig.TopicResult        `json:"schedules"`
 	// Topics              []*codeconfig.TopicResult        `json:"topics"`
-	Websockets          []WebsocketSpec                  `json:"websockets"`
-	ProjectName         string                           `json:"projectName"`
-	ApiAddresses        map[string]string                `json:"apiAddresses"`
-	WebsocketAddresses  map[string]string                `json:"websocketAddresses"`
-	TriggerAddress      string                           `json:"triggerAddress"`
-	StorageAddress      string                           `json:"storageAddress"`
+	Websockets         []WebsocketSpec   `json:"websockets"`
+	ProjectName        string            `json:"projectName"`
+	ApiAddresses       map[string]string `json:"apiAddresses"`
+	WebsocketAddresses map[string]string `json:"websocketAddresses"`
+	TriggerAddress     string            `json:"triggerAddress"`
+	StorageAddress     string            `json:"storageAddress"`
 	// BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications"`
-	CurrentVersion      string                           `json:"currentVersion"`
-	LatestVersion       string                           `json:"latestVersion"`
-	Connected           bool                             `json:"connected"`
+	CurrentVersion string `json:"currentVersion"`
+	LatestVersion  string `json:"latestVersion"`
+	Connected      bool   `json:"connected"`
 }
 
 type Bucket struct {
@@ -108,7 +111,7 @@ type Bucket struct {
 //go:embed dist/*
 var content embed.FS
 
-func (d *Dashboard) AddBucket(name string) {
+func (d *Dashboard) addBucket(name string) {
 	// reset buckets to allow for most recent resources only
 	if !d.resourcesLastUpdated.IsZero() && time.Since(d.resourcesLastUpdated) > time.Second*5 {
 		d.buckets = []string{}
@@ -131,7 +134,7 @@ func (d *Dashboard) AddBucket(name string) {
 	}
 }
 
-func (d *Dashboard) UpdateApis(state apis.State) {
+func (d *Dashboard) updateApis(state apis.State) {
 	apiSpecs, _ := collector.ApisToOpenApiSpecs(state)
 
 	d.apis = apiSpecs
@@ -139,7 +142,7 @@ func (d *Dashboard) UpdateApis(state apis.State) {
 	d.refresh()
 }
 
-func (d *Dashboard) UpdateWebsockets(state websockets.State) {
+func (d *Dashboard) updateWebsockets(state websockets.State) {
 	wsSpec := []WebsocketSpec{}
 
 	for name, ws := range state {
@@ -166,7 +169,7 @@ func (d *Dashboard) UpdateWebsockets(state websockets.State) {
 	d.refresh()
 }
 
-func (d *Dashboard) UpdateTopics(state topics.State) {
+func (d *Dashboard) updateTopics(state topics.State) {
 	// TODO
 	// for name, topic := range state {
 	// 	println(name)
@@ -176,7 +179,7 @@ func (d *Dashboard) UpdateTopics(state topics.State) {
 	// d.refresh()
 }
 
-func (d *Dashboard) UpdateSchedules(state schedules.State) {
+func (d *Dashboard) updateSchedules(state schedules.State) {
 	// TODO
 	// for name, schedule := range state {
 	// 	println(name)
@@ -187,6 +190,13 @@ func (d *Dashboard) UpdateSchedules(state schedules.State) {
 }
 
 func (d *Dashboard) refresh() {
+	// TODO need to determine how to know if connected
+	d.connected = true
+
+	if !d.noBrowser && !d.browserHasOpened {
+		d.openBrowser()
+	}
+
 	err := d.sendStackUpdate()
 	if err != nil {
 		fmt.Printf("Error sending stack update: %v\n", err)
@@ -200,7 +210,7 @@ func (d *Dashboard) RefreshHistory(_ *history.HistoryEvent[any]) error {
 
 func (d *Dashboard) UpdateWebsocketInfoCount(socket string, count int) error {
 	if d.websocketsInfo[socket] == nil {
-		d.websocketsInfo[socket] = &dashboard_events.WebsocketInfo{}
+		d.websocketsInfo[socket] = &websockets.WebsocketInfo{}
 	}
 
 	d.websocketsInfo[socket].ConnectionCount = count
@@ -213,12 +223,12 @@ func (d *Dashboard) UpdateWebsocketInfoCount(socket string, count int) error {
 	return nil
 }
 
-func (d *Dashboard) AddWebsocketInfoMessage(socket string, message dashboard_events.WebsocketMessage) error {
+func (d *Dashboard) AddWebsocketInfoMessage(socket string, message websockets.WebsocketMessage) error {
 	if d.websocketsInfo[socket] == nil {
-		d.websocketsInfo[socket] = &dashboard_events.WebsocketInfo{}
+		d.websocketsInfo[socket] = &websockets.WebsocketInfo{}
 	}
-	
-	d.websocketsInfo[socket].Messages = append([]dashboard_events.WebsocketMessage{message}, d.websocketsInfo[socket].Messages...)
+
+	d.websocketsInfo[socket].Messages = append([]websockets.WebsocketMessage{message}, d.websocketsInfo[socket].Messages...)
 
 	err := d.sendWebsocketsUpdate()
 	if err != nil {
@@ -226,10 +236,6 @@ func (d *Dashboard) AddWebsocketInfoMessage(socket string, message dashboard_eve
 	}
 
 	return nil
-}
-
-func (d *Dashboard) SetConnected(connected bool) {
-	d.connected = connected
 }
 
 func (d *Dashboard) Start() error {
@@ -339,25 +345,28 @@ func (d *Dashboard) Start() error {
 
 	d.port = dashListener.Addr().(*net.TCPAddr).Port
 
-	// open browser
-	if !d.noBrowser {
-		err := browser.Open(d.GetDashboardUrl())
-		if err != nil {
-			return err
-		}
+	return nil
+}
+
+func (d *Dashboard) openBrowser() {
+	d.browserLock.Lock()
+	defer d.browserLock.Unlock()
+
+	if d.browserHasOpened {
+		return // Browser already opened
 	}
 
-	d.hasStarted = true
-
-	return nil
+	err := browser.Open(d.GetDashboardUrl())
+	if err != nil {
+		fmt.Printf("Error opening dashboard in browser: %v\n", err)
+		return
+	}
+	
+	d.browserHasOpened = true
 }
 
 func (d *Dashboard) GetDashboardUrl() string {
 	return fmt.Sprintf("http://localhost:%s", strconv.Itoa(d.port))
-}
-
-func (d *Dashboard) HasStarted() bool {
-	return d.hasStarted
 }
 
 func handleResponseWriter(w http.ResponseWriter, data []byte) {
@@ -372,20 +381,20 @@ func (d *Dashboard) sendStackUpdate() error {
 	latestVersion := update.FetchLatestVersion()
 
 	response := &DashboardResponse{
-		Apis:                d.apis,
+		Apis: d.apis,
 		// Topics:              d.topics,
-		Buckets:             d.buckets,
+		Buckets: d.buckets,
 		// Schedules:           d.schedules,
-		Websockets:          d.websockets,
-		ProjectName:         d.project.Name,
-		ApiAddresses:        d.gatewayService.GetApiAddresses(),
-		WebsocketAddresses:  d.gatewayService.GetWebsocketAddresses(),
-		TriggerAddress:      d.gatewayService.GetTriggerAddress(),
-		StorageAddress:      d.storageService.GetStorageEndpoint(),
+		Websockets:         d.websockets,
+		ProjectName:        d.project.Name,
+		ApiAddresses:       d.gatewayService.GetApiAddresses(),
+		WebsocketAddresses: d.gatewayService.GetWebsocketAddresses(),
+		TriggerAddress:     d.gatewayService.GetTriggerAddress(),
+		StorageAddress:     d.storageService.GetStorageEndpoint(),
 		// BucketNotifications: d.bucketNotifications,
-		CurrentVersion:      currentVersion,
-		LatestVersion:       latestVersion,
-		Connected:           d.connected,
+		CurrentVersion: currentVersion,
+		LatestVersion:  latestVersion,
+		Connected:      d.connected,
 	}
 
 	// Encode the response as JSON
@@ -424,30 +433,36 @@ func (d *Dashboard) sendWebsocketsUpdate() error {
 	return err
 }
 
-func New(p *project.Project, noBrowser bool, storageService *storage.LocalStorageService, gatewayService *gateway.LocalGatewayService) (*Dashboard, error) {
+func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
+	fs := afero.NewOsFs()
+
+	p, err := project.FromFile(fs, "")
+	if err != nil {
+		return nil, err
+	}
+
 	stackWebSocket := melody.New()
 	historyWebSocket := melody.New()
 	wsWebSocket := melody.New()
 
 	dash := &Dashboard{
-		project:             p,
-		history:             history.New(p.Directory),
-		storageService:      storageService,
-		gatewayService:      gatewayService,
-		apis:                []*openapi3.T{},
-		envMap:              map[string]string{},
-		stackWebSocket:      stackWebSocket,
-		historyWebSocket:    historyWebSocket,
-		wsWebSocket:         wsWebSocket,
+		project:          p,
+		history:          history.New(p.Directory),
+		storageService:   localCloud.Storage,
+		gatewayService:   localCloud.Gateway,
+		apis:             []*openapi3.T{},
+		envMap:           map[string]string{},
+		stackWebSocket:   stackWebSocket,
+		historyWebSocket: historyWebSocket,
+		wsWebSocket:      wsWebSocket,
 		// bucketNotifications: []*codeconfig.BucketNotification{},
 		// schedules:           []*codeconfig.TopicResult{},
 		// topics:              []*codeconfig.TopicResult{},
-		websocketsInfo:      map[string]*dashboard_events.WebsocketInfo{},
-		hasStarted:          false,
-		noBrowser:           noBrowser,
+		websocketsInfo: map[string]*websockets.WebsocketInfo{},
+		noBrowser:      noBrowser,
 	}
 
-	err := eventbus.Bus().Subscribe(dashboard_events.AddBucketTopic, dash.AddBucket)
+	err = eventbus.Bus().Subscribe(resources.DeclareBucketTopic, dash.addBucket)
 	if err != nil {
 		return nil, err
 	}
@@ -457,15 +472,26 @@ func New(p *project.Project, noBrowser bool, storageService *storage.LocalStorag
 		return nil, err
 	}
 
-	err = eventbus.Bus().Subscribe(dashboard_events.AddWebsocketInfoTopic, dash.AddWebsocketInfoMessage)
+	err = eventbus.Bus().Subscribe(websockets.AddWebsocketInfoTopic, dash.AddWebsocketInfoMessage)
 	if err != nil {
 		return nil, err
 	}
 
-	err = eventbus.Bus().Subscribe(dashboard_events.UpdateWebsocketInfoCountTopic, dash.UpdateWebsocketInfoCount)
+	err = eventbus.Bus().Subscribe(websockets.UpdateWebsocketInfoCountTopic, dash.UpdateWebsocketInfoCount)
 	if err != nil {
 		return nil, err
 	}
+
+	// subscribe to local cloud state
+	err = eventbus.Bus().Subscribe(websockets.UpdateWebsocketInfoCountTopic, dash.UpdateWebsocketInfoCount)
+	if err != nil {
+		return nil, err
+	}
+
+	localCloud.Apis.SubscribeToState(dash.updateApis)
+	localCloud.Websockets.SubscribeToState(dash.updateWebsockets)
+	localCloud.Schedules.SubscribeToState(dash.updateSchedules)
+	localCloud.Topics.SubscribeToState(dash.updateTopics)
 
 	return dash, nil
 }

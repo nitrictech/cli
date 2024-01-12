@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/fasthttp/router"
 	"github.com/fasthttp/websocket"
 	"github.com/google/uuid"
@@ -78,9 +79,26 @@ type LocalGatewayService struct {
 	stop chan bool
 
 	options *gateway.GatewayStartOpts
+	bus     EventBus.Bus
 }
 
 var _ gateway.GatewayService = &LocalGatewayService{}
+
+const localApiRequestTopic = "local_api_request"
+
+type ApiRequestState struct {
+	Api      string
+	ReqCtx   *fasthttp.RequestCtx
+	HttpResp *apispb.HttpResponse
+}
+
+func (s *LocalGatewayService) publishState(state ApiRequestState) {
+	s.bus.Publish(localApiRequestTopic, state)
+}
+
+func (s *LocalGatewayService) SubscribeToApiRequestCtx(subscriberFunction func(state ApiRequestState)) {
+	s.bus.Subscribe(localApiRequestTopic, subscriberFunction)
+}
 
 // GetTriggerAddress - Returns the base address built-in nitric services, like schedules and topics, will be exposed on.
 func (s *LocalGatewayService) GetTriggerAddress() string {
@@ -211,43 +229,12 @@ func (s *LocalGatewayService) handleApiHttpRequest(idx int) fasthttp.RequestHand
 			ctx.Response.SetStatusCode(int(http.Status))
 			ctx.Response.SetBody(resp.GetHttpResponse().GetBody())
 
-			// var queryParams []history.Param
-
-			// for k, v := range query {
-			// 	for _, val := range v.Value {
-			// 		queryParams = append(queryParams, history.Param{
-			// 			Key:   k,
-			// 			Value: val,
-			// 		})
-			// 	}
-			// }
-
-			// eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryEvent[any]{
-			// 	Time:       time.Now().UnixMilli(),
-			// 	RecordType: history.API,
-			// 	Event: history.ApiHistoryItem{
-			// 		Api: s.GetApiAddresses()[apiName],
-			// 		Request: &history.RequestHistory{
-			// 			Method:      string(ctx.Request.Header.Method()),
-			// 			Path:        string(ctx.URI().PathOriginal()),
-			// 			QueryParams: queryParams,
-			// 			Headers: lo.MapEntries(headers, func(k string, v *apispb.HeaderValue) (string, []string) {
-			// 				return k, v.Value
-			// 			}),
-			// 			Body:       ctx.Request.Body(),
-			// 			PathParams: []history.Param{},
-			// 		},
-			// 		Response: &history.ResponseHistory{
-			// 			Headers: lo.MapEntries(http.Headers, func(k string, v *apispb.HeaderValue) (string, []string) {
-			// 				return k, v.Value
-			// 			}),
-			// 			Time:   time.Since(ctx.ConnTime()).Milliseconds(),
-			// 			Status: http.Status,
-			// 			Data:   resp.GetHttpResponse().GetBody(),
-			// 			Size:   len(resp.GetHttpResponse().GetBody()),
-			// 		},
-			// 	},
-			// })
+			// publish ctx for history
+			s.publishState(ApiRequestState{
+				Api:      apiName,
+				ReqCtx:   ctx,
+				HttpResp: http,
+			})
 
 			return
 		}
@@ -700,5 +687,6 @@ func (s *LocalGatewayService) Stop() error {
 func NewGateway(wsPlugin *websockets.LocalWebsocketService) (*LocalGatewayService, error) {
 	return &LocalGatewayService{
 		websocketPlugin: wsPlugin,
+		bus:             EventBus.New(),
 	}, nil
 }

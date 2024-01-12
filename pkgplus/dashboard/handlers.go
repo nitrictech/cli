@@ -21,12 +21,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/samber/lo"
+
+	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
-	"github.com/nitrictech/cli/pkgplus/dashboard/history"
+	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
+	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
 
@@ -205,7 +211,7 @@ func (d *Dashboard) createHistoryHttpHandler() func(http.ResponseWriter, *http.R
 		if r.Method == "DELETE" {
 			historyType := r.URL.Query().Get("type")
 
-			err := d.history.DeleteHistoryRecord(history.RecordType(historyType))
+			err := d.DeleteHistoryRecord(RecordType(historyType))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -259,5 +265,44 @@ func (d *Dashboard) handleWebsocketMessagesClear() func(http.ResponseWriter, *ht
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func (d *Dashboard) handleApiHistory(state gateway.ApiRequestState) {
+	var queryParams []Param
+
+	state.ReqCtx.QueryArgs().VisitAll(func(key []byte, val []byte) {
+		queryParams = append(queryParams, Param{
+			Key:   string(key),
+			Value: string(val),
+		})
+	})
+
+	err := d.writeHistoryRecord(&HistoryEvent[any]{
+		Time:       time.Now().UnixMilli(),
+		RecordType: API,
+		Event: ApiHistoryItem{
+			Api: d.gatewayService.GetApiAddresses()[state.Api],
+			Request: &RequestHistory{
+				Method:      string(state.ReqCtx.Request.Header.Method()),
+				Path:        string(state.ReqCtx.URI().PathOriginal()),
+				QueryParams: queryParams,
+				Headers:     base_http.HttpHeadersToMap(&state.ReqCtx.Request.Header),
+				Body:        state.ReqCtx.Request.Body(),
+				PathParams:  []Param{},
+			},
+			Response: &ResponseHistory{
+				Headers: lo.MapEntries(state.HttpResp.Headers, func(k string, v *apispb.HeaderValue) (string, []string) {
+					return k, v.Value
+				}),
+				Time:   time.Since(state.ReqCtx.ConnTime()).Milliseconds(),
+				Status: state.HttpResp.GetStatus(),
+				Data:   state.HttpResp.GetBody(),
+				Size:   len(state.HttpResp.GetBody()),
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
 }

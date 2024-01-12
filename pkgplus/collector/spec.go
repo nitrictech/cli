@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -543,8 +544,29 @@ func buildPolicyRequirements(allServiceRequirements []*ServiceRequirements) ([]*
 	return resources, nil
 }
 
+func checkServiceRequirementErrors(allServiceRequirements []*ServiceRequirements) error {
+	allServiceErrors := []error{}
+
+	for _, serviceRequirements := range allServiceRequirements {
+		serviceRequirementsErrors := serviceRequirements.Error()
+		if serviceRequirementsErrors != nil {
+			allServiceErrors = append(allServiceErrors, serviceRequirementsErrors)
+		}
+	}
+
+	if len(allServiceErrors) > 0 {
+		return errors.Join(allServiceErrors...)
+	}
+
+	return nil
+}
+
 // convert service requirements to a cloud bill of materials
 func ServiceRequirementsToSpec(projectName string, environmentVariables map[string]string, allServiceRequirements []*ServiceRequirements) (*deploymentspb.Spec, error) {
+	if err := checkServiceRequirementErrors(allServiceRequirements); err != nil {
+		return nil, err
+	}
+
 	newSpec := &deploymentspb.Spec{
 		Resources: []*deploymentspb.Resource{},
 	}

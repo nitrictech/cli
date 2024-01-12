@@ -20,8 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/samber/lo"
-
+	"github.com/charmbracelet/lipgloss"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
@@ -29,6 +28,9 @@ import (
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
+	"github.com/nitrictech/pearls/pkg/tui"
+	"github.com/nitrictech/pearls/pkg/tui/view"
+	"github.com/samber/lo"
 )
 
 // ServiceRequirements - Cloud resource requirements for a Nitric Application Service
@@ -37,6 +39,7 @@ import (
 type ServiceRequirements struct {
 	serviceName string
 	serviceType string
+	serviceFile string
 
 	resourceLock sync.Mutex
 
@@ -76,6 +79,30 @@ func (s *ServiceRequirements) Details(context.Context, *resourcespb.ResourceDeta
 	return &resourcespb.ResourceDetailsResponse{}, nil
 }
 
+// Error - Returns an error if any requirements have been registered incorrectly, such as duplicates
+func (s *ServiceRequirements) Error() error {
+	if len(s.errors) > 0 {
+		errorView := view.New()
+
+		errorView.AddRow(
+			view.NewFragment("Errors found in service "),
+			view.NewFragment(s.serviceFile).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple)),
+		)
+
+		for _, err := range s.errors {
+			errorView.AddRow(
+				view.NewFragment(
+					fmt.Sprintf("- %s", err.Error()),
+				).WithStyle(lipgloss.NewStyle().MarginLeft(2).Foreground(tui.Colors.Gray)),
+			)
+		}
+
+		return fmt.Errorf(errorView.Render())
+	}
+
+	return nil
+}
+
 func (s *ServiceRequirements) WorkerCount() int {
 	return len(lo.Values(s.routes)) +
 		len(s.listeners) +
@@ -85,6 +112,9 @@ func (s *ServiceRequirements) WorkerCount() int {
 }
 
 func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {
+	s.resourceLock.Lock()
+	defer s.resourceLock.Unlock()
+
 	switch req.Resource.Type {
 	case resourcespb.ResourceType_Bucket:
 		// Add a bucket
@@ -130,6 +160,9 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 }
 
 func (s *ServiceRequirements) Proxy(ctx context.Context, req *httppb.HttpProxyRequest) (*httppb.HttpProxyResponse, error) {
+	s.resourceLock.Lock()
+	defer s.resourceLock.Unlock()
+
 	// capture a http proxy
 	if len(s.routes) > 0 {
 		s.errors = append(s.errors, fmt.Errorf("cannot register HTTP proxy, API routes have already been registered"))
@@ -145,6 +178,9 @@ func (s *ServiceRequirements) Proxy(ctx context.Context, req *httppb.HttpProxyRe
 }
 
 func (s *ServiceRequirements) Serve(stream apispb.Api_ServeServer) error {
+	s.resourceLock.Lock()
+	defer s.resourceLock.Unlock()
+
 	msg, err := stream.Recv()
 	if err != nil {
 		return err
@@ -161,7 +197,10 @@ func (s *ServiceRequirements) Serve(stream apispb.Api_ServeServer) error {
 	})
 
 	if found {
-		s.errors = append(s.errors, fmt.Errorf("route already registered: %s %s", existingRoute.Api, existingRoute.Path))
+		conflictingMethods := lo.Intersect(existingRoute.Methods, registrationRequest.Methods)
+		for _, conflictingMethod := range conflictingMethods {
+			s.errors = append(s.errors, fmt.Errorf("%s: %s already registered for API '%s'", conflictingMethod, existingRoute.Path, existingRoute.Api))
+		}
 	} else {
 		s.routes[registrationRequest.Api] = append(s.routes[registrationRequest.Api], registrationRequest)
 	}
@@ -174,6 +213,9 @@ func (s *ServiceRequirements) Serve(stream apispb.Api_ServeServer) error {
 }
 
 func (s *ServiceRequirements) Schedule(stream schedulespb.Schedules_ScheduleServer) error {
+	s.resourceLock.Lock()
+	defer s.resourceLock.Unlock()
+
 	msg, err := stream.Recv()
 	if err != nil {
 		return err
@@ -187,7 +229,7 @@ func (s *ServiceRequirements) Schedule(stream schedulespb.Schedules_ScheduleServ
 
 	_, found := s.schedules[registrationRequest.ScheduleName]
 	if found {
-		s.errors = append(s.errors, fmt.Errorf("schedule already registered: %s", registrationRequest.ScheduleName))
+		s.errors = append(s.errors, fmt.Errorf("schedule '%s' already registered", registrationRequest.ScheduleName))
 	}
 
 	s.schedules[registrationRequest.ScheduleName] = registrationRequest
@@ -200,6 +242,9 @@ func (s *ServiceRequirements) Schedule(stream schedulespb.Schedules_ScheduleServ
 }
 
 func (s *ServiceRequirements) Subscribe(stream topicspb.Subscriber_SubscribeServer) error {
+	s.resourceLock.Lock()
+	defer s.resourceLock.Unlock()
+
 	msg, err := stream.Recv()
 	if err != nil {
 		return err
@@ -221,6 +266,9 @@ func (s *ServiceRequirements) Subscribe(stream topicspb.Subscriber_SubscribeServ
 }
 
 func (s *ServiceRequirements) Listen(stream storagepb.StorageListener_ListenServer) error {
+	s.resourceLock.Lock()
+	defer s.resourceLock.Unlock()
+
 	msg, err := stream.Recv()
 	if err != nil {
 		return err
@@ -229,13 +277,13 @@ func (s *ServiceRequirements) Listen(stream storagepb.StorageListener_ListenServ
 	registrationRequest := msg.GetRegistrationRequest()
 
 	if registrationRequest == nil {
-		return fmt.Errorf("first ")
+		return fmt.Errorf("first message must be a registration request")
 	}
 
-	_, found := s.buckets[registrationRequest.BucketName]
+	_, found := s.listeners[registrationRequest.BucketName]
 
 	if found {
-		s.errors = append(s.errors, fmt.Errorf("bucket already registered: %s", registrationRequest.BucketName))
+		s.errors = append(s.errors, fmt.Errorf("listener for bucket '%s' already registered, only one listener per service is permitted for each bucket", registrationRequest.BucketName))
 	} else {
 		s.listeners[registrationRequest.BucketName] = registrationRequest
 	}
@@ -248,6 +296,9 @@ func (s *ServiceRequirements) Listen(stream storagepb.StorageListener_ListenServ
 }
 
 func (s *ServiceRequirements) HandleEvents(stream websocketspb.WebsocketHandler_HandleEventsServer) error {
+	s.resourceLock.Lock()
+	defer s.resourceLock.Unlock()
+
 	msg, err := stream.Recv()
 	if err != nil {
 		return err
@@ -264,7 +315,7 @@ func (s *ServiceRequirements) HandleEvents(stream websocketspb.WebsocketHandler_
 	})
 
 	if found {
-		s.errors = append(s.errors, fmt.Errorf("websocket handler already registered: %s %s", existingSocketHandler.SocketName, existingSocketHandler.EventType))
+		s.errors = append(s.errors, fmt.Errorf("'%s' handler already registered for websocket '%s'", existingSocketHandler.EventType, existingSocketHandler.SocketName))
 	} else {
 		s.websockets[registrationRequest.SocketName] = append(s.websockets[registrationRequest.SocketName], registrationRequest)
 	}
@@ -276,7 +327,7 @@ func (s *ServiceRequirements) HandleEvents(stream websocketspb.WebsocketHandler_
 	})
 }
 
-func NewServiceRequirements(serviceName string, serviceType string) *ServiceRequirements {
+func NewServiceRequirements(serviceName string, serviceFile string, serviceType string) *ServiceRequirements {
 	if serviceType == "" {
 		serviceType = "default"
 	}
@@ -284,6 +335,7 @@ func NewServiceRequirements(serviceName string, serviceType string) *ServiceRequ
 	return &ServiceRequirements{
 		serviceName:           serviceName,
 		serviceType:           serviceType,
+		serviceFile:           serviceFile,
 		resourceLock:          sync.Mutex{},
 		routes:                make(map[string][]*apispb.RegistrationRequest),
 		schedules:             make(map[string]*schedulespb.RegistrationRequest),

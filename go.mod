@@ -1,6 +1,8 @@
 module github.com/nitrictech/cli
 
-go 1.19
+go 1.21
+
+toolchain go1.21.4
 
 replace github.com/mattn/go-ieproxy => github.com/darthShadow/go-ieproxy v0.0.0-20220916090656-69928ad83ed6
 
@@ -32,7 +34,7 @@ require (
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
 	github.com/nitrictech/nitric/cloud/aws v0.0.0-20231220231644-a22c6184f20a
-	github.com/nitrictech/nitric/core v0.0.0-20240111014301-3a0f370d529f
+	github.com/nitrictech/nitric/core v0.0.0-20240112014601-ab979949ac6b
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0

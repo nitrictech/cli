@@ -14,22 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package history
+package dashboard
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 
-	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const AddRecordTopic = "history:addrecord"
 
 type HistoryEvents struct {
-	ScheduleHistory []*HistoryEvent[any]            `json:"schedules"`
+	ScheduleHistory []*HistoryEvent[HistoryItem]    `json:"schedules"`
 	TopicHistory    []*HistoryEvent[TopicEvent]     `json:"topics"`
 	ApiHistory      []*HistoryEvent[ApiHistoryItem] `json:"apis"`
 }
@@ -117,28 +117,17 @@ type History struct {
 	projectDir string
 }
 
-func New(projectDir string) *History {
-	h := &History{
-		projectDir: projectDir,
-	}
-
-	// Start the goroutine to handle write operation
-	_ = eventbus.Bus().Subscribe(AddRecordTopic, h.writeHistoryRecord)
-
-	return h
-}
-
 func NewHistoryError(recordType RecordType, historyFile string) error {
 	return fmt.Errorf("could not write %s history to the JSON file '%s' due to a formatting issue. Please check the file's formatting and ensure it follows the correct JSON structure, or reset the history by deleting the file", recordType, historyFile)
 }
 
-func (h *History) writeHistoryRecord(historyRecord *HistoryEvent[any]) error {
-	historyFile, err := utils.NitricHistoryFile(h.projectDir, string(historyRecord.RecordType))
+func (d *Dashboard) writeHistoryRecord(historyRecord *HistoryEvent[any]) error {
+	historyFile, err := utils.NitricHistoryFile(d.project.Directory, string(historyRecord.RecordType))
 	if err != nil {
 		return err
 	}
 
-	existingRecords, err := ReadHistoryRecords[any](h, historyRecord.RecordType)
+	existingRecords, err := ReadHistoryRecords[any](d.project.Directory, historyRecord.RecordType)
 	if err != nil {
 		return NewHistoryError(historyRecord.RecordType, historyFile)
 	}
@@ -155,11 +144,16 @@ func (h *History) writeHistoryRecord(historyRecord *HistoryEvent[any]) error {
 		return NewHistoryError(historyRecord.RecordType, historyFile)
 	}
 
+	err = d.sendHistoryUpdate()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return nil
 }
 
-func (h *History) DeleteHistoryRecord(recordType RecordType) error {
-	historyFile, err := utils.NitricHistoryFile(h.projectDir, string(recordType))
+func (d *Dashboard) DeleteHistoryRecord(recordType RecordType) error {
+	historyFile, err := utils.NitricHistoryFile(d.project.Directory, string(recordType))
 	if err != nil {
 		return err
 	}
@@ -167,18 +161,18 @@ func (h *History) DeleteHistoryRecord(recordType RecordType) error {
 	return os.Remove(historyFile)
 }
 
-func (h *History) ReadAllHistoryRecords() (*HistoryEvents, error) {
-	schedules, err := ReadHistoryRecords[any](h, SCHEDULE)
+func (d *Dashboard) ReadAllHistoryRecords() (*HistoryEvents, error) {
+	schedules, err := ReadHistoryRecords[HistoryItem](d.project.Directory, SCHEDULE)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred reading schedule history: %w", err)
 	}
 
-	topics, err := ReadHistoryRecords[TopicEvent](h, TOPIC)
+	topics, err := ReadHistoryRecords[TopicEvent](d.project.Directory, TOPIC)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred reading topic history: %w", err)
 	}
 
-	apis, err := ReadHistoryRecords[ApiHistoryItem](h, API)
+	apis, err := ReadHistoryRecords[ApiHistoryItem](d.project.Directory, API)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred reading api history: %w", err)
 	}
@@ -190,8 +184,8 @@ func (h *History) ReadAllHistoryRecords() (*HistoryEvents, error) {
 	}, nil
 }
 
-func ReadHistoryRecords[T any](h *History, recordType RecordType) ([]*HistoryEvent[T], error) {
-	historyFile, err := utils.NitricHistoryFile(h.projectDir, string(recordType))
+func ReadHistoryRecords[T HistoryItem](projectDir string, recordType RecordType) ([]*HistoryEvent[T], error) {
+	historyFile, err := utils.NitricHistoryFile(projectDir, string(recordType))
 	if err != nil {
 		return nil, err
 	}
@@ -206,8 +200,6 @@ func ReadHistoryRecords[T any](h *History, recordType RecordType) ([]*HistoryEve
 	}
 
 	var history []*HistoryEvent[T]
-
-	// TODO could check for v0 history events and convert to v1 types
 
 	err = json.Unmarshal(data, &history)
 	if err != nil {

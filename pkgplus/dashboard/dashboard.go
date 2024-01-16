@@ -37,7 +37,6 @@ import (
 	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/collector"
-	"github.com/nitrictech/cli/pkgplus/dashboard/history"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
 	"github.com/nitrictech/cli/pkg/update"
@@ -60,7 +59,6 @@ type WebsocketSpec struct {
 
 type Dashboard struct {
 	project        *project.Project
-	history        *history.History
 	storageService *storage.LocalStorageService
 	gatewayService *gateway.LocalGatewayService
 	apis           []*openapi3.T
@@ -75,11 +73,11 @@ type Dashboard struct {
 	websocketsInfo       map[string]*websockets.WebsocketInfo
 	resourcesLastUpdated time.Time
 	// bucketNotifications  []*codeconfig.BucketNotification
-	port       int
+	port             int
 	browserHasOpened bool
-	connected  bool
-	noBrowser  bool
-	browserLock sync.Mutex
+	connected        bool
+	noBrowser        bool
+	browserLock      sync.Mutex
 }
 type Api struct {
 	Name    string                 `json:"name,omitempty"`
@@ -202,10 +200,6 @@ func (d *Dashboard) refresh() {
 		fmt.Printf("Error sending stack update: %v\n", err)
 		return
 	}
-}
-
-func (d *Dashboard) RefreshHistory(_ *history.HistoryEvent[any]) error {
-	return d.sendHistoryUpdate()
 }
 
 func (d *Dashboard) UpdateWebsocketInfoCount(socket string, count int) error {
@@ -361,7 +355,7 @@ func (d *Dashboard) openBrowser() {
 		fmt.Printf("Error opening dashboard in browser: %v\n", err)
 		return
 	}
-	
+
 	d.browserHasOpened = true
 }
 
@@ -409,7 +403,7 @@ func (d *Dashboard) sendStackUpdate() error {
 }
 
 func (d *Dashboard) sendHistoryUpdate() error {
-	response, err := d.history.ReadAllHistoryRecords()
+	response, err := d.ReadAllHistoryRecords()
 	if err != nil {
 		return err
 	}
@@ -447,7 +441,6 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 
 	dash := &Dashboard{
 		project:          p,
-		history:          history.New(p.Directory),
 		storageService:   localCloud.Storage,
 		gatewayService:   localCloud.Gateway,
 		apis:             []*openapi3.T{},
@@ -463,11 +456,6 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	}
 
 	err = eventbus.Bus().Subscribe(resources.DeclareBucketTopic, dash.addBucket)
-	if err != nil {
-		return nil, err
-	}
-
-	err = eventbus.Bus().Subscribe(history.AddRecordTopic, dash.RefreshHistory)
 	if err != nil {
 		return nil, err
 	}
@@ -492,6 +480,9 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	localCloud.Websockets.SubscribeToState(dash.updateWebsockets)
 	localCloud.Schedules.SubscribeToState(dash.updateSchedules)
 	localCloud.Topics.SubscribeToState(dash.updateTopics)
+
+	// subscribe to history events from gateway
+	localCloud.Gateway.SubscribeToApiRequestCtx(dash.handleApiHistory)
 
 	return dash, nil
 }

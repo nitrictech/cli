@@ -33,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
 	stack_new "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/stack_up"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 	"github.com/nitrictech/pearls/pkg/tui/inlinelist"
 )
@@ -214,35 +215,46 @@ var stackUpdateCmd = &cobra.Command{
 		attributesStruct, err := structpb.NewStruct(attributes)
 		tui.CheckErr(err)
 
-		eventChannel, errorChan := deploymentClient.Up(&deploymentspb.DeployUpRequest{
+		eventChan, errorChan := deploymentClient.Up(&deploymentspb.DeploymentUpRequest{
 			Spec:        spec,
 			Attributes:  attributesStruct,
 			Interactive: true,
 		})
 
 		// Step 5b. Communicate with server to share progress of ...
-	ServerCommunication:
-		for {
-			select {
-			case event, ok := <-eventChannel:
-				if !ok {
-					break ServerCommunication
-				}
 
-				switch event.Content.(type) {
-				case *deploymentspb.DeployUpEvent_Message:
-					fmt.Print(event.GetMessage().GetMessage())
-				case *deploymentspb.DeployUpEvent_Result:
-					fmt.Print(event.GetResult().Result.GetStringResult())
-				}
+		stackUp := stack_up.New(eventChan, errorChan)
 
-			case err, ok := <-errorChan:
-				if !ok {
-					break ServerCommunication
-				}
-				tui.CheckErr(err)
-			}
-		}
+		_, err = tea.NewProgram(stackUp).Run()
+		tui.CheckErr(err)
+
+		// ServerCommunication:
+		// 	for {
+		// 		select {
+		// 		case event, ok := <-eventChan:
+		// 			if !ok {
+		// 				break ServerCommunication
+		// 			}
+
+		// 			switch event.Content.(type) {
+		// 			case *deploymentspb.DeploymentUpEvent_Message:
+		// 				pterm.Error.Print(event.GetMessage())
+		// 				// fmt.Println(event.GetMessage())
+		// 			case *deploymentspb.DeploymentUpEvent_Result:
+		// 				pterm.Error.Print(event.GetResult().Details)
+		// 				// fmt.Println(event.GetResult().Details)
+		// 			case *deploymentspb.DeploymentUpEvent_Update:
+		// 				pterm.Error.Print(event.GetUpdate())
+		// 				// fmt.Println(event.GetUpdate())
+		// 			}
+
+		// 		case err, ok := <-errorChan:
+		// 			if !ok {
+		// 				break ServerCommunication
+		// 			}
+		// 			tui.CheckErr(err)
+		// 		}
+		// 	}
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -324,7 +336,7 @@ nitric stack down -s aws -y`,
 		attributesStruct, err := structpb.NewStruct(attributes)
 		cobra.CheckErr(err)
 
-		eventChannel, errorChan := deploymentClient.Down(&deploymentspb.DeployDownRequest{
+		eventChannel, errorChan := deploymentClient.Down(&deploymentspb.DeploymentDownRequest{
 			Attributes:  attributesStruct,
 			Interactive: true,
 		})
@@ -339,9 +351,9 @@ nitric stack down -s aws -y`,
 				}
 
 				switch event.Content.(type) {
-				case *deploymentspb.DeployDownEvent_Message:
-					fmt.Print(event.GetMessage().GetMessage())
-				case *deploymentspb.DeployDownEvent_Result:
+				case *deploymentspb.DeploymentDownEvent_Message:
+					fmt.Print(event.GetMessage())
+				case *deploymentspb.DeploymentDownEvent_Result:
 					// fmt.Print(event.GetResult())
 				}
 

@@ -140,7 +140,7 @@ func (d *Dashboard) addBucket(name string) {
 }
 
 func (d *Dashboard) updateApis(state apis.State) {
-	apiSpecs, _ := collector.ApisToOpenApiSpecs(state)
+	apiSpecs, _ := collector.ApisToOpenApiSpecs(state, nil)
 
 	d.apis = apiSpecs
 

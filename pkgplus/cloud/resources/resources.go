@@ -94,11 +94,9 @@ func (l *LocalResourcesService) Details(ctx context.Context, req *resourcespb.Re
 }
 
 func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {
-	resource := req.Resource
-
-	switch resource.Type {
+	switch req.Id.Type {
 	case resourcespb.ResourceType_Bucket:
-		eventbus.Bus().Publish(DeclareBucketTopic, resource.GetName())
+		eventbus.Bus().Publish(DeclareBucketTopic, req.Id.Name)
 	}
 
 	return &resourcespb.ResourceDeclareResponse{}, nil

@@ -50,8 +50,8 @@ func (p *DeploymentClient) dialConnection() (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-func (p *DeploymentClient) Up(deploymentRequest *deploy.DeployUpRequest) (<-chan *deploy.DeployUpEvent, <-chan error) {
-	eventChan := make(chan *deploy.DeployUpEvent)
+func (p *DeploymentClient) Up(deploymentRequest *deploy.DeploymentUpRequest) (<-chan *deploy.DeploymentUpEvent, <-chan error) {
+	eventChan := make(chan *deploy.DeploymentUpEvent)
 	errorChan := make(chan error)
 	go func() {
 		defer close(eventChan)
@@ -63,7 +63,7 @@ func (p *DeploymentClient) Up(deploymentRequest *deploy.DeployUpRequest) (<-chan
 		}
 		defer conn.Close()
 
-		client := deploy.NewDeployClient(conn)
+		client := deploy.NewDeploymentClient(conn)
 
 		op, err := client.Up(context.Background(), deploymentRequest)
 		if err != nil {
@@ -89,8 +89,8 @@ func (p *DeploymentClient) Up(deploymentRequest *deploy.DeployUpRequest) (<-chan
 	return eventChan, errorChan
 }
 
-func (p *DeploymentClient) Down(deploymentRequest *deploy.DeployDownRequest) (<-chan *deploy.DeployDownEvent, <-chan error) {
-	eventChan := make(chan *deploy.DeployDownEvent)
+func (p *DeploymentClient) Down(deploymentRequest *deploy.DeploymentDownRequest) (<-chan *deploy.DeploymentDownEvent, <-chan error) {
+	eventChan := make(chan *deploy.DeploymentDownEvent)
 	errorChan := make(chan error)
 
 	go func() {
@@ -103,7 +103,7 @@ func (p *DeploymentClient) Down(deploymentRequest *deploy.DeployDownRequest) (<-
 		}
 		defer conn.Close()
 
-		client := deploy.NewDeployClient(conn)
+		client := deploy.NewDeploymentClient(conn)
 
 		op, err := client.Down(context.Background(), deploymentRequest)
 		if err != nil {

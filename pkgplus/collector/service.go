@@ -115,45 +115,45 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 	s.resourceLock.Lock()
 	defer s.resourceLock.Unlock()
 
-	switch req.Resource.Type {
+	switch req.Id.Type {
 	case resourcespb.ResourceType_Bucket:
 		// Add a bucket
-		s.buckets[req.Resource.GetName()] = req.GetBucket()
+		s.buckets[req.Id.GetName()] = req.GetBucket()
 	case resourcespb.ResourceType_Collection:
 		// Add a collection
-		s.collections[req.Resource.GetName()] = req.GetCollection()
+		s.collections[req.Id.GetName()] = req.GetCollection()
 	case resourcespb.ResourceType_Api:
 		// Add an api
-		s.apis[req.Resource.GetName()] = req.GetApi()
+		s.apis[req.Id.GetName()] = req.GetApi()
 	case resourcespb.ResourceType_ApiSecurityDefinition:
 		// Add an api security definition
 		if s.apiSecurityDefinition[req.GetApiSecurityDefinition().GetApiName()] == nil {
 			s.apiSecurityDefinition[req.GetApiSecurityDefinition().GetApiName()] = make(map[string]*resourcespb.ApiSecurityDefinitionResource)
 		}
 
-		s.apiSecurityDefinition[req.GetApiSecurityDefinition().GetApiName()][req.Resource.GetName()] = req.GetApiSecurityDefinition()
+		s.apiSecurityDefinition[req.GetApiSecurityDefinition().GetApiName()][req.Id.GetName()] = req.GetApiSecurityDefinition()
 	case resourcespb.ResourceType_Secret:
 		// Add a secret
-		s.secrets[req.Resource.GetName()] = req.GetSecret()
+		s.secrets[req.Id.GetName()] = req.GetSecret()
 	case resourcespb.ResourceType_Policy:
 		// Services don't know their own name, so we need to add it here
 		if req.GetPolicy().GetPrincipals() == nil {
-			req.GetPolicy().Principals = []*resourcespb.Resource{{
+			req.GetPolicy().Principals = []*resourcespb.ResourceIdentifier{{
 				Name: s.serviceName,
-				Type: resourcespb.ResourceType_Function,
+				Type: resourcespb.ResourceType_ExecUnit,
 			}}
 		} else {
 			for _, principal := range req.GetPolicy().GetPrincipals() {
-				if principal.GetName() == "" && principal.GetType() == resourcespb.ResourceType_Function {
+				if principal.GetName() == "" && principal.GetType() == resourcespb.ResourceType_ExecUnit {
 					principal.Name = s.serviceName
 				}
 			}
 		}
 		// Add a policy
-		s.policies[req.Resource.GetName()] = req.GetPolicy()
+		s.policies[req.Id.GetName()] = req.GetPolicy()
 	case resourcespb.ResourceType_Topic:
 		// add a topic
-		s.topics[req.Resource.GetName()] = req.GetTopic()
+		s.topics[req.Id.GetName()] = req.GetTopic()
 	}
 
 	return &resourcespb.ResourceDeclareResponse{}, nil

@@ -73,8 +73,8 @@ func (p *ProviderProcess) startProcess() error {
 		return err
 	}
 
-	cmd.Stderr = output.NewPtermWriter(pterm.Debug)
-	cmd.Stdout = output.NewPtermWriter(pterm.Debug)
+	cmd.Stderr = output.NewPtermWriter(pterm.Info)
+	cmd.Stdout = output.NewPtermWriter(pterm.Info)
 
 	err = cmd.Start()
 	if err != nil {

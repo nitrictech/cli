@@ -76,5 +76,5 @@ type Provider interface {
 type ConfigFromCode interface {
 	ProjectDir() string
 	ProjectName() string
-	ToUpRequest() (*deploy.DeployUpRequest, error)
+	ToUpRequest() (*deploy.DeploymentUpRequest, error)
 }

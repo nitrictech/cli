@@ -58,10 +58,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		return m, tea.ClearScreen
-	case *deploy.DeployDownEvent_Message:
-		m.Content = msg.Message.Message
-	case *deploy.DeployUpEvent_Message:
-		m.Content = msg.Message.Message
+	case *deploy.DeploymentDownEvent_Message:
+		m.Content = msg.Message
+	case *deploy.DeploymentUpEvent_Message:
+		m.Content = msg.Message
 	}
 
 	return m, nil

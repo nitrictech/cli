@@ -28,7 +28,6 @@ import (
 	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/dashboard"
-	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
 )
@@ -63,12 +62,14 @@ var startCmd = &cobra.Command{
 		dash, err := dashboard.New(startNoBrowser, localCloud)
 		cobra.CheckErr(err)
 
-		proj, err := project.FromFile(fs, "")
-		tui.CheckErr(err)
+		// fs := afero.NewOsFs()
 
-		// create dashboard, we will start it once an application is connected
-		dash, err := dashboard.New(proj, startNoBrowser, localCloud.Storage, localCloud.Gateway)
-		tui.CheckErr(err)
+		// _, err := project.FromFile(fs, "")
+		// tui.CheckErr(err)
+
+		// // create dashboard, we will start it once an application is connected
+		// dash, err = dashboard.New(startNoBrowser, localCloud.Storage)
+		// tui.CheckErr(err)
 
 		// Start dashboard
 		err = dash.Start()

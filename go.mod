@@ -2,7 +2,11 @@ module github.com/nitrictech/cli
 
 go 1.21
 
+<<<<<<< refs/remotes/origin/v1
 toolchain go1.21.4
+=======
+toolchain go1.21.3
+>>>>>>> wip update view
 
 replace github.com/mattn/go-ieproxy => github.com/darthShadow/go-ieproxy v0.0.0-20220916090656-69928ad83ed6
 
@@ -33,8 +37,13 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
+<<<<<<< refs/remotes/origin/v1
 	github.com/nitrictech/nitric/cloud/aws v0.0.0-20231220231644-a22c6184f20a
 	github.com/nitrictech/nitric/core v0.0.0-20240115224904-e2cb744cf9f6
+=======
+	github.com/nitrictech/nitric/cloud/aws v0.0.0-20240116015916-00dbcf63ad71
+	github.com/nitrictech/nitric/core v0.0.0-20240116015916-00dbcf63ad71
+>>>>>>> wip update view
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0
@@ -83,7 +92,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.13.0 // indirect
 	cloud.google.com/go/pubsub v1.30.0 // indirect
-	cloud.google.com/go/storage v1.28.1 // indirect
+	cloud.google.com/go/storage v1.29.0 // indirect
 	github.com/4meepo/tagalign v1.3.3 // indirect
 	github.com/Abirdcfly/dupword v0.0.13 // indirect
 	github.com/Antonboom/errname v0.1.12 // indirect
@@ -311,6 +320,8 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nishanths/exhaustive v0.11.0 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
+	github.com/nitrictech/nitric/cloud/azure v0.0.0-20240116015916-00dbcf63ad71 // indirect
+	github.com/nitrictech/nitric/cloud/gcp v0.0.0-20240116015916-00dbcf63ad71 // indirect
 	github.com/nunnatsa/ginkgolinter v0.14.1 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect

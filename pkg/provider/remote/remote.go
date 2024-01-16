@@ -105,7 +105,7 @@ func (p *remoteDeployment) Up() (*types.Deployment, error) {
 		return nil, err
 	}
 
-	client := deploy.NewDeployClient(conn)
+	client := deploy.NewDeploymentClient(conn)
 
 	op, err := client.Up(context.Background(), req)
 	if err != nil {
@@ -143,7 +143,7 @@ func (p *remoteDeployment) Up() (*types.Deployment, error) {
 
 		program.Send(evt.Content)
 
-		eventResult, ok := evt.Content.(*deploy.DeployUpEvent_Result)
+		eventResult, ok := evt.Content.(*deploy.DeploymentUpEvent_Result)
 		if ok {
 			if !eventResult.Result.Success {
 				return res, errors.New("deployment failed")
@@ -175,12 +175,12 @@ func (p *remoteDeployment) Down() (*types.Summary, error) {
 		return nil, err
 	}
 
-	req := &deploy.DeployDownRequest{
+	req := &deploy.DeploymentDownRequest{
 		Attributes:  reqAttributes,
 		Interactive: p.interactive,
 	}
 
-	client := deploy.NewDeployClient(conn)
+	client := deploy.NewDeploymentClient(conn)
 
 	op, err := client.Down(context.Background(), req)
 	if err != nil {
@@ -215,7 +215,7 @@ func (p *remoteDeployment) Down() (*types.Summary, error) {
 
 		program.Send(evt.Content)
 
-		_, ok := evt.Content.(*deploy.DeployDownEvent_Result)
+		_, ok := evt.Content.(*deploy.DeploymentDownEvent_Result)
 		if ok {
 			return res, nil
 		}

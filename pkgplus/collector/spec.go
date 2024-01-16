@@ -20,7 +20,6 @@ import (
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 	"github.com/nitrictech/pearls/pkg/tui/view"
-	"github.com/samber/lo"
 )
 
 type ProjectErrors struct {
@@ -53,31 +52,33 @@ func buildBucketRequirements(allServiceRequirements []*ServiceRequirements, proj
 
 	for _, serviceRequirements := range allServiceRequirements {
 		for bucketName := range serviceRequirements.buckets {
-			notifications := []*deploymentspb.BucketNotificationTarget{}
+			notifications := []*deploymentspb.BucketListener{}
 
 			for _, v := range serviceRequirements.listeners {
-				notifications = append(notifications, &deploymentspb.BucketNotificationTarget{
+				notifications = append(notifications, &deploymentspb.BucketListener{
 					Config: v,
-					Target: &deploymentspb.BucketNotificationTarget_ExecutionUnit{
+					Target: &deploymentspb.BucketListener_ExecutionUnit{
 						ExecutionUnit: serviceRequirements.serviceName,
 					},
 				})
 			}
 
 			res, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
-				return item.Name == bucketName
+				return item.Id.Name == bucketName
 			})
 
 			if exists {
 				// add the listeners to the bucket configuration
-				res.GetBucket().Notifications = append(res.GetBucket().Notifications, notifications...)
+				res.GetBucket().Listeners = append(res.GetBucket().Listeners, notifications...)
 			} else {
 				res := &deploymentspb.Resource{
-					Name: bucketName,
-					Type: resourcespb.ResourceType_Bucket,
+					Id: &resourcespb.ResourceIdentifier{
+						Name: bucketName,
+						Type: resourcespb.ResourceType_Bucket,
+					},
 					Config: &deploymentspb.Resource_Bucket{
 						Bucket: &deploymentspb.Bucket{
-							Notifications: notifications,
+							Listeners: notifications,
 						},
 					},
 				}
@@ -96,8 +97,10 @@ func buildHttpRequirements(allServiceRequirements []*ServiceRequirements, projec
 	for _, serviceRequirements := range allServiceRequirements {
 		if serviceRequirements.proxy != nil {
 			resources = append(resources, &deploymentspb.Resource{
-				Name: serviceRequirements.serviceName,
-				Type: resourcespb.ResourceType_Http,
+				Id: &resourcespb.ResourceIdentifier{
+					Name: serviceRequirements.serviceName,
+					Type: resourcespb.ResourceType_Http,
+				},
 				Config: &deploymentspb.Resource_Http{
 					Http: &deploymentspb.Http{
 						Target: &deploymentspb.HttpTarget{
@@ -121,13 +124,15 @@ func buildTopicRequirements(allServiceRequirements []*ServiceRequirements, proje
 	for _, serviceRequirements := range allServiceRequirements {
 		for topicName := range serviceRequirements.topics {
 			res, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
-				return item.Name == topicName
+				return item.Id.Name == topicName
 			})
 
 			if !exists {
 				res = &deploymentspb.Resource{
-					Name: topicName,
-					Type: resourcespb.ResourceType_Topic,
+					Id: &resourcespb.ResourceIdentifier{
+						Name: topicName,
+						Type: resourcespb.ResourceType_Topic,
+					},
 					Config: &deploymentspb.Resource_Topic{
 						Topic: &deploymentspb.Topic{
 							Subscriptions: []*deploymentspb.SubscriptionTarget{},
@@ -157,13 +162,15 @@ func buildSecretRequirements(allServiceRequirements []*ServiceRequirements, proj
 	for _, serviceRequirements := range allServiceRequirements {
 		for secretName := range serviceRequirements.secrets {
 			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
-				return item.Name == secretName
+				return item.Id.Name == secretName
 			})
 
 			if !exists {
 				res := &deploymentspb.Resource{
-					Name: secretName,
-					Type: resourcespb.ResourceType_Secret,
+					Id: &resourcespb.ResourceIdentifier{
+						Name: secretName,
+						Type: resourcespb.ResourceType_Secret,
+					},
 					Config: &deploymentspb.Resource_Secret{
 						Secret: &deploymentspb.Secret{},
 					},
@@ -345,8 +352,10 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 		}
 
 		resources = append(resources, &deploymentspb.Resource{
-			Name: apiName,
-			Type: resourcespb.ResourceType_Api,
+			Id: &resourcespb.ResourceIdentifier{
+				Name: apiName,
+				Type: resourcespb.ResourceType_Api,
+			},
 			Config: &deploymentspb.Resource_Api{
 				Api: &deploymentspb.Api{
 					Document: &deploymentspb.Api_Openapi{
@@ -367,13 +376,15 @@ func buildWebsocketRequirements(allServiceRequirements []*ServiceRequirements, p
 	for _, serviceRequirements := range allServiceRequirements {
 		for socketName, registrations := range serviceRequirements.websockets {
 			res, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
-				return item.Name == socketName
+				return item.Id.Name == socketName
 			})
 
 			if !exists {
 				res = &deploymentspb.Resource{
-					Name: socketName,
-					Type: resourcespb.ResourceType_Websocket,
+					Id: &resourcespb.ResourceIdentifier{
+						Name: socketName,
+						Type: resourcespb.ResourceType_Websocket,
+					},
 					Config: &deploymentspb.Resource_Websocket{
 						Websocket: &deploymentspb.Websocket{},
 					},
@@ -411,15 +422,15 @@ func buildWebsocketRequirements(allServiceRequirements []*ServiceRequirements, p
 		ws := websocketResource.GetWebsocket()
 
 		if ws.ConnectTarget == nil {
-			projectErrors.Add(fmt.Errorf("missing connect handler for websocket %s", websocketResource.Name))
+			projectErrors.Add(fmt.Errorf("missing connect handler for websocket %s", websocketResource.Id.Name))
 		}
 
 		if ws.DisconnectTarget == nil {
-			projectErrors.Add(fmt.Errorf("missing disconnect handler for websocket %s", websocketResource.Name))
+			projectErrors.Add(fmt.Errorf("missing disconnect handler for websocket %s", websocketResource.Id.Name))
 		}
 
 		if ws.MessageTarget == nil {
-			projectErrors.Add(fmt.Errorf("missing message handler for websocket %s", websocketResource.Name))
+			projectErrors.Add(fmt.Errorf("missing message handler for websocket %s", websocketResource.Id.Name))
 		}
 	}
 
@@ -433,7 +444,7 @@ func buildScheduleRequirements(allServiceRequirements []*ServiceRequirements, pr
 	for _, serviceRequirements := range allServiceRequirements {
 		for scheduleName, scheduleConfig := range serviceRequirements.schedules {
 			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
-				return item.Name == scheduleName
+				return item.Id.Name == scheduleName
 			})
 
 			if !exists {
@@ -461,8 +472,10 @@ func buildScheduleRequirements(allServiceRequirements []*ServiceRequirements, pr
 				}
 
 				res := &deploymentspb.Resource{
-					Name: scheduleName,
-					Type: resourcespb.ResourceType_Schedule,
+					Id: &resourcespb.ResourceIdentifier{
+						Name: scheduleName,
+						Type: resourcespb.ResourceType_Schedule,
+					},
 					Config: &deploymentspb.Resource_Schedule{
 						Schedule: schedule,
 					},
@@ -497,13 +510,15 @@ func buildCollectionsRequirements(allServiceRequirements []*ServiceRequirements,
 	for _, serviceRequirements := range allServiceRequirements {
 		for collectionName := range serviceRequirements.collections {
 			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
-				return item.Name == collectionName
+				return item.Id.Name == collectionName
 			})
 
 			if !exists {
 				resources = append(resources, &deploymentspb.Resource{
-					Name:   collectionName,
-					Type:   resourcespb.ResourceType_Collection,
+					Id: &resourcespb.ResourceIdentifier{
+						Name: collectionName,
+						Type: resourcespb.ResourceType_Collection,
+					},
 					Config: &deploymentspb.Resource_Collection{},
 				})
 			}
@@ -522,7 +537,7 @@ func buildPolicyRequirements(allServiceRequirements []*ServiceRequirements, proj
 	for _, serviceRequirements := range allServiceRequirements {
 		compactedPoliciesByKey := lo.GroupBy(lo.Values(serviceRequirements.policies), func(item *resourcespb.PolicyResource) string {
 			// get the princpals and actions as a unique key (make sure they're sorted for consistency)
-			principalNames := lo.Reduce(item.Principals, func(agg []string, principal *resourcespb.Resource, idx int) []string {
+			principalNames := lo.Reduce(item.Principals, func(agg []string, principal *resourcespb.ResourceIdentifier, idx int) []string {
 				return append(agg, principal.Name)
 			}, []string{})
 			slices.Sort(principalNames)
@@ -566,21 +581,27 @@ func buildPolicyRequirements(allServiceRequirements []*ServiceRequirements, proj
 
 			for _, r := range policy.Resources {
 				policyResources = append(policyResources, &deploymentspb.Resource{
-					Name: r.Name,
-					Type: r.Type,
+					Id: &resourcespb.ResourceIdentifier{
+						Name: r.Name,
+						Type: r.Type,
+					},
 				})
 			}
 
 			for _, p := range policy.Principals {
 				principals = append(principals, &deploymentspb.Resource{
-					Name: p.Name,
-					Type: p.Type,
+					Id: &resourcespb.ResourceIdentifier{
+						Name: p.Name,
+						Type: p.Type,
+					},
 				})
 			}
 
 			res := &deploymentspb.Resource{
-				Name: policyName,
-				Type: resourcespb.ResourceType_Policy,
+				Id: &resourcespb.ResourceIdentifier{
+					Name: policyName,
+					Type: resourcespb.ResourceType_Policy,
+				},
 				Config: &deploymentspb.Resource_Policy{
 					Policy: &deploymentspb.Policy{
 						Principals: principals,
@@ -682,8 +703,10 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 
 	for _, serviceRequirements := range allServiceRequirements {
 		newSpec.Resources = append(newSpec.Resources, &deploymentspb.Resource{
-			Name: serviceRequirements.serviceName,
-			Type: resourcespb.ResourceType_Function,
+			Id: &resourcespb.ResourceIdentifier{
+				Name: serviceRequirements.serviceName,
+				Type: resourcespb.ResourceType_ExecUnit,
+			},
 			Config: &deploymentspb.Resource_ExecutionUnit{
 				ExecutionUnit: &deploymentspb.ExecutionUnit{
 					Source: &deploymentspb.ExecutionUnit_Image{

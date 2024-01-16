@@ -34,7 +34,7 @@ require (
 	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
 	github.com/nitrictech/nitric/cloud/aws v0.0.0-20231220231644-a22c6184f20a
-	github.com/nitrictech/nitric/core v0.0.0-20240112014601-ab979949ac6b
+	github.com/nitrictech/nitric/core v0.0.0-20240115224904-e2cb744cf9f6
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0

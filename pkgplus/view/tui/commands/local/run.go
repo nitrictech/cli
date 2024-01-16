@@ -306,7 +306,7 @@ func (t *TuiModel) View() string {
 
 func NewTuiModel(localCloud *cloud.LocalCloud, dashboardUrl string) *TuiModel {
 	return &TuiModel{
-		localCloud: localCloud,
+		localCloud:   localCloud,
 		dashboardUrl: dashboardUrl,
 	}
 }

@@ -680,6 +680,6 @@ func (s *LocalGatewayService) Stop() error {
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
 func NewGateway() (*LocalGatewayService, error) {
 	return &LocalGatewayService{
-		bus:             EventBus.New(),
+		bus: EventBus.New(),
 	}, nil
 }

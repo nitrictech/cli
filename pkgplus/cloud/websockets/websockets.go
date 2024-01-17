@@ -49,8 +49,8 @@ var (
 )
 
 const (
-	localWebsocketActionTopic    = "local_websocket_action"
-	localWebsocketTopic           = "local_websocket_gateway"
+	localWebsocketActionTopic = "local_websocket_action"
+	localWebsocketTopic       = "local_websocket_gateway"
 )
 
 type WebsocketMessage struct {
@@ -60,24 +60,24 @@ type WebsocketMessage struct {
 }
 
 type WebsocketInfo struct {
-	ConnectionCount int `json:"connectionCount,omitempty"`
-	Messages []WebsocketMessage `json:"messages,omitempty"`
+	ConnectionCount int                `json:"connectionCount,omitempty"`
+	Messages        []WebsocketMessage `json:"messages,omitempty"`
 }
 
 type ActionType string
 
 const (
-	INFO       ActionType = "info"
-	MESSAGE    ActionType = "message"
+	INFO    ActionType = "info"
+	MESSAGE ActionType = "message"
 )
 
 type EventItem interface {
 	WebsocketMessage | WebsocketInfo | any
 }
 type WebsocketAction[Event EventItem] struct {
-	Name  string    `json:"name"`
-	Event Event     `json:"event"`
-	Type ActionType `json:"-"`
+	Name  string     `json:"name"`
+	Event Event      `json:"event"`
+	Type  ActionType `json:"-"`
 }
 
 func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string][]nitricws.WebsocketEventType)) {
@@ -195,7 +195,7 @@ func (r *LocalWebsocketService) Send(ctx context.Context, req *nitricws.Websocke
 	if err != nil {
 		return nil, err
 	}
-	
+
 	r.publishAction(WebsocketAction[EventItem]{
 		Name: req.SocketName,
 		Type: MESSAGE,

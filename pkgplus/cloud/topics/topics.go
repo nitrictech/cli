@@ -46,8 +46,8 @@ type LocalTopicsAndSubscribersService struct {
 
 type ActionState struct {
 	TopicName string
-	Payload string
-	Success bool
+	Payload   string
+	Success   bool
 }
 
 var (
@@ -126,7 +126,7 @@ func (s *LocalTopicsAndSubscribersService) Subscribe(stream topicspb.Subscriber_
 	})
 
 	// Keep track of our local topic subscriptions
- 	s.registerSubscriber(firstRequest.GetRegistrationRequest())
+	s.registerSubscriber(firstRequest.GetRegistrationRequest())
 	defer s.unregisterSubscriber(firstRequest.GetRegistrationRequest())
 
 	return s.SubscriberManager.Subscribe(peekableStream)
@@ -149,16 +149,16 @@ func (s *LocalTopicsAndSubscribersService) deliverEvent(ctx context.Context, req
 	if err != nil {
 		return err
 	}
-	
+
 	json, err := req.Message.GetStructPayload().MarshalJSON()
 	if err != nil {
 		return err
 	}
-	
+
 	s.publishAction(ActionState{
 		TopicName: req.TopicName,
-		Success: resp.GetMessageResponse().GetSuccess(),
-		Payload: string(json),
+		Success:   resp.GetMessageResponse().GetSuccess(),
+		Payload:   string(json),
 	})
 
 	fmt.Printf("Publishing to %s topic, %d subscriber(s)\n", req.TopicName, s.WorkerCount())

@@ -72,7 +72,7 @@ const WSTreeView: FC<Props> = ({ websockets, onSelect, initialItem }) => {
                 <TooltipTrigger asChild>
                   <ExclamationTriangleIcon className="w-5 h-5 text-destructive" />
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent side="right">
                   <p>Missing Events: {eventsNotRegistered.join(", ")}</p>
                 </TooltipContent>
               </Tooltip>

@@ -31,6 +31,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 
 	"github.com/nitrictech/cli/pkg/browser"
@@ -68,6 +69,11 @@ type TopicSpec struct {
 	SubscriberCount int    `json:"subscriberCount"`
 }
 
+type BucketSpec struct {
+	Name              string `json:"name,omitempty"`
+	NotificationCount int    `json:"notificationCount"`
+}
+
 type Dashboard struct {
 	project              *project.Project
 	storageService       *storage.LocalStorageService
@@ -75,7 +81,7 @@ type Dashboard struct {
 	apis                 []*openapi3.T
 	schedules            []ScheduleSpec
 	topics               []TopicSpec
-	buckets              []string
+	buckets              []BucketSpec
 	websockets           []WebsocketSpec
 	envMap               map[string]string
 	stackWebSocket       *melody.Melody
@@ -93,7 +99,7 @@ type Dashboard struct {
 
 type DashboardResponse struct {
 	Apis               []*openapi3.T     `json:"apis"`
-	Buckets            []string          `json:"buckets"`
+	Buckets            []BucketSpec      `json:"buckets"`
 	Schedules          []ScheduleSpec    `json:"schedules"`
 	Topics             []TopicSpec       `json:"topics"`
 	Websockets         []WebsocketSpec   `json:"websockets"`
@@ -119,24 +125,23 @@ var content embed.FS
 func (d *Dashboard) addBucket(name string) {
 	// reset buckets to allow for most recent resources only
 	if !d.resourcesLastUpdated.IsZero() && time.Since(d.resourcesLastUpdated) > time.Second*5 {
-		d.buckets = []string{}
+		d.buckets = []BucketSpec{}
 	}
 
 	for _, b := range d.buckets {
-		if b == name {
+		if b.Name == name {
 			return
 		}
 	}
 
-	d.buckets = append(d.buckets, name)
+	d.buckets = append(d.buckets, BucketSpec{
+		Name:              name,
+		NotificationCount: 0,
+	})
 
 	d.resourcesLastUpdated = time.Now()
 
-	err := d.sendStackUpdate()
-	if err != nil {
-		fmt.Printf("Error sending stack update: %v\n", err)
-		return
-	}
+	d.refresh()
 }
 
 func (d *Dashboard) updateApis(state apis.State) {
@@ -203,6 +208,26 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 	d.schedules = schedules
 
 	d.refresh()
+}
+
+func (d *Dashboard) updateBucketNotifications(state storage.State) {
+	var performUpdate bool
+
+	for bucketName, count := range state {
+		_, idx, found := lo.FindIndexOf[BucketSpec](d.buckets, func(item BucketSpec) bool {
+			return item.Name == bucketName
+		})
+
+		if found {
+			d.buckets[idx].NotificationCount = count
+			performUpdate = true
+		}
+
+	}
+
+	if performUpdate {
+		d.refresh()
+	}
 }
 
 func (d *Dashboard) refresh() {
@@ -452,6 +477,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	localCloud.Websockets.SubscribeToState(dash.updateWebsockets)
 	localCloud.Schedules.SubscribeToState(dash.updateSchedules)
 	localCloud.Topics.SubscribeToState(dash.updateTopics)
+	localCloud.Storage.SubscribeToState(dash.updateBucketNotifications)
 
 	// subscribe to history events from gateway
 	localCloud.Apis.SubscribeToAction(dash.handleApiHistory)

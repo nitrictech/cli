@@ -85,7 +85,7 @@ const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
                       </Badge>
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent side="right">
                     <p>{topicSubscriberCount} subscribers to this topic</p>
                   </TooltipContent>
                 </Tooltip>

@@ -76,8 +76,6 @@ func (p *DeploymentClient) Up(deploymentRequest *deploy.DeploymentUpRequest) (<-
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
 					errorChan <- err
-				} else {
-					fmt.Println("got EOF")
 				}
 				break
 			}

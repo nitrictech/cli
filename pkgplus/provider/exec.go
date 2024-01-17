@@ -18,16 +18,16 @@ package provider
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
 	"runtime"
 
-	"github.com/pterm/pterm"
 	"github.com/spf13/afero"
 
-	"github.com/nitrictech/cli/pkg/output"
 	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/iox"
 )
 
 // ProviderProcess - A deployment engine based on a locally executable binary file
@@ -36,6 +36,8 @@ type ProviderProcess struct {
 	process      *os.Process
 	envMap       map[string]string
 	Address      string
+	stdout       chan<- string
+	stderr       chan<- string
 }
 
 func (p *ProviderProcess) startProcess() error {
@@ -73,8 +75,16 @@ func (p *ProviderProcess) startProcess() error {
 		return err
 	}
 
-	cmd.Stderr = output.NewPtermWriter(pterm.Info)
-	cmd.Stdout = output.NewPtermWriter(pterm.Info)
+	cmd.Stderr = io.Discard
+	cmd.Stdout = io.Discard
+
+	if p.stderr != nil {
+		cmd.Stderr = iox.NewChannelWriter(p.stderr)
+	}
+
+	if p.stdout != nil {
+		cmd.Stdout = iox.NewChannelWriter(p.stdout)
+	}
 
 	err = cmd.Start()
 	if err != nil {
@@ -108,7 +118,21 @@ func isExecAny(mode os.FileMode) bool {
 	return mode.IsRegular() && (mode.Perm()&0o111) != 0
 }
 
-func StartProviderExecutable(fs afero.Fs, executablePath string) (*ProviderProcess, error) {
+type ProviderExecutableOption = func(*ProviderProcess)
+
+func WithStdout(stdout chan<- string) ProviderExecutableOption {
+	return func(pp *ProviderProcess) {
+		pp.stdout = stdout
+	}
+}
+
+func WithStderr(stderr chan<- string) ProviderExecutableOption {
+	return func(pp *ProviderProcess) {
+		pp.stderr = stderr
+	}
+}
+
+func StartProviderExecutable(fs afero.Fs, executablePath string, opts ...ProviderExecutableOption) (*ProviderProcess, error) {
 	fileInfo, err := fs.Stat(executablePath)
 	if err != nil {
 		return nil, err
@@ -122,6 +146,10 @@ func StartProviderExecutable(fs afero.Fs, executablePath string) (*ProviderProce
 	provProc := &ProviderProcess{
 		providerPath: executablePath,
 		envMap:       map[string]string{},
+	}
+
+	for _, o := range opts {
+		o(provProc)
 	}
 
 	if err := provProc.startProcess(); err != nil {

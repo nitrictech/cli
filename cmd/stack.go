@@ -195,8 +195,10 @@ var stackUpdateCmd = &cobra.Command{
 		spec, err := collector.ServiceRequirementsToSpec(proj.Name, map[string]string{}, serviceRequirements)
 		tui.CheckErr(err)
 
+		providerStdout := make(chan string)
+
 		// Step 4. Start the deployment provider server
-		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath)
+		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout))
 		tui.CheckErr(err)
 		defer providerProcess.Stop()
 
@@ -223,13 +225,12 @@ var stackUpdateCmd = &cobra.Command{
 
 		// Step 5b. Communicate with server to share progress of ...
 
-		stackUp := stack_up.New(eventChan, errorChan)
+		stackUp := stack_up.New(eventChan, providerStdout, errorChan)
 
-		finalModel, err := tea.NewProgram(stackUp, tea.WithAltScreen()).Run()
+		_, err = tea.NewProgram(stackUp).Run()
 		tui.CheckErr(err)
 
-		fmt.Println("ITS THE FINAL MODEL!!!")
-		fmt.Print(finalModel.View())
+		// fmt.Print(finalModel.View())
 
 		// eventsLeft := true
 		// errsLeft := true

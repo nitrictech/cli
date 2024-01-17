@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
+	"github.com/nitrictech/pearls/pkg/tui"
 	"github.com/nitrictech/pearls/pkg/tui/view"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
@@ -26,11 +27,12 @@ type Resource struct {
 }
 
 type Model struct {
-	stack       *Resource
-	updatesChan <-chan *deploymentspb.DeploymentUpEvent
-	errorChan   <-chan error
-	err         error
-	allMsgs     []string
+	stack              *Resource
+	updatesChan        <-chan *deploymentspb.DeploymentUpEvent
+	errorChan          <-chan error
+	providerStdoutChan <-chan string
+	providerStdout     []string
+	errs               []error
 
 	spinner        spinner.Model
 	resourcesTable table.Model
@@ -39,11 +41,12 @@ type Model struct {
 var _ tea.Model = Model{}
 
 func (m Model) Init() tea.Cmd {
-	m.allMsgs = make([]string, 0)
+	m.errs = make([]error, 0)
 	return tea.Batch(
 		m.spinner.Tick,
 		reactive.AwaitChannel(m.updatesChan),
 		reactive.AwaitChannel(m.errorChan),
+		reactive.AwaitChannel(m.providerStdoutChan),
 	)
 }
 
@@ -58,11 +61,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.resourcesTable, cmd = m.resourcesTable.Update(msg)
 			return m, cmd
 		}
+
+	case reactive.ChanMsg[string]:
+		if !msg.Ok {
+			break
+		}
+
+		m.providerStdout = append(m.providerStdout, msg.Value)
+
+		return m, reactive.AwaitChannel(msg.Source)
 	case reactive.ChanMsg[*deploymentspb.DeploymentUpEvent]:
 
 		// the source channel is close
 		if !msg.Ok {
-			return m, nil
+			return m, tea.Quit
 		}
 
 		switch content := msg.Value.Content.(type) {
@@ -71,8 +83,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if content.Update == nil || content.Update.Id == nil {
 				break
 			}
-
-			m.allMsgs = append(m.allMsgs, fmt.Sprintf("%s -:- %+v", msg.Value.GetUpdate().Id.Type.String(), msg.Value))
 
 			name := content.Update.SubResource
 			if name == "" {
@@ -86,17 +96,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 
 				if !found {
-					// // create it?
-					// m.stack.children = append(m.stack.children, &Resource{
-					// 	name:      fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name),
-					// 	children:  make([]*Resource, 0),
-					// 	startTime: time.Now(),
-					// 	status:    content.Update.Status, // Unknown what parent's status is.
-					// 	action:    content.Update.Action, // FIXME: this is the child's action not the parents...
-					// 	message:   "child reported before parent, this shouldn't happen?",
-					// })
-					m.err = fmt.Errorf("child reported before parent, this shouldn't happen?")
-					return m, nil
+					m.errs = append(m.errs, fmt.Errorf("received update for resource [%s], without associated nitric parent resource", content.Update.SubResource))
+					return m, tea.Quit
 				}
 
 				parent = nitricResource
@@ -132,7 +133,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, reactive.AwaitChannel(msg.Source)
 	case reactive.ChanMsg[error]:
-		m.err = msg.Value
+		m.errs = append(m.errs, msg.Value)
 		return m, nil
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -175,31 +176,23 @@ var verbMap = map[deploymentspb.ResourceDeploymentAction]map[deploymentspb.Resou
 	},
 }
 
+const maxOutputLines = 5
+
 func (m Model) View() string {
 	// print the stack?
 	treeView := view.New()
 
 	treeView.AddRow(
-		view.NewFragment("Nitric Up"+m.spinner.View()),
+		view.NewFragment("Nitric Up"+m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)),
 		view.Break(),
 	)
-
-	for _, msg := range m.allMsgs {
-		treeView.AddRow(
-			view.NewFragment(msg),
-		)
-	}
-
-	// table.New(table.WithKeyMap(
-	// 	table.DefaultKeyMap(),
-	// ))
 
 	rows := []table.Row{}
 
 	for _, child := range m.stack.children {
 		// print the child
 		rows = append(rows, table.Row{
-			lipgloss.NewStyle().Bold(true).Render(child.name),
+			lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Blue).Render(child.name),
 			"", // "", verbMap[child.action][child.status],
 		})
 
@@ -209,7 +202,7 @@ func (m Model) View() string {
 			resourceTime := lo.Ternary(grandchild.finishTime.IsZero(), time.Since(grandchild.startTime).Round(time.Second), grandchild.finishTime.Sub(grandchild.startTime))
 
 			rows = append(rows, table.Row{
-				lipgloss.NewStyle().MarginLeft(1).Render(linkChar + grandchild.name),
+				lipgloss.NewStyle().MarginLeft(1).Foreground(tui.Colors.Blue).Render(linkChar) + lipgloss.NewStyle().Foreground(tui.Colors.Gray).Render(grandchild.name),
 				verbMap[grandchild.action][grandchild.status] + fmt.Sprintf(" (%s)", resourceTime.Round(time.Second)),
 			})
 		}
@@ -218,34 +211,63 @@ func (m Model) View() string {
 
 	treeView.AddRow(view.NewFragment(m.resourcesTable.View()))
 
-	if m.err != nil {
+	// Provider Stdout and Stderr rendering
+	if len(m.providerStdout) > 0 {
+		tealForTim := lipgloss.NewStyle().Foreground(tui.Colors.Gray)
+
+		providerTermView := view.New()
+
+		treeView.AddRow(
+			view.NewFragment("Provider Output:").WithStyle(tealForTim),
+		)
+
+		for _, line := range m.providerStdout[max(0, len(m.providerStdout)-maxOutputLines):] {
+			providerTermView.AddRow(
+				view.NewFragment(line).WithStyle(lipgloss.NewStyle().Width(98)),
+			)
+		}
+
+		borderStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tui.Colors.Gray)
+
+		treeView.AddRow(
+			view.NewFragment(providerTermView.Render()).WithStyle(borderStyle),
+			view.Break(),
+		)
+	}
+
+	for _, e := range m.errs[max(0, len(m.errs)-maxOutputLines):] {
 		treeView.AddRow(
 			view.NewFragment("Error:"),
-			view.NewFragment(m.err.Error()),
+			view.NewFragment(e.Error()),
 		).WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("205")))
 	}
 
 	return treeView.Render()
 }
 
-func New(updatesChan <-chan *deploymentspb.DeploymentUpEvent, errorChan <-chan error) Model {
+func New(updatesChan <-chan *deploymentspb.DeploymentUpEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
 	return Model{
 		resourcesTable: table.New(
 			table.WithColumns([]table.Column{
 				{
-					Title: "name",
-					Width: 50,
+					Title: "Name",
+					Width: 80,
 				},
 				{
-					Title: "status",
+					Title: "Status",
 					Width: 20,
 				},
 			}),
-			table.WithHeight(20),
+			table.WithStyles(table.Styles{
+				Selected: table.DefaultStyles().Cell,
+				Header:   table.DefaultStyles().Header,
+				Cell:     table.DefaultStyles().Cell,
+			}),
 		),
-		spinner:     spinner.New(spinner.WithSpinner(spinner.Ellipsis)),
-		updatesChan: updatesChan,
-		errorChan:   errorChan,
+		spinner:            spinner.New(spinner.WithSpinner(spinner.Ellipsis)),
+		updatesChan:        updatesChan,
+		providerStdoutChan: providerStdoutChan,
+		errorChan:          errorChan,
 		stack: &Resource{
 			name:     "stack",
 			message:  "",

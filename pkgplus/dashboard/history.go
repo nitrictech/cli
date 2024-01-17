@@ -30,8 +30,8 @@ const AddRecordTopic = "history:addrecord"
 
 type HistoryEvents struct {
 	ScheduleHistory []*HistoryEvent[ScheduleHistoryItem] `json:"schedules"`
-	TopicHistory    []*HistoryEvent[TopicHistoryItem]    `json:"topics"`
-	ApiHistory      []*HistoryEvent[ApiHistoryItem]      `json:"apis"`
+	TopicHistory    []*HistoryEvent[TopicHistoryItem] `json:"topics"`
+	ApiHistory      []*HistoryEvent[ApiHistoryItem] `json:"apis"`
 }
 
 type RecordType string
@@ -52,15 +52,15 @@ type HistoryEvent[Event HistoryItem] struct {
 }
 
 type TopicHistoryItem struct {
-	Name    string `json:"name,omitempty"`
-	Delay   int    `json:"delay,omitempty"`
-	Payload string `json:"payload,omitempty"`
-	Success bool   `json:"success,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Delay     int    `json:"delay,omitempty"`
+	Payload   string `json:"payload,omitempty"`
+	Success   bool   `json:"success,omitempty"`
 }
 
 type ScheduleHistoryItem struct {
-	Name    string `json:"name,omitempty"`
-	Success bool   `json:"success,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Success   bool   `json:"success,omitempty"`
 }
 
 type ApiHistoryItem struct {

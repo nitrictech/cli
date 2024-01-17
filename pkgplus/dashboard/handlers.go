@@ -332,7 +332,7 @@ func (d *Dashboard) handleTopicsHistory(action topics.ActionState) {
 		Time:       time.Now().UnixMilli(),
 		RecordType: TOPIC,
 		Event: TopicHistoryItem{
-			Name:    action.TopicName,
+			Name: action.TopicName,
 			Payload: action.Payload,
 			Success: action.Success,
 		},
@@ -347,7 +347,7 @@ func (d *Dashboard) handleSchedulesHistory(action schedules.ActionState) {
 		Time:       time.Now().UnixMilli(),
 		RecordType: SCHEDULE,
 		Event: ScheduleHistoryItem{
-			Name:    action.ScheduleName,
+			Name: action.ScheduleName,
 			Success: action.Success,
 		},
 	})

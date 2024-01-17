@@ -64,15 +64,15 @@ type ScheduleSpec struct {
 }
 
 type TopicSpec struct {
-	Name            string `json:"name,omitempty"`
-	SubscriberCount int    `json:"subscriberCount"`
+	Name       string `json:"name,omitempty"`
+	SubscriberCount int `json:"subscriberCount"`
 }
 
 type Dashboard struct {
-	project              *project.Project
-	storageService       *storage.LocalStorageService
-	gatewayService       *gateway.LocalGatewayService
-	apis                 []*openapi3.T
+	project        *project.Project
+	storageService *storage.LocalStorageService
+	gatewayService *gateway.LocalGatewayService
+	apis           []*openapi3.T
 	schedules            []ScheduleSpec
 	topics               []TopicSpec
 	buckets              []string
@@ -92,10 +92,10 @@ type Dashboard struct {
 }
 
 type DashboardResponse struct {
-	Apis               []*openapi3.T     `json:"apis"`
-	Buckets            []string          `json:"buckets"`
-	Schedules          []ScheduleSpec    `json:"schedules"`
-	Topics             []TopicSpec       `json:"topics"`
+	Apis    []*openapi3.T `json:"apis"`
+	Buckets []string      `json:"buckets"`
+	Schedules           []ScheduleSpec   `json:"schedules"`
+	Topics              []TopicSpec        `json:"topics"`
 	Websockets         []WebsocketSpec   `json:"websockets"`
 	ProjectName        string            `json:"projectName"`
 	ApiAddresses       map[string]string `json:"apiAddresses"`
@@ -179,13 +179,13 @@ func (d *Dashboard) updateTopics(state topics.State) {
 
 	for topic, count := range state {
 		topics = append(topics, TopicSpec{
-			Name:            topic,
+			Name: topic,
 			SubscriberCount: count,
 		})
 	}
 
 	d.topics = topics
-
+	
 	d.refresh()
 }
 
@@ -194,9 +194,9 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 
 	for _, schedule := range state {
 		schedules = append(schedules, ScheduleSpec{
-			Name:       schedule.GetScheduleName(),
+			Name: schedule.GetScheduleName(),
 			Expression: schedule.GetCron().GetExpression(),
-			Rate:       schedule.GetEvery().GetRate(),
+			Rate: schedule.GetEvery().GetRate(),
 		})
 	}
 
@@ -363,9 +363,9 @@ func (d *Dashboard) sendStackUpdate() error {
 	latestVersion := update.FetchLatestVersion()
 
 	response := &DashboardResponse{
-		Apis:               d.apis,
-		Topics:             d.topics,
-		Buckets:            d.buckets,
+		Apis: d.apis,
+		Topics:              d.topics,
+		Buckets: d.buckets,
 		Schedules:          d.schedules,
 		Websockets:         d.websockets,
 		ProjectName:        d.project.Name,
@@ -437,8 +437,8 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		historyWebSocket: historyWebSocket,
 		wsWebSocket:      wsWebSocket,
 		// bucketNotifications: []*codeconfig.BucketNotification{},
-		schedules:      []ScheduleSpec{},
-		topics:         []TopicSpec{},
+		schedules: []ScheduleSpec{},
+		topics:    []TopicSpec{},
 		websocketsInfo: map[string]*websockets.WebsocketInfo{},
 		noBrowser:      noBrowser,
 	}

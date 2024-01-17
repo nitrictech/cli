@@ -86,7 +86,7 @@ func (l *LocalSchedulesService) HandleRequest(request *schedulespb.ServerMessage
 
 	l.publishAction(ActionState{ScheduleName: scheduleName, Success: true})
 
-	return resp, err	
+	return resp, err
 }
 
 func (l *LocalSchedulesService) createCronSchedule(scheduleName, expression string) (cron.EntryID, error) {

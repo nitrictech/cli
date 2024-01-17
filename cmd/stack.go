@@ -225,8 +225,31 @@ var stackUpdateCmd = &cobra.Command{
 
 		stackUp := stack_up.New(eventChan, errorChan)
 
-		_, err = tea.NewProgram(stackUp).Run()
+		finalModel, err := tea.NewProgram(stackUp, tea.WithAltScreen()).Run()
 		tui.CheckErr(err)
+
+		fmt.Println("ITS THE FINAL MODEL!!!")
+		fmt.Print(finalModel.View())
+
+		// eventsLeft := true
+		// errsLeft := true
+		// for eventsLeft || errsLeft {
+		// 	select {
+		// 	case event, ok := <-eventChan:
+		// 		if !ok {
+		// 			eventsLeft = false
+		// 			break
+		// 		}
+		// 		pterm.Info.Print(event)
+
+		// 	case err, ok := <-errorChan:
+		// 		if !ok {
+		// 			errsLeft = false
+		// 			break
+		// 		}
+		// 		pterm.Error.Print(err)
+		// 	}
+		// }
 
 		// ServerCommunication:
 		// 	for {

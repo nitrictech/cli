@@ -18,6 +18,10 @@ import (
 
 type State = map[string]*schedulespb.RegistrationRequest
 
+type ActionState struct {
+	ScheduleName string
+	Success      bool
+}
 type LocalSchedulesService struct {
 	*schedules.ScheduleWorkerManager
 	cron *cron.Cron
@@ -30,12 +34,22 @@ type LocalSchedulesService struct {
 
 const localSchedulesTopic = "local_schedules"
 
+const localSchedulesActionTopic = "local_schedules_action"
+
 func (l *LocalSchedulesService) publishState() {
 	l.bus.Publish(localSchedulesTopic, maps.Clone(l.schedules))
 }
 
 func (l *LocalSchedulesService) SubscribeToState(fn func(State)) {
 	l.bus.Subscribe(localSchedulesTopic, fn)
+}
+
+func (l *LocalSchedulesService) publishAction(action ActionState) {
+	l.bus.Publish(localSchedulesActionTopic, action)
+}
+
+func (l *LocalSchedulesService) SubscribeToAction(subscription func(ActionState)) {
+	l.bus.Subscribe(localSchedulesActionTopic, subscription)
 }
 
 var _ schedulespb.SchedulesServer = (*LocalSchedulesService)(nil)
@@ -52,12 +66,32 @@ func (l *LocalSchedulesService) registerSchedule(registrationRequest *schedulesp
 	defer l.schedulesLock.Unlock()
 
 	l.schedules[registrationRequest.ScheduleName] = registrationRequest
+
+	l.publishState()
+}
+
+func (l *LocalSchedulesService) unregisterSchedule(registrationRequest *schedulespb.RegistrationRequest) {
+	l.schedulesLock.Lock()
+	defer l.schedulesLock.Unlock()
+
+	delete(l.schedules, registrationRequest.ScheduleName)
+
+	l.publishState()
+}
+
+func (l *LocalSchedulesService) HandleRequest(request *schedulespb.ServerMessage) (*schedulespb.ClientMessage, error) {
+	resp, err := l.ScheduleWorkerManager.HandleRequest(request)
+
+	scheduleName := request.GetIntervalRequest().ScheduleName
+
+	l.publishAction(ActionState{ScheduleName: scheduleName, Success: true})
+
+	return resp, err	
 }
 
 func (l *LocalSchedulesService) createCronSchedule(scheduleName, expression string) (cron.EntryID, error) {
 	return l.cron.AddFunc(expression, func() {
 		l.HandleRequest(&schedulespb.ServerMessage{
-			Id: "",
 			Content: &schedulespb.ServerMessage_IntervalRequest{
 				IntervalRequest: &schedulespb.IntervalRequest{
 					ScheduleName: scheduleName,
@@ -80,6 +114,7 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 	}
 
 	l.registerSchedule(firstRequest.GetRegistrationRequest())
+	defer l.unregisterSchedule(firstRequest.GetRegistrationRequest())
 
 	scheduleName := firstRequest.GetRegistrationRequest().ScheduleName
 	cronExpression := ""
@@ -107,8 +142,6 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 	default:
 		return fmt.Errorf("unknown schedule type, must be one of: cron, every")
 	}
-
-	fmt.Println(cronExpression)
 
 	cronEntryId, err := l.createCronSchedule(scheduleName, cronExpression)
 	if err != nil {

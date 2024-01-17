@@ -8,7 +8,7 @@ import { useHistory } from "../../lib/hooks/use-history";
 interface Props {
   storageKey: string;
   workerType: string;
-  selected: WorkerResource;
+  selected: string;
   onAfterClear: () => void;
 }
 
@@ -21,7 +21,7 @@ const EventsMenu: React.FC<Props> = ({
   const { deleteHistory } = useHistory(workerType);
 
   const clearHistory = async () => {
-    const prefix = `${storageKey}-${selected.topicKey}-`;
+    const prefix = `${storageKey}-${selected}-`;
 
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);

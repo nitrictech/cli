@@ -29,7 +29,9 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
+	"github.com/nitrictech/cli/pkgplus/cloud/apis"
+	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
+	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
@@ -268,7 +270,7 @@ func (d *Dashboard) handleWebsocketMessagesClear() func(http.ResponseWriter, *ht
 	}
 }
 
-func (d *Dashboard) handleApiHistory(state gateway.ApiRequestState) {
+func (d *Dashboard) handleApiHistory(state apis.ApiRequestState) {
 	var queryParams []Param
 
 	state.ReqCtx.QueryArgs().VisitAll(func(key []byte, val []byte) {
@@ -300,6 +302,53 @@ func (d *Dashboard) handleApiHistory(state gateway.ApiRequestState) {
 				Data:   state.HttpResp.GetBody(),
 				Size:   len(state.HttpResp.GetBody()),
 			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (d *Dashboard) handleWebsocketEvents(action websockets.WebsocketAction[websockets.EventItem]) {
+	if d.websocketsInfo[action.Name] == nil {
+		d.websocketsInfo[action.Name] = &websockets.WebsocketInfo{}
+	}
+
+	switch e := action.Event.(type) {
+	case websockets.WebsocketInfo:
+		d.websocketsInfo[action.Name].ConnectionCount = e.ConnectionCount
+	case websockets.WebsocketMessage:
+		d.websocketsInfo[action.Name].Messages = append([]websockets.WebsocketMessage{e}, d.websocketsInfo[action.Name].Messages...)
+	}
+
+	err := d.sendWebsocketsUpdate()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (d *Dashboard) handleTopicsHistory(action topics.ActionState) {
+	err := d.writeHistoryRecord(&HistoryEvent[any]{
+		Time:       time.Now().UnixMilli(),
+		RecordType: TOPIC,
+		Event: TopicHistoryItem{
+			Name: action.TopicName,
+			Payload: action.Payload,
+			Success: action.Success,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (d *Dashboard) handleSchedulesHistory(action schedules.ActionState) {
+	err := d.writeHistoryRecord(&HistoryEvent[any]{
+		Time:       time.Now().UnixMilli(),
+		RecordType: SCHEDULE,
+		Event: ScheduleHistoryItem{
+			Name: action.ScheduleName,
+			Success: action.Success,
 		},
 	})
 	if err != nil {

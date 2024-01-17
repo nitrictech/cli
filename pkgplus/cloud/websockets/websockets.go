@@ -26,7 +26,6 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/fasthttp/websocket"
 
-	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkgplus/streams"
 
 	nitricws "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
@@ -50,8 +49,7 @@ var (
 )
 
 const (
-	AddWebsocketInfoTopic         = "dash:addwebsocketinfo"
-	UpdateWebsocketInfoCountTopic = "dash:addwebsocketinfocount"
+	localWebsocketActionTopic    = "local_websocket_action"
 	localWebsocketTopic           = "local_websocket_gateway"
 )
 
@@ -60,9 +58,26 @@ type WebsocketMessage struct {
 	Time         time.Time `json:"time,omitempty"`
 	ConnectionID string    `json:"connectionId,omitempty"`
 }
+
 type WebsocketInfo struct {
-	ConnectionCount int                `json:"connectionCount,omitempty"`
-	Messages        []WebsocketMessage `json:"messages,omitempty"`
+	ConnectionCount int `json:"connectionCount,omitempty"`
+	Messages []WebsocketMessage `json:"messages,omitempty"`
+}
+
+type ActionType string
+
+const (
+	INFO       ActionType = "info"
+	MESSAGE    ActionType = "message"
+)
+
+type EventItem interface {
+	WebsocketMessage | WebsocketInfo | any
+}
+type WebsocketAction[Event EventItem] struct {
+	Name  string    `json:"name"`
+	Event Event     `json:"event"`
+	Type ActionType `json:"-"`
 }
 
 func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string][]nitricws.WebsocketEventType)) {
@@ -74,6 +89,14 @@ func (r *LocalWebsocketService) GetState() map[string][]nitricws.WebsocketEventT
 	defer r.lock.RUnlock()
 
 	return r.state
+}
+
+func (r *LocalWebsocketService) publishAction(action WebsocketAction[EventItem]) {
+	r.bus.Publish(localWebsocketActionTopic, action)
+}
+
+func (r *LocalWebsocketService) SubscribeToAction(subscription func(WebsocketAction[EventItem])) {
+	r.bus.Subscribe(localWebsocketActionTopic, subscription)
 }
 
 func (r *LocalWebsocketService) registerWebsocketWorker(registration *nitricws.RegistrationRequest) {
@@ -140,7 +163,13 @@ func (r *LocalWebsocketService) RegisterConnection(socket string, connectionId s
 
 	r.connections[socket][connectionId] = connection
 
-	eventbus.Bus().Publish(UpdateWebsocketInfoCountTopic, socket, len(r.connections[socket]))
+	r.publishAction(WebsocketAction[EventItem]{
+		Name: socket,
+		Type: INFO,
+		Event: WebsocketInfo{
+			ConnectionCount: len(r.connections[socket]),
+		},
+	})
 
 	return nil
 }
@@ -166,14 +195,16 @@ func (r *LocalWebsocketService) Send(ctx context.Context, req *nitricws.Websocke
 	if err != nil {
 		return nil, err
 	}
-
-	infoMessage := WebsocketMessage{
-		Data:         string(req.Data),
-		Time:         time.Now(),
-		ConnectionID: req.ConnectionId,
-	}
-
-	eventbus.Bus().Publish(AddWebsocketInfoTopic, req.SocketName, infoMessage)
+	
+	r.publishAction(WebsocketAction[EventItem]{
+		Name: req.SocketName,
+		Type: MESSAGE,
+		Event: WebsocketMessage{
+			Data:         string(req.Data),
+			Time:         time.Now(),
+			ConnectionID: req.ConnectionId,
+		},
+	})
 
 	return &nitricws.WebsocketSendResponse{}, nil
 }
@@ -196,7 +227,13 @@ func (r *LocalWebsocketService) Close(ctx context.Context, req *nitricws.Websock
 	// delete the connection from the pool
 	delete(r.connections[req.SocketName], req.ConnectionId)
 
-	eventbus.Bus().Publish(UpdateWebsocketInfoCountTopic, req.SocketName, len(r.connections[req.SocketName]))
+	r.publishAction(WebsocketAction[EventItem]{
+		Name: req.SocketName,
+		Type: INFO,
+		Event: WebsocketInfo{
+			ConnectionCount: len(r.connections[req.SocketName]),
+		},
+	})
 
 	return &nitricws.WebsocketCloseResponse{}, nil
 }

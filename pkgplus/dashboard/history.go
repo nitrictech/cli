@@ -29,8 +29,8 @@ import (
 const AddRecordTopic = "history:addrecord"
 
 type HistoryEvents struct {
-	ScheduleHistory []*HistoryEvent[HistoryItem]    `json:"schedules"`
-	TopicHistory    []*HistoryEvent[TopicEvent]     `json:"topics"`
+	ScheduleHistory []*HistoryEvent[ScheduleHistoryItem] `json:"schedules"`
+	TopicHistory    []*HistoryEvent[TopicHistoryItem] `json:"topics"`
 	ApiHistory      []*HistoryEvent[ApiHistoryItem] `json:"apis"`
 }
 
@@ -43,7 +43,7 @@ const (
 )
 
 type HistoryItem interface {
-	ApiHistoryItem | TopicEvent | any
+	ApiHistoryItem | TopicHistoryItem | ScheduleHistoryItem | any
 }
 type HistoryEvent[Event HistoryItem] struct {
 	Time       int64      `json:"time,omitempty"`
@@ -51,37 +51,16 @@ type HistoryEvent[Event HistoryItem] struct {
 	RecordType RecordType `json:"-"`
 }
 
-type TopicEvent struct {
-	Id      string `json:"Id"`
-	Topic   string `json:"topic"`
-	Publish *TopicPublishEvent
-	Result  *TopicSubscriberResultEvent
-}
-
-type TopicPublishEvent struct {
-	Payload string `json:"payload"`
-}
-
-type TopicSubscriberResultEvent struct {
-	Success bool `json:"success"`
-}
-
-type EventRecord struct {
-	EventId  string `json:"eventId,omitempty"`
-	TopicKey string `json:"topicKey,omitempty"`
-}
-
-type EventResponseRecord struct {
-	Success bool
-}
-
-type EventRequestRecord struct{}
-
-type EventHistoryItem struct {
-	Event     *EventRecord `json:"event,omitempty"`
-	Request   *EventRequestRecord
+type TopicHistoryItem struct {
+	Name      string `json:"name,omitempty"`
+	Delay     int    `json:"delay,omitempty"`
 	Payload   string `json:"payload,omitempty"`
-	Responses *EventResponseRecord
+	Success   bool   `json:"success,omitempty"`
+}
+
+type ScheduleHistoryItem struct {
+	Name      string `json:"name,omitempty"`
+	Success   bool   `json:"success,omitempty"`
 }
 
 type ApiHistoryItem struct {
@@ -111,10 +90,6 @@ type ResponseHistory struct {
 	Size    int                 `json:"size"`
 	Time    int64               `json:"time"`
 	Headers map[string][]string `json:"headers"`
-}
-
-type History struct {
-	projectDir string
 }
 
 func NewHistoryError(recordType RecordType, historyFile string) error {
@@ -162,12 +137,12 @@ func (d *Dashboard) DeleteHistoryRecord(recordType RecordType) error {
 }
 
 func (d *Dashboard) ReadAllHistoryRecords() (*HistoryEvents, error) {
-	schedules, err := ReadHistoryRecords[HistoryItem](d.project.Directory, SCHEDULE)
+	schedules, err := ReadHistoryRecords[ScheduleHistoryItem](d.project.Directory, SCHEDULE)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred reading schedule history: %w", err)
 	}
 
-	topics, err := ReadHistoryRecords[TopicEvent](d.project.Directory, TOPIC)
+	topics, err := ReadHistoryRecords[TopicHistoryItem](d.project.Directory, TOPIC)
 	if err != nil {
 		return nil, fmt.Errorf("error occurred reading topic history: %w", err)
 	}

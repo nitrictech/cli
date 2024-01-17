@@ -19,15 +19,14 @@ package topics
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 
 	"github.com/asaskevich/EventBus"
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 
-	"github.com/nitrictech/cli/pkg/dashboard/history"
-	"github.com/nitrictech/cli/pkg/eventbus"
+	"github.com/nitrictech/cli/pkgplus/streams"
 
 	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
@@ -45,6 +44,12 @@ type LocalTopicsAndSubscribersService struct {
 	bus EventBus.Bus
 }
 
+type ActionState struct {
+	TopicName string
+	Payload string
+	Success bool
+}
+
 var (
 	_ topicspb.TopicsServer     = (*LocalTopicsAndSubscribersService)(nil)
 	_ topicspb.SubscriberServer = (*LocalTopicsAndSubscribersService)(nil)
@@ -52,8 +57,22 @@ var (
 
 const localTopicsTopic = "local_topics"
 
+const localTopicsDeliveryTopic = "local_topics_delivery"
+
+func (s *LocalTopicsAndSubscribersService) publishState() {
+	s.bus.Publish(localTopicsTopic, maps.Clone(s.subscribers))
+}
+
 func (s *LocalTopicsAndSubscribersService) SubscribeToState(subscription func(State)) {
 	s.bus.Subscribe(localTopicsTopic, subscription)
+}
+
+func (s *LocalTopicsAndSubscribersService) publishAction(action ActionState) {
+	s.bus.Publish(localTopicsDeliveryTopic, action)
+}
+
+func (s *LocalTopicsAndSubscribersService) SubscribeToAction(subscription func(ActionState)) {
+	s.bus.Subscribe(localTopicsDeliveryTopic, subscription)
 }
 
 func (s *LocalTopicsAndSubscribersService) GetSubscribers() map[string]int {
@@ -69,7 +88,7 @@ func (s *LocalTopicsAndSubscribersService) registerSubscriber(registration *topi
 
 	s.subscribers[registration.TopicName]++
 
-	s.bus.Publish(localTopicsTopic, s.subscribers)
+	s.publishState()
 }
 
 func (s *LocalTopicsAndSubscribersService) unregisterSubscriber(registration *topicspb.RegistrationRequest) {
@@ -78,18 +97,19 @@ func (s *LocalTopicsAndSubscribersService) unregisterSubscriber(registration *to
 
 	s.subscribers[registration.TopicName]--
 
-	s.bus.Publish(localTopicsTopic, s.subscribers)
+	s.publishState()
 }
 
 // Subscribe to a topic and handle incoming messages
 func (s *LocalTopicsAndSubscribersService) Subscribe(stream topicspb.Subscriber_SubscribeServer) error {
-	firstRequest, err := stream.Recv()
+	peekableStream := streams.NewPeekableStreamServer[*topicspb.ServerMessage, *topicspb.ClientMessage](stream)
+
+	firstRequest, err := peekableStream.Peek()
 	if err != nil {
 		return err
 	}
 
 	if firstRequest.GetRegistrationRequest() == nil {
-		// first request MUST be a registration request
 		return fmt.Errorf("first request must be a registration request")
 	}
 
@@ -106,80 +126,44 @@ func (s *LocalTopicsAndSubscribersService) Subscribe(stream topicspb.Subscriber_
 	})
 
 	// Keep track of our local topic subscriptions
-	s.registerSubscriber(firstRequest.GetRegistrationRequest())
+ 	s.registerSubscriber(firstRequest.GetRegistrationRequest())
 	defer s.unregisterSubscriber(firstRequest.GetRegistrationRequest())
 
-	// we've got the worker details, lets get the subcribed
-	topicName := firstRequest.GetRegistrationRequest().TopicName
-
-	eventbus.TopicBus().SubscribeAsync(topicName, func(req *topicspb.ServerMessage) {
-		err := stream.Send(req)
-		if err != nil {
-			fmt.Println("problem sending the event")
-		}
-	}, false)
-
-	for {
-		// log responses
-		// problem processing the event
-		msg, err := stream.Recv()
-		if err != nil {
-			return err
-		}
-
-		resp := msg.GetMessageResponse()
-		if resp == nil {
-			return fmt.Errorf("expected message response")
-		}
-
-		// TODO: Add successfully handled history event
-		eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryEvent[history.TopicEvent]{
-			Time:       time.Now().UnixMilli(),
-			RecordType: history.TOPIC,
-			Event: history.TopicEvent{
-				Id:    msg.Id,
-				Topic: topicName,
-				Result: &history.TopicSubscriberResultEvent{
-					Success: msg.GetMessageResponse().Success,
-				},
-			},
-		})
-	}
+	return s.SubscriberManager.Subscribe(peekableStream)
 }
 
 func (s *LocalTopicsAndSubscribersService) deliverEvent(ctx context.Context, req *topicspb.TopicPublishRequest) error {
-	jsonPayload, err := req.Message.GetStructPayload().MarshalJSON()
+	msg := &topicspb.ServerMessage{
+		Content: &topicspb.ServerMessage_MessageRequest{
+			MessageRequest: &topicspb.MessageRequest{
+				TopicName: req.TopicName,
+				Message: &topicspb.Message{
+					Content: &topicspb.Message_StructPayload{
+						StructPayload: req.Message.GetStructPayload(),
+					},
+				},
+			},
+		},
+	}
+	resp, err := s.SubscriberManager.HandleRequest(msg)
 	if err != nil {
 		return err
 	}
-
-	// Other message brokers generate their own IDs, we simulate that with a basic uuid.
-	messageId := uuid.New().String()
-
-	// Send to dashboard here.... (assign an ID to the individual)
-	eventbus.Bus().Publish(history.AddRecordTopic, &history.HistoryEvent[history.TopicEvent]{
-		Time:       time.Now().UnixMilli(),
-		RecordType: history.TOPIC,
-		Event: history.TopicEvent{
-			Id:      messageId,
-			Topic:   req.TopicName,
-			Publish: &history.TopicPublishEvent{Payload: string(jsonPayload)},
-		},
+	
+	json, err := req.Message.GetStructPayload().MarshalJSON()
+	if err != nil {
+		return err
+	}
+	
+	s.publishAction(ActionState{
+		TopicName: req.TopicName,
+		Success: resp.GetMessageResponse().GetSuccess(),
+		Payload: string(json),
 	})
 
 	fmt.Printf("Publishing to %s topic, %d subscriber(s)\n", req.TopicName, s.WorkerCount())
 
-	eventbus.TopicBus().Publish(req.TopicName, &topicspb.ServerMessage{
-		Id: messageId,
-		Content: &topicspb.ServerMessage_MessageRequest{
-			MessageRequest: &topicspb.MessageRequest{
-				TopicName: req.TopicName,
-				Message:   req.Message,
-			},
-		},
-	})
-
-	return nil
+	return err
 }
 
 // Publish a message to a given topic

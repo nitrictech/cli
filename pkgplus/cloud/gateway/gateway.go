@@ -37,6 +37,8 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/http"
+	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
+	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
 
 	"github.com/nitrictech/cli/pkg/utils"
@@ -73,7 +75,10 @@ type LocalGatewayService struct {
 	websocketWorkers []string
 	socketServer     map[string]*socketServer
 	serviceServer    *fasthttp.Server
+	apisPlugin       *apis.LocalApiGatewayService
 	websocketPlugin  *websockets.LocalWebsocketService
+	topicsPlugin     *topics.LocalTopicsAndSubscribersService
+	schedulesPlugin  *schedules.LocalSchedulesService
 	serviceListener  net.Listener
 	gateway.UnimplementedGatewayPlugin
 	stop chan bool
@@ -83,22 +88,6 @@ type LocalGatewayService struct {
 }
 
 var _ gateway.GatewayService = &LocalGatewayService{}
-
-const localApiRequestTopic = "local_api_request"
-
-type ApiRequestState struct {
-	Api      string
-	ReqCtx   *fasthttp.RequestCtx
-	HttpResp *apispb.HttpResponse
-}
-
-func (s *LocalGatewayService) publishState(state ApiRequestState) {
-	s.bus.Publish(localApiRequestTopic, state)
-}
-
-func (s *LocalGatewayService) SubscribeToApiRequestCtx(subscriberFunction func(state ApiRequestState)) {
-	s.bus.Subscribe(localApiRequestTopic, subscriberFunction)
-}
 
 // GetTriggerAddress - Returns the base address built-in nitric services, like schedules and topics, will be exposed on.
 func (s *LocalGatewayService) GetTriggerAddress() string {
@@ -230,7 +219,7 @@ func (s *LocalGatewayService) handleApiHttpRequest(idx int) fasthttp.RequestHand
 			ctx.Response.SetBody(resp.GetHttpResponse().GetBody())
 
 			// publish ctx for history
-			s.publishState(ApiRequestState{
+			s.apisPlugin.PublishActionState(apis.ApiRequestState{
 				Api:      apiName,
 				ReqCtx:   ctx,
 				HttpResp: http,
@@ -384,20 +373,14 @@ func (s *LocalGatewayService) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	msg := &topicspb.ServerMessage{
-		Content: &topicspb.ServerMessage_MessageRequest{
-			MessageRequest: &topicspb.MessageRequest{
-				TopicName: topicName,
-				Message: &topicspb.Message{
-					Content: &topicspb.Message_StructPayload{
-						StructPayload: structPayload,
-					},
-				},
+	_, err = s.topicsPlugin.Publish(ctx, &topicspb.TopicPublishRequest{
+		TopicName: topicName,
+		Message: &topicspb.Message{
+			Content: &topicspb.Message_StructPayload{
+				StructPayload: structPayload,
 			},
 		},
-	}
-
-	_, err = s.options.TopicsListenerPlugin.HandleRequest(msg)
+	})
 	if err != nil {
 		ctx.Error(fmt.Sprintf("Error handling topic request: %v", err), 500)
 		return
@@ -417,7 +400,7 @@ func (s *LocalGatewayService) handleSchedulesTrigger(ctx *fasthttp.RequestCtx) {
 		},
 	}
 
-	_, err := s.options.SchedulesPlugin.HandleRequest(msg)
+	_, err := s.schedulesPlugin.HandleRequest(msg)
 	if err != nil {
 		ctx.Error(fmt.Sprintf("Error handling schedule trigger: %v", err), 500)
 		return
@@ -603,7 +586,7 @@ func (s *LocalGatewayService) createHttpServers() error {
 const nameParam = "{name}"
 
 const (
-	topicPath    = "/topic/" + nameParam
+	topicPath    = "/topics/" + nameParam
 	schedulePath = "/schedules/" + nameParam
 )
 
@@ -646,12 +629,23 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 		apiPlugin.SubscribeToState(func(state apis.State) {
 			s.refreshApis(state)
 		})
+		s.apisPlugin = apiPlugin
+	}
+
+	if topicsPlugin, ok := s.options.TopicsListenerPlugin.(*topics.LocalTopicsAndSubscribersService); ok {
+		s.topicsPlugin = topicsPlugin
+	}
+
+	if schedulesPlugin, ok := s.options.SchedulesPlugin.(*schedules.LocalSchedulesService); ok {
+		s.schedulesPlugin = schedulesPlugin
 	}
 
 	if websocketPlugin, ok := s.options.WebsocketListenerPlugin.(*websockets.LocalWebsocketService); ok {
 		websocketPlugin.SubscribeToState(func(state map[string][]websocketspb.WebsocketEventType) {
 			s.refreshWebsocketWorkers(state)
 		})
+
+		s.websocketPlugin = websocketPlugin
 	}
 
 	if httpProxyPlugin, ok := s.options.HttpPlugin.(*http.LocalHttpProxy); ok {
@@ -684,9 +678,8 @@ func (s *LocalGatewayService) Stop() error {
 
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
-func NewGateway(wsPlugin *websockets.LocalWebsocketService) (*LocalGatewayService, error) {
+func NewGateway() (*LocalGatewayService, error) {
 	return &LocalGatewayService{
-		websocketPlugin: wsPlugin,
 		bus:             EventBus.New(),
 	}, nil
 }

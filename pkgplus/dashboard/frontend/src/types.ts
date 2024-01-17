@@ -1,5 +1,6 @@
 import type { OpenAPIV3 } from "openapi-types";
 import type { FieldRow } from "./components/shared/FieldRows";
+import EventsHistory from "./components/events/EventsHistory";
 
 export type APIDoc = OpenAPIV3.Document;
 
@@ -13,16 +14,16 @@ export type Method =
   | "PATCH"
   | "TRACE";
 
-export interface WorkerResource {
-  workerKey: string;
-  topicKey: string;
+export interface Schedule {
+  name: string;
+  expression?: string;
+  rate?: string;
 }
-export type Schedule = WorkerResource;
 
-export type Subscription = WorkerResource;
-
-export type Topic = Schedule;
-
+export interface Topic {
+  name: string;
+  subscriberCount: number;
+}
 export interface History {
   apis: ApiHistoryItem[];
   schedules: EventHistoryItem[];
@@ -50,9 +51,9 @@ export interface WebSocketResponse {
   projectName: string;
   buckets: string[];
   apis: APIDoc[];
-  schedules: WorkerResource[];
-  topics: WorkerResource[];
-  subscriptions: WorkerResource[];
+  schedules: Schedule[];
+  topics: Topic[];
+  subscriptions: string[];
   websockets: WebSocket[];
   triggerAddress: string;
   apiAddresses: Record<string, string>;
@@ -98,12 +99,6 @@ export interface BucketFile {
   key: string;
 }
 
-export interface TopicRequest {
-  id: string;
-  payloadType: string;
-  payload: Record<string, string>;
-}
-
 // HISTORY //
 
 /** Used only in local storage to store the last used params in a request */
@@ -118,9 +113,17 @@ export interface HistoryItem<T> {
   event: T;
 }
 
-export type EventHistoryItem = HistoryItem<{
-  event: WorkerResource;
+export type EventHistoryItem = TopicHistoryItem | ScheduleHistoryItem;
+
+export type TopicHistoryItem = HistoryItem<{
+  name: string;
   payload: string;
+  success: boolean;
+}>;
+
+export type ScheduleHistoryItem = HistoryItem<{
+  name: string;
+  success: boolean;
 }>;
 
 export type ApiHistoryItem = HistoryItem<{

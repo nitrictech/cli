@@ -188,7 +188,6 @@ const WSExplorer = () => {
       websocketRef.current = socket;
 
       socket.addEventListener("message", (event) => {
-        console.log(event);
         setMessages((prev) => [
           {
             data: event.data,
@@ -210,7 +209,6 @@ const WSExplorer = () => {
       });
       // Event listener to handle connection open
       socket.addEventListener("open", (event) => {
-        console.log(event);
         setMessages((prev) => [
           {
             data: `Connected to ${websocketAddress}`,

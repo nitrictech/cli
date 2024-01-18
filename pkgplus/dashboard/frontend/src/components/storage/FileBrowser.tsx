@@ -30,8 +30,6 @@ setChonkyDefaults({
 function generateTree(data: { key: string }[]): FileData[] {
   const tree: FileData[] = [];
 
-  console.log(data);
-
   data.forEach((item) => {
     const parts = item.key.split("/");
     let parent = tree;

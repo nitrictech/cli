@@ -31,7 +31,6 @@ const StorageTreeView: FC<Props> = ({ buckets, onSelect, initialItem }) => {
     };
 
     for (const bucket of buckets) {
-      console.log(bucket);
       // add api if not added already
       rootItems[bucket.name] = {
         index: bucket.name,

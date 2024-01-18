@@ -299,7 +299,7 @@ const WSExplorer = () => {
       }
     >
       <Loading delay={400} conditionToShow={!loading}>
-        {selectedWebsocket ? (
+        {data?.websockets?.length && selectedWebsocket ? (
           <div className="flex max-w-6xl flex-col md:pr-8">
             <div className="w-full flex flex-col gap-8">
               <h2 className="text-2xl">{selectedWebsocket?.name}</h2>

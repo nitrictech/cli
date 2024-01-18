@@ -97,6 +97,10 @@ func (s *LocalTopicsAndSubscribersService) unregisterSubscriber(registration *to
 
 	s.subscribers[registration.TopicName]--
 
+	if s.subscribers[registration.TopicName] == 0 {
+		delete(s.subscribers, registration.TopicName)
+	}
+
 	s.publishState()
 }
 

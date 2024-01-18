@@ -9,6 +9,7 @@ export const useWebSocket = () => {
   const toastIdRef = useRef<string>();
   const prevDataRef = useRef<WebSocketResponse>();
   const timeoutIdRef = useRef<NodeJS.Timeout>();
+  const timeoutDisconnectRef = useRef<NodeJS.Timeout>();
   const socketRef = useRef<WebSocket>();
   const [state, setState] = useState<"open" | "error">();
   const host = getHost();
@@ -56,9 +57,21 @@ export const useWebSocket = () => {
             }
           }
 
-          prevDataRef.current = message;
+          if (timeoutDisconnectRef.current) {
+            clearTimeout(timeoutDisconnectRef.current);
+            timeoutDisconnectRef.current = undefined;
+          }
 
-          next(null, message);
+          // if previously connected and an incoming disconnect, wait to make sure it isnt a refresh
+          if (prevDataRef.current?.connected && !message.connected) {
+            timeoutDisconnectRef.current = setTimeout(() => {
+              next(null, message);
+            }, 2000);
+          } else {
+            next(null, message);
+          }
+
+          prevDataRef.current = message;
         });
 
         socketRef.current.addEventListener("close", () => {

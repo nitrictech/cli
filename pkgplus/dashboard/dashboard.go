@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bep/debounce"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
 	"github.com/samber/lo"
@@ -93,6 +94,7 @@ type Dashboard struct {
 	browserHasOpened           bool
 	noBrowser                  bool
 	browserLock                sync.Mutex
+	debouncedUpdate            func(f func())
 }
 
 type DashboardResponse struct {
@@ -231,11 +233,13 @@ func (d *Dashboard) refresh() {
 		d.openBrowser()
 	}
 
-	err := d.sendStackUpdate()
-	if err != nil {
-		fmt.Printf("Error sending stack update: %v\n", err)
-		return
-	}
+	d.debouncedUpdate(func() {
+		err := d.sendStackUpdate()
+		if err != nil {
+			fmt.Printf("Error sending stack update: %v\n", err)
+			return
+		}
+	})
 }
 
 func (d *Dashboard) isConnected() bool {
@@ -462,6 +466,8 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	historyWebSocket := melody.New()
 	wsWebSocket := melody.New()
 
+	debouncedUpdate := debounce.New(300 * time.Millisecond)
+
 	dash := &Dashboard{
 		project:          p,
 		storageService:   localCloud.Storage,
@@ -473,8 +479,10 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		wsWebSocket:      wsWebSocket,
 		schedules:        []ScheduleSpec{},
 		topics:           []TopicSpec{},
+		websockets:       []WebsocketSpec{},
 		websocketsInfo:   map[string]*websockets.WebsocketInfo{},
 		noBrowser:        noBrowser,
+		debouncedUpdate:  debouncedUpdate,
 	}
 
 	err = eventbus.Bus().Subscribe(resources.DeclareBucketTopic, dash.addBucket)

@@ -1,4 +1,9 @@
-import type { EventHistoryItem, WorkerResource } from "../../types";
+import type {
+  EventHistoryItem,
+  Schedule,
+  Topic,
+  TopicHistoryItem,
+} from "../../types";
 import Badge from "../shared/Badge";
 import { formatJSON, getDateString } from "../../lib/utils";
 import { Disclosure } from "@headlessui/react";
@@ -8,14 +13,19 @@ import { ScrollArea } from "../ui/scroll-area";
 
 interface Props {
   history: EventHistoryItem[];
-  selectedWorker: WorkerResource;
+  selectedWorker: Schedule | Topic;
+  workerType: "schedules" | "topics";
 }
 
-const EventsHistory: React.FC<Props> = ({ selectedWorker, history }) => {
+const EventsHistory: React.FC<Props> = ({
+  selectedWorker,
+  workerType,
+  history,
+}) => {
   const requestHistory = history
     .sort((a, b) => b.time - a.time)
     .filter((h) => h.event)
-    .filter((h) => h.event.topicKey && selectedWorker.topicKey);
+    .filter((h) => h.event.name === selectedWorker.name);
 
   if (!requestHistory.length) {
     return <p>There is no history.</p>;
@@ -26,7 +36,7 @@ const EventsHistory: React.FC<Props> = ({ selectedWorker, history }) => {
       <ScrollArea className="h-[30rem]" type="always">
         <div className="flex flex-col gap-2">
           {requestHistory.map((h, idx) => (
-            <EventHistoryAccordion key={idx} {...h} />
+            <EventHistoryAccordion key={idx} workerType={workerType} {...h} />
           ))}
         </div>
       </ScrollArea>
@@ -34,12 +44,15 @@ const EventsHistory: React.FC<Props> = ({ selectedWorker, history }) => {
   );
 };
 
-const EventHistoryAccordion: React.FC<EventHistoryItem> = ({
-  event,
-  payload,
-  success,
-  time,
-}) => {
+const EventHistoryAccordion: React.FC<
+  EventHistoryItem & Pick<Props, "workerType">
+> = ({ event, time, workerType }) => {
+  let payload = "";
+
+  if (workerType === "topics") {
+    payload = (event as TopicHistoryItem["event"]).payload;
+  }
+
   const formattedPayload = payload ? formatJSON(payload) : "";
 
   return (
@@ -50,12 +63,12 @@ const EventHistoryAccordion: React.FC<EventHistoryItem> = ({
             <div className="flex flex-row justify-between w-full">
               <div className="flex flex-row gap-4 w-2/3">
                 <Badge
-                  status={success ? "green" : "red"}
+                  status={event.success ? "green" : "red"}
                   className="!text-md w-16 h-6"
                 >
-                  {success ? "success" : "failure"}
+                  {event.success ? "success" : "failure"}
                 </Badge>
-                <p className="text-ellipsis">{event.topicKey}</p>
+                <p className="text-ellipsis">{event.name}</p>
               </div>
               <div className="flex flex-row gap-4">
                 <p>{getDateString(time)}</p>

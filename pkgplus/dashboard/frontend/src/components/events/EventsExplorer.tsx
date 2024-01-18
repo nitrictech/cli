@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { useWebSocket } from "../../lib/hooks/use-web-socket";
-import type {
-  APIResponse,
-  EventHistoryItem,
-  TopicRequest,
-  WorkerResource,
-} from "../../types";
-import { Badge, Select, Spinner, Tabs, Loading, FieldRows } from "../shared";
+import type { APIResponse, EventHistoryItem, Schedule, Topic } from "@/types";
+import { Badge, Select, Spinner, Tabs, Loading } from "../shared";
 import APIResponseContent from "../apis/APIResponseContent";
 import {
   fieldRowArrToHeaders,
@@ -18,13 +13,12 @@ import {
 } from "../../lib/utils";
 import EventsHistory from "./EventsHistory";
 import { useHistory } from "../../lib/hooks/use-history";
-import { v4 as uuidv4 } from "uuid";
 import CodeEditor from "../apis/CodeEditor";
 import EventsMenu from "./EventsMenu";
 import AppLayout from "../layout/AppLayout";
 import EventsTreeView from "./EventsTreeView";
 import { copyToClipboard } from "../../lib/utils/copy-to-clipboard";
-import { ClipboardIcon } from "@heroicons/react/24/outline";
+import ClipboardIcon from "@heroicons/react/24/outline/ClipboardIcon";
 import toast from "react-hot-toast";
 import { capitalize } from "radash";
 import { Button } from "../ui/button";
@@ -33,6 +27,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 interface Props {
   workerType: "schedules" | "topics";
 }
+
+type Worker = Schedule | Topic;
 
 const EventsExplorer: React.FC<Props> = ({ workerType }) => {
   const storageKey = `nitric-local-dash-${workerType}-history`;
@@ -44,31 +40,12 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
 
   const [response, setResponse] = useState<APIResponse>();
 
-  const [selectedWorker, setSelectedWorker] = useState<WorkerResource>();
+  const [selectedWorker, setSelectedWorker] = useState<Worker>();
   const [responseTabIndex, setResponseTabIndex] = useState(0);
-  const [requestTabIndex, setRequestTabIndex] = useState(0);
 
   const [eventHistory, setEventHistory] = useState<EventHistoryItem[]>([]);
 
-  const [body, setBody] = useState({
-    id: uuidv4(),
-    payloadType: "None",
-    payload: {},
-  } as TopicRequest);
-
-  const handleAppendHistory = (event: WorkerResource, success: boolean) => {
-    const appendedEventHistory = [
-      ...eventHistory,
-      { event, success, time: Date.now() } as EventHistoryItem,
-    ];
-
-    setEventHistory(appendedEventHistory);
-
-    localStorage.setItem(
-      `${storageKey}-requests`,
-      JSON.stringify(appendedEventHistory)
-    );
-  };
+  const [body, setBody] = useState({});
 
   useEffect(() => {
     if (history) {
@@ -85,15 +62,14 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
         );
 
         const worker =
-          (previousId &&
-            data[workerType].find((s) => s.topicKey === previousId)) ||
+          (previousId && data[workerType].find((s) => s.name === previousId)) ||
           data[workerType][0];
 
         setSelectedWorker(worker);
       } else {
         // could be a refresh from ws, so update the selected endpoint
         const latest = data[workerType].find(
-          (s) => s.topicKey === selectedWorker.topicKey
+          (s) => s.name === selectedWorker.name
         );
 
         if (latest) {
@@ -108,7 +84,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
       // set history
       localStorage.setItem(
         `${storageKey}-last-${workerType}`,
-        selectedWorker.topicKey
+        selectedWorker.name
       );
     }
   }, [selectedWorker]);
@@ -121,7 +97,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
     e.preventDefault();
 
     const url =
-      `http://${getHost()}/api/call` + `/topic/${selectedWorker.topicKey}`;
+      `http://${getHost()}/api/call` + `/${workerType}/${selectedWorker.name}`;
     const requestOptions: RequestInit = {
       method: "POST",
       body: JSON.stringify(body),
@@ -145,14 +121,13 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
     const res = await fetch(url, requestOptions);
 
     const callResponse = await generateResponse(res, startTime);
-    handleAppendHistory(selectedWorker, callResponse.status < 400);
     setResponse(callResponse);
 
     setTimeout(() => setCallLoading(false), 300);
   };
 
   const workerTitleSingle = capitalize(workerType).slice(0, -1);
-  const generatedURL = `http://${data?.triggerAddress}/topic/${selectedWorker?.topicKey}`;
+  const generatedURL = `http://${data?.triggerAddress}/${workerType}/${selectedWorker?.name}`;
 
   return (
     <AppLayout
@@ -165,7 +140,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
             <div className="flex mb-2 items-center justify-between px-2">
               <span className="text-lg">{capitalize(workerType)}</span>
               <EventsMenu
-                selected={selectedWorker}
+                selected={selectedWorker.name}
                 storageKey={storageKey}
                 workerType={workerType}
                 onAfterClear={() => {
@@ -189,10 +164,10 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
             <div className="w-full flex flex-col gap-8">
               <div className="flex">
-                <h2 className="text-2xl">{selectedWorker?.topicKey}</h2>
+                <h2 className="text-2xl">{selectedWorker.name}</h2>
                 <div className="flex ml-auto items-center md:hidden">
                   <EventsMenu
-                    selected={selectedWorker}
+                    selected={selectedWorker.name}
                     storageKey={storageKey}
                     workerType={workerType}
                     onAfterClear={() => {
@@ -206,15 +181,15 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                   <ol className="flex md:hidden w-11/12 items-center gap-4">
                     <li className="w-full">
                       {data[workerType] && (
-                        <Select<WorkerResource>
+                        <Select
                           id={`${workerType}-select`}
                           items={data[workerType]}
                           label={capitalize(workerType)}
                           selected={selectedWorker}
                           setSelected={setSelectedWorker}
-                          display={(w: WorkerResource) => (
+                          display={(w: Worker) => (
                             <div className="flex items-center p-0.5 text-lg gap-4">
-                              {w?.workerKey}
+                              {w.name}
                             </div>
                           )}
                         />
@@ -253,101 +228,44 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                     </Tooltip>
                   </span>
                   <span className="hidden md:block"></span>
-                  <div className="ml-auto">
+                  {workerType === "schedules" && (
                     <Button
                       size="lg"
+                      className="ml-auto"
                       data-testid={`trigger-${workerType}-btn`}
                       onClick={handleSend}
                     >
                       Trigger
                     </Button>
-                  </div>
+                  )}
                 </nav>
               </div>
 
-              <div className="bg-white shadow sm:rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="sm:flex sm:items-start sm:justify-between">
-                    <div className="w-full">
-                      <div className="relative flex w-full">
-                        <p className="text-gray-500 text-sm">
-                          To initiate a POST request to{" "}
-                          <a
-                            data-testid="generated-request-path"
-                            href={`http://${data.triggerAddress}/topic/${selectedWorker?.topicKey}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            http://{data.triggerAddress}/topic/
-                            {selectedWorker?.topicKey}
-                          </a>
-                          , <strong>click the trigger button.</strong>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
               {workerType === "topics" && (
                 <div className="flex flex-col py-4">
-                  <div className="bg-white shadow sm:rounded-lg">
-                    <Tabs
-                      index={requestTabIndex}
-                      setIndex={setRequestTabIndex}
-                      tabs={[
-                        {
-                          name: "Params",
-                        },
-                        {
-                          name: "Payload",
-                        },
-                      ]}
-                    />
-                    <div className="px-4 py-5 sm:p-6">
-                      {requestTabIndex === 0 && (
-                        <div className="pt-4">
-                          <h4 className="text-lg font-medium text-gray-900">
-                            Params
-                          </h4>
-                          <div className="flex flex-row gap-2 w-full"></div>
-                          <hr />
-                          <FieldRows
-                            lockKeys
-                            canClearRow={false}
-                            testId="topic-payload"
-                            rows={[
-                              { key: "ID", value: body.id },
-                              { key: "Payload Type", value: body.payloadType },
-                            ]}
-                            setRows={(rows) => {
-                              setBody((prev) => ({
-                                ...prev,
-                                id:
-                                  rows.find((r) => r.key === "ID")?.value ?? "",
-                                payloadType:
-                                  rows.find((r) => r.key === "Payload Type")
-                                    ?.value ?? "",
-                              }));
-                            }}
-                          />
-                        </div>
-                      )}{" "}
-                      {requestTabIndex === 1 && (
-                        <div className="pt-4">
-                          <CodeEditor
-                            value={formatJSON(body.payload)}
-                            contentType="application/json"
-                            onChange={(payload: string) => {
-                              try {
-                                const obj = JSON.parse(payload);
-                                setBody((prev) => ({ ...prev, payload: obj }));
-                              } catch {
-                                return;
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
+                  <div className="bg-white shadow sm:rounded-lg px-4 py-5 sm:p-6">
+                    <h2>Payload</h2>
+                    <div>
+                      <CodeEditor
+                        value={formatJSON(body)}
+                        contentType="application/json"
+                        onChange={(payload: string) => {
+                          try {
+                            setBody(JSON.parse(payload));
+                          } catch {
+                            return;
+                          }
+                        }}
+                      />
+
+                      <Button
+                        size="lg"
+                        className="ml-auto flex mt-6"
+                        data-testid={`trigger-${workerType}-btn`}
+                        onClick={handleSend}
+                      >
+                        {workerType === "topics" ? "Publish" : "Trigger"}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -467,6 +385,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               <h3 className="text-2xl font-semibold leading-6">History</h3>
               <EventsHistory
                 history={eventHistory}
+                workerType={workerType}
                 selectedWorker={selectedWorker}
               />
             </div>

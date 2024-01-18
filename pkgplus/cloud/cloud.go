@@ -18,22 +18,23 @@ import (
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 )
 
-type Subscribable[T any] interface {
+type Subscribable[T any, A any] interface {
 	SubscribeToState(fn func(T))
+	SubscribeToAction(fn func(A)) // used to subscribe to api calls, ws messages, topic deliveries etc
 }
 type LocalCloud struct {
 	membrane *membrane.Membrane
 
-	Apis        Subscribable[apis.State]
+	Apis        Subscribable[apis.State, apis.ApiRequestState]
 	Collections *collections.BoltDocService
 	Gateway     *gateway.LocalGatewayService
 	Http        *http.LocalHttpProxy
 	Resources   *resources.LocalResourcesService
-	Schedules   Subscribable[map[string]*schedulespb.RegistrationRequest]
+	Schedules   Subscribable[map[string]*schedulespb.RegistrationRequest, schedules.ActionState]
 	Secrets     *secrets.DevSecretService
 	Storage     *storage.LocalStorageService
-	Topics      Subscribable[map[string]int]
-	Websockets  Subscribable[map[string][]websocketspb.WebsocketEventType]
+	Topics      Subscribable[map[string]int, topics.ActionState]
+	Websockets  Subscribable[map[string][]websocketspb.WebsocketEventType, websockets.WebsocketAction[websockets.EventItem]]
 }
 
 // StartLocalNitric - starts the Nitric Server (membrane), including plugins and their local dependencies (e.g. local versions of cloud services
@@ -76,7 +77,7 @@ func New() (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localGateway, err := gateway.NewGateway(localWebsockets)
+	localGateway, err := gateway.NewGateway()
 	if err != nil {
 		return nil, err
 	}

@@ -57,13 +57,24 @@ type WebsocketSpec struct {
 	Events []string `json:"events,omitempty"`
 }
 
+type ScheduleSpec struct {
+	Name       string `json:"name,omitempty"`
+	Expression string `json:"expression,omitempty"`
+	Rate       string `json:"rate,omitempty"`
+}
+
+type TopicSpec struct {
+	Name            string `json:"name,omitempty"`
+	SubscriberCount int    `json:"subscriberCount"`
+}
+
 type Dashboard struct {
-	project        *project.Project
-	storageService *storage.LocalStorageService
-	gatewayService *gateway.LocalGatewayService
-	apis           []*openapi3.T
-	// schedules            []*codeconfig.TopicResult
-	// topics               []*codeconfig.TopicResult
+	project              *project.Project
+	storageService       *storage.LocalStorageService
+	gatewayService       *gateway.LocalGatewayService
+	apis                 []*openapi3.T
+	schedules            []ScheduleSpec
+	topics               []TopicSpec
 	buckets              []string
 	websockets           []WebsocketSpec
 	envMap               map[string]string
@@ -79,16 +90,12 @@ type Dashboard struct {
 	noBrowser        bool
 	browserLock      sync.Mutex
 }
-type Api struct {
-	Name    string                 `json:"name,omitempty"`
-	OpenApi map[string]interface{} `json:"spec,omitempty"` // not sure which spec version yet
-}
 
 type DashboardResponse struct {
-	Apis    []*openapi3.T `json:"apis"`
-	Buckets []string      `json:"buckets"`
-	// Schedules           []*codeconfig.TopicResult        `json:"schedules"`
-	// Topics              []*codeconfig.TopicResult        `json:"topics"`
+	Apis               []*openapi3.T     `json:"apis"`
+	Buckets            []string          `json:"buckets"`
+	Schedules          []ScheduleSpec    `json:"schedules"`
+	Topics             []TopicSpec       `json:"topics"`
 	Websockets         []WebsocketSpec   `json:"websockets"`
 	ProjectName        string            `json:"projectName"`
 	ApiAddresses       map[string]string `json:"apiAddresses"`
@@ -168,23 +175,34 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 }
 
 func (d *Dashboard) updateTopics(state topics.State) {
-	// TODO
-	// for name, topic := range state {
-	// 	println(name)
-	// 	println(topic)
-	// }
+	topics := []TopicSpec{}
 
-	// d.refresh()
+	for topic, count := range state {
+		topics = append(topics, TopicSpec{
+			Name:            topic,
+			SubscriberCount: count,
+		})
+	}
+
+	d.topics = topics
+
+	d.refresh()
 }
 
 func (d *Dashboard) updateSchedules(state schedules.State) {
-	// TODO
-	// for name, schedule := range state {
-	// 	println(name)
-	// 	println(schedule)
-	// }
+	schedules := []ScheduleSpec{}
 
-	// d.refresh()
+	for _, schedule := range state {
+		schedules = append(schedules, ScheduleSpec{
+			Name:       schedule.GetScheduleName(),
+			Expression: schedule.GetCron().GetExpression(),
+			Rate:       schedule.GetEvery().GetRate(),
+		})
+	}
+
+	d.schedules = schedules
+
+	d.refresh()
 }
 
 func (d *Dashboard) refresh() {
@@ -200,36 +218,6 @@ func (d *Dashboard) refresh() {
 		fmt.Printf("Error sending stack update: %v\n", err)
 		return
 	}
-}
-
-func (d *Dashboard) UpdateWebsocketInfoCount(socket string, count int) error {
-	if d.websocketsInfo[socket] == nil {
-		d.websocketsInfo[socket] = &websockets.WebsocketInfo{}
-	}
-
-	d.websocketsInfo[socket].ConnectionCount = count
-
-	err := d.sendWebsocketsUpdate()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (d *Dashboard) AddWebsocketInfoMessage(socket string, message websockets.WebsocketMessage) error {
-	if d.websocketsInfo[socket] == nil {
-		d.websocketsInfo[socket] = &websockets.WebsocketInfo{}
-	}
-
-	d.websocketsInfo[socket].Messages = append([]websockets.WebsocketMessage{message}, d.websocketsInfo[socket].Messages...)
-
-	err := d.sendWebsocketsUpdate()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (d *Dashboard) Start() error {
@@ -375,10 +363,10 @@ func (d *Dashboard) sendStackUpdate() error {
 	latestVersion := update.FetchLatestVersion()
 
 	response := &DashboardResponse{
-		Apis: d.apis,
-		// Topics:              d.topics,
-		Buckets: d.buckets,
-		// Schedules:           d.schedules,
+		Apis:               d.apis,
+		Topics:             d.topics,
+		Buckets:            d.buckets,
+		Schedules:          d.schedules,
 		Websockets:         d.websockets,
 		ProjectName:        d.project.Name,
 		ApiAddresses:       d.gatewayService.GetApiAddresses(),
@@ -449,29 +437,13 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		historyWebSocket: historyWebSocket,
 		wsWebSocket:      wsWebSocket,
 		// bucketNotifications: []*codeconfig.BucketNotification{},
-		// schedules:           []*codeconfig.TopicResult{},
-		// topics:              []*codeconfig.TopicResult{},
+		schedules:      []ScheduleSpec{},
+		topics:         []TopicSpec{},
 		websocketsInfo: map[string]*websockets.WebsocketInfo{},
 		noBrowser:      noBrowser,
 	}
 
 	err = eventbus.Bus().Subscribe(resources.DeclareBucketTopic, dash.addBucket)
-	if err != nil {
-		return nil, err
-	}
-
-	err = eventbus.Bus().Subscribe(websockets.AddWebsocketInfoTopic, dash.AddWebsocketInfoMessage)
-	if err != nil {
-		return nil, err
-	}
-
-	err = eventbus.Bus().Subscribe(websockets.UpdateWebsocketInfoCountTopic, dash.UpdateWebsocketInfoCount)
-	if err != nil {
-		return nil, err
-	}
-
-	// subscribe to local cloud state
-	err = eventbus.Bus().Subscribe(websockets.UpdateWebsocketInfoCountTopic, dash.UpdateWebsocketInfoCount)
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +454,10 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	localCloud.Topics.SubscribeToState(dash.updateTopics)
 
 	// subscribe to history events from gateway
-	localCloud.Gateway.SubscribeToApiRequestCtx(dash.handleApiHistory)
+	localCloud.Apis.SubscribeToAction(dash.handleApiHistory)
+	localCloud.Topics.SubscribeToAction(dash.handleTopicsHistory)
+	localCloud.Schedules.SubscribeToAction(dash.handleSchedulesHistory)
+	localCloud.Websockets.SubscribeToAction(dash.handleWebsocketEvents)
 
 	return dash, nil
 }

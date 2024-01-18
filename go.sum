@@ -1668,6 +1668,8 @@ github.com/nitrictech/nitric/core v0.0.0-20240111014301-3a0f370d529f h1:VcFEwIfQ
 github.com/nitrictech/nitric/core v0.0.0-20240111014301-3a0f370d529f/go.mod h1:iz/seHApmfpML52NVjankr+9izPddUUwZHdcSQEvm9E=
 github.com/nitrictech/nitric/core v0.0.0-20240112014601-ab979949ac6b h1:leIPTNtDxjDrgqXuTC/htyd6FJyLvzarZ7P3hWco25A=
 github.com/nitrictech/nitric/core v0.0.0-20240112014601-ab979949ac6b/go.mod h1:GMQNqu3YMn3LU1puO55YkyX198rDtOfcD3ltYspT/g4=
+github.com/nitrictech/nitric/core v0.0.0-20240115224904-e2cb744cf9f6 h1:8Q/UpT/E8R+f8MK+YfRpt1M375v5dHWBArI0CVfgOfw=
+github.com/nitrictech/nitric/core v0.0.0-20240115224904-e2cb744cf9f6/go.mod h1:GMQNqu3YMn3LU1puO55YkyX198rDtOfcD3ltYspT/g4=
 github.com/nitrictech/pearls v0.0.0-20231011053212-77f78229fb97 h1:f0T/6zLQszcic1XXsEJEIXrk4nzFijNyDJ400S2swZA=
 github.com/nitrictech/pearls v0.0.0-20231011053212-77f78229fb97/go.mod h1:IXCOsqYAR5KRqXbbXnHkMp9NJrfY0qOeV3IcbBR5uSA=
 github.com/nunnatsa/ginkgolinter v0.14.1 h1:khx0CqR5U4ghsscjJ+lZVthp3zjIFytRXPTaQ/TMiyA=

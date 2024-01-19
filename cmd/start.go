@@ -18,16 +18,14 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/dashboard"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
 )
 
@@ -41,13 +39,13 @@ var startCmd = &cobra.Command{
 	Annotations: map[string]string{"commonCommand": "yes"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Divert default log output to pterm debug
-		log.SetOutput(output.NewPtermWriter(pterm.Debug))
-		log.SetFlags(0)
+		// log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		// log.SetFlags(0)
 
-		if !utils.IsTerminal() && !output.CI {
+		if !tui.IsTerminal() {
 			fmt.Println("")
 			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode.")
-			output.CI = true
+			// output.CI = true
 		}
 
 		// if output.CI {
@@ -55,11 +53,20 @@ var startCmd = &cobra.Command{
 		// }
 
 		localCloud, err := cloud.New()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		// create dashboard
 		dash, err := dashboard.New(startNoBrowser, localCloud)
 		cobra.CheckErr(err)
+
+		// fs := afero.NewOsFs()
+
+		// _, err := project.FromFile(fs, "")
+		// tui.CheckErr(err)
+
+		// // create dashboard, we will start it once an application is connected
+		// dash, err = dashboard.New(startNoBrowser, localCloud.Storage)
+		// tui.CheckErr(err)
 
 		// Start dashboard
 		err = dash.Start()
@@ -74,7 +81,7 @@ var startCmd = &cobra.Command{
 		}()
 
 		err = localCloud.Start()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		return nil
 	},

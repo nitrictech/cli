@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkgplus/project"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
 )
 
@@ -34,15 +35,15 @@ var buildCmd = &cobra.Command{
 		fs := afero.NewOsFs()
 
 		proj, err := project.FromFile(fs, "")
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		updates, err := proj.BuildServices(fs)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		prog := tea.NewProgram(build.NewModel(updates))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 	},
 }
 

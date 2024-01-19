@@ -14,25 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package tui
 
 import (
-	"fmt"
+	"os"
 
-	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkgplus/version"
+	"github.com/mattn/go-isatty"
 )
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of this CLI",
-	Long:  `All software has versions. This is Nitric's`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(version.Version)
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(versionCmd)
+// IsTerminal returns true if the current process is running in an interactive terminal
+func IsTerminal() bool {
+	return isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd())
 }

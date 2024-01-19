@@ -36,10 +36,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
 	"gopkg.in/yaml.v2"
-
-	"github.com/nitrictech/cli/pkg/output"
 )
 
 type Docker struct {
@@ -164,7 +161,7 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	cmd := exec.Command("docker", args...)
 
 	if buildLogger == nil {
-		buildLogger = output.NewPtermWriter(pterm.Info)
+		buildLogger = io.Discard
 	}
 
 	cmd.Stdout = buildLogger
@@ -203,13 +200,7 @@ func print(rd io.Reader) error {
 		text := strings.TrimRightFunc(line.Stream, unicode.IsSpace)
 
 		if len(text) > 0 {
-			if strings.Contains(text, "--->") {
-				if output.VerboseLevel >= 3 {
-					log.Default().Println(text)
-				}
-			} else {
-				log.Default().Println(text)
-			}
+			log.Default().Println(text)
 		}
 	}
 

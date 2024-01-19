@@ -56,8 +56,6 @@ nitric new --help
 Documentation for all available commands:
 
 - nitric build : Build a Nitric project
-- nitric feedback : Provide feedback on your experience with nitric
-- nitric info : Gather information about Nitric and the environment
 - nitric new [projectName] [templateName] : Create a new project
 - nitric run : Run your project locally for development and testing
 - nitric stack : Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)
@@ -78,6 +76,11 @@ Documentation for all available commands:
 - Find us on [Twitter](https://twitter.com/nitric_io)
 
 - Send us an [email](mailto:maintainers@nitric.io)
+
+## Get Started
+
+Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.
+lto:maintainers@nitric.io)
 
 ## Get Started
 

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	goruntime "runtime"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -20,6 +21,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 
+	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/docker"
 	"github.com/nitrictech/cli/pkgplus/netx"
@@ -470,9 +472,38 @@ func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirement
 	return allServiceRequirements, nil
 }
 
+// RunServices - Runs all the services locally using a startup command
+// use the stop channel to stop all running services
+// func (p *Project) RunServicesWithCommand(command string, stop <-chan bool, output chan<- string) error {
+// 	stopChannels := lo.FanOut[bool](len(p.Services), 1, stop)
+
+// 	group, _ := errgroup.WithContext(context.TODO())
+
+// 	for i, service := range p.Services {
+// 		idx := i
+// 		svc := service
+
+// 		// start the service with the given file reference from its projects CWD
+
+// 		group.Go(func() error {
+// 			serviceCmd := exec.Command(command, svc.file)
+
+// 			serviceCmd.Env("setup env variables")
+
+// 			return serviceCmd.Run()
+// 		})
+
+// 		group.Go(func() error {
+// 			return svc.RunContainer(stopChannels[idx], updates)
+// 		})
+// 	}
+
+// 	return group.Wait()
+// }
+
 // RunServices - Runs all the services as containers
 // use the stop channel to stop all running services
-func (p *Project) RunServices(stop <-chan bool, updates chan<- ServiceRunUpdate) error {
+func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate) error {
 	stopChannels := lo.FanOut[bool](len(p.Services), 1, stop)
 
 	group, _ := errgroup.WithContext(context.TODO())
@@ -482,7 +513,12 @@ func (p *Project) RunServices(stop <-chan bool, updates chan<- ServiceRunUpdate)
 		svc := service
 
 		group.Go(func() error {
-			return svc.RunContainer(stopChannels[idx], updates)
+			port, err := localCloud.AddService(svc.Name)
+			if err != nil {
+				return err
+			}
+
+			return svc.RunContainer(stopChannels[idx], updates, WithNitricPort(strconv.Itoa(port)))
 		})
 	}
 

@@ -78,9 +78,9 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// update the api state by getting the latest API addresses
 		newApiSummary := []ApiSummary{}
 
-		for api, host := range t.localCloud.Gateway.GetApiAddresses() {
+		for apiName, host := range t.localCloud.Gateway.GetApiAddresses() {
 			newApiSummary = append(newApiSummary, ApiSummary{
-				name: api,
+				name: apiName,
 				url:  host,
 			})
 		}

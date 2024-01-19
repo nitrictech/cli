@@ -80,7 +80,7 @@ var startCmd = &cobra.Command{
 			localCloud.Stop()
 		}()
 
-		err = localCloud.Start()
+		// err = localCloud.Start()
 		tui.CheckErr(err)
 
 		return nil

@@ -325,7 +325,7 @@ const APIExplorer = () => {
       title="API Explorer"
       routePath={"/"}
       secondLevelNav={
-        paths && selectedApiEndpoint && request?.method ? (
+        paths?.length && selectedApiEndpoint && request?.method ? (
           <>
             <div className="flex mb-2 items-center justify-between px-2">
               <span className="text-lg">APIs</span>
@@ -357,7 +357,7 @@ const APIExplorer = () => {
       }
     >
       <Loading delay={400} conditionToShow={!loading}>
-        {paths && selectedApiEndpoint && request?.method ? (
+        {paths?.length && selectedApiEndpoint && request?.method ? (
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
             <div className="w-full flex flex-col gap-8">
               <div>

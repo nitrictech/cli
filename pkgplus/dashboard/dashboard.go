@@ -29,8 +29,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bep/debounce"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 
 	"github.com/nitrictech/cli/pkgplus/browser"
@@ -68,32 +70,36 @@ type TopicSpec struct {
 	SubscriberCount int    `json:"subscriberCount"`
 }
 
+type BucketSpec struct {
+	Name              string `json:"name,omitempty"`
+	NotificationCount int    `json:"notificationCount"`
+}
+
 type Dashboard struct {
-	project              *project.Project
-	storageService       *storage.LocalStorageService
-	gatewayService       *gateway.LocalGatewayService
-	apis                 []*openapi3.T
-	schedules            []ScheduleSpec
-	topics               []TopicSpec
-	buckets              []string
-	websockets           []WebsocketSpec
-	envMap               map[string]string
-	stackWebSocket       *melody.Melody
-	historyWebSocket     *melody.Melody
-	wsWebSocket          *melody.Melody
-	websocketsInfo       map[string]*websockets.WebsocketInfo
-	resourcesLastUpdated time.Time
-	// bucketNotifications  []*codeconfig.BucketNotification
-	port             int
-	browserHasOpened bool
-	connected        bool
-	noBrowser        bool
-	browserLock      sync.Mutex
+	project                    *project.Project
+	storageService             *storage.LocalStorageService
+	gatewayService             *gateway.LocalGatewayService
+	apis                       []*openapi3.T
+	schedules                  []ScheduleSpec
+	topics                     []TopicSpec
+	buckets                    []*BucketSpec
+	websockets                 []WebsocketSpec
+	envMap                     map[string]string
+	stackWebSocket             *melody.Melody
+	historyWebSocket           *melody.Melody
+	wsWebSocket                *melody.Melody
+	websocketsInfo             map[string]*websockets.WebsocketInfo
+	bucketResourcesLastUpdated time.Time
+	port                       int
+	browserHasOpened           bool
+	noBrowser                  bool
+	browserLock                sync.Mutex
+	debouncedUpdate            func(f func())
 }
 
 type DashboardResponse struct {
 	Apis               []*openapi3.T     `json:"apis"`
-	Buckets            []string          `json:"buckets"`
+	Buckets            []*BucketSpec     `json:"buckets"`
 	Schedules          []ScheduleSpec    `json:"schedules"`
 	Topics             []TopicSpec       `json:"topics"`
 	Websockets         []WebsocketSpec   `json:"websockets"`
@@ -102,10 +108,9 @@ type DashboardResponse struct {
 	WebsocketAddresses map[string]string `json:"websocketAddresses"`
 	TriggerAddress     string            `json:"triggerAddress"`
 	StorageAddress     string            `json:"storageAddress"`
-	// BucketNotifications []*codeconfig.BucketNotification `json:"bucketNotifications"`
-	CurrentVersion string `json:"currentVersion"`
-	LatestVersion  string `json:"latestVersion"`
-	Connected      bool   `json:"connected"`
+	CurrentVersion     string            `json:"currentVersion"`
+	LatestVersion      string            `json:"latestVersion"`
+	Connected          bool              `json:"connected"`
 }
 
 type Bucket struct {
@@ -118,25 +123,24 @@ var content embed.FS
 
 func (d *Dashboard) addBucket(name string) {
 	// reset buckets to allow for most recent resources only
-	if !d.resourcesLastUpdated.IsZero() && time.Since(d.resourcesLastUpdated) > time.Second*5 {
-		d.buckets = []string{}
+	if !d.bucketResourcesLastUpdated.IsZero() && time.Since(d.bucketResourcesLastUpdated) > time.Second*5 {
+		d.buckets = []*BucketSpec{}
 	}
 
 	for _, b := range d.buckets {
-		if b == name {
+		if b.Name == name {
 			return
 		}
 	}
 
-	d.buckets = append(d.buckets, name)
+	d.buckets = append(d.buckets, &BucketSpec{
+		Name:              name,
+		NotificationCount: 0,
+	})
 
-	d.resourcesLastUpdated = time.Now()
+	d.bucketResourcesLastUpdated = time.Now()
 
-	err := d.sendStackUpdate()
-	if err != nil {
-		fmt.Printf("Error sending stack update: %v\n", err)
-		return
-	}
+	d.refresh()
 }
 
 func (d *Dashboard) updateApis(state apis.State) {
@@ -205,19 +209,55 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 	d.refresh()
 }
 
-func (d *Dashboard) refresh() {
-	// TODO need to determine how to know if connected
-	d.connected = true
+func (d *Dashboard) updateBucketNotifications(state storage.State) {
+	var performUpdate bool
 
+	for bucketName, count := range state {
+		_, idx, found := lo.FindIndexOf[*BucketSpec](d.buckets, func(item *BucketSpec) bool {
+			return item.Name == bucketName
+		})
+
+		if found && d.buckets[idx] != nil {
+			d.buckets[idx].NotificationCount = count
+			performUpdate = true
+		}
+	}
+
+	if performUpdate {
+		d.refresh()
+	}
+}
+
+func (d *Dashboard) refresh() {
 	if !d.noBrowser && !d.browserHasOpened {
 		d.openBrowser()
 	}
 
-	err := d.sendStackUpdate()
-	if err != nil {
-		fmt.Printf("Error sending stack update: %v\n", err)
-		return
+	d.debouncedUpdate(func() {
+		err := d.sendStackUpdate()
+		if err != nil {
+			fmt.Printf("Error sending stack update: %v\n", err)
+			return
+		}
+	})
+}
+
+func (d *Dashboard) isConnected() bool {
+	apisRegistered := len(d.apis) > 0
+	websocketsRegistered := len(d.websockets) > 0
+	topicsRegistered := len(d.topics) > 0
+	schedulesRegistered := len(d.schedules) > 0
+
+	bucketNotificationsRegistered := false
+
+	// Note: buckets arent completely removed at the moment, but the NotificationCount is.
+	for _, bs := range d.buckets {
+		if bs.NotificationCount > 0 {
+			return true
+		}
 	}
+
+	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || bucketNotificationsRegistered
 }
 
 func (d *Dashboard) Start() error {
@@ -373,10 +413,9 @@ func (d *Dashboard) sendStackUpdate() error {
 		WebsocketAddresses: d.gatewayService.GetWebsocketAddresses(),
 		TriggerAddress:     d.gatewayService.GetTriggerAddress(),
 		StorageAddress:     d.storageService.GetStorageEndpoint(),
-		// BucketNotifications: d.bucketNotifications,
-		CurrentVersion: currentVersion,
-		LatestVersion:  latestVersion,
-		Connected:      d.connected,
+		CurrentVersion:     currentVersion,
+		LatestVersion:      latestVersion,
+		Connected:          d.isConnected(),
 	}
 
 	// Encode the response as JSON
@@ -427,6 +466,8 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	historyWebSocket := melody.New()
 	wsWebSocket := melody.New()
 
+	debouncedUpdate := debounce.New(300 * time.Millisecond)
+
 	dash := &Dashboard{
 		project:          p,
 		storageService:   localCloud.Storage,
@@ -436,11 +477,12 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		stackWebSocket:   stackWebSocket,
 		historyWebSocket: historyWebSocket,
 		wsWebSocket:      wsWebSocket,
-		// bucketNotifications: []*codeconfig.BucketNotification{},
-		schedules:      []ScheduleSpec{},
-		topics:         []TopicSpec{},
-		websocketsInfo: map[string]*websockets.WebsocketInfo{},
-		noBrowser:      noBrowser,
+		schedules:        []ScheduleSpec{},
+		topics:           []TopicSpec{},
+		websockets:       []WebsocketSpec{},
+		websocketsInfo:   map[string]*websockets.WebsocketInfo{},
+		noBrowser:        noBrowser,
+		debouncedUpdate:  debouncedUpdate,
 	}
 
 	err = eventbus.Bus().Subscribe(resources.DeclareBucketTopic, dash.addBucket)
@@ -452,6 +494,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	localCloud.Websockets.SubscribeToState(dash.updateWebsockets)
 	localCloud.Schedules.SubscribeToState(dash.updateSchedules)
 	localCloud.Topics.SubscribeToState(dash.updateTopics)
+	localCloud.Storage.SubscribeToState(dash.updateBucketNotifications)
 
 	// subscribe to history events from gateway
 	localCloud.Apis.SubscribeToAction(dash.handleApiHistory)

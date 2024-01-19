@@ -129,6 +129,8 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
   const workerTitleSingle = capitalize(workerType).slice(0, -1);
   const generatedURL = `http://${data?.triggerAddress}/${workerType}/${selectedWorker?.name}`;
 
+  const hasData = Boolean(data && data[workerType]?.length);
+
   return (
     <AppLayout
       title={capitalize(workerType)}
@@ -160,7 +162,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
       }
     >
       <Loading delay={400} conditionToShow={!loading}>
-        {selectedWorker && data ? (
+        {selectedWorker && hasData ? (
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
             <div className="w-full flex flex-col gap-8">
               <div className="flex">
@@ -390,16 +392,16 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               />
             </div>
           </div>
-        ) : !data || !data[workerType] ? (
+        ) : !hasData ? (
           <div>
             Please refer to our documentation on{" "}
             <a
               className="underline"
               target="_blank"
-              href="https://nitric.io/docs/"
+              href="https://nitric.io/docs/messaging"
               rel="noreferrer"
             >
-              creating {workerType}
+              creating {capitalize(workerType)}
             </a>{" "}
             as we are unable to find any existing {workerType}.
           </div>

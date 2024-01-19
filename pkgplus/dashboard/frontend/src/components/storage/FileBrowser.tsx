@@ -18,6 +18,7 @@ import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import "./file-browser-styles.css";
 import FileUpload from "./FileUpload";
 import { Loading } from "../shared";
+import { downloadFiles } from "./download-files";
 
 interface Props {
   bucket: string;
@@ -29,8 +30,6 @@ setChonkyDefaults({
 
 function generateTree(data: { key: string }[]): FileData[] {
   const tree: FileData[] = [];
-
-  console.log(data);
 
   data.forEach((item) => {
     const parts = item.key.split("/");
@@ -138,43 +137,62 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
 
   const handleFileAction = useCallback(
     async (actionData: ChonkyFileActionData) => {
-      if (actionData.id === ChonkyActions.OpenFiles.id) {
-        if (actionData.payload.files && actionData.payload.files.length !== 1)
-          return;
-        if (
-          !actionData.payload.targetFile ||
-          !actionData.payload.targetFile.isDir
-        )
-          return;
+      switch (actionData.id) {
+        case "open_files": {
+          if (actionData.payload.files && actionData.payload.files.length !== 1)
+            return;
+          if (
+            !actionData.payload.targetFile ||
+            !actionData.payload.targetFile.isDir
+          )
+            return;
 
-        const newPrefix = `${actionData.payload.targetFile.id.replace(
-          /\/*$/,
-          ""
-        )}/`;
+          const newPrefix = `${actionData.payload.targetFile.id.replace(
+            /\/*$/,
+            ""
+          )}/`;
 
-        setFolderPrefix(newPrefix);
-      } else if (actionData.id === ChonkyActions.DeleteFiles.id) {
-        const filesToDelete = getAllFiles({
-          children: actionData.state.selectedFilesForAction,
-          isDir: true,
-        });
-
-        // TODO perhaps add a confirm dialog?
-        await Promise.all(
-          filesToDelete.map((file) => deleteFile(getFilePath(file.id)))
-        );
-
-        const filesLeftCount = getAllFiles({
-          children: folderFiles,
-          isDir: true,
-        }).length;
-
-        // if no files left, simulate all being removed
-        if (filesToDelete.length === filesLeftCount) {
-          setFolderFiles([]);
+          setFolderPrefix(newPrefix);
+          break;
         }
+        case "delete_files": {
+          const filesToDelete = getAllFiles({
+            children: actionData.state.selectedFilesForAction,
+            isDir: true,
+          });
 
-        mutate();
+          // TODO perhaps add a confirm dialog?
+          await Promise.all(
+            filesToDelete.map((file) => deleteFile(getFilePath(file.id)))
+          );
+
+          const filesLeftCount = getAllFiles({
+            children: folderFiles,
+            isDir: true,
+          }).length;
+
+          // if no files left, simulate all being removed
+          if (filesToDelete.length === filesLeftCount) {
+            setFolderFiles([]);
+          }
+
+          mutate();
+          break;
+        }
+        case "download_files": {
+          const filesToDownload = getAllFiles({
+            children: actionData.state.selectedFilesForAction,
+            isDir: true,
+          });
+
+          await downloadFiles(
+            filesToDownload.map((file) => ({
+              url: `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`,
+              name: file.id,
+            }))
+          );
+          break;
+        }
       }
     },
     [setFolderPrefix, bucket, contents, folderFiles]
@@ -233,7 +251,10 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
               instanceId={bucket}
               files={folderFiles}
               disableDefaultFileActions={actionsToDisable}
-              fileActions={[ChonkyActions.DeleteFiles]}
+              fileActions={[
+                ChonkyActions.DeleteFiles,
+                ChonkyActions.DownloadFiles,
+              ]}
               folderChain={folderChain}
               onFileAction={handleFileAction}
               thumbnailGenerator={(file) =>

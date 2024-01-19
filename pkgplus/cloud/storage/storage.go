@@ -144,6 +144,9 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 
 	listenTopicName := fmt.Sprintf("%s:%s", bucketName, listenEvtType)
 
+	r.registerListener(firstRequest.GetRegistrationRequest())
+	defer r.unregisterListener(firstRequest.GetRegistrationRequest())
+
 	eventbus.StorageBus().SubscribeAsync(listenTopicName, func(req *storagepb.ServerMessage) {
 		err := stream.Send(req)
 		if err != nil {
@@ -318,5 +321,7 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 		client:          s3Client,
 		server:          seaweedServer,
 		storageEndpoint: storageEndpoint,
+		listeners:       map[string]int{},
+		bus:             EventBus.New(),
 	}, nil
 }

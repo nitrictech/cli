@@ -8,12 +8,13 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/pterm/pterm"
+	"github.com/samber/lo"
+
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 	"github.com/nitrictech/pearls/pkg/tui"
 	"github.com/nitrictech/pearls/pkg/tui/view"
-	"github.com/pterm/pterm"
-	"github.com/samber/lo"
 )
 
 type Resource struct {

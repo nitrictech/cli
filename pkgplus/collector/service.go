@@ -140,11 +140,11 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 		if req.GetPolicy().GetPrincipals() == nil {
 			req.GetPolicy().Principals = []*resourcespb.ResourceIdentifier{{
 				Name: s.serviceName,
-				Type: resourcespb.ResourceType_ExecUnit,
+				Type: resourcespb.ResourceType_Service,
 			}}
 		} else {
 			for _, principal := range req.GetPolicy().GetPrincipals() {
-				if principal.GetName() == "" && principal.GetType() == resourcespb.ResourceType_ExecUnit {
+				if principal.GetName() == "" && principal.GetType() == resourcespb.ResourceType_Service {
 					principal.Name = s.serviceName
 				}
 			}

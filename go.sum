@@ -1666,10 +1666,14 @@ github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f h1:awate
 github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f/go.mod h1:jqImBS1Tsk12vV2Gk7yP9+jajhpG+cHXrg7UhVxFruQ=
 github.com/nitrictech/nitric/cloud/aws v0.0.0-20240118225958-1a99e3438c78 h1:8prkB6VvXpE0KUc4+Igw1zT2Oy7T34iydrg1h4nOry0=
 github.com/nitrictech/nitric/cloud/aws v0.0.0-20240118225958-1a99e3438c78/go.mod h1:GdTe7eeuhkr8oT6AM5XnM/r8TaDl5xcYX8SRppEp+Po=
+github.com/nitrictech/nitric/cloud/aws v0.0.0-20240119015317-a05b2de92af8 h1:vO246berEpeMmNhoGgVm17NmsKcp7ZmNL4vCeQ5r17E=
+github.com/nitrictech/nitric/cloud/aws v0.0.0-20240119015317-a05b2de92af8/go.mod h1:GdTe7eeuhkr8oT6AM5XnM/r8TaDl5xcYX8SRppEp+Po=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20231206014944-68e146f4f69a h1:BgsbgSm3iaObiUqGYCdX5mtavHqNJ/3FDxgYeBG+hpw=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20231206014944-68e146f4f69a/go.mod h1:+X62o2IvXWO1jw3758kdy+JWDCd5f1hCgqdPa4/Gtbo=
 github.com/nitrictech/nitric/core v0.0.0-20240118225958-1a99e3438c78 h1:78vHoeAISZoBNXXjYqSHHqGiLsmGtmBYq10vnDGX9Ys=
 github.com/nitrictech/nitric/core v0.0.0-20240118225958-1a99e3438c78/go.mod h1:GMQNqu3YMn3LU1puO55YkyX198rDtOfcD3ltYspT/g4=
+github.com/nitrictech/nitric/core v0.0.0-20240119015317-a05b2de92af8 h1:FgNsfmvxVmiKmPy0QZB7YYqBRDxXp1ZAOAOMhCbWYeg=
+github.com/nitrictech/nitric/core v0.0.0-20240119015317-a05b2de92af8/go.mod h1:GMQNqu3YMn3LU1puO55YkyX198rDtOfcD3ltYspT/g4=
 github.com/nitrictech/pearls v0.0.0-20231011053212-77f78229fb97 h1:f0T/6zLQszcic1XXsEJEIXrk4nzFijNyDJ400S2swZA=
 github.com/nitrictech/pearls v0.0.0-20231011053212-77f78229fb97/go.mod h1:IXCOsqYAR5KRqXbbXnHkMp9NJrfY0qOeV3IcbBR5uSA=
 github.com/nunnatsa/ginkgolinter v0.14.1 h1:khx0CqR5U4ghsscjJ+lZVthp3zjIFytRXPTaQ/TMiyA=

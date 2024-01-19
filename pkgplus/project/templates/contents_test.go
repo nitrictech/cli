@@ -26,7 +26,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/nitrictech/cli/mocks/mock_utils"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/project/templates"
 )
 
 func TestRepository(t *testing.T) {
@@ -65,7 +65,7 @@ func TestRepository(t *testing.T) {
 
 	d := &downloader{
 		configPath: configPath,
-		newGetter: func(c *getter.Client) utils.GetterClient {
+		newGetter: func(c *getter.Client) templates.GetterClient {
 			return mgetter
 		},
 	}

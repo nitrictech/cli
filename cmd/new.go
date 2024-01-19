@@ -23,7 +23,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/project"
 )
@@ -50,7 +49,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 			templateName = args[1]
 		}
 
-		if !utils.IsTerminal() && (templateName == "" || projectName == "") {
+		if !tui.IsTerminal() && (templateName == "" || projectName == "") {
 			return fmt.Errorf(`non-interactive environment detected, please provide all mandatory arguments e.g. nitric new hello-world "official/TypeScript - Starter"`)
 		}
 

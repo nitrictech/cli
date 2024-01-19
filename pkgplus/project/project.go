@@ -20,9 +20,9 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/docker"
+	"github.com/nitrictech/cli/pkgplus/netx"
 	"github.com/nitrictech/cli/pkgplus/project/runtime"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
@@ -161,7 +161,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
 	}
 
-	randomPort, _ := utils.Take(1)
+	randomPort, _ := netx.TakePort(1)
 	hostProxyPort := fmt.Sprint(randomPort[0])
 	env := []string{
 		"NITRIC_ENVIRONMENT=run",

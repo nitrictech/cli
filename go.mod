@@ -2,12 +2,6 @@ module github.com/nitrictech/cli
 
 go 1.21
 
-<<<<<<< refs/remotes/origin/v1
-toolchain go1.21.4
-=======
-toolchain go1.21.3
->>>>>>> wip update view
-
 replace github.com/mattn/go-ieproxy => github.com/darthShadow/go-ieproxy v0.0.0-20220916090656-69928ad83ed6
 
 require (
@@ -20,7 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.8
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.8
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.0
-	github.com/davecgh/go-spew v1.1.1
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/docker v20.10.24+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fasthttp/router v1.4.18
@@ -32,43 +26,29 @@ require (
 	github.com/hashicorp/consul/sdk v0.13.0
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.6.0
-	github.com/imdario/mergo v0.3.15
-	github.com/jedib0t/go-pretty v4.3.0+incompatible
-	github.com/joho/godotenv v1.4.0
-	github.com/missionMeteora/toolkit v0.0.0-20170713173850-88364e3ef8cc
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
-<<<<<<< refs/remotes/origin/v1
-	github.com/nitrictech/nitric/cloud/aws v0.0.0-20231220231644-a22c6184f20a
-	github.com/nitrictech/nitric/core v0.0.0-20240115224904-e2cb744cf9f6
-=======
-	github.com/nitrictech/nitric/cloud/aws v0.0.0-20240116015916-00dbcf63ad71
-	github.com/nitrictech/nitric/core v0.0.0-20240116015916-00dbcf63ad71
->>>>>>> wip update view
+	github.com/nitrictech/nitric/cloud/aws v0.0.0-20240118225958-1a99e3438c78
+	github.com/nitrictech/nitric/core v0.0.0-20240118225958-1a99e3438c78
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/valyala/fasthttp v1.51.0
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
 	google.golang.org/grpc v1.54.0
-	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
-	github.com/bep/debounce v1.2.1
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.8.0
-	github.com/docker/distribution v2.8.0+incompatible
 	github.com/fasthttp/websocket v1.5.3
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
 	github.com/mattn/go-isatty v0.0.18
-	github.com/mitchellh/mapstructure v1.5.0
-	github.com/muesli/reflow v0.3.0
 	github.com/nitrictech/nitric/cloud/common v0.0.0-20231206014944-68e146f4f69a
 	github.com/nitrictech/pearls v0.0.0-20231011053212-77f78229fb97
 	github.com/olahol/melody v1.1.3
@@ -118,7 +98,6 @@ require (
 	github.com/arangodb/go-driver v1.4.1 // indirect
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
-	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/ashanbrown/forbidigo v1.6.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
@@ -170,6 +149,7 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
+	github.com/docker/distribution v2.8.0+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
@@ -190,9 +170,7 @@ require (
 	github.com/go-errors/errors v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-openapi/errors v0.20.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
-	github.com/go-openapi/strfmt v0.21.3 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-redsync/redsync/v4 v4.7.1 // indirect
@@ -305,6 +283,7 @@ require (
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
@@ -312,6 +291,7 @@ require (
 	github.com/moricho/tparallel v0.3.1 // indirect
 	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
+	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/nakabonne/nestif v0.3.1 // indirect
 	github.com/nats-io/nats-server/v2 v2.7.4 // indirect
@@ -320,10 +300,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nishanths/exhaustive v0.11.0 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
-	github.com/nitrictech/nitric/cloud/azure v0.0.0-20240116015916-00dbcf63ad71 // indirect
-	github.com/nitrictech/nitric/cloud/gcp v0.0.0-20240116015916-00dbcf63ad71 // indirect
 	github.com/nunnatsa/ginkgolinter v0.14.1 // indirect
-	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

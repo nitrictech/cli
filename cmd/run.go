@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/command"
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
@@ -104,5 +103,5 @@ func init() {
 		false,
 		"disable browser opening for local dashboard, note: in CI mode the browser opening feature is disabled",
 	)
-	rootCmd.AddCommand(command.AddDependencyCheck(runCmd, command.Docker))
+	rootCmd.AddCommand(tui.AddDependencyCheck(runCmd, tui.Docker))
 }

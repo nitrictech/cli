@@ -19,8 +19,8 @@ package resources
 import (
 	"context"
 
-	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
+	"github.com/nitrictech/cli/pkgplus/eventbus"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
 

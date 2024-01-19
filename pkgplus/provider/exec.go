@@ -26,8 +26,8 @@ import (
 
 	"github.com/spf13/afero"
 
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/iox"
+	"github.com/nitrictech/cli/pkgplus/netx"
 )
 
 // ProviderProcess - A deployment engine based on a locally executable binary file
@@ -47,7 +47,7 @@ func (p *ProviderProcess) startProcess() error {
 		p.envMap = map[string]string{}
 	}
 
-	lis, err := utils.GetNextListener()
+	lis, err := netx.GetNextListener()
 	if err != nil {
 		return err
 	}

@@ -26,8 +26,8 @@ import (
 	"github.com/seaweedfs/seaweedfs/weed/command"
 	flag "github.com/seaweedfs/seaweedfs/weed/util/fla9"
 
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/cloud/env"
+	"github.com/nitrictech/cli/pkgplus/netx"
 )
 
 type SeaweedServer struct {
@@ -42,7 +42,7 @@ const (
 
 // Start - Start the local SeaweedFS server
 func (m *SeaweedServer) Start() error {
-	ports, err := utils.Take(1)
+	ports, err := netx.TakePort(1)
 	if err != nil {
 		return errors.WithMessage(err, "freeport.Take")
 	}

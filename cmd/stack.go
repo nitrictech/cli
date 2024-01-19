@@ -24,8 +24,6 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/nitrictech/cli/pkg/command"
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/stack"
@@ -86,7 +84,7 @@ var newStackCmd = &cobra.Command{
 	Short: "Create a new Nitric stack",
 	Long:  `Creates a new Nitric stack.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsTerminal() {
+		if !tui.IsTerminal() {
 			return fmt.Errorf("the stack new command does not support non-interactive environments")
 		}
 
@@ -396,14 +394,12 @@ func init() {
 	stackCmd.AddCommand(newStackCmd)
 	newStackCmd.Flags().BoolVarP(&forceNewStack, "force", "f", false, "force stack creation.")
 
-	stackCmd.AddCommand(command.AddDependencyCheck(stackUpdateCmd, command.Pulumi, command.Docker))
+	stackCmd.AddCommand(tui.AddDependencyCheck(stackUpdateCmd, tui.Pulumi, tui.Docker))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
-	// utils.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
-	stackCmd.AddCommand(command.AddDependencyCheck(stackDeleteCmd, command.Pulumi))
+	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd, tui.Pulumi))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
-	// utils.CheckErr(stack.AddOptions(stackDeleteCmd, false))
 
 	rootCmd.AddCommand(stackCmd)
 

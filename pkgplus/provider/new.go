@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/paths"
 )
 
 type Provider struct {
@@ -55,7 +55,7 @@ const (
 )
 
 func providerFilePath(prov *Provider) string {
-	provDir := utils.NitricProviderDir()
+	provDir := paths.NitricProviderDir()
 	os := runtime.GOOS
 
 	if os == "windows" {

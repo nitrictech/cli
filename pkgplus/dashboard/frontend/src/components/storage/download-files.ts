@@ -2,7 +2,6 @@ export const downloadFiles = async (
   files: Array<{ url: string; name: string }>
 ): Promise<void> => {
   const promises = files.map(async (file) => {
-    console.log("file", file);
     const response = await fetch(file.url);
     const blob = await response.blob();
     const link = document.createElement("a");

@@ -188,7 +188,6 @@ const WSExplorer = () => {
       websocketRef.current = socket;
 
       socket.addEventListener("message", (event) => {
-        console.log(event);
         setMessages((prev) => [
           {
             data: event.data,
@@ -210,7 +209,6 @@ const WSExplorer = () => {
       });
       // Event listener to handle connection open
       socket.addEventListener("open", (event) => {
-        console.log(event);
         setMessages((prev) => [
           {
             data: `Connected to ${websocketAddress}`,
@@ -301,7 +299,7 @@ const WSExplorer = () => {
       }
     >
       <Loading delay={400} conditionToShow={!loading}>
-        {selectedWebsocket ? (
+        {data?.websockets?.length && selectedWebsocket ? (
           <div className="flex max-w-6xl flex-col md:pr-8">
             <div className="w-full flex flex-col gap-8">
               <h2 className="text-2xl">{selectedWebsocket?.name}</h2>

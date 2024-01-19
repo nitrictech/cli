@@ -47,9 +47,14 @@ export interface WebSocketInfo {
 export interface WebSocketsInfo {
   [socket: string]: WebSocketInfo;
 }
+
+export interface Bucket {
+  name: string;
+  notificationCount: number;
+}
 export interface WebSocketResponse {
   projectName: string;
-  buckets: string[];
+  buckets: Bucket[];
   apis: APIDoc[];
   schedules: Schedule[];
   topics: Topic[];

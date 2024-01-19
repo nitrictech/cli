@@ -19,15 +19,15 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/ghissue"
-	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/update"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/paths"
+	"github.com/nitrictech/cli/pkgplus/update"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 )
 
 const usageTemplate = `Nitric - The fastest way to build serverless apps
@@ -49,23 +49,23 @@ var rootCmd = &cobra.Command{
 	Use:   "nitric",
 	Short: "CLI for Nitric applications",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if output.VerboseLevel > 1 {
-			pterm.EnableDebugMessages()
-		}
+		// if output.VerboseLevel > 1 {
+		// 	pterm.EnableDebugMessages()
+		// }
 
-		if output.VerboseLevel == 0 {
-			pterm.Info.Debugger = true
-		}
+		// if output.VerboseLevel == 0 {
+		// 	pterm.Info.Debugger = true
+		// }
 
-		if output.CI {
-			pterm.DisableStyling()
-		}
+		// if output.CI {
+		// 	pterm.DisableStyling()
+		// }
 
 		// Ensure the Nitric Home Directory Exists
-		if _, err := os.Stat(utils.NitricHomeDir()); os.IsNotExist(err) {
-			err := os.MkdirAll(utils.NitricHomeDir(), 0o700) // Create the Nitric Home Directory if it's missing
+		if _, err := os.Stat(paths.NitricHomeDir()); os.IsNotExist(err) {
+			err := os.MkdirAll(paths.NitricHomeDir(), 0o700) // Create the Nitric Home Directory if it's missing
 			if err != nil {
-				utils.CheckErr(fmt.Errorf("Failed to create nitric home directory. %w", err))
+				tui.CheckErr(fmt.Errorf("Failed to create nitric home directory. %w", err))
 			}
 		}
 
@@ -83,33 +83,32 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	defer func() {
 		if err := recover(); err != nil {
-			pterm.Error.Println("An unexpected error occurred, please create a github issue by clicking on the link below")
-			fmt.Println(ghissue.BugLink(err))
+			pterm.Error.Printfln(
+				"An unexpected error occurred:\n %s\n If you'd like to raise an issue in github https://github.com/nitrictech/cli/issues please include the above stack trace in the description",
+				string(debug.Stack()),
+			)
 		}
 	}()
 
-	utils.CheckErr(rootCmd.Execute())
+	tui.CheckErr(rootCmd.Execute())
 }
 
 func init() {
-	rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
-	rootCmd.PersistentFlags().BoolVar(&output.CI, "ci", false, "CI mode, disable output styling and auto-confirm all operations")
-	rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
+	// rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
+	// rootCmd.PersistentFlags().BoolVar(&output.CI, "ci", false, "CI mode, disable output styling and auto-confirm all operations")
+	// rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
 
-	err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
-	})
-	utils.CheckErr(err)
-	// addAlias("stack update", "up", true)
-	// addAlias("stack down", "down", true)
-	// addAlias("stack list", "list", false)
+	// err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	// 	return output.OutputTypeFlag.Allowed, cobra.ShellCompDirectiveDefault
+	// })
+	// tui.CheckErr(err)
 
 	rootCmd.Long = usageString()
 }
 
 func addAlias(from, to string, commonCommand bool) {
 	cmd, _, err := rootCmd.Find(strings.Split(from, " "))
-	utils.CheckErr(err)
+	tui.CheckErr(err)
 
 	if cmd.Annotations == nil {
 		cmd.Annotations = map[string]string{}
@@ -127,7 +126,7 @@ func addAlias(from, to string, commonCommand bool) {
 			newArgs = append(newArgs, strings.Split(from, " ")...)
 			newArgs = append(newArgs, args...)
 			os.Args = newArgs
-			utils.CheckErr(rootCmd.Execute())
+			tui.CheckErr(rootCmd.Execute())
 		},
 		DisableFlagParsing: true, // the real command will parse the flags
 	}

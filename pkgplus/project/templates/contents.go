@@ -24,10 +24,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-getter"
+	"github.com/nitrictech/cli/pkgplus/paths"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
-
-	"github.com/nitrictech/cli/pkg/utils"
 )
 
 const (
@@ -53,7 +52,7 @@ type Downloader interface {
 
 type downloader struct {
 	configPath string
-	newGetter  func(*getter.Client) utils.GetterClient
+	newGetter  func(*getter.Client) GetterClient
 	repo       []TemplateInfo
 }
 
@@ -61,8 +60,8 @@ var _ Downloader = &downloader{}
 
 func NewDownloader() Downloader {
 	return &downloader{
-		configPath: filepath.Join(utils.NitricTemplatesDir(), "repositories.yml"),
-		newGetter:  utils.NewGetter,
+		configPath: filepath.Join(paths.NitricTemplatesDir(), "repositories.yml"),
+		newGetter:  NewGetter,
 	}
 }
 

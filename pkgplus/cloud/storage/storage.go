@@ -34,7 +34,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/nitrictech/cli/pkg/eventbus"
+	"github.com/nitrictech/cli/pkgplus/eventbus"
 	s3_service "github.com/nitrictech/nitric/cloud/aws/runtime/storage"
 
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"

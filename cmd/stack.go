@@ -24,14 +24,14 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/nitrictech/cli/pkg/command"
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/stack"
 	"github.com/nitrictech/cli/pkgplus/provider"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
 	stack_new "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/stack_up"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 	"github.com/nitrictech/pearls/pkg/tui/inlinelist"
 )
@@ -84,7 +84,7 @@ var newStackCmd = &cobra.Command{
 	Short: "Create a new Nitric stack",
 	Long:  `Creates a new Nitric stack.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsTerminal() {
+		if !tui.IsTerminal() {
 			return fmt.Errorf("the stack new command does not support non-interactive environments")
 		}
 
@@ -132,12 +132,12 @@ var stackUpdateCmd = &cobra.Command{
 		fs := afero.NewOsFs()
 
 		stackFiles, err := stack.GetAllStackFiles(fs)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		if len(stackFiles) == 0 {
 			// no stack files found
 			// print error with suggestion for user to run stack new
-			cobra.CheckErr(fmt.Errorf("no stacks found in project, to create a new one run `nitric stack new`"))
+			tui.CheckErr(fmt.Errorf("no stacks found in project, to create a new one run `nitric stack new`"))
 		}
 
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
@@ -161,41 +161,43 @@ var stackUpdateCmd = &cobra.Command{
 		// }
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		proj, err := project.FromFile(fs, "")
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		// make provider from the provider name
 		// providerName := stackConfig.Provider
 
 		// Step 0a. Locate/Download provider where applicable.
 		prov, err := provider.NewProvider(stackConfig.Provider)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		providerFilePath, err := provider.EnsureProviderExists(fs, prov)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		// Build the Project's Services (Containers)
 		buildUpdates, err := proj.BuildServices(fs)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		prog := tea.NewProgram(build.NewModel(buildUpdates))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		// Step 2. Start the collectors and containers (respectively in pairs)
 		// Step 3. Merge requirements from collectors into a specification
 		serviceRequirements, err := proj.CollectServicesRequirements()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		spec, err := collector.ServiceRequirementsToSpec(proj.Name, map[string]string{}, serviceRequirements)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
+
+		providerStdout := make(chan string)
 
 		// Step 4. Start the deployment provider server
-		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath)
-		cobra.CheckErr(err)
+		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout))
+		tui.CheckErr(err)
 		defer providerProcess.Stop()
 
 		// Step 5a. Send specification to provider for deployment
@@ -211,37 +213,70 @@ var stackUpdateCmd = &cobra.Command{
 		}
 
 		attributesStruct, err := structpb.NewStruct(attributes)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
-		eventChannel, errorChan := deploymentClient.Up(&deploymentspb.DeployUpRequest{
+		eventChan, errorChan := deploymentClient.Up(&deploymentspb.DeploymentUpRequest{
 			Spec:        spec,
 			Attributes:  attributesStruct,
 			Interactive: true,
 		})
 
 		// Step 5b. Communicate with server to share progress of ...
-	ServerCommunication:
-		for {
-			select {
-			case event, ok := <-eventChannel:
-				if !ok {
-					break ServerCommunication
-				}
 
-				switch event.Content.(type) {
-				case *deploymentspb.DeployUpEvent_Message:
-					fmt.Print(event.GetMessage().GetMessage())
-				case *deploymentspb.DeployUpEvent_Result:
-					fmt.Print(event.GetResult().Result.GetStringResult())
-				}
+		stackUp := stack_up.New(eventChan, providerStdout, errorChan)
 
-			case err, ok := <-errorChan:
-				if !ok {
-					break ServerCommunication
-				}
-				cobra.CheckErr(err)
-			}
-		}
+		_, err = tea.NewProgram(stackUp).Run()
+		tui.CheckErr(err)
+
+		// fmt.Print(finalModel.View())
+
+		// eventsLeft := true
+		// errsLeft := true
+		// for eventsLeft || errsLeft {
+		// 	select {
+		// 	case event, ok := <-eventChan:
+		// 		if !ok {
+		// 			eventsLeft = false
+		// 			break
+		// 		}
+		// 		pterm.Info.Print(event)
+
+		// 	case err, ok := <-errorChan:
+		// 		if !ok {
+		// 			errsLeft = false
+		// 			break
+		// 		}
+		// 		pterm.Error.Print(err)
+		// 	}
+		// }
+
+		// ServerCommunication:
+		// 	for {
+		// 		select {
+		// 		case event, ok := <-eventChan:
+		// 			if !ok {
+		// 				break ServerCommunication
+		// 			}
+
+		// 			switch event.Content.(type) {
+		// 			case *deploymentspb.DeploymentUpEvent_Message:
+		// 				pterm.Error.Print(event.GetMessage())
+		// 				// fmt.Println(event.GetMessage())
+		// 			case *deploymentspb.DeploymentUpEvent_Result:
+		// 				pterm.Error.Print(event.GetResult().Details)
+		// 				// fmt.Println(event.GetResult().Details)
+		// 			case *deploymentspb.DeploymentUpEvent_Update:
+		// 				pterm.Error.Print(event.GetUpdate())
+		// 				// fmt.Println(event.GetUpdate())
+		// 			}
+
+		// 		case err, ok := <-errorChan:
+		// 			if !ok {
+		// 				break ServerCommunication
+		// 			}
+		// 			tui.CheckErr(err)
+		// 		}
+		// 	}
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -323,7 +358,7 @@ nitric stack down -s aws -y`,
 		attributesStruct, err := structpb.NewStruct(attributes)
 		cobra.CheckErr(err)
 
-		eventChannel, errorChan := deploymentClient.Down(&deploymentspb.DeployDownRequest{
+		eventChannel, errorChan := deploymentClient.Down(&deploymentspb.DeploymentDownRequest{
 			Attributes:  attributesStruct,
 			Interactive: true,
 		})
@@ -338,9 +373,9 @@ nitric stack down -s aws -y`,
 				}
 
 				switch event.Content.(type) {
-				case *deploymentspb.DeployDownEvent_Message:
-					fmt.Print(event.GetMessage().GetMessage())
-				case *deploymentspb.DeployDownEvent_Result:
+				case *deploymentspb.DeploymentDownEvent_Message:
+					fmt.Print(event.GetMessage())
+				case *deploymentspb.DeploymentDownEvent_Result:
 					// fmt.Print(event.GetResult())
 				}
 
@@ -359,14 +394,12 @@ func init() {
 	stackCmd.AddCommand(newStackCmd)
 	newStackCmd.Flags().BoolVarP(&forceNewStack, "force", "f", false, "force stack creation.")
 
-	stackCmd.AddCommand(command.AddDependencyCheck(stackUpdateCmd, command.Pulumi, command.Docker))
+	stackCmd.AddCommand(tui.AddDependencyCheck(stackUpdateCmd, tui.Pulumi, tui.Docker))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
-	// utils.CheckErr(stack.AddOptions(stackUpdateCmd, false))
 
-	stackCmd.AddCommand(command.AddDependencyCheck(stackDeleteCmd, command.Pulumi))
+	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd, tui.Pulumi))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
-	// utils.CheckErr(stack.AddOptions(stackDeleteCmd, false))
 
 	rootCmd.AddCommand(stackCmd)
 

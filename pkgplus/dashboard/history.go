@@ -23,7 +23,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkgplus/paths"
 )
 
 const AddRecordTopic = "history:addrecord"
@@ -97,7 +97,7 @@ func NewHistoryError(recordType RecordType, historyFile string) error {
 }
 
 func (d *Dashboard) writeHistoryRecord(historyRecord *HistoryEvent[any]) error {
-	historyFile, err := utils.NitricHistoryFile(d.project.Directory, string(historyRecord.RecordType))
+	historyFile, err := paths.NitricHistoryFile(d.project.Directory, string(historyRecord.RecordType))
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (d *Dashboard) writeHistoryRecord(historyRecord *HistoryEvent[any]) error {
 }
 
 func (d *Dashboard) DeleteHistoryRecord(recordType RecordType) error {
-	historyFile, err := utils.NitricHistoryFile(d.project.Directory, string(recordType))
+	historyFile, err := paths.NitricHistoryFile(d.project.Directory, string(recordType))
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (d *Dashboard) ReadAllHistoryRecords() (*HistoryEvents, error) {
 }
 
 func ReadHistoryRecords[T HistoryItem](projectDir string, recordType RecordType) ([]*HistoryEvent[T], error) {
-	historyFile, err := utils.NitricHistoryFile(projectDir, string(recordType))
+	historyFile, err := paths.NitricHistoryFile(projectDir, string(recordType))
 	if err != nil {
 		return nil, err
 	}

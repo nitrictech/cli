@@ -27,10 +27,9 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/afero"
 
-	"github.com/nitrictech/cli/pkg/provider/types"
-	"github.com/nitrictech/cli/pkg/utils"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/stack"
+	clitui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/pearls/pkg/tui"
 	"github.com/nitrictech/pearls/pkg/tui/listprompt"
 	"github.com/nitrictech/pearls/pkg/tui/textprompt"
@@ -283,10 +282,18 @@ func stackNameExistsValidator(projectDir string) validation.StringValidator {
 	}
 }
 
+const (
+	Aws   = "aws"
+	Azure = "azure"
+	Gcp   = "gcp"
+)
+
+var availableProviders = []string{Aws, Gcp, Azure}
+
 func New(fs afero.Fs, args Args) Model {
 	// Load and update the project name in the template's nitric.yaml
 	projectConfig, err := project.ConfigurationFromFile(fs, "")
-	utils.CheckErr(err)
+	clitui.CheckErr(err)
 
 	if !args.Force {
 		projectNameValidators = append(projectNameValidators, stackNameExistsValidator(projectConfig.Directory))
@@ -307,7 +314,7 @@ func New(fs afero.Fs, args Args) Model {
 	providerPrompt := listprompt.New(listprompt.Args{
 		Prompt: "Which provider do you want to deploy with?",
 		Tag:    "prov",
-		Items:  listprompt.ConvertStringsToListItems(types.Providers),
+		Items:  listprompt.ConvertStringsToListItems(availableProviders),
 	})
 
 	s := spinner.New()

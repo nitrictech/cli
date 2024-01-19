@@ -40,8 +40,8 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
+	"github.com/nitrictech/cli/pkgplus/netx"
 
-	"github.com/nitrictech/cli/pkg/utils"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 
 	workersHttp "github.com/nitrictech/nitric/core/pkg/workers/http"
@@ -475,7 +475,7 @@ func (s *LocalGatewayService) createApiServers() error {
 			Handler:         s.handleApiHttpRequest(len(s.apiServers)),
 		}
 		// Expand servers to account for apis
-		lis, err := utils.GetNextListener()
+		lis, err := netx.GetNextListener()
 		if err != nil {
 			return err
 		}
@@ -515,7 +515,7 @@ func (s *LocalGatewayService) createWebsocketServers() error {
 				Handler:         s.handleWebsocketRequest(sock),
 			}
 
-			lis, err := utils.GetNextListener()
+			lis, err := netx.GetNextListener()
 			if err != nil {
 				return err
 			}
@@ -559,7 +559,7 @@ func (s *LocalGatewayService) createHttpServers() error {
 			Handler:         s.handleHttpProxyRequest(len(s.httpServers)),
 		}
 		// Expand servers to account for apis
-		lis, err := utils.GetNextListener()
+		lis, err := netx.GetNextListener()
 		if err != nil {
 			return err
 		}
@@ -620,7 +620,7 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 		Handler:         r.Handler,
 	}
 
-	s.serviceListener, err = utils.GetNextListener()
+	s.serviceListener, err = netx.GetNextListener()
 	if err != nil {
 		return err
 	}

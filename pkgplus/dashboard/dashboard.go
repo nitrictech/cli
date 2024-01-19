@@ -33,15 +33,13 @@ import (
 	"github.com/olahol/melody"
 	"github.com/spf13/afero"
 
-	"github.com/nitrictech/cli/pkg/browser"
-	"github.com/nitrictech/cli/pkg/eventbus"
+	"github.com/nitrictech/cli/pkgplus/browser"
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/collector"
+	"github.com/nitrictech/cli/pkgplus/eventbus"
+	"github.com/nitrictech/cli/pkgplus/netx"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
-	"github.com/nitrictech/cli/pkg/update"
-	"github.com/nitrictech/cli/pkg/utils"
-	"github.com/nitrictech/cli/pkg/version"
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
 	"github.com/nitrictech/cli/pkgplus/cloud/resources"
@@ -50,6 +48,8 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
 	"github.com/nitrictech/cli/pkgplus/project"
+	"github.com/nitrictech/cli/pkgplus/update"
+	"github.com/nitrictech/cli/pkgplus/version"
 )
 
 type WebsocketSpec struct {
@@ -140,7 +140,7 @@ func (d *Dashboard) addBucket(name string) {
 }
 
 func (d *Dashboard) updateApis(state apis.State) {
-	apiSpecs, _ := collector.ApisToOpenApiSpecs(state)
+	apiSpecs, _ := collector.ApisToOpenApiSpecs(state, nil)
 
 	d.apis = apiSpecs
 
@@ -312,7 +312,7 @@ func (d *Dashboard) Start() error {
 	})
 
 	// using ephemeral ports, we will redirect to the dashboard on main api 4000
-	dashListener, err := utils.GetNextListener(utils.MinPort(49152), utils.MaxPort(65535))
+	dashListener, err := netx.GetNextListener(netx.MinPort(49152), netx.MaxPort(65535))
 	if err != nil {
 		return err
 	}

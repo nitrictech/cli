@@ -21,9 +21,9 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/command"
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/project"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/services"
 )
@@ -55,22 +55,22 @@ var runCmd = &cobra.Command{
 		fs := afero.NewOsFs()
 
 		proj, err := project.FromFile(fs, "")
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		// Start the local cloud service analogues
 		localCloud, err := cloud.New()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		go localCloud.Start()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		updates, err := proj.BuildServices(fs)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		prog := tea.NewProgram(build.NewModel(updates))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		// Run the app code (project services)
 		stopChan := make(chan bool)
@@ -82,7 +82,7 @@ var runCmd = &cobra.Command{
 			}
 		}()
 
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		runView := tea.NewProgram(services.NewModel(stopChan, updatesChan, localCloud))
 
@@ -103,5 +103,5 @@ func init() {
 		false,
 		"disable browser opening for local dashboard, note: in CI mode the browser opening feature is disabled",
 	)
-	rootCmd.AddCommand(command.AddDependencyCheck(runCmd, command.Docker))
+	rootCmd.AddCommand(tui.AddDependencyCheck(runCmd, tui.Docker))
 }

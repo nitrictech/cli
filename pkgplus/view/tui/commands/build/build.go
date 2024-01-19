@@ -10,6 +10,7 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
+	"github.com/nitrictech/pearls/pkg/tui"
 	"github.com/nitrictech/pearls/pkg/tui/view"
 )
 
@@ -56,6 +57,7 @@ var (
 	headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFDF5"))
 	inProgStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#0000A0"))
 	doneStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#00A000"))
+	messageStyle = lipgloss.NewStyle().MarginLeft(2).Foreground(tui.Colors.Gray)
 )
 
 func (m Model) View() string {
@@ -82,6 +84,8 @@ func (m Model) View() string {
 			view.NewFragment(serviceName),
 			view.NewFragment(" "),
 			view.NewFragment(service.Status).WithStyle(serviceProgStyle),
+			view.Break(),
+			view.NewFragment(service.Message).WithStyle(messageStyle),
 		)
 	}
 

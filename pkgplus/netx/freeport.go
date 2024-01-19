@@ -14,25 +14,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package netx
 
 import (
-	"fmt"
+	"bufio"
+	"os"
+	"strings"
 
-	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkgplus/version"
+	"github.com/hashicorp/consul/sdk/freeport"
+	"github.com/pterm/pterm"
 )
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of this CLI",
-	Long:  `All software has versions. This is Nitric's`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(version.Version)
-	},
-}
+// TakePort is just a wrapper around freeport.TakePort() that changes the
+// stderr output to pterm.Debug
+func TakePort(n int) ([]int, error) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
 
-func init() {
-	rootCmd.AddCommand(versionCmd)
+	defer r.Close()
+
+	stderr := os.Stderr
+	os.Stderr = w
+	ports, err := freeport.Take(n)
+	os.Stderr = stderr
+
+	w.Close()
+
+	in := bufio.NewScanner(r)
+
+	for in.Scan() {
+		pterm.Debug.Println(strings.TrimPrefix(in.Text(), "[INFO] "))
+	}
+
+	return ports, err
 }

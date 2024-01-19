@@ -6,10 +6,9 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/nitrictech/cli/pkgplus/paths"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
-
-	filepath "github.com/nitrictech/cli/pkgplus"
 )
 
 type StackConfig[T any] struct {
@@ -54,8 +53,8 @@ func NewStackFile(fs afero.Fs, providerName string, stackName string, dir string
 		return "", fmt.Errorf("invalid stack name %s", stackName)
 	}
 
-	stackFilePath := filepath.Join(dir, fileName)
-	relativePath, _ := filepath.Rel(".", stackFilePath)
+	stackFilePath := paths.Join(dir, fileName)
+	relativePath, _ := paths.Rel(".", stackFilePath)
 
 	return fmt.Sprintf(".%s%s", string(os.PathSeparator), relativePath), afero.WriteFile(fs, stackFilePath, []byte(template), os.ModePerm)
 }
@@ -71,12 +70,12 @@ func ConfigFromName[T any](fs afero.Fs, stackName string) (*StackConfig[T], erro
 	if !IsValidFileName(stackFile) {
 		return nil, fmt.Errorf("invalid stack name %s", stackName)
 	}
-	return configFromFile[T](fs, filepath.Join("./", stackFile))
+	return configFromFile[T](fs, paths.Join("./", stackFile))
 }
 
 // GetAllStackFiles returns a list of all stack files in the current directory
 func GetAllStackFiles(fs afero.Fs) ([]string, error) {
-	return filepath.Glob(fs, "nitric.*.yaml")
+	return paths.Glob(fs, "nitric.*.yaml")
 }
 
 // GetStackNameFromFileName returns the stack name from a given stack file name

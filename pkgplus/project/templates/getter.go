@@ -14,25 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package templates
 
-import (
-	"fmt"
+import "github.com/hashicorp/go-getter"
 
-	"github.com/spf13/cobra"
-
-	"github.com/nitrictech/cli/pkgplus/version"
-)
-
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of this CLI",
-	Long:  `All software has versions. This is Nitric's`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(version.Version)
-	},
+// GetterClient exists because go-getter does not have an interface to mock.
+type GetterClient interface {
+	Get() error
 }
 
-func init() {
-	rootCmd.AddCommand(versionCmd)
+type getterConfig struct {
+	*getter.Client
+}
+
+func NewGetter(c *getter.Client) GetterClient {
+	return &getterConfig{Client: c}
+}
+
+func (c *getterConfig) Get() error {
+	return c.Client.Get()
 }

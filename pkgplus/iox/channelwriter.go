@@ -17,7 +17,6 @@ package iox
 
 import (
 	"io"
-
 	"strings"
 )
 

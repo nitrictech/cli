@@ -25,6 +25,9 @@ type ServiceConfiguration struct {
 
 	// This allows specifying a particular service type (e.g. "Job"), this is optional and custom service types can be defined for each stack
 	Type string `yaml:"type"`
+
+	// This is a command that will be use to run these services when using nitric start
+	Start string `yaml:"start"`
 }
 
 type ProjectConfiguration struct {

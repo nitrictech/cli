@@ -57,8 +57,8 @@ func buildBucketRequirements(allServiceRequirements []*ServiceRequirements, proj
 			for _, v := range serviceRequirements.listeners {
 				notifications = append(notifications, &deploymentspb.BucketListener{
 					Config: v,
-					Target: &deploymentspb.BucketListener_ExecutionUnit{
-						ExecutionUnit: serviceRequirements.serviceName,
+					Target: &deploymentspb.BucketListener_Service{
+						Service: serviceRequirements.serviceName,
 					},
 				})
 			}
@@ -104,8 +104,8 @@ func buildHttpRequirements(allServiceRequirements []*ServiceRequirements, projec
 				Config: &deploymentspb.Resource_Http{
 					Http: &deploymentspb.Http{
 						Target: &deploymentspb.HttpTarget{
-							Target: &deploymentspb.HttpTarget_ExecutionUnit{
-								ExecutionUnit: serviceRequirements.serviceName,
+							Target: &deploymentspb.HttpTarget_Service{
+								Service: serviceRequirements.serviceName,
 							},
 						},
 					},
@@ -144,8 +144,8 @@ func buildTopicRequirements(allServiceRequirements []*ServiceRequirements, proje
 
 			if len(serviceRequirements.subscriptions[topicName]) > 0 {
 				res.GetTopic().Subscriptions = append(res.GetTopic().Subscriptions, &deploymentspb.SubscriptionTarget{
-					Target: &deploymentspb.SubscriptionTarget_ExecutionUnit{
-						ExecutionUnit: serviceRequirements.serviceName,
+					Target: &deploymentspb.SubscriptionTarget_Service{
+						Service: serviceRequirements.serviceName,
 					},
 				})
 			}
@@ -396,20 +396,20 @@ func buildWebsocketRequirements(allServiceRequirements []*ServiceRequirements, p
 				switch registration.EventType {
 				case *websocketspb.WebsocketEventType_Connect.Enum():
 					res.GetWebsocket().ConnectTarget = &deploymentspb.WebsocketTarget{
-						Target: &deploymentspb.WebsocketTarget_ExecutionUnit{
-							ExecutionUnit: serviceRequirements.serviceName,
+						Target: &deploymentspb.WebsocketTarget_Service{
+							Service: serviceRequirements.serviceName,
 						},
 					}
 				case *websocketspb.WebsocketEventType_Disconnect.Enum():
 					res.GetWebsocket().DisconnectTarget = &deploymentspb.WebsocketTarget{
-						Target: &deploymentspb.WebsocketTarget_ExecutionUnit{
-							ExecutionUnit: serviceRequirements.serviceName,
+						Target: &deploymentspb.WebsocketTarget_Service{
+							Service: serviceRequirements.serviceName,
 						},
 					}
 				case *websocketspb.WebsocketEventType_Message.Enum():
 					res.GetWebsocket().MessageTarget = &deploymentspb.WebsocketTarget{
-						Target: &deploymentspb.WebsocketTarget_ExecutionUnit{
-							ExecutionUnit: serviceRequirements.serviceName,
+						Target: &deploymentspb.WebsocketTarget_Service{
+							Service: serviceRequirements.serviceName,
 						},
 					}
 				}
@@ -466,8 +466,8 @@ func buildScheduleRequirements(allServiceRequirements []*ServiceRequirements, pr
 				}
 
 				schedule.Target = &deploymentspb.ScheduleTarget{
-					Target: &deploymentspb.ScheduleTarget_ExecutionUnit{
-						ExecutionUnit: serviceRequirements.serviceName,
+					Target: &deploymentspb.ScheduleTarget_Service{
+						Service: serviceRequirements.serviceName,
 					},
 				}
 
@@ -705,11 +705,11 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 		newSpec.Resources = append(newSpec.Resources, &deploymentspb.Resource{
 			Id: &resourcespb.ResourceIdentifier{
 				Name: serviceRequirements.serviceName,
-				Type: resourcespb.ResourceType_ExecUnit,
+				Type: resourcespb.ResourceType_Service,
 			},
-			Config: &deploymentspb.Resource_ExecutionUnit{
-				ExecutionUnit: &deploymentspb.ExecutionUnit{
-					Source: &deploymentspb.ExecutionUnit_Image{
+			Config: &deploymentspb.Resource_Service{
+				Service: &deploymentspb.Service{
+					Source: &deploymentspb.Service_Image{
 						Image: &deploymentspb.ImageSource{
 							Uri: fmt.Sprintf(serviceRequirements.serviceName),
 						},

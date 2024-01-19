@@ -414,7 +414,7 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	stopChannel := make(chan bool)
 	updatesChannel := make(chan ServiceRunUpdate)
 	go func() {
-		for _ = range updatesChannel {
+		for range updatesChannel {
 			// TODO: Provide some updates - bubbletea nice output
 			// fmt.Println("container update:", update)
 			continue

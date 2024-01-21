@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/asaskevich/EventBus"
-	"github.com/pterm/pterm"
 	"github.com/valyala/fasthttp"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/nitrictech/cli/pkgplus/grpcx"
-	"github.com/nitrictech/cli/pkgplus/streams"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/apis"
 )
@@ -93,19 +89,12 @@ func (l *LocalApiGatewayService) unregisterApiWorker(serviceName string, registr
 }
 
 func (l *LocalApiGatewayService) Serve(stream apispb.Api_ServeServer) error {
-	streamMetadata, ok := metadata.FromIncomingContext(stream.Context())
-	if !ok {
-		return fmt.Errorf("missing expected metadata")
-	}
-	pterm.Error.Printfln("%+v", streamMetadata)
-
-	serviceName := strings.Join(streamMetadata.Get(grpcx.ServiceNameKey), "")
-
-	if serviceName == "" {
-		return fmt.Errorf("missing expected service name")
+	serviceName, err := grpcx.GetServiceNameFromStream(stream)
+	if err != nil {
+		return err
 	}
 
-	peekableStream := streams.NewPeekableStreamServer[*apispb.ServerMessage, *apispb.ClientMessage](stream)
+	peekableStream := grpcx.NewPeekableStreamServer[*apispb.ServerMessage, *apispb.ClientMessage](stream)
 
 	firstRequest, err := peekableStream.Peek()
 	if err != nil {

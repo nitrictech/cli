@@ -44,8 +44,6 @@ import (
 
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 
-	workersHttp "github.com/nitrictech/nitric/core/pkg/workers/http"
-
 	"github.com/nitrictech/nitric/core/pkg/gateway"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
@@ -649,7 +647,7 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 	}
 
 	if httpProxyPlugin, ok := s.options.HttpPlugin.(*http.LocalHttpProxy); ok {
-		httpProxyPlugin.SubscribeToState(func(state map[string]*workersHttp.HttpServer) {
+		httpProxyPlugin.SubscribeToState(func(state map[string]*http.HttpProxyService) {
 			s.refreshHttpWorkers(state)
 		})
 	}

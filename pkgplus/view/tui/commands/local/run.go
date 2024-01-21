@@ -114,11 +114,17 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// update the api state by getting the latest API addresses
 		newTopicsSummary := []TopicSummary{}
 
-		for topic, subscriberCount := range state {
+		for topic, subscribedService := range state {
+			// Each service can subscribe more than once.
+			subCount := 0
+			for _, numSubscribers := range subscribedService {
+				subCount += numSubscribers
+			}
+
 			newTopicsSummary = append(newTopicsSummary, TopicSummary{
 				name:            topic,
 				url:             t.localCloud.Gateway.GetTopicTriggerUrl(topic),
-				subscriberCount: subscriberCount,
+				subscriberCount: subCount,
 			})
 		}
 
@@ -127,10 +133,10 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// update the api state by getting the latest API addresses
 		newSchedulesSummary := []ScheduleSummary{}
 
-		for schedule, registrationRequest := range state {
+		for schedule, scheduledService := range state {
 			var rate string = ""
 
-			switch t := registrationRequest.Cadence.(type) {
+			switch t := scheduledService.Schedule.Cadence.(type) {
 			case *schedulespb.RegistrationRequest_Cron:
 				rate = t.Cron.Expression
 			case *schedulespb.RegistrationRequest_Every:

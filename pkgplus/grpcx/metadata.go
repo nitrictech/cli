@@ -2,10 +2,13 @@ package grpcx
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
-	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/pterm/pterm"
 )
 
 const ServiceNameKey = "x-nitric-service-name"
@@ -24,7 +27,7 @@ func newWrappedStream(stream grpc.ServerStream, ctx context.Context) grpc.Server
 	return &wrappedStream{ServerStream: stream, ctx: ctx}
 }
 
-func CreateServiceIdInterceptor(serviceName string) (grpc.UnaryServerInterceptor, grpc.StreamServerInterceptor) {
+func CreateServiceNameInterceptor(serviceName string) (grpc.UnaryServerInterceptor, grpc.StreamServerInterceptor) {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 			pterm.Info.Printf("%+v\n", ctx)
 			// Inject the name of the service
@@ -52,4 +55,25 @@ func CreateServiceIdInterceptor(serviceName string) (grpc.UnaryServerInterceptor
 			// Call the original handler with the new wrapped stream
 			return handler(srv, wrappedStream)
 		}
+}
+
+// GetServiceNameFromIncomingContext extracts the nitric service name from the incoming context of a grpc request
+func GetServiceNameFromIncomingContext(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("request ctx missing expected metadata")
+	}
+
+	serviceName := strings.Join(md.Get(ServiceNameKey), "")
+
+	if serviceName == "" {
+		return "", fmt.Errorf("request ctx metadata missing service name in key %s", ServiceNameKey)
+	}
+
+	return serviceName, nil
+}
+
+// GetServiceNameFromStream extracts the nitric service name from the incoming context of a grpc stream
+func GetServiceNameFromStream(stream grpc.ServerStream) (string, error) {
+	return GetServiceNameFromIncomingContext(stream.Context())
 }

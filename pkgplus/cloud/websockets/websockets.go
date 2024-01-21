@@ -19,18 +19,14 @@ package websockets
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/fasthttp/websocket"
-	"github.com/pterm/pterm"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/nitrictech/cli/pkgplus/grpcx"
-	"github.com/nitrictech/cli/pkgplus/streams"
 
 	nitricws "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/websockets"
@@ -87,7 +83,7 @@ type WebsocketAction[Event EventItem] struct {
 	Type  ActionType `json:"-"`
 }
 
-func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string][]nitricws.WebsocketEventType)) {
+func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string]map[string][]nitricws.WebsocketEventType)) {
 	r.bus.Subscribe(localWebsocketTopic, subscription)
 }
 
@@ -142,19 +138,12 @@ func (r *LocalWebsocketService) unRegisterWebsocketWorker(serviceName string, re
 }
 
 func (r *LocalWebsocketService) HandleEvents(stream nitricws.WebsocketHandler_HandleEventsServer) error {
-	streamMetadata, ok := metadata.FromIncomingContext(stream.Context())
-	if !ok {
-		return fmt.Errorf("missing expected metadata")
-	}
-	pterm.Error.Printfln("%+v", streamMetadata)
-
-	serviceName := strings.Join(streamMetadata.Get(grpcx.ServiceNameKey), "")
-
-	if serviceName == "" {
-		return fmt.Errorf("missing expected service name")
+	serviceName, err := grpcx.GetServiceNameFromStream(stream)
+	if err != nil {
+		return err
 	}
 
-	peekableStream := streams.NewPeekableStreamServer[*nitricws.ServerMessage, *nitricws.ClientMessage](stream)
+	peekableStream := grpcx.NewPeekableStreamServer[*nitricws.ServerMessage, *nitricws.ClientMessage](stream)
 
 	firstRequest, err := peekableStream.Peek()
 	if err != nil {

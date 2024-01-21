@@ -111,7 +111,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	})
 
 	go func() {
-		interceptor, streamInterceptor := grpcx.CreateServiceIdInterceptor(serviceName)
+		interceptor, streamInterceptor := grpcx.CreateServiceNameInterceptor(serviceName)
 
 		srv := grpc.NewServer(
 			grpc.UnaryInterceptor(interceptor),

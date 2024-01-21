@@ -641,7 +641,7 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 	}
 
 	if websocketPlugin, ok := s.options.WebsocketListenerPlugin.(*websockets.LocalWebsocketService); ok {
-		websocketPlugin.SubscribeToState(func(state map[string][]websocketspb.WebsocketEventType) {
+		websocketPlugin.SubscribeToState(func(state map[string]map[string][]websocketspb.WebsocketEventType) {
 			s.refreshWebsocketWorkers(state)
 		})
 

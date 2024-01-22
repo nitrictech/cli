@@ -15,7 +15,7 @@ import (
 )
 
 type HttpProxyService struct {
-	serviceName string
+	ServiceName string
 	server      *http.HttpServer
 }
 
@@ -90,7 +90,7 @@ func (h *LocalHttpProxy) Proxy(ctx context.Context, req *httppb.HttpProxyRequest
 
 	h.state[host] = &HttpProxyService{
 		server:      srv,
-		serviceName: serviceName,
+		ServiceName: serviceName,
 	}
 
 	h.publishState()

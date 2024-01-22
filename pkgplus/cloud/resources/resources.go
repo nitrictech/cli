@@ -19,66 +19,79 @@ package resources
 import (
 	"context"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
-	"github.com/nitrictech/cli/pkgplus/eventbus"
+	"github.com/nitrictech/cli/pkgplus/grpcx"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
 
+type ResourceName = string
+
 type LocalResourcesService struct {
 	gateway *gateway.LocalGatewayService
+
+	Apis        ResourceRegistrar[resourcespb.ApiResource]
+	Buckets     ResourceRegistrar[resourcespb.BucketResource]
+	Collections ResourceRegistrar[resourcespb.CollectionResource]
+	Policies    ResourceRegistrar[resourcespb.PolicyResource]
+	Secrets     ResourceRegistrar[resourcespb.SecretResource]
+	Topics      ResourceRegistrar[resourcespb.TopicResource]
+
+	bus EventBus.Bus
 }
 
 type LocalResourcesOptions struct {
 	Gateway *gateway.LocalGatewayService
 }
 
-const DeclareBucketTopic = "resources:declarebucket"
+/*
+var _ resourcespb.ResourcesServer = &LocalResourcesService{}
 
-// var _ resourcespb.ResourcesServer = &LocalResourcesService{}
+func (l *LocalResourcesService) getApiDetails(name string) (*resourcespb.ResourceDetailsResponse, error) {
+	gatewayUri, ok := l.gateway.GetApiAddresses()[name]
+	if !ok {
+		return nil, fmt.Errorf("api %s does not exist", name)
+	}
 
-// func (l *LocalResourcesService) getApiDetails(name string) (*resourcespb.ResourceDetailsResponse, error) {
-// 	gatewayUri, ok := l.gateway.GetApiAddresses()[name]
-// 	if !ok {
-// 		return nil, fmt.Errorf("api %s does not exist", name)
-// 	}
+	// if !l.isStart {
+	// 	gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
+	// }
 
-// 	// if !l.isStart {
-// 	// 	gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
-// 	// }
+	return &resourcespb.ResourceDetailsResponse{
+		Id:       name,
+		Provider: "dev",
+		Service:  "Api",
+		Details: &resourcespb.ResourceDetailsResponse_Api{
+			Api: &resourcespb.ApiResourceDetails{
+				Url: fmt.Sprintf("http://%s", gatewayUri),
+			},
+		},
+	}, nil
+}
 
-// 	return &resourcespb.ResourceDetailsResponse{
-// 		Id:       name,
-// 		Provider: "dev",
-// 		Service:  "Api",
-// 		Details: &resourcespb.ResourceDetailsResponse_Api{
-// 			Api: &resourcespb.ApiResourceDetails{
-// 				Url: fmt.Sprintf("http://%s", gatewayUri),
-// 			},
-// 		},
-// 	}, nil
-// }
+func (l *LocalResourcesService) getWebsocketDetails(name string) (*resourcespb.ResourceDetailsResponse, error) {
+	gatewayUri, ok := l.gateway.GetWebsocketAddresses()[name]
+	if !ok {
+		return nil, fmt.Errorf("api %s does not exist", name)
+	}
 
-// func (l *LocalResourcesService) getWebsocketDetails(name string) (*resourcespb.ResourceDetailsResponse, error) {
-// 	gatewayUri, ok := l.gateway.GetWebsocketAddresses()[name]
-// 	if !ok {
-// 		return nil, fmt.Errorf("api %s does not exist", name)
-// 	}
+	// if !r.isStart {
+	// 	gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
+	// }
 
-// 	// if !r.isStart {
-// 	// 	gatewayUri = strings.Replace(gatewayUri, "localhost", "host.docker.internal", 1)
-// 	// }
+	return &resourcespb.ResourceDetailsResponse{
+		Id:       name,
+		Provider: "dev",
+		Service:  "Websocket",
+		Details: &resourcespb.ResourceDetailsResponse_Websocket{
+			Websocket: &resourcespb.WebsocketResourceDetails{
+				Url: fmt.Sprintf("ws://%s", gatewayUri),
+			},
+		},
+	}, nil
+}
 
-// 	return &resourcespb.ResourceDetailsResponse{
-// 		Id:       name,
-// 		Provider: "dev",
-// 		Service:  "Websocket",
-// 		Details: &resourcespb.ResourceDetailsResponse_Websocket{
-// 			Websocket: &resourcespb.WebsocketResourceDetails{
-// 				Url: fmt.Sprintf("ws://%s", gatewayUri),
-// 			},
-// 		},
-// 	}, nil
-// }
+*/
 
 func (l *LocalResourcesService) Details(ctx context.Context, req *resourcespb.ResourceDetailsRequest) (*resourcespb.ResourceDetailsResponse, error) {
 	// switch req.Resource.Type {
@@ -93,18 +106,56 @@ func (l *LocalResourcesService) Details(ctx context.Context, req *resourcespb.Re
 	return nil, nil
 }
 
+const localResourcesTopic = "local_resources"
+
+// func (s *LocalResourcesService) SubscribeToState(fn func(State)) {
+// 	s.bus.Subscribe(localResourcesTopic, fn)
+// }
+
 func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {
-	switch req.Id.Type {
-	case resourcespb.ResourceType_Bucket:
-		eventbus.Bus().Publish(DeclareBucketTopic, req.Id.Name)
+	serviceName, err := grpcx.GetServiceNameFromIncomingContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
+	switch req.Id.Type {
+	case resourcespb.ResourceType_Api:
+		err = l.Apis.Register(req.Id.Name, serviceName, req.GetApi())
+	case resourcespb.ResourceType_Bucket:
+		// eventbus.Bus().Publish(DeclareBucketTopic, req.Id.Name)
+		err = l.Buckets.Register(req.Id.Name, serviceName, req.GetBucket())
+	case resourcespb.ResourceType_Collection:
+		err = l.Collections.Register(req.Id.Name, serviceName, req.GetCollection())
+	case resourcespb.ResourceType_Policy:
+		err = l.Policies.Register(req.Id.Name, serviceName, req.GetPolicy())
+	case resourcespb.ResourceType_Secret:
+		err = l.Secrets.Register(req.Id.Name, serviceName, req.GetSecret())
+	case resourcespb.ResourceType_Topic:
+		err = l.Topics.Register(req.Id.Name, serviceName, req.GetTopic())
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	l.bus.Publish(localResourcesTopic, l)
+
 	return &resourcespb.ResourceDeclareResponse{}, nil
+}
+
+// ClearServiceResources - Clear all resources registered by a service, typically done when the service terminates or is restarted
+func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
+	l.Apis.ClearRequestingService(serviceName)
+	l.Buckets.ClearRequestingService(serviceName)
+	l.Collections.ClearRequestingService(serviceName)
+	l.Policies.ClearRequestingService(serviceName)
+	l.Secrets.ClearRequestingService(serviceName)
+	l.Topics.ClearRequestingService(serviceName)
 }
 
 // TODO: Refactor Declare and Details into their respected resources contracts (e.g. Storage/Apis/Collections etc.)
 func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService {
 	return &LocalResourcesService{
 		gateway: opts.Gateway,
+		bus:     EventBus.New(),
 	}
 }

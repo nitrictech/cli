@@ -1,4 +1,4 @@
-package services
+package resources
 
 import (
 	"fmt"
@@ -6,17 +6,16 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/http"
-	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/storage"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
 )
 
-type ServiceState struct {
+type ServiceResourceRefresher struct {
 	serviceName string
 
-	resourcesPlugin *resources.LocalResourcesService
+	resourcesPlugin *LocalResourcesService
 
 	lock             sync.RWMutex
 	apiWorkers       int
@@ -35,11 +34,11 @@ type UpdateArgs struct {
 	httpState            http.State
 }
 
-func (s *ServiceState) allWorkerCount() int {
+func (s *ServiceResourceRefresher) allWorkerCount() int {
 	return s.apiWorkers + s.scheduleWorkers + s.httpWorkers + s.listenerWorkers + s.websocketWorkers
 }
 
-func (s *ServiceState) updatesWorkers(update UpdateArgs) {
+func (s *ServiceResourceRefresher) updatesWorkers(update UpdateArgs) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	previous := s.allWorkerCount()
@@ -90,60 +89,60 @@ func (s *ServiceState) updatesWorkers(update UpdateArgs) {
 	}
 }
 
-type NewServiceStateArgs struct {
-	resources *resources.LocalResourcesService
+type NewServiceResourceRefresherArgs struct {
+	Resources *LocalResourcesService
 
-	apis      *apis.LocalApiGatewayService
-	schedules *schedules.LocalSchedulesService
-	http      *http.LocalHttpProxy
-	listeners *storage.LocalStorageService
-	websocket *websockets.LocalWebsocketService
-	topics    *topics.LocalTopicsAndSubscribersService
-	storage   *storage.LocalStorageService
+	Apis       *apis.LocalApiGatewayService
+	Schedules  *schedules.LocalSchedulesService
+	Http       *http.LocalHttpProxy
+	Listeners  *storage.LocalStorageService
+	Websockets *websockets.LocalWebsocketService
+	Topics     *topics.LocalTopicsAndSubscribersService
+	Storage    *storage.LocalStorageService
 }
 
-func NewServiceState(serviceName string, args NewServiceStateArgs) (*ServiceState, error) {
-	if args.resources == nil || args.apis == nil || args.schedules == nil || args.http == nil || args.listeners == nil || args.websocket == nil {
+func NewServiceResourceRefresher(serviceName string, args NewServiceResourceRefresherArgs) (*ServiceResourceRefresher, error) {
+	if args.Resources == nil || args.Apis == nil || args.Schedules == nil || args.Http == nil || args.Listeners == nil || args.Websockets == nil {
 		return nil, fmt.Errorf("all service plugins are required")
 	}
 
-	serviceState := &ServiceState{
+	serviceState := &ServiceResourceRefresher{
 		serviceName:     serviceName,
-		resourcesPlugin: args.resources,
+		resourcesPlugin: args.Resources,
 		lock:            sync.RWMutex{},
 	}
 
-	args.apis.SubscribeToState(func(s apis.State) {
+	args.Apis.SubscribeToState(func(s apis.State) {
 		serviceState.updatesWorkers(UpdateArgs{
 			apiState: s,
 		})
 	})
 
-	args.http.SubscribeToState(func(s http.State) {
+	args.Http.SubscribeToState(func(s http.State) {
 		serviceState.updatesWorkers(UpdateArgs{
 			httpState: s,
 		})
 	})
 
-	args.websocket.SubscribeToState(func(s websockets.State) {
+	args.Websockets.SubscribeToState(func(s websockets.State) {
 		serviceState.updatesWorkers(UpdateArgs{
 			websocketState: s,
 		})
 	})
 
-	args.schedules.SubscribeToState(func(s schedules.State) {
+	args.Schedules.SubscribeToState(func(s schedules.State) {
 		serviceState.updatesWorkers(UpdateArgs{
 			schedulesState: s,
 		})
 	})
 
-	args.topics.SubscribeToState(func(s topics.State) {
+	args.Topics.SubscribeToState(func(s topics.State) {
 		serviceState.updatesWorkers(UpdateArgs{
 			topicSubscriberState: s,
 		})
 	})
 
-	args.storage.SubscribeToState(func(s storage.State) {
+	args.Storage.SubscribeToState(func(s storage.State) {
 		serviceState.updatesWorkers(UpdateArgs{
 			bucketListenersState: s,
 		})

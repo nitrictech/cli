@@ -18,6 +18,9 @@ package resources
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
@@ -27,15 +30,18 @@ import (
 
 type ResourceName = string
 
+type LocalResourcesState struct {
+	Buckets     *ResourceRegistrar[resourcespb.BucketResource]
+	Collections *ResourceRegistrar[resourcespb.CollectionResource]
+	Policies    *ResourceRegistrar[resourcespb.PolicyResource]
+	Secrets     *ResourceRegistrar[resourcespb.SecretResource]
+	Topics      *ResourceRegistrar[resourcespb.TopicResource]
+}
+
 type LocalResourcesService struct {
 	gateway *gateway.LocalGatewayService
 
-	Apis        ResourceRegistrar[resourcespb.ApiResource]
-	Buckets     ResourceRegistrar[resourcespb.BucketResource]
-	Collections ResourceRegistrar[resourcespb.CollectionResource]
-	Policies    ResourceRegistrar[resourcespb.PolicyResource]
-	Secrets     ResourceRegistrar[resourcespb.SecretResource]
-	Topics      ResourceRegistrar[resourcespb.TopicResource]
+	state LocalResourcesState
 
 	bus EventBus.Bus
 }
@@ -108,9 +114,22 @@ func (l *LocalResourcesService) Details(ctx context.Context, req *resourcespb.Re
 
 const localResourcesTopic = "local_resources"
 
-// func (s *LocalResourcesService) SubscribeToState(fn func(State)) {
-// 	s.bus.Subscribe(localResourcesTopic, fn)
-// }
+func (s *LocalResourcesService) SubscribeToState(fn func(lrs LocalResourcesState)) {
+	s.bus.Subscribe(localResourcesTopic, fn)
+}
+
+// policyResourceName generates a unique name for a policy resource by hashing the policy document
+func policyResourceName(policy *resourcespb.PolicyResource) (string, error) {
+	policyDoc, err := json.Marshal(policy)
+	if err != nil {
+		return "", err
+	}
+
+	hasher := md5.New()
+	hasher.Write(policyDoc)
+
+	return hex.EncodeToString(hasher.Sum(nil)), nil
+}
 
 func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {
 	serviceName, err := grpcx.GetServiceNameFromIncomingContext(ctx)
@@ -119,42 +138,57 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 	}
 
 	switch req.Id.Type {
-	case resourcespb.ResourceType_Api:
-		err = l.Apis.Register(req.Id.Name, serviceName, req.GetApi())
 	case resourcespb.ResourceType_Bucket:
-		// eventbus.Bus().Publish(DeclareBucketTopic, req.Id.Name)
-		err = l.Buckets.Register(req.Id.Name, serviceName, req.GetBucket())
+		err = l.state.Buckets.Register(req.Id.Name, serviceName, req.GetBucket())
 	case resourcespb.ResourceType_Collection:
-		err = l.Collections.Register(req.Id.Name, serviceName, req.GetCollection())
+		err = l.state.Collections.Register(req.Id.Name, serviceName, req.GetCollection())
 	case resourcespb.ResourceType_Policy:
-		err = l.Policies.Register(req.Id.Name, serviceName, req.GetPolicy())
+		// Services don't know their own name, so forgetful 🙄, that's ok, we'll add it here.
+		for _, principal := range req.GetPolicy().Principals {
+			if principal.Type == resourcespb.ResourceType_Service {
+				principal.Name = serviceName
+			}
+		}
+
+		policyName, policyErr := policyResourceName(req.GetPolicy())
+		if policyErr != nil {
+			return nil, policyErr
+		}
+
+		err = l.state.Policies.Register(policyName, serviceName, req.GetPolicy())
 	case resourcespb.ResourceType_Secret:
-		err = l.Secrets.Register(req.Id.Name, serviceName, req.GetSecret())
+		err = l.state.Secrets.Register(req.Id.Name, serviceName, req.GetSecret())
 	case resourcespb.ResourceType_Topic:
-		err = l.Topics.Register(req.Id.Name, serviceName, req.GetTopic())
+		err = l.state.Topics.Register(req.Id.Name, serviceName, req.GetTopic())
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	l.bus.Publish(localResourcesTopic, l)
+	l.bus.Publish(localResourcesTopic, l.state)
 
 	return &resourcespb.ResourceDeclareResponse{}, nil
 }
 
 // ClearServiceResources - Clear all resources registered by a service, typically done when the service terminates or is restarted
 func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
-	l.Apis.ClearRequestingService(serviceName)
-	l.Buckets.ClearRequestingService(serviceName)
-	l.Collections.ClearRequestingService(serviceName)
-	l.Policies.ClearRequestingService(serviceName)
-	l.Secrets.ClearRequestingService(serviceName)
-	l.Topics.ClearRequestingService(serviceName)
+	l.state.Buckets.ClearRequestingService(serviceName)
+	l.state.Collections.ClearRequestingService(serviceName)
+	l.state.Policies.ClearRequestingService(serviceName)
+	l.state.Secrets.ClearRequestingService(serviceName)
+	l.state.Topics.ClearRequestingService(serviceName)
 }
 
 // TODO: Refactor Declare and Details into their respected resources contracts (e.g. Storage/Apis/Collections etc.)
 func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService {
 	return &LocalResourcesService{
+		state: LocalResourcesState{
+			Buckets:     NewResourceRegistrar[resourcespb.BucketResource](),
+			Collections: NewResourceRegistrar[resourcespb.CollectionResource](),
+			Policies:    NewResourceRegistrar[resourcespb.PolicyResource](),
+			Secrets:     NewResourceRegistrar[resourcespb.SecretResource](),
+			Topics:      NewResourceRegistrar[resourcespb.TopicResource](),
+		},
 		gateway: opts.Gateway,
 		bus:     EventBus.New(),
 	}

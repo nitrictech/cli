@@ -7,8 +7,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-
-	"github.com/pterm/pterm"
 )
 
 const ServiceNameKey = "x-nitric-service-name"
@@ -29,13 +27,11 @@ func newWrappedStream(stream grpc.ServerStream, ctx context.Context) grpc.Server
 
 func CreateServiceNameInterceptor(serviceName string) (grpc.UnaryServerInterceptor, grpc.StreamServerInterceptor) {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-			pterm.Info.Printf("%+v\n", ctx)
 			// Inject the name of the service
 			md, _ := metadata.FromIncomingContext(ctx)
 			md.Append(ServiceNameKey, serviceName) // example of adding new metadata
 
-			newCtx := metadata.NewOutgoingContext(ctx, md)
-			pterm.Info.Printf("%+v\n", newCtx)
+			newCtx := metadata.NewIncomingContext(ctx, md)
 			return handler(newCtx, req)
 		}, func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 			md, ok := metadata.FromIncomingContext(ss.Context())

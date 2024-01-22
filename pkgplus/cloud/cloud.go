@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
@@ -26,7 +27,8 @@ type Subscribable[T any, A any] interface {
 	SubscribeToAction(fn func(A)) // used to subscribe to api calls, ws messages, topic deliveries etc
 }
 type LocalCloud struct {
-	membranes map[string]*membrane.Membrane
+	membraneLock sync.Mutex
+	membranes    map[string]*membrane.Membrane
 
 	Apis        *apis.LocalApiGatewayService
 	Collections *collections.BoltDocService
@@ -74,6 +76,8 @@ func (lc *LocalCloud) Stop() {
 // }
 
 func (lc *LocalCloud) AddService(serviceName string) (int, error) {
+	lc.membraneLock.Lock()
+	defer lc.membraneLock.Unlock()
 	if _, ok := lc.membranes[serviceName]; ok {
 		return 0, fmt.Errorf("service %s already started", serviceName)
 	}
@@ -109,6 +113,21 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 
 		SuppressLogs: false,
 	})
+
+	// Create a watcher that clears old resources when the service is restarted
+	_, err = resources.NewServiceResourceRefresher(serviceName, resources.NewServiceResourceRefresherArgs{
+		Resources:  lc.Resources,
+		Apis:       lc.Apis,
+		Schedules:  lc.Schedules,
+		Http:       lc.Http,
+		Listeners:  lc.Storage,
+		Websockets: lc.Websockets,
+		Topics:     lc.Topics,
+		Storage:    lc.Storage,
+	})
+	if err != nil {
+		return 0, err
+	}
 
 	go func() {
 		interceptor, streamInterceptor := grpcx.CreateServiceNameInterceptor(serviceName)

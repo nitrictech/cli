@@ -6,18 +6,20 @@ import (
 	"sync"
 )
 
+type ResourceRegister[R any] struct {
+	RequestingServices []string
+	Resource           *R
+}
+
 type ResourceRegistrar[R any] struct {
 	lock      sync.RWMutex
-	resources map[ResourceName]*struct {
-		requestingServices []string
-		resource           *R
-	}
+	resources map[ResourceName]*ResourceRegister[R]
 }
 
 func (r *ResourceRegistrar[R]) isAlreadyRegistered(name string, requestingService string) bool {
 	_, exists := r.resources[name]
 	if exists {
-		duplicate := slices.Contains(r.resources[name].requestingServices, requestingService)
+		duplicate := slices.Contains(r.resources[name].RequestingServices, requestingService)
 		if !duplicate {
 			return true
 		}
@@ -37,30 +39,34 @@ func (r *ResourceRegistrar[R]) Register(name string, requestingService string, r
 		}
 
 		// already registered, by another service, add this service to the list
-		r.resources[name].requestingServices = append(r.resources[name].requestingServices, requestingService)
+		r.resources[name].RequestingServices = append(r.resources[name].RequestingServices, requestingService)
 		return nil
 	}
 
 	// new resource, register it
-	r.resources[name] = &struct {
-		requestingServices []string
-		resource           *R
-	}{
-		requestingServices: []string{requestingService},
-		resource:           resource,
+	r.resources[name] = &ResourceRegister[R]{
+		RequestingServices: []string{requestingService},
+		Resource:           resource,
 	}
 	return nil
 }
 
-func (r *ResourceRegistrar[R]) Get(name string) *R {
+func (r *ResourceRegistrar[R]) Get(resourceName string) *R {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
-	registration, ok := r.resources[name]
+	registration, ok := r.resources[resourceName]
 	if !ok {
 		return nil
 	}
-	return registration.resource
+	return registration.Resource
+}
+
+func (r *ResourceRegistrar[R]) GetAll() map[ResourceName]*ResourceRegister[R] {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	return r.resources
 }
 
 func (r *ResourceRegistrar[R]) GetRequestingServices(name string) []string {
@@ -71,23 +77,28 @@ func (r *ResourceRegistrar[R]) GetRequestingServices(name string) []string {
 	if !ok {
 		return []string{}
 	}
-	return registration.requestingServices
+	return registration.RequestingServices
 }
 
-// ClearRequestingService - Remove a requesting service from all resources, if it was the only requestor for a resource, remove the resource
+// ClearRequestingService - Remove a requesting service from all resources, if it was the only requestor for a resource, the resource is also removed
 func (r *ResourceRegistrar[R]) ClearRequestingService(requestingService string) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
 	for name, registration := range r.resources {
-		for i, service := range registration.requestingServices {
+		for i, service := range registration.RequestingServices {
 			if service == requestingService {
-				// TODO: are the indexes here correct or should it be i, i+1?
-				registration.requestingServices = slices.Delete(registration.requestingServices, i, i)
+				registration.RequestingServices = slices.Delete(registration.RequestingServices, i, i+1)
 			}
 		}
-		if len(registration.requestingServices) == 0 {
+		if len(registration.RequestingServices) == 0 {
 			delete(r.resources, name)
 		}
+	}
+}
+
+func NewResourceRegistrar[R any]() *ResourceRegistrar[R] {
+	return &ResourceRegistrar[R]{
+		resources: make(map[string]*ResourceRegister[R], 0),
 	}
 }

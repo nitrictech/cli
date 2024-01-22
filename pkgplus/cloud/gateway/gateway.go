@@ -17,6 +17,7 @@
 package gateway
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -652,26 +653,19 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 		})
 	}
 
-	go func() {
-		_ = s.serviceServer.Serve(s.serviceListener)
-	}()
-
-	// block on a stop signal
-	<-s.stop
-
-	return nil
+	return s.serviceServer.Serve(s.serviceListener)
 }
 
 func (s *LocalGatewayService) Stop() error {
 	for _, s := range s.apiServers {
 		// shutdown all the servers
 		// this will allow Start to exit
-		_ = s.srv.Shutdown()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+		defer cancel()
+		_ = s.srv.ShutdownWithContext(ctx)
 	}
 
-	s.stop <- true
-
-	return nil
+	return s.serviceServer.Shutdown()
 }
 
 // Create new HTTP gateway

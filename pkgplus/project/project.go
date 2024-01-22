@@ -171,17 +171,18 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, command
 		errChan <- err
 	}()
 
-	select {
-	case err := <-errChan:
-		updates <- ServiceRunUpdate{
-			ServiceName: s.Name,
-			Status:      ServiceRunStatus_Error,
-			Err:         err,
-		}
-		return err
-	case <-stop:
-		return cmd.Process.Kill()
+	go func(cmd *exec.Cmd) {
+		<-stop
+		_ = cmd.Process.Kill()
+	}(cmd)
+
+	err := <-errChan
+	updates <- ServiceRunUpdate{
+		ServiceName: s.Name,
+		Status:      ServiceRunStatus_Error,
+		Err:         err,
 	}
+	return err
 }
 
 // RunContainer - Runs a container for the service, blocking until the container exits

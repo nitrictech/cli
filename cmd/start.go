@@ -17,16 +17,14 @@
 package cmd
 
 import (
-	"fmt"
-
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pterm/pterm"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkgplus/cloud"
-	"github.com/nitrictech/cli/pkgplus/dashboard"
+	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
-	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
+	"github.com/nitrictech/cli/pkgplus/view/tui/commands/services"
 )
 
 var startNoBrowser bool
@@ -41,47 +39,32 @@ var startCmd = &cobra.Command{
 		// Divert default log output to pterm debug
 		// log.SetOutput(output.NewPtermWriter(pterm.Debug))
 		// log.SetFlags(0)
+		fs := afero.NewOsFs()
 
-		if !tui.IsTerminal() {
-			fmt.Println("")
-			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode.")
-			// output.CI = true
-		}
+		proj, err := project.FromFile(fs, "")
+		tui.CheckErr(err)
 
-		// if output.CI {
-		// 	return start.RunNonInteractive(startNoBrowser)
-		// }
-
+		// Start the local cloud service analogues
 		localCloud, err := cloud.New()
 		tui.CheckErr(err)
 
-		// create dashboard
-		dash, err := dashboard.New(startNoBrowser, localCloud)
-		cobra.CheckErr(err)
-
-		// fs := afero.NewOsFs()
-
-		// _, err := project.FromFile(fs, "")
-		// tui.CheckErr(err)
-
-		// // create dashboard, we will start it once an application is connected
-		// dash, err = dashboard.New(startNoBrowser, localCloud.Storage)
-		// tui.CheckErr(err)
-
-		// Start dashboard
-		err = dash.Start()
-		cobra.CheckErr(err)
-
-		// Start a new tea app
+		// Run the app code (project services)
+		stopChan := make(chan bool)
+		updatesChan := make(chan project.ServiceRunUpdate)
 		go func() {
-			cliView := tea.NewProgram(local.NewTuiModel(localCloud, dash.GetDashboardUrl()))
-
-			_, _ = cliView.Run()
-			localCloud.Stop()
+			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan)
+			if err != nil {
+				panic(err)
+			}
 		}()
 
-		err = localCloud.Start()
 		tui.CheckErr(err)
+
+		runView := tea.NewProgram(services.NewModel(stopChan, updatesChan, localCloud))
+
+		_, _ = runView.Run()
+		// cobra.CheckErr(err)
+		localCloud.Stop()
 
 		return nil
 	},

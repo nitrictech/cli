@@ -7,8 +7,10 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -20,6 +22,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 
+	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/docker"
 	"github.com/nitrictech/cli/pkgplus/netx"
@@ -38,6 +41,8 @@ type Service struct {
 
 	file         string
 	buildContext runtime.RuntimeBuildContext
+
+	start string
 }
 
 const tempBuildDir = "./.nitric/build"
@@ -127,6 +132,57 @@ type writerFunc func(p []byte) (n int, err error)
 
 func (wf writerFunc) Write(p []byte) (n int, err error) {
 	return wf(p)
+}
+
+// Run - runs the service using the provided command, typically not in a container.
+func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, command string, env map[string]string) error {
+	commandParts := strings.Split(fmt.Sprintf(command, s.file), " ")
+	cmd := exec.Command(
+		commandParts[0],
+		commandParts[1:]...,
+	)
+
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	for k, v := range env {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+
+	cmd.Stdout = &ServiceRunUpdateWriter{
+		updates:     updates,
+		serviceName: s.Name,
+		status:      ServiceRunStatus_Running,
+	}
+
+	cmd.Stderr = &ServiceRunUpdateWriter{
+		updates:     updates,
+		serviceName: s.Name,
+		status:      ServiceRunStatus_Error,
+	}
+
+	errChan := make(chan error)
+
+	go func() {
+		err := cmd.Start()
+		if err != nil {
+			errChan <- err
+		}
+
+		err = cmd.Wait()
+		errChan <- err
+	}()
+
+	go func(cmd *exec.Cmd) {
+		<-stop
+		_ = cmd.Process.Kill()
+	}(cmd)
+
+	err := <-errChan
+	updates <- ServiceRunUpdate{
+		ServiceName: s.Name,
+		Status:      ServiceRunStatus_Error,
+		Err:         err,
+	}
+	return err
 }
 
 // RunContainer - Runs a container for the service, blocking until the container exits
@@ -324,6 +380,24 @@ type ServiceRunUpdate struct {
 	Err         error
 }
 
+type ServiceRunUpdateWriter struct {
+	updates     chan<- ServiceRunUpdate
+	serviceName string
+	status      ServiceRunStatus
+}
+
+func (s *ServiceRunUpdateWriter) Write(data []byte) (int, error) {
+	msg := string(data)
+
+	s.updates <- ServiceRunUpdate{
+		ServiceName: s.serviceName,
+		Message:     msg,
+		Status:      s.status,
+	}
+
+	return len(data), nil
+}
+
 type serviceBuildUpdateWriter struct {
 	serviceName     string
 	buildUpdateChan chan ServiceBuildUpdate
@@ -470,9 +544,38 @@ func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirement
 	return allServiceRequirements, nil
 }
 
+// RunServices - Runs all the services locally using a startup command
+// use the stop channel to stop all running services
+func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate) error {
+	stopChannels := lo.FanOut[bool](len(p.Services), 1, stop)
+
+	group, _ := errgroup.WithContext(context.TODO())
+
+	for i, service := range p.Services {
+		idx := i
+		svc := service
+
+		// start the service with the given file reference from its projects CWD
+		group.Go(func() error {
+			port, err := localCloud.AddService(svc.Name)
+			if err != nil {
+				return err
+			}
+
+			return svc.Run(stopChannels[idx], updates, svc.start, map[string]string{
+				"NITRIC_ENVIRONMENT": "run",
+				"SERVICE_ADDRESS":    "localhost:" + strconv.Itoa(port),
+				// TODO: add .env variables.
+			})
+		})
+	}
+
+	return group.Wait()
+}
+
 // RunServices - Runs all the services as containers
 // use the stop channel to stop all running services
-func (p *Project) RunServices(stop <-chan bool, updates chan<- ServiceRunUpdate) error {
+func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate) error {
 	stopChannels := lo.FanOut[bool](len(p.Services), 1, stop)
 
 	group, _ := errgroup.WithContext(context.TODO())
@@ -482,7 +585,12 @@ func (p *Project) RunServices(stop <-chan bool, updates chan<- ServiceRunUpdate)
 		svc := service
 
 		group.Go(func() error {
-			return svc.RunContainer(stopChannels[idx], updates)
+			port, err := localCloud.AddService(svc.Name)
+			if err != nil {
+				return err
+			}
+
+			return svc.RunContainer(stopChannels[idx], updates, WithNitricPort(strconv.Itoa(port)))
 		})
 	}
 
@@ -557,6 +665,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 				file:         f,
 				buildContext: *buildContext,
 				Type:         service.Type,
+				start:        service.Start,
 			}
 
 			if service.Type == "" {

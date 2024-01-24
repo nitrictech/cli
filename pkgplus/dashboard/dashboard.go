@@ -39,6 +39,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/eventbus"
 	"github.com/nitrictech/cli/pkgplus/netx"
+	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
@@ -143,7 +144,15 @@ func (d *Dashboard) addBucket(name string) {
 }
 
 func (d *Dashboard) updateApis(state apis.State) {
-	apiSpecs, _ := collector.ApisToOpenApiSpecs(state, &collector.ProjectErrors{})
+	apis := make(map[string][]*apispb.RegistrationRequest, 0)
+
+	for apiName, api := range state {
+		for _, routes := range lo.Values(api) {
+			apis[apiName] = append(apis[apiName], routes...)
+		}
+	}
+
+	apiSpecs, _ := collector.ApisToOpenApiSpecs(apis, &collector.ProjectErrors{})
 
 	d.apis = apiSpecs
 

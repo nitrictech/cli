@@ -17,6 +17,7 @@
 package gateway
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -43,8 +44,6 @@ import (
 	"github.com/nitrictech/cli/pkgplus/netx"
 
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
-
-	workersHttp "github.com/nitrictech/nitric/core/pkg/workers/http"
 
 	"github.com/nitrictech/nitric/core/pkg/gateway"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
@@ -641,7 +640,7 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 	}
 
 	if websocketPlugin, ok := s.options.WebsocketListenerPlugin.(*websockets.LocalWebsocketService); ok {
-		websocketPlugin.SubscribeToState(func(state map[string][]websocketspb.WebsocketEventType) {
+		websocketPlugin.SubscribeToState(func(state map[string]map[string][]websocketspb.WebsocketEventType) {
 			s.refreshWebsocketWorkers(state)
 		})
 
@@ -649,31 +648,24 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 	}
 
 	if httpProxyPlugin, ok := s.options.HttpPlugin.(*http.LocalHttpProxy); ok {
-		httpProxyPlugin.SubscribeToState(func(state map[string]*workersHttp.HttpServer) {
+		httpProxyPlugin.SubscribeToState(func(state map[string]*http.HttpProxyService) {
 			s.refreshHttpWorkers(state)
 		})
 	}
 
-	go func() {
-		_ = s.serviceServer.Serve(s.serviceListener)
-	}()
-
-	// block on a stop signal
-	<-s.stop
-
-	return nil
+	return s.serviceServer.Serve(s.serviceListener)
 }
 
 func (s *LocalGatewayService) Stop() error {
 	for _, s := range s.apiServers {
 		// shutdown all the servers
 		// this will allow Start to exit
-		_ = s.srv.Shutdown()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+		defer cancel()
+		_ = s.srv.ShutdownWithContext(ctx)
 	}
 
-	s.stop <- true
-
-	return nil
+	return s.serviceServer.Shutdown()
 }
 
 // Create new HTTP gateway

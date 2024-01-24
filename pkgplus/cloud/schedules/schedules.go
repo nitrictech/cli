@@ -11,12 +11,20 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/robfig/cron/v3"
 
-	"github.com/nitrictech/cli/pkgplus/streams"
+	"github.com/nitrictech/cli/pkgplus/grpcx"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/schedules"
 )
 
-type State = map[string]*schedulespb.RegistrationRequest
+type scheduleName = string
+type serviceName = string
+
+type ScheduledService struct {
+	ServiceName serviceName
+	Schedule    *schedulespb.RegistrationRequest
+}
+
+type State = map[scheduleName]*ScheduledService
 
 type ActionState struct {
 	ScheduleName string
@@ -61,16 +69,25 @@ func (l *LocalSchedulesService) GetSchedules() State {
 	return l.schedules
 }
 
-func (l *LocalSchedulesService) registerSchedule(registrationRequest *schedulespb.RegistrationRequest) {
+func (l *LocalSchedulesService) registerSchedule(serviceName string, registrationRequest *schedulespb.RegistrationRequest) error {
 	l.schedulesLock.Lock()
 	defer l.schedulesLock.Unlock()
 
-	l.schedules[registrationRequest.ScheduleName] = registrationRequest
+	if l.schedules[registrationRequest.ScheduleName] != nil {
+		existing := l.schedules[registrationRequest.ScheduleName]
+		return fmt.Errorf("service %s has already registered a schedule named %s", existing.ServiceName, existing.Schedule.ScheduleName)
+	}
+
+	l.schedules[registrationRequest.ScheduleName] = &ScheduledService{
+		ServiceName: serviceName,
+		Schedule:    registrationRequest,
+	}
 
 	l.publishState()
+	return nil
 }
 
-func (l *LocalSchedulesService) unregisterSchedule(registrationRequest *schedulespb.RegistrationRequest) {
+func (l *LocalSchedulesService) unregisterSchedule(serviceName string, registrationRequest *schedulespb.RegistrationRequest) {
 	l.schedulesLock.Lock()
 	defer l.schedulesLock.Unlock()
 
@@ -102,7 +119,12 @@ func (l *LocalSchedulesService) createCronSchedule(scheduleName, expression stri
 }
 
 func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleServer) error {
-	peekableStream := streams.NewPeekableStreamServer[*schedulespb.ServerMessage, *schedulespb.ClientMessage](stream)
+	serviceName, err := grpcx.GetServiceNameFromStream(stream)
+	if err != nil {
+		return err
+	}
+
+	peekableStream := grpcx.NewPeekableStreamServer[*schedulespb.ServerMessage, *schedulespb.ClientMessage](stream)
 
 	firstRequest, err := peekableStream.Peek()
 	if err != nil {
@@ -113,8 +135,8 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 		return fmt.Errorf("first request must be a registration request")
 	}
 
-	l.registerSchedule(firstRequest.GetRegistrationRequest())
-	defer l.unregisterSchedule(firstRequest.GetRegistrationRequest())
+	l.registerSchedule(serviceName, firstRequest.GetRegistrationRequest())
+	defer l.unregisterSchedule(serviceName, firstRequest.GetRegistrationRequest())
 
 	scheduleName := firstRequest.GetRegistrationRequest().ScheduleName
 	cronExpression := ""
@@ -165,6 +187,6 @@ func NewLocalSchedulesService() *LocalSchedulesService {
 		ScheduleWorkerManager: schedules.New(),
 		cron:                  cron.New(),
 		bus:                   EventBus.New(),
-		schedules:             make(map[string]*schedulespb.RegistrationRequest),
+		schedules:             make(State),
 	}
 }

@@ -26,14 +26,17 @@ import (
 	"github.com/asaskevich/EventBus"
 	"google.golang.org/grpc/codes"
 
-	"github.com/nitrictech/cli/pkgplus/streams"
+	"github.com/nitrictech/cli/pkgplus/grpcx"
 
 	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/topics"
 )
 
-type State = map[string]int
+type topicName = string
+type serviceName = string
+
+type State = map[topicName]map[serviceName]int
 
 type LocalTopicsAndSubscribersService struct {
 	*topics.SubscriberManager
@@ -75,29 +78,37 @@ func (s *LocalTopicsAndSubscribersService) SubscribeToAction(subscription func(A
 	s.bus.Subscribe(localTopicsDeliveryTopic, subscription)
 }
 
-func (s *LocalTopicsAndSubscribersService) GetSubscribers() map[string]int {
+func (s *LocalTopicsAndSubscribersService) GetSubscribers() map[string]map[string]int {
 	s.subscribersLock.RLock()
 	defer s.subscribersLock.RUnlock()
 
 	return s.subscribers
 }
 
-func (s *LocalTopicsAndSubscribersService) registerSubscriber(registration *topicspb.RegistrationRequest) {
+func (s *LocalTopicsAndSubscribersService) registerSubscriber(serviceName string, registration *topicspb.RegistrationRequest) {
 	s.subscribersLock.Lock()
 	defer s.subscribersLock.Unlock()
 
-	s.subscribers[registration.TopicName]++
+	if s.subscribers[registration.TopicName] == nil {
+		s.subscribers[registration.TopicName] = make(map[string]int)
+	}
+
+	s.subscribers[registration.TopicName][serviceName]++
 
 	s.publishState()
 }
 
-func (s *LocalTopicsAndSubscribersService) unregisterSubscriber(registration *topicspb.RegistrationRequest) {
+func (s *LocalTopicsAndSubscribersService) unregisterSubscriber(serviceName string, registration *topicspb.RegistrationRequest) {
 	s.subscribersLock.Lock()
 	defer s.subscribersLock.Unlock()
 
-	s.subscribers[registration.TopicName]--
+	if s.subscribers[registration.TopicName] == nil {
+		s.subscribers[registration.TopicName] = make(map[string]int)
+	}
 
-	if s.subscribers[registration.TopicName] == 0 {
+	s.subscribers[registration.TopicName][serviceName]--
+
+	if s.subscribers[registration.TopicName][serviceName] == 0 {
 		delete(s.subscribers, registration.TopicName)
 	}
 
@@ -106,7 +117,12 @@ func (s *LocalTopicsAndSubscribersService) unregisterSubscriber(registration *to
 
 // Subscribe to a topic and handle incoming messages
 func (s *LocalTopicsAndSubscribersService) Subscribe(stream topicspb.Subscriber_SubscribeServer) error {
-	peekableStream := streams.NewPeekableStreamServer[*topicspb.ServerMessage, *topicspb.ClientMessage](stream)
+	serviceName, err := grpcx.GetServiceNameFromStream(stream)
+	if err != nil {
+		return err
+	}
+
+	peekableStream := grpcx.NewPeekableStreamServer[*topicspb.ServerMessage, *topicspb.ClientMessage](stream)
 
 	firstRequest, err := peekableStream.Peek()
 	if err != nil {
@@ -130,8 +146,8 @@ func (s *LocalTopicsAndSubscribersService) Subscribe(stream topicspb.Subscriber_
 	})
 
 	// Keep track of our local topic subscriptions
-	s.registerSubscriber(firstRequest.GetRegistrationRequest())
-	defer s.unregisterSubscriber(firstRequest.GetRegistrationRequest())
+	s.registerSubscriber(serviceName, firstRequest.GetRegistrationRequest())
+	defer s.unregisterSubscriber(serviceName, firstRequest.GetRegistrationRequest())
 
 	return s.SubscriberManager.Subscribe(peekableStream)
 }
@@ -201,7 +217,7 @@ func NewLocalTopicsService() (*LocalTopicsAndSubscribersService, error) {
 	return &LocalTopicsAndSubscribersService{
 		SubscriberManager: topics.New(),
 		subscribersLock:   sync.RWMutex{},
-		subscribers:       make(map[string]int),
+		subscribers:       make(map[string]map[string]int),
 		bus:               EventBus.New(),
 	}, nil
 }

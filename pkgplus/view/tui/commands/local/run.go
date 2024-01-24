@@ -1,18 +1,23 @@
 package local
 
 import (
+	"fmt"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/http"
+	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	"github.com/nitrictech/pearls/pkg/tui"
+	"github.com/nitrictech/pearls/pkg/tui/view"
 	pearlsview "github.com/nitrictech/pearls/pkg/tui/view"
 )
 
@@ -51,6 +56,8 @@ type TuiModel struct {
 	topics      []TopicSummary
 	schedules   []ScheduleSummary
 
+	resources *resources.LocalResourcesState
+
 	reactiveSub *reactive.Subscription
 
 	dashboardUrl string
@@ -66,6 +73,8 @@ func (t *TuiModel) Init() tea.Cmd {
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Websockets.SubscribeToState)
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Http.SubscribeToState)
 
+	reactive.ListenFor(t.reactiveSub, t.localCloud.Resources.SubscribeToState)
+
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Schedules.SubscribeToState)
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Topics.SubscribeToState)
 
@@ -74,13 +83,15 @@ func (t *TuiModel) Init() tea.Cmd {
 
 func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch state := msg.(type) {
+	case resources.LocalResourcesState:
+		t.resources = &state
 	case apis.State:
 		// update the api state by getting the latest API addresses
 		newApiSummary := []ApiSummary{}
 
-		for api, host := range t.localCloud.Gateway.GetApiAddresses() {
+		for apiName, host := range t.localCloud.Gateway.GetApiAddresses() {
 			newApiSummary = append(newApiSummary, ApiSummary{
-				name: api,
+				name: apiName,
 				url:  host,
 			})
 		}
@@ -114,11 +125,17 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// update the api state by getting the latest API addresses
 		newTopicsSummary := []TopicSummary{}
 
-		for topic, subscriberCount := range state {
+		for topic, subscribedService := range state {
+			// Each service can subscribe more than once.
+			subCount := 0
+			for _, numSubscribers := range subscribedService {
+				subCount += numSubscribers
+			}
+
 			newTopicsSummary = append(newTopicsSummary, TopicSummary{
 				name:            topic,
 				url:             t.localCloud.Gateway.GetTopicTriggerUrl(topic),
-				subscriberCount: subscriberCount,
+				subscriberCount: subCount,
 			})
 		}
 
@@ -127,10 +144,10 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// update the api state by getting the latest API addresses
 		newSchedulesSummary := []ScheduleSummary{}
 
-		for schedule, registrationRequest := range state {
+		for schedule, scheduledService := range state {
 			var rate string = ""
 
-			switch t := registrationRequest.Cadence.(type) {
+			switch t := scheduledService.Schedule.Cadence.(type) {
 			case *schedulespb.RegistrationRequest_Cron:
 				rate = t.Cron.Expression
 			case *schedulespb.RegistrationRequest_Every:
@@ -182,7 +199,7 @@ var (
 			Foreground(tui.Colors.White).
 			Background(tui.Colors.Blue).
 			MarginRight(2)
-	tagStyle = lipgloss.NewStyle().Width(18).Background(tui.Colors.Purple).Foreground(tui.Colors.White)
+	tagStyle = lipgloss.NewStyle().Width(10).Background(tui.Colors.Purple).Foreground(tui.Colors.White)
 )
 
 func (t *TuiModel) View() string {
@@ -298,6 +315,31 @@ func (t *TuiModel) View() string {
 			pearlsview.NewFragment("waiting for connections, start your application to connect it with the local nitric server.").WithStyle(lipgloss.NewStyle().Bold(true)),
 			pearlsview.Break(),
 		)
+	}
+
+	// Render resources
+	if t.resources != nil {
+		output.AddRow(
+			pearlsview.NewFragment("Resources:").WithStyle(tagStyle),
+			pearlsview.Break(),
+		)
+
+		for name, bucket := range t.resources.Buckets.GetAll() {
+			output.AddRow(
+				view.NewFragment(fmt.Sprintf("Bucket::%s", name)),
+				view.Break(),
+				view.NewFragment("  beloved by:"),
+				view.NewFragment(strings.Join(bucket.RequestingServices, ", ")),
+			)
+		}
+
+		for name, policy := range t.resources.Policies.GetAll() {
+			output.AddRow(
+				view.NewFragment(fmt.Sprintf("Policy::%s", name)),
+				view.Break(),
+				view.NewFragment(fmt.Sprintf(" - %+v", policy.Resource)),
+			)
+		}
 	}
 
 	// Show relevant links

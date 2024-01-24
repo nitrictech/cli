@@ -35,14 +35,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/nitrictech/cli/pkgplus/eventbus"
+	"github.com/nitrictech/cli/pkgplus/grpcx"
 	s3_service "github.com/nitrictech/nitric/cloud/aws/runtime/storage"
 
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
 
 type BucketName = string
+type serviceName = string
 
-type State = map[BucketName]int
+type State = map[BucketName]map[serviceName]int
 
 // LocalStorageService - A local implementation of the storage and listeners services, bypasses the gateway to forward storage change events directly to listeners.
 type LocalStorageService struct {
@@ -71,15 +73,19 @@ func (s *LocalStorageService) GetStorageEndpoint() string {
 	return s.storageEndpoint
 }
 
-func (r *LocalStorageService) registerListener(registrationRequest *storagepb.RegistrationRequest) {
+func (r *LocalStorageService) registerListener(serviceName string, registrationRequest *storagepb.RegistrationRequest) {
 	r.listenersLock.Lock()
 	defer r.listenersLock.Unlock()
 
-	if _, ok := r.listeners[registrationRequest.BucketName]; !ok {
-		r.listeners[registrationRequest.BucketName] = 0
+	if r.listeners[registrationRequest.BucketName] == nil {
+		r.listeners[registrationRequest.BucketName] = map[string]int{}
 	}
 
-	r.listeners[registrationRequest.BucketName]++
+	if _, ok := r.listeners[registrationRequest.BucketName]; !ok {
+		r.listeners[registrationRequest.BucketName][serviceName] = 0
+	}
+
+	r.listeners[registrationRequest.BucketName][serviceName]++
 
 	r.bus.Publish(localStorageTopic, r.listeners)
 }
@@ -89,23 +95,25 @@ func (r *LocalStorageService) WorkerCount() int {
 	defer r.listenersLock.RUnlock()
 
 	workerCount := 0
-	for _, val := range r.listeners {
-		workerCount += val
+	for _, services := range r.listeners {
+		for _, val := range services {
+			workerCount += val
+		}
 	}
 
 	return workerCount
 }
 
-func (r *LocalStorageService) unregisterListener(registrationRequest *storagepb.RegistrationRequest) {
+func (r *LocalStorageService) unregisterListener(serviceName string, registrationRequest *storagepb.RegistrationRequest) {
 	r.listenersLock.Lock()
 	defer r.listenersLock.Unlock()
 
-	r.listeners[registrationRequest.BucketName]--
+	r.listeners[registrationRequest.BucketName][serviceName]--
 
 	r.bus.Publish(localStorageTopic, r.listeners)
 }
 
-func (r *LocalStorageService) GetListeners() map[BucketName]int {
+func (r *LocalStorageService) GetListeners() map[BucketName]map[serviceName]int {
 	r.listenersLock.RLock()
 	defer r.listenersLock.RUnlock()
 
@@ -122,6 +130,11 @@ func (r *LocalStorageService) StopSeaweed() error {
 }
 
 func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServer) error {
+	serviceName, err := grpcx.GetServiceNameFromStream(stream)
+	if err != nil {
+		return err
+	}
+
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err
@@ -144,8 +157,8 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 
 	listenTopicName := fmt.Sprintf("%s:%s", bucketName, listenEvtType)
 
-	r.registerListener(firstRequest.GetRegistrationRequest())
-	defer r.unregisterListener(firstRequest.GetRegistrationRequest())
+	r.registerListener(serviceName, firstRequest.GetRegistrationRequest())
+	defer r.unregisterListener(serviceName, firstRequest.GetRegistrationRequest())
 
 	eventbus.StorageBus().SubscribeAsync(listenTopicName, func(req *storagepb.ServerMessage) {
 		err := stream.Send(req)
@@ -321,7 +334,7 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 		client:          s3Client,
 		server:          seaweedServer,
 		storageEndpoint: storageEndpoint,
-		listeners:       map[string]int{},
+		listeners:       map[string]map[string]int{},
 		bus:             EventBus.New(),
 	}, nil
 }

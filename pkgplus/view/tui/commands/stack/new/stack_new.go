@@ -30,6 +30,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/stack"
 	clitui "github.com/nitrictech/cli/pkgplus/view/tui"
+	validators "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
 	"github.com/nitrictech/pearls/pkg/tui"
 	"github.com/nitrictech/pearls/pkg/tui/listprompt"
 	"github.com/nitrictech/pearls/pkg/tui/textprompt"
@@ -296,11 +297,11 @@ func New(fs afero.Fs, args Args) Model {
 	clitui.CheckErr(err)
 
 	if !args.Force {
-		projectNameValidators = append(projectNameValidators, stackNameExistsValidator(projectConfig.Directory))
+		validators.ProjectNameValidators = append(validators.ProjectNameValidators, stackNameExistsValidator(projectConfig.Directory))
 	}
 
-	nameValidator := validation.ComposeValidators(projectNameValidators...)
-	nameInFlightValidator := validation.ComposeValidators(projectNameInFlightValidators...)
+	nameValidator := validation.ComposeValidators(validators.ProjectNameValidators...)
+	nameInFlightValidator := validation.ComposeValidators(validators.ProjectNameValidators...)
 
 	namePrompt := textprompt.NewTextPrompt("stackName", textprompt.TextPromptArgs{
 		Prompt:            "What should we name this stack?",

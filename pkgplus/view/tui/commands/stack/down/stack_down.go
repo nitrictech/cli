@@ -135,39 +135,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-var verbMap = map[deploymentspb.ResourceDeploymentAction]map[deploymentspb.ResourceDeploymentStatus]string{
-	deploymentspb.ResourceDeploymentAction_CREATE: {
-		deploymentspb.ResourceDeploymentStatus_PENDING:     "create",
-		deploymentspb.ResourceDeploymentStatus_IN_PROGRESS: "creating",
-		deploymentspb.ResourceDeploymentStatus_FAILED:      "creation failed",
-		deploymentspb.ResourceDeploymentStatus_SUCCESS:     "created",
-	},
-	deploymentspb.ResourceDeploymentAction_DELETE: {
-		deploymentspb.ResourceDeploymentStatus_PENDING:     "delete",
-		deploymentspb.ResourceDeploymentStatus_SUCCESS:     "deleted",
-		deploymentspb.ResourceDeploymentStatus_IN_PROGRESS: "deleting",
-		deploymentspb.ResourceDeploymentStatus_FAILED:      "failed to delete",
-	},
-	deploymentspb.ResourceDeploymentAction_REPLACE: {
-		deploymentspb.ResourceDeploymentStatus_PENDING:     "replace",
-		deploymentspb.ResourceDeploymentStatus_SUCCESS:     "replaced",
-		deploymentspb.ResourceDeploymentStatus_IN_PROGRESS: "replacing",
-		deploymentspb.ResourceDeploymentStatus_FAILED:      "failed to replace",
-	},
-	deploymentspb.ResourceDeploymentAction_UPDATE: {
-		deploymentspb.ResourceDeploymentStatus_PENDING:     "update",
-		deploymentspb.ResourceDeploymentStatus_SUCCESS:     "updated",
-		deploymentspb.ResourceDeploymentStatus_IN_PROGRESS: "updating",
-		deploymentspb.ResourceDeploymentStatus_FAILED:      "failed to update",
-	},
-	deploymentspb.ResourceDeploymentAction_SAME: {
-		deploymentspb.ResourceDeploymentStatus_PENDING:     "unchanged",
-		deploymentspb.ResourceDeploymentStatus_SUCCESS:     "unchanged",
-		deploymentspb.ResourceDeploymentStatus_IN_PROGRESS: "unchanged",
-		deploymentspb.ResourceDeploymentStatus_FAILED:      "unchanged",
-	},
-}
-
 const maxOutputLines = 5
 
 func (m Model) View() string {
@@ -195,7 +162,7 @@ func (m Model) View() string {
 
 			rows = append(rows, table.Row{
 				lipgloss.NewStyle().MarginLeft(1).Foreground(tui.Colors.Blue).Render(linkChar) + lipgloss.NewStyle().Foreground(tui.Colors.Gray).Render(grandchild.Name),
-				verbMap[grandchild.Action][grandchild.Status] + fmt.Sprintf(" (%s)", resourceTime.Round(time.Second)),
+				stack.VerbMap[grandchild.Action][grandchild.Status] + fmt.Sprintf(" (%s)", resourceTime.Round(time.Second)),
 			})
 		}
 	}

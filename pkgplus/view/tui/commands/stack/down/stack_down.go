@@ -88,8 +88,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 
 				if !found {
-					m.errs = append(m.errs, fmt.Errorf("received update for resource [%s], without associated nitric parent resource", content.Update.SubResource))
-					return m, tea.Quit
+					nitricResource = &stack.Resource{
+						Name:     fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name),
+						Message:  "",
+						Action:   content.Update.Action,
+						Status:   content.Update.Status,
+						Children: make([]*stack.Resource, 0),
+					}
+
+					// Add it from the given parent details
+					m.stack.Children = append(m.stack.Children, nitricResource)
 				}
 
 				parent = nitricResource

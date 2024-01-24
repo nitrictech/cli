@@ -99,6 +99,8 @@ export const useWebSocket = () => {
     }
   );
 
+  console.log("ws-data", data);
+
   return {
     data: data as WebSocketResponse | null,
     error,

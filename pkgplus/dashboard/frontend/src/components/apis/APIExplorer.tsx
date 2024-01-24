@@ -98,7 +98,7 @@ const APIExplorer = () => {
   const [requiredPathParamErrors, setRequiredPathParamErrors] = useState({});
 
   const paths = useMemo(
-    () => data?.apis?.map((doc) => flattenPaths(doc)).flat(),
+    () => data?.apis?.map((api) => flattenPaths(api.spec)).flat(),
     [data]
   );
 
@@ -322,7 +322,7 @@ const APIExplorer = () => {
 
   return (
     <AppLayout
-      title="API Explorer"
+      title="APIs"
       routePath={"/"}
       secondLevelNav={
         paths?.length && selectedApiEndpoint && request?.method ? (

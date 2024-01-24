@@ -78,8 +78,8 @@ func (m Model) View() string {
 	return runView.Render()
 }
 
-func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUpdate, localCloud *cloud.LocalCloud) Model {
-	localServicesModel := local.NewTuiModel(localCloud, "")
+func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUpdate, localCloud *cloud.LocalCloud, dashboardUrl string) Model {
+	localServicesModel := local.NewTuiModel(localCloud, dashboardUrl)
 
 	return Model{
 		stopChan:           stopChannel,

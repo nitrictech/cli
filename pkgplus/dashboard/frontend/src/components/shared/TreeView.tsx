@@ -11,7 +11,7 @@ import {
   FolderOpenIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 import { debounce } from "radash";
 import TextField from "./TextField";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
@@ -123,7 +123,7 @@ const TreeView = <T extends Record<string, any>>({
               {...context.itemContainerWithoutChildrenProps}
               {...context.interactiveElementProps}
               type="button"
-              className={classNames(
+              className={cn(
                 "flex w-full items-center justify-start gap-2 p-2 px-4 hover:bg-gray-200 transition-colors",
                 context.isSelected && "bg-gray-200",
                 depth === 0 && context.isExpanded ? "pb-2" : ""
@@ -140,9 +140,7 @@ const TreeView = <T extends Record<string, any>>({
           return (
             <li
               {...context.itemContainerWithChildrenProps}
-              className={classNames(
-                "flex w-full flex-col text-base items-start"
-              )}
+              className={cn("flex w-full flex-col text-base items-start")}
             >
               {/* if text is over 30 chars, show tooltip */}
               {item.data.label.length >= 30 ? (

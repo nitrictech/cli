@@ -84,7 +84,7 @@ var runCmd = &cobra.Command{
 
 		tui.CheckErr(err)
 
-		runView := tea.NewProgram(services.NewModel(stopChan, updatesChan, localCloud))
+		runView := tea.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
 
 		_, _ = runView.Run()
 		// cobra.CheckErr(err)

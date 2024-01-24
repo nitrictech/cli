@@ -14,14 +14,21 @@ export type Method =
   | "PATCH"
   | "TRACE";
 
-export interface Schedule {
+interface BaseResource {
   name: string;
+  requestingServices: string[];
+}
+
+export interface Api extends BaseResource {
+  spec: APIDoc;
+}
+
+export interface Schedule extends BaseResource {
   expression?: string;
   rate?: string;
 }
 
-export interface Topic {
-  name: string;
+export interface Topic extends BaseResource {
   subscriberCount: number;
 }
 export interface History {
@@ -30,12 +37,11 @@ export interface History {
   topics: EventHistoryItem[];
 }
 
-export interface WebSocket {
-  name: string;
+export interface WebSocket extends BaseResource {
   events: ("connect" | "disconnect" | "message")[];
 }
 
-export interface WebSocketInfo {
+export interface WebSocket {
   connectionCount: number;
   messages: {
     data: string;
@@ -45,21 +51,28 @@ export interface WebSocketInfo {
 }
 
 export interface WebSocketsInfo {
-  [socket: string]: WebSocketInfo;
+  [socket: string]: WebSocket;
 }
 
-export interface Bucket {
-  name: string;
+export interface Bucket extends BaseResource {
   notificationCount: number;
+}
+
+export interface Policy {
+  actions: string[];
+  requestingServices: string[];
 }
 export interface WebSocketResponse {
   projectName: string;
   buckets: Bucket[];
-  apis: APIDoc[];
+  apis: Api[];
   schedules: Schedule[];
   topics: Topic[];
   subscriptions: string[];
   websockets: WebSocket[];
+  policies: {
+    [name: string]: Policy;
+  };
   triggerAddress: string;
   apiAddresses: Record<string, string>;
   websocketAddresses: Record<string, string>;
@@ -80,7 +93,7 @@ export interface Endpoint {
   path: string;
   method: Method;
   params?: Param[];
-  doc: OpenAPIV3.Document<Record<string, any>>;
+  doc: Api["spec"];
 }
 
 export interface APIRequest {

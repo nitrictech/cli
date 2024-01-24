@@ -88,6 +88,7 @@ func (r *ResourceRegistrar[R]) ClearRequestingService(requestingService string) 
 	for name, registration := range r.resources {
 		for i, service := range registration.RequestingServices {
 			if service == requestingService {
+				// TODO investigate slice bounds error when refreshing code, could just append to a new slice
 				registration.RequestingServices = slices.Delete(registration.RequestingServices, i, i+1)
 			}
 		}

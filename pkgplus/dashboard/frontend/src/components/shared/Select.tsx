@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Listbox, Transition } from "@headlessui/react";
 import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 
 interface Props<T> {
   id: string;
@@ -53,7 +53,7 @@ const Select = <T extends Record<string, any> | string>({
                   <Listbox.Option
                     key={i}
                     className={({ active }) =>
-                      classNames(
+                      cn(
                         active ? "bg-blue-600 text-white" : "text-gray-900",
                         "relative cursor-default select-none py-2 pl-3 pr-9"
                       )
@@ -63,7 +63,7 @@ const Select = <T extends Record<string, any> | string>({
                     {({ selected, active }) => (
                       <>
                         <span
-                          className={classNames(
+                          className={cn(
                             selected ? "font-semibold" : "font-normal",
                             "block truncate"
                           )}
@@ -73,7 +73,7 @@ const Select = <T extends Record<string, any> | string>({
 
                         {selected ? (
                           <span
-                            className={classNames(
+                            className={cn(
                               active ? "text-white" : "text-primary",
                               "absolute inset-y-0 right-0 flex items-center pr-4"
                             )}

@@ -18,10 +18,11 @@ import "./styles.css";
 import AppLayout from "../layout/AppLayout";
 import { useCallback, useEffect } from "react";
 import { useWebSocket } from "@/lib/hooks/use-web-socket";
-import { APINode, createApiNode } from "./nodes/APINode";
 import ShareButton from "./ShareButton";
-
-const nodeTypes = { api: APINode };
+import {
+  generateVisualizerData,
+  nodeTypes,
+} from "@/lib/utils/generate-visualizer-data";
 
 const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
@@ -83,13 +84,7 @@ function ReactFlowLayout() {
   useEffect(() => {
     if (!data) return;
 
-    let nodes: Node[] = [];
-
-    if (data?.apis.length) {
-      nodes = [...data.apis.map(createApiNode)];
-    }
-
-    // TODO actually connect this to the real data and connect edges
+    const { nodes, edges } = generateVisualizerData(data);
 
     const layouted = getLayoutedElements(nodes, edges);
 

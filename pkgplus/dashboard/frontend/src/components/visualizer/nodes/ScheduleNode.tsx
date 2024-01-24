@@ -1,16 +1,18 @@
 import { type ComponentType } from "react";
 
-import type { Api } from "@/types";
+import type { Schedule } from "@/types";
 import type { NodeProps } from "reactflow";
 import NodeBase, { type NodeBaseData } from "./NodeBase";
 
-export type ApiNodeData = NodeBaseData<Api>;
+export type ScheduleNodeData = NodeBaseData<Schedule>;
 
-export const APINode: ComponentType<NodeProps<ApiNodeData>> = ({ data }) => {
+export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = ({
+  data,
+}) => {
   return (
     <NodeBase
       {...data}
-      title={`${data.title} API`}
+      title={`${data.title} Schedule`}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

@@ -1,16 +1,18 @@
 import { type ComponentType } from "react";
 
-import type { Api } from "@/types";
-import type { NodeProps } from "reactflow";
+import type { Bucket } from "@/types";
+import type { Node, NodeProps } from "reactflow";
 import NodeBase, { type NodeBaseData } from "./NodeBase";
 
-export type ApiNodeData = NodeBaseData<Api>;
+export type BucketNodeData = NodeBaseData<Bucket>;
 
-export const APINode: ComponentType<NodeProps<ApiNodeData>> = ({ data }) => {
+export const BucketNode: ComponentType<NodeProps<BucketNodeData>> = ({
+  data,
+}) => {
   return (
     <NodeBase
       {...data}
-      title={`${data.title} API`}
+      title={`${data.title} Bucket`}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

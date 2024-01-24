@@ -14,7 +14,7 @@ export type Method =
   | "PATCH"
   | "TRACE";
 
-interface BaseResource {
+export interface BaseResource {
   name: string;
   requestingServices: string[];
 }
@@ -58,9 +58,15 @@ export interface Bucket extends BaseResource {
   notificationCount: number;
 }
 
-export interface Policy {
+type ResourceType = "bucket" | "topic" | "websocket" | "collection" | "secret";
+
+interface Resource {
+  name: string;
+  type: ResourceType;
+}
+export interface Policy extends BaseResource {
   actions: string[];
-  requestingServices: string[];
+  resources: Resource[];
 }
 export interface WebSocketResponse {
   projectName: string;

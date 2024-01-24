@@ -86,10 +86,16 @@ type BucketSpec struct {
 
 	NotificationCount int `json:"notificationCount"`
 }
+
+type PolicyResource struct {
+	Name      string   `json:"name"`
+	Type      string   `json:"type"`
+}
 type PolicySpec struct {
 	*BaseResourceSpec
 
 	Actions []string `json:"actions"`
+	Resources []PolicyResource `json:"resources"`
 }
 
 type Dashboard struct {
@@ -130,7 +136,6 @@ type DashboardResponse struct {
 	CurrentVersion     string                `json:"currentVersion"`
 	LatestVersion      string                `json:"latestVersion"`
 	Connected          bool                  `json:"connected"`
-	//Resources          []ResourceSpec    `json:"resources"`
 }
 
 type Bucket struct {
@@ -164,14 +169,20 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 		}
 	}
 
-	for policyName, resource := range lrs.Policies.GetAll() {
+	for policyName, policy := range lrs.Policies.GetAll() {
 		d.policies[policyName] = PolicySpec{
 			BaseResourceSpec: &BaseResourceSpec{
 				Name:               policyName,
-				RequestingServices: resource.RequestingServices,
+				RequestingServices: policy.RequestingServices,
 			},
-			Actions: lo.Map(resource.Resource.Actions, func(item resourcespb.Action, index int) string {
+			Actions: lo.Map(policy.Resource.Actions, func(item resourcespb.Action, index int) string {
 				return item.String()
+			}),
+			Resources: lo.Map(policy.Resource.Resources, func(item *resourcespb.ResourceIdentifier, index int) PolicyResource  {
+				return PolicyResource{
+					Name: item.Name,
+					Type: strings.ToLower(item.Type.String()),
+				}
 			}),
 		}
 	}

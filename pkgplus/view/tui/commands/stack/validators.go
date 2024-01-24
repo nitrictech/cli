@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack_new
+package stack
 
 import (
 	"regexp"
@@ -31,12 +31,12 @@ var (
 	gcpProjectIDRegex = regexp.MustCompile(`^[a-z][a-z0-9-]{4,28}[a-z0-9]$`)
 )
 
-var projectNameInFlightValidators = []validation.StringValidator{
+var ProjectNameInFlightValidators = []validation.StringValidator{
 	validation.RegexValidator(prefixRegex, "name can't start with a dash"),
 	validation.RegexValidator(nameRegex, "name must only contain letters, numbers and dashes"),
 }
 
-var projectNameValidators = append([]validation.StringValidator{
+var ProjectNameValidators = append([]validation.StringValidator{
 	validation.RegexValidator(suffixRegex, "name can't end with a dash"),
 	validation.NotBlankValidator("name can't be blank"),
-}, projectNameInFlightValidators...)
+}, ProjectNameInFlightValidators...)

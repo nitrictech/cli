@@ -62,7 +62,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.providerStdout = append(m.providerStdout, msg.Value)
 
 		return m, reactive.AwaitChannel(msg.Source)
-	case reactive.ChanMsg[*deploymentspb.DeploymentUpEvent]:
+	case reactive.ChanMsg[*deploymentspb.DeploymentDownEvent]:
 
 		// the source channel is close
 		if !msg.Ok {
@@ -70,7 +70,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch content := msg.Value.Content.(type) {
-		case *deploymentspb.DeploymentUpEvent_Update:
+		case *deploymentspb.DeploymentDownEvent_Update:
 
 			if content.Update == nil || content.Update.Id == nil {
 				break

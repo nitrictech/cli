@@ -30,8 +30,9 @@ import (
 	"github.com/nitrictech/cli/pkgplus/provider"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
-	stack_new "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
-	"github.com/nitrictech/cli/pkgplus/view/tui/commands/stack_up"
+	stack_new "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/new"
+	stack_select "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/select"
+	stack_up "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/up"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 	"github.com/nitrictech/pearls/pkg/tui/inlinelist"
 )
@@ -109,18 +110,6 @@ var newStackCmd = &cobra.Command{
 	Annotations: map[string]string{"commonCommand": "yes"},
 }
 
-type SimpleStringListItem string
-
-var _ inlinelist.ListItem = SimpleStringListItem("")
-
-func (s SimpleStringListItem) GetItemDescription() string {
-	return string(s)
-}
-
-func (s SimpleStringListItem) GetItemValue() string {
-	return string(s)
-}
-
 var stackUpdateCmd = &cobra.Command{
 	Use:     "update [-s stack]",
 	Short:   "Create or update a deployed stack",
@@ -141,24 +130,29 @@ var stackUpdateCmd = &cobra.Command{
 		}
 
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
-		stackSelection := stack.GetStackNameFromFileName(stackFiles[0])
-		// if len(stackFiles) > 1 {
-		// 	stackNames := make([]inlinelist.ListItem, len(stackFiles))
-		// 	for i, stackFile := range stackFiles {
-		// 		stackNames[i] = SimpleStringListItem(stack.GetStackNameFromFileName(stackFile))
-		// 	}
-		// 	// ask which one
-		// 	// FIXME: currently a keyboard trap and not the UI we want
-		// 	promptModel := listprompt.New(listprompt.Args{
-		// 		Items:  stackNames,
-		// 		Tag:    "stack",
-		// 		Prompt: "Which stack would you like to update?",
-		// 	})
+		stackSelection := ""
+		if len(stackFiles) > 1 {
+			stackList := make([]inlinelist.ListItem, len(stackFiles))
 
-		// 	selection, err := tea.NewProgram(promptModel).Run()
-		// 	cobra.CheckErr(err)
-		// 	stackSelection = selection.(listprompt.Model).Choice()
-		// }
+			for i, stackFile := range stackFiles {
+				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stack.GetStackNameFromFileName(stackFile))
+				tui.CheckErr(err)
+				stackList[i] = stack_select.StackListItem{
+					Name:     stackConfig.Name,
+					Provider: stackConfig.Provider,
+				}
+			}
+
+			promptModel := stack_select.New(stack_select.Args{
+				StackList: stackList,
+			})
+
+			selection, err := tea.NewProgram(promptModel).Run()
+			cobra.CheckErr(err)
+			stackSelection = selection.(stack_select.Model).Choice()
+		} else {
+			stackSelection = stack.GetStackNameFromFileName(stackFiles[0])
+		}
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
 		tui.CheckErr(err)

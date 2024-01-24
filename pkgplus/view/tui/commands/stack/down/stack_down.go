@@ -1,4 +1,4 @@
-package stack_up
+package stack_down
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 
 type Model struct {
 	stack              *stack.Resource
-	updatesChan        <-chan *deploymentspb.DeploymentUpEvent
+	updatesChan        <-chan *deploymentspb.DeploymentDownEvent
 	errorChan          <-chan error
 	providerStdoutChan <-chan string
 	providerStdout     []string
@@ -175,7 +175,7 @@ func (m Model) View() string {
 	treeView := view.New()
 
 	treeView.AddRow(
-		view.NewFragment("Nitric Up"+m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)),
+		view.NewFragment("Nitric Down"+m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)),
 		view.Break(),
 	)
 
@@ -237,7 +237,7 @@ func (m Model) View() string {
 	return treeView.Render()
 }
 
-func New(updatesChan <-chan *deploymentspb.DeploymentUpEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
+func New(updatesChan <-chan *deploymentspb.DeploymentDownEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
 	return Model{
 		resourcesTable: table.New(
 			table.WithColumns([]table.Column{

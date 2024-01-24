@@ -61,8 +61,8 @@ var runCmd = &cobra.Command{
 		localCloud, err := cloud.New()
 		tui.CheckErr(err)
 
-		go localCloud.Start()
-		tui.CheckErr(err)
+		// go localCloud.Start()
+		// tui.CheckErr(err)
 
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
@@ -76,7 +76,7 @@ var runCmd = &cobra.Command{
 		stopChan := make(chan bool)
 		updatesChan := make(chan project.ServiceRunUpdate)
 		go func() {
-			err := proj.RunServices(stopChan, updatesChan)
+			err := proj.RunServices(localCloud, stopChan, updatesChan)
 			if err != nil {
 				panic(err)
 			}

@@ -9,13 +9,19 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/valyala/fasthttp"
 
+	"github.com/nitrictech/cli/pkgplus/grpcx"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/http"
 )
 
+type HttpProxyService struct {
+	ServiceName string
+	server      *http.HttpServer
+}
+
 type HostAddress = string
 
-type State = map[HostAddress]*http.HttpServer
+type State = map[HostAddress]*HttpProxyService
 
 type LocalHttpProxy struct {
 	state          State
@@ -29,7 +35,7 @@ func (l *LocalHttpProxy) publishState() {
 	l.bus.Publish(localHttpProxyTopic, maps.Clone(l.state))
 }
 
-func (l *LocalHttpProxy) SubscribeToState(fn func(map[HostAddress]*http.HttpServer)) {
+func (l *LocalHttpProxy) SubscribeToState(fn func(map[HostAddress]*HttpProxyService)) {
 	l.bus.Subscribe(localHttpProxyTopic, fn)
 }
 
@@ -42,7 +48,7 @@ func (h *LocalHttpProxy) WorkerCount() int {
 	return len(h.state)
 }
 
-func (h *LocalHttpProxy) GetState() map[HostAddress]*http.HttpServer {
+func (h *LocalHttpProxy) GetState() State {
 	h.httpWorkerLock.RLock()
 	defer h.httpWorkerLock.RUnlock()
 
@@ -56,15 +62,20 @@ func (h *LocalHttpProxy) HandleRequest(request *fasthttp.Request) (*fasthttp.Res
 
 	host := string(request.Host())
 
-	srv, ok := h.state[host]
+	service, ok := h.state[host]
 	if !ok {
-		return nil, fmt.Errorf("No worker found for host: %s", host)
+		return nil, fmt.Errorf("no worker found for host: %s", host)
 	}
 
-	return srv.HandleRequest(request)
+	return service.server.HandleRequest(request)
 }
 
 func (h *LocalHttpProxy) Proxy(ctx context.Context, req *httppb.HttpProxyRequest) (*httppb.HttpProxyResponse, error) {
+	serviceName, err := grpcx.GetServiceNameFromIncomingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	h.httpWorkerLock.Lock()
 	defer h.httpWorkerLock.Unlock()
 	host := req.GetHost()
@@ -77,8 +88,10 @@ func (h *LocalHttpProxy) Proxy(ctx context.Context, req *httppb.HttpProxyRequest
 		return nil, err
 	}
 
-	// register the worker
-	h.state[host] = srv
+	h.state[host] = &HttpProxyService{
+		server:      srv,
+		ServiceName: serviceName,
+	}
 
 	h.publishState()
 
@@ -88,7 +101,7 @@ func (h *LocalHttpProxy) Proxy(ctx context.Context, req *httppb.HttpProxyRequest
 
 func NewLocalHttpProxyService() *LocalHttpProxy {
 	return &LocalHttpProxy{
-		state:          make(map[HostAddress]*http.HttpServer),
+		state:          make(State),
 		httpWorkerLock: sync.RWMutex{},
 		bus:            EventBus.New(),
 	}

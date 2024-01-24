@@ -26,13 +26,16 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/fasthttp/websocket"
 
-	"github.com/nitrictech/cli/pkgplus/streams"
+	"github.com/nitrictech/cli/pkgplus/grpcx"
 
 	nitricws "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/websockets"
 )
 
-type State = map[string][]nitricws.WebsocketEventType
+type socketName = string
+type serviceName = string
+
+type State = map[socketName]map[serviceName][]nitricws.WebsocketEventType
 
 type LocalWebsocketService struct {
 	*websockets.WebsocketManager
@@ -80,11 +83,11 @@ type WebsocketAction[Event EventItem] struct {
 	Type  ActionType `json:"-"`
 }
 
-func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string][]nitricws.WebsocketEventType)) {
+func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string]map[string][]nitricws.WebsocketEventType)) {
 	r.bus.Subscribe(localWebsocketTopic, subscription)
 }
 
-func (r *LocalWebsocketService) GetState() map[string][]nitricws.WebsocketEventType {
+func (r *LocalWebsocketService) GetState() State {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
@@ -99,20 +102,20 @@ func (r *LocalWebsocketService) SubscribeToAction(subscription func(WebsocketAct
 	r.bus.Subscribe(localWebsocketActionTopic, subscription)
 }
 
-func (r *LocalWebsocketService) registerWebsocketWorker(registration *nitricws.RegistrationRequest) {
+func (r *LocalWebsocketService) registerWebsocketWorker(serviceName string, registration *nitricws.RegistrationRequest) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
 	if r.state[registration.SocketName] == nil {
-		r.state[registration.SocketName] = make([]nitricws.WebsocketEventType, 0)
+		r.state[registration.SocketName] = make(map[string][]nitricws.WebsocketEventType, 0)
 	}
 
-	r.state[registration.SocketName] = append(r.state[registration.SocketName], registration.EventType)
+	r.state[registration.SocketName][serviceName] = append(r.state[registration.SocketName][serviceName], registration.EventType)
 
 	r.bus.Publish(localWebsocketTopic, r.state)
 }
 
-func (r *LocalWebsocketService) unRegisterWebsocketWorker(registration *nitricws.RegistrationRequest) {
+func (r *LocalWebsocketService) unRegisterWebsocketWorker(serviceName string, registration *nitricws.RegistrationRequest) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -120,9 +123,9 @@ func (r *LocalWebsocketService) unRegisterWebsocketWorker(registration *nitricws
 		return
 	}
 
-	for i, w := range r.state[registration.SocketName] {
+	for i, w := range r.state[registration.SocketName][serviceName] {
 		if w == registration.EventType {
-			r.state[registration.SocketName] = append(r.state[registration.SocketName][:i], r.state[registration.SocketName][i+1:]...)
+			r.state[registration.SocketName][serviceName] = append(r.state[registration.SocketName][serviceName][:i], r.state[registration.SocketName][serviceName][i+1:]...)
 			break
 		}
 	}
@@ -135,7 +138,12 @@ func (r *LocalWebsocketService) unRegisterWebsocketWorker(registration *nitricws
 }
 
 func (r *LocalWebsocketService) HandleEvents(stream nitricws.WebsocketHandler_HandleEventsServer) error {
-	peekableStream := streams.NewPeekableStreamServer[*nitricws.ServerMessage, *nitricws.ClientMessage](stream)
+	serviceName, err := grpcx.GetServiceNameFromStream(stream)
+	if err != nil {
+		return err
+	}
+
+	peekableStream := grpcx.NewPeekableStreamServer[*nitricws.ServerMessage, *nitricws.ClientMessage](stream)
 
 	firstRequest, err := peekableStream.Peek()
 	if err != nil {
@@ -147,8 +155,8 @@ func (r *LocalWebsocketService) HandleEvents(stream nitricws.WebsocketHandler_Ha
 	}
 
 	// register the websocket
-	r.registerWebsocketWorker(firstRequest.GetRegistrationRequest())
-	defer r.unRegisterWebsocketWorker(firstRequest.GetRegistrationRequest())
+	r.registerWebsocketWorker(serviceName, firstRequest.GetRegistrationRequest())
+	defer r.unRegisterWebsocketWorker(serviceName, firstRequest.GetRegistrationRequest())
 
 	return r.WebsocketManager.HandleEvents(peekableStream)
 }
@@ -243,7 +251,7 @@ func NewLocalWebsocketService() (*LocalWebsocketService, error) {
 		WebsocketManager: websockets.NewWebsocketManager(),
 		connections:      make(map[string]map[string]*websocket.Conn),
 		lock:             sync.RWMutex{},
-		state:            make(map[string][]nitricws.WebsocketEventType),
+		state:            make(map[string]map[string][]nitricws.WebsocketEventType),
 		bus:              EventBus.New(),
 	}, nil
 }

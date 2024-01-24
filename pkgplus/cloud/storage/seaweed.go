@@ -51,7 +51,7 @@ func (m *SeaweedServer) Start() error {
 
 	go func() {
 		// FIXME: magic number 26 is the seaweedFS server command
-		// We may want to fork this to publically expose these commands
+		// We may want to fork this to publicly expose these commands
 		srvCmd := command.Commands[26]
 
 		parentArgs := []string{

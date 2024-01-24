@@ -86,7 +86,7 @@ function ReactFlowLayout() {
 
     const { nodes, edges } = generateVisualizerData(data);
 
-    const layouted = getLayoutedElements(nodes, edges);
+    const layouted = getLayoutedElements(nodes, edges, "LB");
 
     setNodes([...layouted.nodes]);
     setEdges([...layouted.edges]);

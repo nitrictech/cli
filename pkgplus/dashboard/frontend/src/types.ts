@@ -1,6 +1,5 @@
 import type { OpenAPIV3 } from "openapi-types";
 import type { FieldRow } from "./components/shared/FieldRows";
-import EventsHistory from "./components/events/EventsHistory";
 
 export type APIDoc = OpenAPIV3.Document;
 

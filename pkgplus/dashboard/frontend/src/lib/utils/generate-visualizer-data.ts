@@ -11,6 +11,7 @@ import {
   ChatBubbleLeftRightIcon,
   CircleStackIcon,
   ClockIcon,
+  CubeIcon,
   MegaphoneIcon,
 } from "@heroicons/react/24/outline";
 import GlobeAltIcon from "@heroicons/react/24/outline/GlobeAltIcon";
@@ -27,6 +28,10 @@ import {
   ScheduleNode,
   type ScheduleNodeData,
 } from "@/components/visualizer/nodes/ScheduleNode";
+import {
+  ServiceNode,
+  type ServiceNodeData,
+} from "@/components/visualizer/nodes/ServiceNode";
 
 export const nodeTypes = {
   api: APINode,
@@ -34,6 +39,7 @@ export const nodeTypes = {
   schedule: ScheduleNode,
   topic: TopicNode,
   websocket: WebsocketNode,
+  service: ServiceNode,
 };
 
 const createNode = <T>(
@@ -71,6 +77,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
 } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
+  const uniqueServices: Set<string> = new Set();
 
   // Generate nodes from APIs
   data.apis.forEach((api) => {
@@ -157,20 +164,39 @@ export function generateVisualizerData(data: WebSocketResponse): {
     edges.push(...topicEdges);
   });
 
-  // Generate nodes from other components (buckets, schedules, topics, websockets)
-
-  // TODO: Add logic to generate nodes and edges for other components
+  // Generate nodes for containers
 
   // Generate edges from policies
-  Object.values(data.policies).forEach((policy) => {
-    policy.resources.forEach((resource) => {
-      const edge: Edge = {
-        id: `e-${resource.name}-${policy.name}`,
-        source: resource.name,
-        target: resource.name,
+  // TODO use policies to add more info via edges or nodes
+  // Object.values(data.policies).forEach((policy) => {
+  //   policy.resources.forEach((resource) => {
+  //     const edge: Edge = {
+  //       id: `e-${resource.name}-${policy.name}`,
+  //       source: resource.name,
+  //       target: resource.name,
+  //     };
+  //     edges.push(edge);
+  //   });
+  // });
+
+  // Collect unique services in a single pass
+  edges.forEach(({ target: serviceName, id }) => {
+    if (!uniqueServices.has(serviceName)) {
+      console.log(serviceName);
+      const node: Node<ServiceNodeData> = {
+        id: serviceName,
+        position: { x: 0, y: 0 },
+        data: {
+          title: `${serviceName}`,
+          description: "",
+          resource: {},
+          icon: CubeIcon,
+        },
+        type: "service",
       };
-      edges.push(edge);
-    });
+      nodes.push(node);
+      uniqueServices.add(serviceName);
+    }
   });
 
   return { nodes, edges };

@@ -1,4 +1,4 @@
-package stack_up
+package stack_down
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 
 type Model struct {
 	stack              *stack.Resource
-	updatesChan        <-chan *deploymentspb.DeploymentUpEvent
+	updatesChan        <-chan *deploymentspb.DeploymentDownEvent
 	errorChan          <-chan error
 	providerStdoutChan <-chan string
 	providerStdout     []string
@@ -62,7 +62,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.providerStdout = append(m.providerStdout, msg.Value)
 
 		return m, reactive.AwaitChannel(msg.Source)
-	case reactive.ChanMsg[*deploymentspb.DeploymentUpEvent]:
+	case reactive.ChanMsg[*deploymentspb.DeploymentDownEvent]:
 
 		// the source channel is close
 		if !msg.Ok {
@@ -70,7 +70,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch content := msg.Value.Content.(type) {
-		case *deploymentspb.DeploymentUpEvent_Update:
+		case *deploymentspb.DeploymentDownEvent_Update:
 
 			if content.Update == nil || content.Update.Id == nil {
 				break
@@ -88,8 +88,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 
 				if !found {
-					m.errs = append(m.errs, fmt.Errorf("received update for resource [%s], without associated nitric parent resource", content.Update.SubResource))
-					return m, tea.Quit
+					nitricResource = &stack.Resource{
+						Name:     fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name),
+						Message:  "",
+						Action:   content.Update.Action,
+						Status:   content.Update.Status,
+						Children: make([]*stack.Resource, 0),
+					}
+
+					// Add it from the given parent details
+					m.stack.Children = append(m.stack.Children, nitricResource)
 				}
 
 				parent = nitricResource
@@ -142,7 +150,7 @@ func (m Model) View() string {
 	treeView := view.New()
 
 	treeView.AddRow(
-		view.NewFragment("Nitric Up"+m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)),
+		view.NewFragment("Nitric Down"+m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)),
 		view.Break(),
 	)
 
@@ -204,7 +212,7 @@ func (m Model) View() string {
 	return treeView.Render()
 }
 
-func New(updatesChan <-chan *deploymentspb.DeploymentUpEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
+func New(updatesChan <-chan *deploymentspb.DeploymentDownEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
 	return Model{
 		resourcesTable: table.New(
 			table.WithColumns([]table.Column{

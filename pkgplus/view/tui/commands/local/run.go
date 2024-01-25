@@ -14,11 +14,11 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	pearlsview "github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
-	"github.com/nitrictech/pearls/pkg/tui"
-	"github.com/nitrictech/pearls/pkg/tui/view"
-	pearlsview "github.com/nitrictech/pearls/pkg/tui/view"
 )
 
 type ApiSummary struct {

@@ -7,8 +7,8 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
-	"github.com/nitrictech/pearls/pkg/tui/view"
 )
 
 type Model struct {

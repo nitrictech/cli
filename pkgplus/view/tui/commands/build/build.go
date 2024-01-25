@@ -9,9 +9,9 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkgplus/project"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
-	"github.com/nitrictech/pearls/pkg/tui"
-	"github.com/nitrictech/pearls/pkg/tui/view"
 )
 
 type Model struct {

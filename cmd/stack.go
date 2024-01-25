@@ -34,8 +34,8 @@ import (
 	stack_new "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/new"
 	stack_select "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/select"
 	stack_up "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/up"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/inlinelist"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
-	"github.com/nitrictech/pearls/pkg/tui/inlinelist"
 )
 
 var (

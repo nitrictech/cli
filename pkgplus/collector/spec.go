@@ -14,12 +14,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/samber/lo"
 
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
-	"github.com/nitrictech/pearls/pkg/tui/view"
 )
 
 type ProjectErrors struct {

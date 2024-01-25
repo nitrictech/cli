@@ -19,7 +19,7 @@ package stack
 import (
 	"regexp"
 
-	"github.com/nitrictech/pearls/pkg/tui/validation"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/validation"
 )
 
 var (

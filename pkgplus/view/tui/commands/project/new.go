@@ -31,12 +31,12 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/templates"
-	"github.com/nitrictech/pearls/pkg/tui"
-	"github.com/nitrictech/pearls/pkg/tui/inlinelist"
-	"github.com/nitrictech/pearls/pkg/tui/listprompt"
-	"github.com/nitrictech/pearls/pkg/tui/textprompt"
-	"github.com/nitrictech/pearls/pkg/tui/validation"
-	"github.com/nitrictech/pearls/pkg/tui/view"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/inlinelist"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/listprompt"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/textprompt"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/validation"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 )
 
 type (

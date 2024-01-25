@@ -19,8 +19,8 @@ package stack_select
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/nitrictech/pearls/pkg/tui/inlinelist"
-	"github.com/nitrictech/pearls/pkg/tui/listprompt"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/inlinelist"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/listprompt"
 )
 
 // Model - represents the state of the stack selection list

@@ -12,10 +12,10 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
-	"github.com/nitrictech/pearls/pkg/tui"
-	"github.com/nitrictech/pearls/pkg/tui/view"
 )
 
 type Model struct {

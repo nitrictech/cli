@@ -23,6 +23,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
+	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
@@ -30,8 +32,6 @@ import (
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
-	"github.com/nitrictech/pearls/pkg/tui"
-	"github.com/nitrictech/pearls/pkg/tui/view"
 )
 
 // ServiceRequirements - Cloud resource requirements for a Nitric Application Service

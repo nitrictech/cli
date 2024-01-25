@@ -6,7 +6,6 @@ replace github.com/mattn/go-ieproxy => github.com/darthShadow/go-ieproxy v0.0.0-
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible
 	github.com/asdine/storm v2.1.2+incompatible
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/aws/aws-sdk-go v1.44.175 // indirect
@@ -50,7 +49,6 @@ require (
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
 	github.com/mattn/go-isatty v0.0.18
 	github.com/nitrictech/nitric/cloud/common v0.0.0-20231206014944-68e146f4f69a
-	github.com/nitrictech/pearls v0.0.0-20231011053212-77f78229fb97
 	github.com/olahol/melody v1.1.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/samber/lo v1.38.1

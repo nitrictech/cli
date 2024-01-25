@@ -104,8 +104,8 @@ func (r *Renderer) Render() string {
 
 type RendererOption = func(r *Renderer)
 
-// WithStyle applies/updates the style of the view
-func WithStyle(style lipgloss.Style) RendererOption {
+// WithRendererStyle applies/updates the style of the view
+func WithRendererStyle(style lipgloss.Style) RendererOption {
 	return func(r *Renderer) {
 		r.style = style
 	}
@@ -117,8 +117,8 @@ func (r *Renderer) WithStyle(style lipgloss.Style) *Renderer {
 	return r
 }
 
-// New creates a new view renderer
-func New(options ...RendererOption) *Renderer {
+// NewRenderer creates a new view renderer
+func NewRenderer(options ...RendererOption) *Renderer {
 	renderer := &Renderer{
 		Rows: []*Row{},
 	}

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package inlinelist
+package list
 
 import (
 	"fmt"
@@ -28,11 +28,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 )
 
-type ListItem interface {
-	GetItemValue() string
-	GetItemDescription() string
-}
-type Model struct {
+type InlineList struct {
 	cursor             int
 	Items              []ListItem
 	MaxDisplayedItems  int
@@ -41,18 +37,18 @@ type Model struct {
 	Paginator          paginator.Model
 }
 
-type Args struct {
+type InlineListArgs struct {
 	Items             []ListItem
 	MaxDisplayedItems int
 }
 
-func New(args Args) Model {
+func NewInlineList(args InlineListArgs) InlineList {
 	p := paginator.New()
 	p.Type = paginator.Dots
 	p.ActiveDot = activePaginationDot.String()
 	p.InactiveDot = inactivePaginationDot.String()
 
-	return Model{
+	return InlineList{
 		cursor:             0,
 		firstDisplayedItem: 0,
 		Paginator:          p,
@@ -76,7 +72,7 @@ func max(a, b int) int {
 	return b
 }
 
-func (m Model) Init() tea.Cmd {
+func (m InlineList) Init() tea.Cmd {
 	return nil
 }
 
@@ -91,8 +87,8 @@ var (
 	activePaginationDot      = cursorIconOffset.Copy().Foreground(tui.Colors.White).SetString(bullet)
 )
 
-func (m Model) View() string {
-	listView := view.New()
+func (m InlineList) View() string {
+	listView := view.NewRenderer()
 	maxDisplayedItems := min(m.MaxDisplayedItems, len(m.Items))
 
 	for i := 0; i < maxDisplayedItems; i++ {
@@ -129,7 +125,7 @@ type UpdateListItemsMsg []ListItem
 // UpdateInlineList does the same thing as Update, without erasing the component's type.
 //
 // useful when composing this model into another model
-func (m Model) UpdateInlineList(msg tea.Msg) (Model, tea.Cmd) {
+func (m InlineList) UpdateInlineList(msg tea.Msg) (InlineList, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -147,11 +143,11 @@ func (m Model) UpdateInlineList(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m InlineList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.UpdateInlineList(msg)
 }
 
-func (m Model) UpdateItems(items []ListItem) Model {
+func (m InlineList) UpdateItems(items []ListItem) InlineList {
 	m.Items = items
 	m.cursor = 0
 	m.firstDisplayedItem = 0
@@ -159,7 +155,7 @@ func (m Model) UpdateItems(items []ListItem) Model {
 	return m
 }
 
-func (m Model) CursorUp() Model {
+func (m InlineList) CursorUp() InlineList {
 	m.cursor--
 	if m.cursor < 0 {
 		m.cursor = len(m.Items) - 1
@@ -168,18 +164,18 @@ func (m Model) CursorUp() Model {
 	return m.refreshViewCursor()
 }
 
-func (m Model) CursorDown() Model {
+func (m InlineList) CursorDown() InlineList {
 	m.cursor = (m.cursor + 1) % len(m.Items)
 
 	return m.refreshViewCursor()
 }
 
 // lastDisplayedItem returns the index of the last item currently visible in the list
-func (m Model) lastDisplayedItem() int {
+func (m InlineList) lastDisplayedItem() int {
 	return m.firstDisplayedItem + (m.MaxDisplayedItems - 1)
 }
 
-func (m Model) refreshViewCursor() Model {
+func (m InlineList) refreshViewCursor() InlineList {
 	for m.cursor > m.lastDisplayedItem() {
 		m.firstDisplayedItem++
 	}
@@ -191,10 +187,10 @@ func (m Model) refreshViewCursor() Model {
 	return m
 }
 
-func (m Model) Choice() string {
+func (m InlineList) Choice() string {
 	return m.choice
 }
 
-func (m *Model) SetChoice(choice string) {
+func (m *InlineList) SetChoice(choice string) {
 	m.choice = choice
 }

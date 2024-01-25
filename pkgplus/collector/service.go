@@ -83,7 +83,7 @@ var _ resourcespb.ResourcesServer = (*ServiceRequirements)(nil)
 // Error - Returns an error if any requirements have been registered incorrectly, such as duplicates
 func (s *ServiceRequirements) Error() error {
 	if len(s.errors) > 0 {
-		errorView := view.New()
+		errorView := view.NewRenderer()
 
 		errorView.AddRow(
 			view.NewFragment("Errors found in service "),

@@ -60,7 +60,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 var headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFDF5"))
 
 func (m Model) View() string {
-	runView := view.New()
+	runView := view.NewRenderer()
 
 	// viewport := viewport.Model{}
 

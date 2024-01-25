@@ -147,7 +147,7 @@ const maxOutputLines = 5
 
 func (m Model) View() string {
 	// print the stack?
-	treeView := view.New()
+	treeView := view.NewRenderer()
 
 	treeView.AddRow(
 		view.NewFragment("Nitric Down"+m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)),
@@ -182,7 +182,7 @@ func (m Model) View() string {
 	if len(m.providerStdout) > 0 {
 		tealForTim := lipgloss.NewStyle().Foreground(tui.Colors.Gray)
 
-		providerTermView := view.New()
+		providerTermView := view.NewRenderer()
 
 		treeView.AddRow(
 			view.NewFragment("Provider Output:").WithStyle(tealForTim),

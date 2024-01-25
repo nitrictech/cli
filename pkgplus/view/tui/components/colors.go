@@ -58,7 +58,7 @@ var Colors *ColorPalette = &ColorPalette{
 func DebugColors() string {
 	standardWidth := lipgloss.NewStyle().Width(8)
 
-	colorView := view.New().WithStyle(lipgloss.NewStyle().Margin(1, 0))
+	colorView := view.NewRenderer().WithStyle(lipgloss.NewStyle().Margin(1, 0))
 
 	colorView.AddRow(
 		view.NewFragment("Color Palette Debug").WithStyle(lipgloss.NewStyle().Bold(true)),

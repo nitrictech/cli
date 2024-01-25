@@ -32,7 +32,7 @@ func (pe *ProjectErrors) Add(err error) {
 
 func (pe ProjectErrors) Error() error {
 	if len(pe.errors) > 0 {
-		errorView := view.New()
+		errorView := view.NewRenderer()
 
 		errorView.AddRow(view.NewFragment("Errors found in project:"))
 

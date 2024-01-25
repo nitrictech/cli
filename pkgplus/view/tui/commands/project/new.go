@@ -32,7 +32,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/templates"
 	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
-	"github.com/nitrictech/cli/pkgplus/view/tui/components/inlinelist"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/listprompt"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/textprompt"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/validation"
@@ -55,8 +55,8 @@ const (
 
 // Model - represents the state of the new project creation operation
 type Model struct {
-	namePrompt     textprompt.Model
-	templatePrompt listprompt.Model
+	namePrompt     textprompt.TextPrompt
+	templatePrompt listprompt.ListPrompt
 	spinner        spinner.Model
 	status         NewProjectStatus
 	nonInteractive bool
@@ -159,7 +159,7 @@ var (
 )
 
 func (m Model) View() string {
-	projectView := view.New()
+	projectView := view.NewRenderer()
 
 	if m.err != nil {
 		projectView.AddRow(
@@ -279,13 +279,13 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		return Model{}, err
 	}
 
-	templateItems := []inlinelist.ListItem{}
+	templateItems := []list.ListItem{}
 
 	for _, name := range templateNames {
 		templateItems = append(templateItems, &TemplateItem{Value: name})
 	}
 
-	templatePrompt := listprompt.New(listprompt.Args{
+	templatePrompt := listprompt.NewListPrompt(listprompt.ListPromptArgs{
 		Prompt:            "Which template should we start with?",
 		Tag:               "tmpl",
 		Items:             templateItems,

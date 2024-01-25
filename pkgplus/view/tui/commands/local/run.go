@@ -203,7 +203,7 @@ var (
 )
 
 func (t *TuiModel) View() string {
-	output := pearlsview.New().WithStyle(textStyle)
+	output := pearlsview.NewRenderer().WithStyle(textStyle)
 
 	output.AddRow(
 		pearlsview.NewFragment("Nitric").WithStyle(titleStyle),

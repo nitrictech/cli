@@ -61,7 +61,7 @@ var (
 )
 
 func (m Model) View() string {
-	buildView := view.New()
+	buildView := view.NewRenderer()
 
 	buildView.AddRow(
 		view.NewFragment("Building services"+m.spinner.View()).WithStyle(headingStyle),

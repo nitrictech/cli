@@ -17,8 +17,6 @@
 package list
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
@@ -88,25 +86,24 @@ var (
 )
 
 func (m InlineList) View() string {
-	listView := view.NewRenderer()
+	listView := view.New()
 	maxDisplayedItems := min(m.MaxDisplayedItems, len(m.Items))
 
 	for i := 0; i < maxDisplayedItems; i++ {
-		listView.AddRow(
-			view.WhenOr(
-				i+m.firstDisplayedItem == m.cursor,
-				view.NewFragment(fmt.Sprintf("→ %s", m.Items[i+m.firstDisplayedItem].GetItemValue())).WithStyle(selected),
-				view.NewFragment(m.Items[i+m.firstDisplayedItem].GetItemValue()).WithStyle(unselected),
-			),
-		)
+		if i+m.firstDisplayedItem == m.cursor {
+			listView.Addln("→ %s", m.Items[i+m.firstDisplayedItem].GetItemValue()).WithStyle(selected)
+		} else {
+			listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemValue()).WithStyle(unselected)
+		}
 
 		if m.Items[i+m.firstDisplayedItem].GetItemDescription() != "" {
-			listView.AddRow(view.WhenOr(
-				i+m.firstDisplayedItem == m.cursor,
-				view.NewFragment(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionSelectedStyle),
-				view.NewFragment(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionStyle),
-			),
-				view.Break())
+			if i+m.firstDisplayedItem == m.cursor {
+				listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionSelectedStyle)
+			} else {
+				listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionStyle)
+			}
+
+			listView.Break()
 		}
 	}
 
@@ -114,7 +111,7 @@ func (m InlineList) View() string {
 		m.Paginator.TotalPages = (len(m.Items) + maxDisplayedItems - 1) / maxDisplayedItems
 		m.Paginator.Page = max(0, m.cursor/maxDisplayedItems)
 
-		listView.AddRow(view.NewFragment(m.Paginator.View()))
+		listView.Addln(m.Paginator.View())
 	}
 
 	return listView.Render()

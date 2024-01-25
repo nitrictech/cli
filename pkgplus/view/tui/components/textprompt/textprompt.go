@@ -110,7 +110,6 @@ func (m TextPrompt) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 var (
-	labelStyle      = lipgloss.NewStyle().MarginTop(1)
 	tagStyle        = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
 	promptStyle     = lipgloss.NewStyle().MarginLeft(2)
 	shiftRightStyle = lipgloss.NewStyle().MarginLeft(10)
@@ -119,24 +118,27 @@ var (
 )
 
 func (m TextPrompt) View() string {
-	renderer := view.NewRenderer()
+	v := view.New()
 
-	renderer.AddRow(
-		view.NewFragment(m.Tag).WithStyle(tagStyle),
-		view.NewFragment(m.Prompt).WithStyle(promptStyle),
-		view.Break(),
-	).WithStyle(labelStyle)
+	v.Add(m.Tag).WithStyle(tagStyle, lipgloss.NewStyle().MarginTop(1))
+	v.Addln(m.Prompt).WithStyle(promptStyle)
+	v.Break()
 
-	renderer.AddRow(view.WhenOr(
-		m.textInput.Focused(),
-		view.NewFragment(m.textInput.View()),
-		view.NewFragment(m.textInput.Value()).WithStyle(textStyle),
-	), view.When(
-		m.err != nil,
-		view.NewFragment(m.err).WithStyle(errorStyle),
-	)).WithStyle(shiftRightStyle)
+	field := view.New(view.WithStyle(shiftRightStyle))
 
-	return renderer.Render()
+	if m.textInput.Focused() {
+		field.Addln(m.textInput.View())
+	} else {
+		field.Addln(m.textInput.Value()).WithStyle(textStyle)
+	}
+
+	if m.err != nil {
+		field.Addln(m.err.Error()).WithStyle(errorStyle)
+	}
+
+	v.Add(field.Render())
+
+	return v.Render()
 }
 
 // Focus sets the focus state on the model. When the model is in focus it can

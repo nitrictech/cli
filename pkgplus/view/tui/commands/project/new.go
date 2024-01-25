@@ -166,7 +166,7 @@ func (m Model) View() string {
 		v.Addln(m.err.Error()).WithStyle(errorTextStyle)
 
 		// TODO: this shouldn't be needed but without it the line doesn't print
-		view.Break()
+		v.Break()
 
 		return v.Render()
 	}

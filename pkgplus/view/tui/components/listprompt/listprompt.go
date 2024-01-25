@@ -75,7 +75,6 @@ func (m *ListPrompt) SetChoice(choice string) {
 }
 
 var (
-	labelStyle  = lipgloss.NewStyle().MarginTop(1)
 	tagStyle    = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
 	promptStyle = lipgloss.NewStyle().MarginLeft(2)
 	inputStyle  = lipgloss.NewStyle().MarginLeft(8)
@@ -83,23 +82,19 @@ var (
 )
 
 func (m ListPrompt) View() string {
-	listView := view.NewRenderer()
+	listView := view.New()
 
 	// render the list header
-	listView.AddRow(
-		view.NewFragment(m.Tag).WithStyle(tagStyle),
-		view.NewFragment(m.Prompt).WithStyle(promptStyle),
-		view.Break(),
-	).WithStyle(labelStyle)
+	listView.Add(m.Tag).WithStyle(tagStyle, lipgloss.NewStyle().MarginTop(1))
+	listView.Addln(m.Prompt).WithStyle(promptStyle)
+	listView.Break()
 
-	// render the list view
-	listView.AddRow(
-		view.WhenOr(
-			m.Choice() == "",
-			view.NewFragment(m.listInput.View()).WithStyle(inputStyle),
-			view.NewFragment(m.Choice()).WithStyle(textStyle),
-		),
-	)
+	// render the list
+	if m.Choice() == "" {
+		listView.Addln(m.listInput.View()).WithStyle(inputStyle)
+	} else {
+		listView.Addln(m.Choice()).WithStyle(textStyle)
+	}
 
 	return listView.Render()
 }

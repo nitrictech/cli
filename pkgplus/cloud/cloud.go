@@ -8,9 +8,9 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
-	"github.com/nitrictech/cli/pkgplus/cloud/collections"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
 	"github.com/nitrictech/cli/pkgplus/cloud/http"
+	"github.com/nitrictech/cli/pkgplus/cloud/keyvalue"
 	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/secrets"
@@ -30,16 +30,16 @@ type LocalCloud struct {
 	membraneLock sync.Mutex
 	membranes    map[string]*membrane.Membrane
 
-	Apis        *apis.LocalApiGatewayService
-	Collections *collections.BoltDocService
-	Gateway     *gateway.LocalGatewayService
-	Http        *http.LocalHttpProxy
-	Resources   *resources.LocalResourcesService
-	Schedules   *schedules.LocalSchedulesService
-	Secrets     *secrets.DevSecretService
-	Storage     *storage.LocalStorageService
-	Topics      *topics.LocalTopicsAndSubscribersService
-	Websockets  *websockets.LocalWebsocketService
+	Apis       *apis.LocalApiGatewayService
+	KeyValue   *keyvalue.BoltDocService
+	Gateway    *gateway.LocalGatewayService
+	Http       *http.LocalHttpProxy
+	Resources  *resources.LocalResourcesService
+	Schedules  *schedules.LocalSchedulesService
+	Secrets    *secrets.DevSecretService
+	Storage    *storage.LocalStorageService
+	Topics     *topics.LocalTopicsAndSubscribersService
+	Websockets *websockets.LocalWebsocketService
 
 	// Store all the plugins locally
 }
@@ -103,7 +103,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 		// cloud service plugins
 		SecretManagerPlugin: lc.Secrets,
 		StoragePlugin:       lc.Storage,
-		DocumentPlugin:      lc.Collections,
+		KeyValuePlugin:      lc.KeyValue,
 		GatewayPlugin:       lc.Gateway,
 		TopicsPlugin:        lc.Topics,
 		ResourcesPlugin:     lc.Resources,
@@ -182,22 +182,22 @@ func New() (*LocalCloud, error) {
 		Gateway: localGateway,
 	})
 
-	collections, err := collections.NewBoltService()
+	keyvalueService, err := keyvalue.NewBoltService()
 	if err != nil {
 		return nil, err
 	}
 
 	return &LocalCloud{
-		membranes:   make(map[string]*membrane.Membrane),
-		Apis:        localApis,
-		Http:        localHttpProxy,
-		Resources:   localResources,
-		Schedules:   localSchedules,
-		Storage:     localStorage,
-		Topics:      localTopics,
-		Websockets:  localWebsockets,
-		Gateway:     localGateway,
-		Secrets:     localSecrets,
-		Collections: collections,
+		membranes:  make(map[string]*membrane.Membrane),
+		Apis:       localApis,
+		Http:       localHttpProxy,
+		Resources:  localResources,
+		Schedules:  localSchedules,
+		Storage:    localStorage,
+		Topics:     localTopics,
+		Websockets: localWebsockets,
+		Gateway:    localGateway,
+		Secrets:    localSecrets,
+		KeyValue:   keyvalueService,
 	}, nil
 }

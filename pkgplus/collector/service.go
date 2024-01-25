@@ -54,7 +54,7 @@ type ServiceRequirements struct {
 	apis                  map[string]*resourcespb.ApiResource
 	apiSecurityDefinition map[string]map[string]*resourcespb.ApiSecurityDefinitionResource
 	buckets               map[string]*resourcespb.BucketResource
-	collections           map[string]*resourcespb.CollectionResource
+	keyValueStores        map[string]*resourcespb.KeyValueStoreResource
 	topics                map[string]*resourcespb.TopicResource
 
 	policies map[string]*resourcespb.PolicyResource
@@ -63,6 +63,8 @@ type ServiceRequirements struct {
 	errors []error
 	topicspb.UnimplementedTopicsServer
 	storagepb.UnimplementedStorageListenerServer
+	websocketspb.UnimplementedWebsocketServer
+	apispb.UnimplementedApiServer
 }
 
 var (
@@ -75,10 +77,6 @@ var (
 )
 
 var _ resourcespb.ResourcesServer = (*ServiceRequirements)(nil)
-
-func (s *ServiceRequirements) Details(context.Context, *resourcespb.ResourceDetailsRequest) (*resourcespb.ResourceDetailsResponse, error) {
-	return &resourcespb.ResourceDetailsResponse{}, nil
-}
 
 // Error - Returns an error if any requirements have been registered incorrectly, such as duplicates
 func (s *ServiceRequirements) Error() error {
@@ -120,9 +118,9 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 	case resourcespb.ResourceType_Bucket:
 		// Add a bucket
 		s.buckets[req.Id.GetName()] = req.GetBucket()
-	case resourcespb.ResourceType_Collection:
+	case resourcespb.ResourceType_KeyValueStore:
 		// Add a collection
-		s.collections[req.Id.GetName()] = req.GetCollection()
+		s.keyValueStores[req.Id.GetName()] = req.GetKeyValueStore()
 	case resourcespb.ResourceType_Api:
 		// Add an api
 		s.apis[req.Id.GetName()] = req.GetApi()
@@ -343,7 +341,7 @@ func NewServiceRequirements(serviceName string, serviceFile string, serviceType 
 		subscriptions:         make(map[string][]*topicspb.RegistrationRequest),
 		websockets:            make(map[string][]*websocketspb.RegistrationRequest),
 		buckets:               make(map[string]*resourcespb.BucketResource),
-		collections:           make(map[string]*resourcespb.CollectionResource),
+		keyValueStores:        make(map[string]*resourcespb.KeyValueStoreResource),
 		topics:                make(map[string]*resourcespb.TopicResource),
 		policies:              make(map[string]*resourcespb.PolicyResource),
 		secrets:               make(map[string]*resourcespb.SecretResource),

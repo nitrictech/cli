@@ -43,6 +43,8 @@ type LocalWebsocketService struct {
 	state       State
 	lock        sync.RWMutex
 
+	servers map[string]string
+
 	bus EventBus.Bus
 }
 
@@ -92,6 +94,13 @@ func (r *LocalWebsocketService) GetState() State {
 	defer r.lock.RUnlock()
 
 	return r.state
+}
+
+func (r *LocalWebsocketService) SetServers(server map[string]string) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	r.servers = server
 }
 
 func (r *LocalWebsocketService) publishAction(action WebsocketAction[EventItem]) {
@@ -180,6 +189,17 @@ func (r *LocalWebsocketService) RegisterConnection(socket string, connectionId s
 	})
 
 	return nil
+}
+
+func (r *LocalWebsocketService) Details(ctx context.Context, req *nitricws.WebsocketDetailsRequest) (*nitricws.WebsocketDetailsResponse, error) {
+	gatewayUri, ok := r.servers[req.SocketName]
+	if !ok {
+		return nil, fmt.Errorf("websocket %s does not exist", req.SocketName)
+	}
+
+	return &nitricws.WebsocketDetailsResponse{
+		Url: fmt.Sprintf("ws://%s", gatewayUri),
+	}, nil
 }
 
 func (r *LocalWebsocketService) Send(ctx context.Context, req *nitricws.WebsocketSendRequest) (*nitricws.WebsocketSendResponse, error) {

@@ -64,11 +64,13 @@ type ServiceRequirements struct {
 	topicspb.UnimplementedTopicsServer
 	storagepb.UnimplementedStorageListenerServer
 	websocketspb.UnimplementedWebsocketServer
-	apispb.UnimplementedApiServer
+	// apispb.UnimplementedApiServer
+
+	ApiServer apispb.ApiServer
 }
 
 var (
-	_ apispb.ApiServer                    = (*ServiceRequirements)(nil)
+	// _ apispb.ApiServer                    = (*ServiceRequirements)(nil)
 	_ schedulespb.SchedulesServer         = (*ServiceRequirements)(nil)
 	_ topicspb.SubscriberServer           = (*ServiceRequirements)(nil)
 	_ topicspb.TopicsServer               = (*ServiceRequirements)(nil)
@@ -331,7 +333,7 @@ func NewServiceRequirements(serviceName string, serviceFile string, serviceType 
 		serviceType = "default"
 	}
 
-	return &ServiceRequirements{
+	requirements := &ServiceRequirements{
 		serviceName:           serviceName,
 		serviceType:           serviceType,
 		serviceFile:           serviceFile,
@@ -350,4 +352,9 @@ func NewServiceRequirements(serviceName string, serviceFile string, serviceType 
 		apiSecurityDefinition: make(map[string]map[string]*resourcespb.ApiSecurityDefinitionResource),
 		errors:                []error{},
 	}
+	requirements.ApiServer = &ApiCollectorServer{
+		requirements: requirements,
+	}
+
+	return requirements
 }

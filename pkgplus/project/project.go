@@ -466,7 +466,7 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	grpcServer := grpc.NewServer()
 
 	resourcespb.RegisterResourcesServer(grpcServer, serviceRequirements)
-	apispb.RegisterApiServer(grpcServer, serviceRequirements)
+	apispb.RegisterApiServer(grpcServer, serviceRequirements.ApiServer)
 	schedulespb.RegisterSchedulesServer(grpcServer, serviceRequirements)
 	topicspb.RegisterTopicsServer(grpcServer, serviceRequirements)
 	websocketspb.RegisterWebsocketHandlerServer(grpcServer, serviceRequirements)

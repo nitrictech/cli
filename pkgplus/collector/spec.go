@@ -508,7 +508,7 @@ func buildCollectionsRequirements(allServiceRequirements []*ServiceRequirements,
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
-		for collectionName := range serviceRequirements.collections {
+		for collectionName := range serviceRequirements.keyValueStores {
 			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
 				return item.Id.Name == collectionName
 			})
@@ -517,9 +517,9 @@ func buildCollectionsRequirements(allServiceRequirements []*ServiceRequirements,
 				resources = append(resources, &deploymentspb.Resource{
 					Id: &resourcespb.ResourceIdentifier{
 						Name: collectionName,
-						Type: resourcespb.ResourceType_Collection,
+						Type: resourcespb.ResourceType_KeyValueStore,
 					},
-					Config: &deploymentspb.Resource_Collection{},
+					Config: &deploymentspb.Resource_KeyValueStore{},
 				})
 			}
 		}

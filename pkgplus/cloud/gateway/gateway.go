@@ -545,6 +545,8 @@ func (s *LocalGatewayService) createWebsocketServers() error {
 		currSocket.workerCount = currSocket.workerCount + 1
 	}
 
+	s.websocketPlugin.SetServers(s.GetWebsocketAddresses())
+
 	return nil
 }
 

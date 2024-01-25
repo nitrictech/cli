@@ -30,6 +30,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/provider"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
+	stack_down "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/down"
 	stack_new "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/new"
 	stack_select "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/select"
 	stack_up "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/up"
@@ -221,56 +222,6 @@ var stackUpdateCmd = &cobra.Command{
 
 		_, err = tea.NewProgram(stackUp).Run()
 		tui.CheckErr(err)
-
-		// fmt.Print(finalModel.View())
-
-		// eventsLeft := true
-		// errsLeft := true
-		// for eventsLeft || errsLeft {
-		// 	select {
-		// 	case event, ok := <-eventChan:
-		// 		if !ok {
-		// 			eventsLeft = false
-		// 			break
-		// 		}
-		// 		pterm.Info.Print(event)
-
-		// 	case err, ok := <-errorChan:
-		// 		if !ok {
-		// 			errsLeft = false
-		// 			break
-		// 		}
-		// 		pterm.Error.Print(err)
-		// 	}
-		// }
-
-		// ServerCommunication:
-		// 	for {
-		// 		select {
-		// 		case event, ok := <-eventChan:
-		// 			if !ok {
-		// 				break ServerCommunication
-		// 			}
-
-		// 			switch event.Content.(type) {
-		// 			case *deploymentspb.DeploymentUpEvent_Message:
-		// 				pterm.Error.Print(event.GetMessage())
-		// 				// fmt.Println(event.GetMessage())
-		// 			case *deploymentspb.DeploymentUpEvent_Result:
-		// 				pterm.Error.Print(event.GetResult().Details)
-		// 				// fmt.Println(event.GetResult().Details)
-		// 			case *deploymentspb.DeploymentUpEvent_Update:
-		// 				pterm.Error.Print(event.GetUpdate())
-		// 				// fmt.Println(event.GetUpdate())
-		// 			}
-
-		// 		case err, ok := <-errorChan:
-		// 			if !ok {
-		// 				break ServerCommunication
-		// 			}
-		// 			tui.CheckErr(err)
-		// 		}
-		// 	}
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -297,24 +248,29 @@ nitric stack down -s aws -y`,
 		}
 
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
-		stackSelection := stack.GetStackNameFromFileName(stackFiles[0])
-		// if len(stackFiles) > 1 {
-		// 	stackNames := make([]inlinelist.ListItem, len(stackFiles))
-		// 	for i, stackFile := range stackFiles {
-		// 		stackNames[i] = SimpleStringListItem(stack.GetStackNameFromFileName(stackFile))
-		// 	}
-		// 	// ask which one
-		// 	// FIXME: currently a keyboard trap and not the UI we want
-		// 	promptModel := listprompt.New(listprompt.Args{
-		// 		Items:  stackNames,
-		// 		Tag:    "stack",
-		// 		Prompt: "Which stack would you like to update?",
-		// 	})
+		stackSelection := ""
+		if len(stackFiles) > 1 {
+			stackList := make([]inlinelist.ListItem, len(stackFiles))
 
-		// 	selection, err := tea.NewProgram(promptModel).Run()
-		// 	cobra.CheckErr(err)
-		// 	stackSelection = selection.(listprompt.Model).Choice()
-		// }
+			for i, stackFile := range stackFiles {
+				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stack.GetStackNameFromFileName(stackFile))
+				tui.CheckErr(err)
+				stackList[i] = stack_select.StackListItem{
+					Name:     stackConfig.Name,
+					Provider: stackConfig.Provider,
+				}
+			}
+
+			promptModel := stack_select.New(stack_select.Args{
+				StackList: stackList,
+			})
+
+			selection, err := tea.NewProgram(promptModel).Run()
+			cobra.CheckErr(err)
+			stackSelection = selection.(stack_select.Model).Choice()
+		} else {
+			stackSelection = stack.GetStackNameFromFileName(stackFiles[0])
+		}
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
 		cobra.CheckErr(err)
@@ -332,8 +288,10 @@ nitric stack down -s aws -y`,
 		providerFilePath, err := provider.EnsureProviderExists(fs, prov)
 		cobra.CheckErr(err)
 
+		providerStdout := make(chan string)
+
 		// Step 4. Start the deployment provider server
-		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath)
+		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout))
 		cobra.CheckErr(err)
 		defer providerProcess.Stop()
 
@@ -357,29 +315,10 @@ nitric stack down -s aws -y`,
 			Interactive: true,
 		})
 
-		// Step 5b. Communicate with server to share progress of ...
-	ServerCommunication:
-		for {
-			select {
-			case event, ok := <-eventChannel:
-				if !ok {
-					break ServerCommunication
-				}
+		stackDown := stack_down.New(eventChannel, providerStdout, errorChan)
 
-				switch event.Content.(type) {
-				case *deploymentspb.DeploymentDownEvent_Message:
-					fmt.Print(event.GetMessage())
-				case *deploymentspb.DeploymentDownEvent_Result:
-					// fmt.Print(event.GetResult())
-				}
-
-			case err, ok := <-errorChan:
-				if !ok {
-					break ServerCommunication
-				}
-				cobra.CheckErr(err)
-			}
-		}
+		_, err = tea.NewProgram(stackDown).Run()
+		tui.CheckErr(err)
 	},
 	Args: cobra.ExactArgs(0),
 }

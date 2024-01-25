@@ -45,8 +45,11 @@ func (f Fragment) String() string {
 }
 
 // WithStyle adds a style to this fragment, which will be used when rendering
-func (f *Fragment) WithStyle(style ...lipgloss.Style) *Fragment {
-	f.styles = style
+func (f *Fragment) WithStyle(style lipgloss.Style, styles ...lipgloss.Style) *Fragment {
+	s := make([]lipgloss.Style, 0, len(styles)+1)
+	s = append(s, style)
+	s = append(s, styles...)
+	f.styles = s
 	return f
 }
 

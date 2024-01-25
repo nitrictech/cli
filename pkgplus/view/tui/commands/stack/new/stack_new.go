@@ -212,7 +212,7 @@ func (m Model) View() string {
 
 		indent := view.New(view.WithStyle(lipgloss.NewStyle().MarginLeft(10)))
 
-		indent.Add("Your new stack is available at ").WithStyle()
+		indent.Add("Your new stack is available at ")
 		indent.Addln(m.newStackFilePath).WithStyle(highlightStyle)
 		indent.Break()
 

@@ -83,19 +83,13 @@ var _ resourcespb.ResourcesServer = (*ServiceRequirements)(nil)
 // Error - Returns an error if any requirements have been registered incorrectly, such as duplicates
 func (s *ServiceRequirements) Error() error {
 	if len(s.errors) > 0 {
-		errorView := view.NewRenderer()
+		errorView := view.New()
 
-		errorView.AddRow(
-			view.NewFragment("Errors found in service "),
-			view.NewFragment(s.serviceFile).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple)),
-		)
+		errorView.Add("Errors found in service ")
+		errorView.Addln(s.serviceFile).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple))
 
 		for _, err := range s.errors {
-			errorView.AddRow(
-				view.NewFragment(
-					fmt.Sprintf("- %s", err.Error()),
-				).WithStyle(lipgloss.NewStyle().MarginLeft(2).Foreground(tui.Colors.Gray)),
-			)
+			errorView.Addln("- %s", err.Error()).WithStyle(lipgloss.NewStyle().MarginLeft(2).Foreground(tui.Colors.Gray))
 		}
 
 		return fmt.Errorf(errorView.Render())

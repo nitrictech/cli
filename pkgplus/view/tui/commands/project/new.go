@@ -159,83 +159,65 @@ var (
 )
 
 func (m Model) View() string {
-	projectView := view.NewRenderer()
+	v := view.New()
 
 	if m.err != nil {
-		projectView.AddRow(
-			view.NewFragment("error").WithStyle(errorTagStyle),
-			view.NewFragment(m.err.Error()).WithStyle(errorTextStyle),
-			// TODO: this shouldn't be needed but without it the line doesn't print
-			view.Break(),
-		)
+		v.Add("error").WithStyle(errorTagStyle)
+		v.Addln(m.err.Error()).WithStyle(errorTextStyle)
 
-		return projectView.Render()
+		// TODO: this shouldn't be needed but without it the line doesn't print
+		view.Break()
+
+		return v.Render()
 	}
 
 	if !m.nonInteractive {
-		projectView.AddRow(
-			view.NewFragment("nitric").WithStyle(titleStyle),
-			view.NewFragment("Let's get going!"),
-			view.Break(),
-		)
+		v.Add("nitric").WithStyle(titleStyle)
+		v.Addln("Let's get going!")
+		v.Break()
 
-		projectView.AddRow(
-			view.NewFragment(m.namePrompt.View()),
-		)
+		v.Addln(m.namePrompt.View())
 
 		// Template selection input
 		if m.status >= TemplateInput {
-			projectView.AddRow(
-				view.NewFragment(m.templatePrompt.View()),
-			)
+			v.Addln(m.templatePrompt.View())
 		}
 	}
 
 	// Creating Status
 	if m.status == Pending {
-		projectView.AddRow(
-			view.Break(),
-			view.NewFragment("proj").WithStyle(tagStyle),
-			view.NewFragment(m.spinner.View()).WithStyle(lipgloss.NewStyle().MarginLeft(2)),
-			view.NewFragment(" creating project..."),
-			view.Break(),
-		)
+		v.Break()
+		v.Add("proj").WithStyle(tagStyle)
+		v.Add(m.spinner.View()).WithStyle(lipgloss.NewStyle().MarginLeft(2))
+		v.Addln(" creating project...")
+		v.Break()
 	}
 
 	// Done!
 	if m.status == Done {
-		projectView.AddRow(
-			view.Break(),
-			view.NewFragment("proj").WithStyle(tagStyle),
-			view.NewFragment("Project Created!").WithStyle(projCreatedHeadingStyle),
-			view.Break(),
-		)
+		v.Break()
+		v.Add("proj").WithStyle(tagStyle)
+		v.Addln("Project Created!").WithStyle(projCreatedHeadingStyle)
+		v.Break()
 
-		shiftRight := lipgloss.NewStyle().MarginLeft(10)
+		indent := view.New(view.WithStyle(lipgloss.NewStyle().MarginLeft(10)))
 
-		projectView.AddRow(
-			view.NewFragment("Navigate to your project with "),
-			view.NewFragment(fmt.Sprintf("cd ./%s", m.ProjectName())).WithStyle(highlightStyle),
-		).WithStyle(shiftRight)
+		indent.Add("Navigate to your project with ")
+		indent.Addln("cd ./%s", m.ProjectName()).WithStyle(highlightStyle)
 
-		projectView.AddRow(
-			view.NewFragment("Install dependencies and you're ready to rock! 🪨"),
-			view.Break(),
-		).WithStyle(shiftRight)
+		indent.Addln("Install dependencies and you're ready to rock! 🪨")
+		indent.Break()
 
-		projectView.AddRow(
-			view.NewFragment("Need help? Come and chat "),
-			view.NewFragment("https://nitric.io/chat").WithStyle(highlightStyle),
-			view.Break(),
-		).WithStyle(shiftRight)
+		indent.Add("Need help? Come and chat ")
+		indent.Addln("https://nitric.io/chat").WithStyle(highlightStyle)
+
+		v.Addln(indent.Render())
 	} else {
-		projectView.AddRow(
-			view.Break(),
-			view.NewFragment("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray)),
-		)
+		v.Break()
+		v.Addln("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 	}
 
-	return projectView.Render()
+	return v.Render()
 }
 
 type Args struct {

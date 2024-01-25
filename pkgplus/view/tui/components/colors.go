@@ -58,23 +58,19 @@ var Colors *ColorPalette = &ColorPalette{
 func DebugColors() string {
 	standardWidth := lipgloss.NewStyle().Width(8)
 
-	colorView := view.NewRenderer().WithStyle(lipgloss.NewStyle().Margin(1, 0))
+	colorView := view.New(view.WithStyle(lipgloss.NewStyle().Margin(1, 0)))
 
-	colorView.AddRow(
-		view.NewFragment("Color Palette Debug").WithStyle(lipgloss.NewStyle().Bold(true)),
-		view.Break(),
-	)
+	colorView.Addln("Color Palette Debug").WithStyle(lipgloss.NewStyle().Bold(true))
+	colorView.Break()
 
 	headerStyle := standardWidth.Copy().Bold(true)
 
-	colorView.AddRow(
-		view.NewFragment("Color").WithStyle(headerStyle),
-		view.NewFragment("True").WithStyle(headerStyle),
-		view.NewFragment("Light").WithStyle(headerStyle),
-		view.NewFragment("Dark").WithStyle(headerStyle),
-		view.NewFragment("ANSI256").WithStyle(headerStyle),
-		view.NewFragment("ANSI").WithStyle(headerStyle),
-	)
+	colorView.Add("Color").WithStyle(headerStyle)
+	colorView.Add("True").WithStyle(headerStyle)
+	colorView.Add("Light").WithStyle(headerStyle)
+	colorView.Add("Dark").WithStyle(headerStyle)
+	colorView.Add("ANSI256").WithStyle(headerStyle)
+	colorView.Add("ANSI").WithStyle(headerStyle)
 
 	v := reflect.ValueOf(*Colors)
 
@@ -93,14 +89,13 @@ func DebugColors() string {
 			ANSI256 := standardWidth.Copy().Align(lipgloss.Center).Background(lipgloss.Color(c.ANSI256))
 			ANSI := standardWidth.Copy().Align(lipgloss.Center).Background(lipgloss.Color(c.ANSI))
 
-			colorView.AddRow(
-				view.NewFragment(field.Name).WithStyle(fore),
-				view.NewFragment(field.Name).WithStyle(back),
-				view.NewFragment(field.Name).WithStyle(lightOnBack),
-				view.NewFragment(field.Name).WithStyle(darkOnBack),
-				view.NewFragment(field.Name).WithStyle(ANSI256),
-				view.NewFragment(field.Name).WithStyle(ANSI),
-			)
+			colorView.Add(field.Name).WithStyle(fore)
+			colorView.Add(field.Name).WithStyle(back)
+			colorView.Add(field.Name).WithStyle(lightOnBack)
+			colorView.Add(field.Name).WithStyle(darkOnBack)
+			colorView.Add(field.Name).WithStyle(ANSI256)
+			colorView.Add(field.Name).WithStyle(ANSI)
+			colorView.Break()
 		}
 	}
 

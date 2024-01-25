@@ -1,7 +1,6 @@
 package local
 
 import (
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,7 +15,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
 	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
-	pearlsview "github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	viewr "github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 )
@@ -203,12 +202,10 @@ var (
 )
 
 func (t *TuiModel) View() string {
-	output := pearlsview.NewRenderer().WithStyle(textStyle)
+	output := viewr.New(view.WithStyle(textStyle))
 
-	output.AddRow(
-		pearlsview.NewFragment("Nitric").WithStyle(titleStyle),
-		pearlsview.Break(),
-	)
+	output.Addln("Nitric").WithStyle(titleStyle)
+	output.Break()
 
 	apisRegistered := len(t.apis) > 0
 	websocketsRegistered := len(t.websockets) > 0
@@ -219,126 +216,88 @@ func (t *TuiModel) View() string {
 	noWorkersRegistered := !apisRegistered && !websocketsRegistered && !httpProxiesRegistered && !topicsRegistered && !schedulesRegistered
 
 	if t.dashboardUrl != "" && !noWorkersRegistered {
-		output.AddRow(
-			pearlsview.NewFragment("Dashboard: ").WithStyle(tagStyle),
-			pearlsview.NewFragment(t.dashboardUrl).WithStyle(lipgloss.NewStyle().Bold(true)),
-			pearlsview.Break(),
-		)
+		output.Add("Dashboard: ").WithStyle(tagStyle)
+		output.Addln(t.dashboardUrl).WithStyle(lipgloss.NewStyle().Bold(true))
+		output.Break()
 	}
 
 	// Show APIs
 	if apisRegistered {
-		output.AddRow(
-			pearlsview.NewFragment("APIs:").WithStyle(tagStyle),
-			pearlsview.Break(),
-		)
+		output.Addln("APIs:").WithStyle(tagStyle)
+		output.Break()
 
 		for _, api := range t.apis {
-			output.AddRow(
-				pearlsview.NewFragment(api.name).WithStyle(lipgloss.NewStyle().Bold(true)),
-				pearlsview.NewFragment(" => "),
-				pearlsview.NewFragment(api.url),
-				pearlsview.Break(),
-			)
+			output.Add(api.name).WithStyle(lipgloss.NewStyle().Bold(true))
+			output.Addln(" => %s", api.url)
+			output.Break()
 		}
 	}
 
 	// Show HTTP Servers
 	if httpProxiesRegistered {
-		output.AddRow(
-			pearlsview.NewFragment("HTTP Servers:").WithStyle(tagStyle),
-			pearlsview.Break(),
-		)
+		output.Addln("HTTP Servers:").WithStyle(tagStyle)
+		output.Break()
 
 		for _, httpProxy := range t.httpProxies {
-			output.AddRow(
-				pearlsview.NewFragment(httpProxy.name).WithStyle(lipgloss.NewStyle().Bold(true)),
-				pearlsview.NewFragment(" => "),
-				pearlsview.NewFragment(httpProxy.url),
-				pearlsview.Break(),
-			)
+			output.Add(httpProxy.name).WithStyle(lipgloss.NewStyle().Bold(true))
+			output.Addln(" => %s", httpProxy.url)
+			output.Break()
 		}
 	}
 
 	// Show APIs
 	if websocketsRegistered {
-		output.AddRow(
-			pearlsview.NewFragment("Websockets:").WithStyle(tagStyle),
-			pearlsview.Break(),
-		)
+		output.Addln("Websockets:").WithStyle(tagStyle)
+		output.Break()
 
 		for _, websocket := range t.websockets {
-			output.AddRow(
-				pearlsview.NewFragment(websocket.name).WithStyle(lipgloss.NewStyle().Bold(true)),
-				pearlsview.NewFragment(" => "),
-				pearlsview.NewFragment(websocket.url),
-				pearlsview.Break(),
-			)
+			output.Add(websocket.name).WithStyle(lipgloss.NewStyle().Bold(true))
+			output.Addln(" => %s", websocket.url)
+			output.Break()
 		}
 	}
 
 	if topicsRegistered {
-		output.AddRow(
-			pearlsview.NewFragment("Topics:").WithStyle(tagStyle),
-			pearlsview.Break(),
-		)
+		output.Addln("Topics:").WithStyle(tagStyle)
+		output.Break()
 
 		for _, topic := range t.topics {
-			output.AddRow(
-				pearlsview.NewFragment(topic.name).WithStyle(lipgloss.NewStyle().Bold(true)),
-				pearlsview.NewFragment(" => "),
-				pearlsview.NewFragment(topic.url),
-				pearlsview.Break(),
-			)
+			output.Add(topic.name).WithStyle(lipgloss.NewStyle().Bold(true))
+			output.Addln(" => %s (%d subscribers)", topic.url, topic.subscriberCount)
+			output.Break()
 		}
 	}
 
 	if schedulesRegistered {
-		output.AddRow(
-			pearlsview.NewFragment("Schedules:").WithStyle(tagStyle),
-			pearlsview.Break(),
-		)
+		output.Addln("Schedules:").WithStyle(tagStyle)
+		output.Break()
 
 		for _, schedule := range t.schedules {
-			output.AddRow(
-				pearlsview.NewFragment(schedule.name).WithStyle(lipgloss.NewStyle().Bold(true)),
-				pearlsview.NewFragment(" => "),
-				pearlsview.NewFragment(schedule.url),
-				pearlsview.Break(),
-			)
+			output.Add(schedule.name).WithStyle(lipgloss.NewStyle().Bold(true))
+			output.Addln(" => %s (%s)", schedule.url, schedule.rate)
+			output.Break()
 		}
 	}
 
 	// Show waiting message if no workers are connected
 	if noWorkersRegistered {
-		output.AddRow(
-			pearlsview.NewFragment("waiting for connections, start your application to connect it with the local nitric server.").WithStyle(lipgloss.NewStyle().Bold(true)),
-			pearlsview.Break(),
-		)
+		output.Addln("waiting for connections, start your application to connect it with the local nitric server.").WithStyle(lipgloss.NewStyle().Bold(true))
+		output.Break()
 	}
 
 	// Render resources
 	if t.resources != nil {
-		output.AddRow(
-			pearlsview.NewFragment("Resources:").WithStyle(tagStyle),
-			pearlsview.Break(),
-		)
+		output.Addln("Resources:").WithStyle(tagStyle)
+		output.Break()
 
 		for name, bucket := range t.resources.Buckets.GetAll() {
-			output.AddRow(
-				view.NewFragment(fmt.Sprintf("Bucket::%s", name)),
-				view.Break(),
-				view.NewFragment("  beloved by:"),
-				view.NewFragment(strings.Join(bucket.RequestingServices, ", ")),
-			)
+			output.Addln("Bucket::%s", name)
+			output.Addln(" for %s", strings.Join(bucket.RequestingServices, ", "))
 		}
 
 		for name, policy := range t.resources.Policies.GetAll() {
-			output.AddRow(
-				view.NewFragment(fmt.Sprintf("Policy::%s", name)),
-				view.Break(),
-				view.NewFragment(fmt.Sprintf(" - %+v", policy.Resource)),
-			)
+			output.Addln("Policy::%s", name)
+			output.Addln(" - %+v", policy.Resource)
 		}
 	}
 

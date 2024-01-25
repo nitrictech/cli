@@ -53,6 +53,12 @@ func (f *Fragment) WithStyle(style lipgloss.Style, styles ...lipgloss.Style) *Fr
 	return f
 }
 
+// func (f *Fragment) Style() lipgloss.Style {
+// 	style := lipgloss.NewStyle()
+// 	f.styles = append(f.styles, style)
+// 	return style
+// }
+
 // NewFragment constructs a new fragment from its un-styled content
 func NewFragment(content any) *Fragment {
 	return &Fragment{

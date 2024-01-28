@@ -13,8 +13,8 @@ import {
   ClockIcon,
   CubeIcon,
   MegaphoneIcon,
+  GlobeAltIcon,
 } from "@heroicons/react/24/outline";
-import GlobeAltIcon from "@heroicons/react/24/outline/GlobeAltIcon";
 import type { Edge, Node } from "reactflow";
 import {
   TopicNode,
@@ -63,7 +63,7 @@ const createNode = <T>(
   return {
     node: {
       id: nodeId,
-      position: { x: 0, y: 0 }, // Set your desired position
+      position: { x: 0, y: 0 },
       type,
       data,
     },
@@ -87,7 +87,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       title: api.name,
       resource: api,
       icon: GlobeAltIcon,
-      description: `An API with ${routes.length} ${
+      description: `${routes.length} ${
         routes.length === 1 ? "Route" : "Routes"
       }`,
     });
@@ -105,7 +105,9 @@ export function generateVisualizerData(data: WebSocketResponse): {
         title: ws.name,
         resource: ws,
         icon: ChatBubbleLeftRightIcon,
-        description: ``,
+        description: `${ws.events.length} ${
+          ws.events.length === 1 ? "Event" : "Events"
+        }`,
       }
     );
 
@@ -139,7 +141,9 @@ export function generateVisualizerData(data: WebSocketResponse): {
         title: bucket.name,
         resource: bucket,
         icon: CircleStackIcon,
-        description: ``,
+        description: `${bucket.notificationCount} ${
+          bucket.notificationCount === 1 ? "Notification" : "Notifications"
+        }`,
       }
     );
 
@@ -180,9 +184,8 @@ export function generateVisualizerData(data: WebSocketResponse): {
   // });
 
   // Collect unique services in a single pass
-  edges.forEach(({ target: serviceName, id }) => {
+  edges.forEach(({ target: serviceName }) => {
     if (!uniqueServices.has(serviceName)) {
-      console.log(serviceName);
       const node: Node<ServiceNodeData> = {
         id: serviceName,
         position: { x: 0, y: 0 },

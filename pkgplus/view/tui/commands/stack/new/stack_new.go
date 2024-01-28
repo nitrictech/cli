@@ -32,6 +32,7 @@ import (
 	clitui "github.com/nitrictech/cli/pkgplus/view/tui"
 	validators "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
 	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/listprompt"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/textprompt"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/validation"
@@ -54,8 +55,8 @@ const (
 
 // Model - represents the state of the new stack creation operation
 type Model struct {
-	namePrompt     textprompt.Model
-	providerPrompt listprompt.Model
+	namePrompt     textprompt.TextPrompt
+	providerPrompt listprompt.ListPrompt
 	spinner        spinner.Model
 	status         NewStackStatus
 	provider       string
@@ -162,95 +163,75 @@ var (
 )
 
 var (
-	errorTagStyle            = lipgloss.NewStyle().Background(tui.Colors.Red).Foreground(tui.Colors.White).PaddingLeft(2).PaddingRight(2).Align(lipgloss.Center)
-	errorTextStyle           = lipgloss.NewStyle().PaddingLeft(2).Foreground(tui.Colors.Red)
+	errorTag                 = lipgloss.NewStyle().Background(tui.Colors.Red).Foreground(tui.Colors.White).PaddingLeft(2).PaddingRight(2).Align(lipgloss.Center)
+	errorText                = lipgloss.NewStyle().PaddingLeft(2).Foreground(tui.Colors.Red)
 	tagStyle                 = lipgloss.NewStyle().Width(8).Background(tui.Colors.Purple).Foreground(tui.Colors.White).Align(lipgloss.Center)
+	leftMarginStyle          = lipgloss.NewStyle().MarginLeft(2)
 	stackCreatedHeadingStyle = lipgloss.NewStyle().Bold(true).MarginLeft(2)
 )
 
 func (m Model) View() string {
-	stackView := view.New()
+	v := view.New()
 
 	if m.err != nil {
-		stackView.AddRow(
-			view.NewFragment("error").WithStyle(errorTagStyle),
-			view.NewFragment(m.err.Error()).WithStyle(errorTextStyle),
-			view.Break(),
-		)
+		v.Add("error").WithStyle(errorTag)
+		v.Addln(m.err.Error()).WithStyle(errorText)
+		v.Break()
 
-		return stackView.Render()
+		return v.Render()
 	}
 
 	if !m.nonInteractive {
-		stackView.AddRow(
-			view.NewFragment("nitric").WithStyle(titleStyle),
-			view.NewFragment("Let's get deployed!"),
-			view.Break(),
-		)
+		v.Add("nitric").WithStyle(titleStyle)
+		v.Addln("Let's get deployed!")
+		v.Break()
 
-		stackView.AddRow(
-			view.NewFragment(m.namePrompt.View()),
-		)
+		v.Addln(m.namePrompt.View())
 
 		// Cloud selection input
 		if m.status >= ProviderInput {
-			stackView.AddRow(
-				view.NewFragment(m.providerPrompt.View()),
-			)
+			v.Addln(m.providerPrompt.View())
 		}
 	}
 
 	// Creating Status
 	if m.status == Pending {
-		stackView.AddRow(
-			view.Break(),
-			view.NewFragment("stack").WithStyle(tagStyle),
-			view.NewFragment(m.spinner.View()).WithStyle(lipgloss.NewStyle().MarginLeft(2)),
-			view.NewFragment(" creating stack..."),
-			view.Break(),
-		)
+		v.Break()
+
+		v.Add("stack").WithStyle(tagStyle)
+		v.Add(m.spinner.View()).WithStyle(leftMarginStyle)
+		v.Addln(" creating stack...")
+		v.Break()
 	}
 
 	// Done!
 	if m.status == Done {
-		stackView.AddRow(
-			view.Break(),
-			view.NewFragment("stack").WithStyle(tagStyle),
-			view.NewFragment("Stack Created!").WithStyle(stackCreatedHeadingStyle),
-			view.Break(),
-		)
+		v.Break()
+		v.Add("stack").WithStyle(tagStyle)
+		v.Addln("Stack Created!").WithStyle(stackCreatedHeadingStyle)
 
-		shiftRight := lipgloss.NewStyle().MarginLeft(10)
+		indent := view.New(view.WithStyle(lipgloss.NewStyle().MarginLeft(10)))
 
-		stackView.AddRow(
-			view.NewFragment("Your new stack is available at "),
-			view.NewFragment(m.newStackFilePath).WithStyle(highlightStyle),
-			view.Break(),
-		).WithStyle(shiftRight)
+		indent.Add("Your new stack is available at ")
+		indent.Addln(m.newStackFilePath).WithStyle(highlightStyle)
+		indent.Break()
 
-		stackView.AddRow(
-			view.NewFragment("Check the file for any additional configuration required."),
-			view.Break(),
-		).WithStyle(shiftRight)
+		indent.Addln("Check the file for any additional configuration required.")
+		indent.Break()
 
-		stackView.AddRow(
-			view.NewFragment("Then deploy your stack using "),
-			view.NewFragment("nitric up").WithStyle(highlightStyle),
-		).WithStyle(shiftRight)
+		indent.Add("Then deploy your stack using ")
+		indent.Addln("nitric up").WithStyle(highlightStyle)
 
-		stackView.AddRow(
-			view.NewFragment("Need help? Come and chat "),
-			view.NewFragment("https://nitric.io/chat 💬").WithStyle(highlightStyle),
-			view.Break(),
-		).WithStyle(shiftRight)
+		indent.Add("Need help? Come and chat ")
+		indent.Addln("https://nitric.io/chat 💬").WithStyle(highlightStyle)
+
+		v.Add(indent.Render())
 	} else {
-		stackView.AddRow(
-			view.Break(),
-			view.NewFragment("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray)),
-		)
+		v.Break()
+		v.Addln("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 	}
 
-	return stackView.Render()
+	return v.Render()
 }
 
 type Args struct {
@@ -312,10 +293,10 @@ func New(fs afero.Fs, args Args) Model {
 	})
 	namePrompt.Focus()
 
-	providerPrompt := listprompt.New(listprompt.Args{
+	providerPrompt := listprompt.NewListPrompt(listprompt.ListPromptArgs{
 		Prompt: "Which provider do you want to deploy with?",
 		Tag:    "prov",
-		Items:  listprompt.ConvertStringsToListItems(availableProviders),
+		Items:  list.StringsToListItems(availableProviders),
 	})
 
 	s := spinner.New()

@@ -19,7 +19,7 @@ package stack_select
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/nitrictech/cli/pkgplus/view/tui/components/inlinelist"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/listprompt"
 )
 
@@ -45,7 +45,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	m.listModel, cmd = m.listModel.Update(msg)
-	if m.listModel.(listprompt.Model).IsComplete() {
+	if m.listModel.(listprompt.ListPrompt).IsComplete() {
 		return m, tea.Quit
 	}
 
@@ -57,11 +57,11 @@ func (m Model) View() string {
 }
 
 func (m Model) Choice() string {
-	return m.listModel.(listprompt.Model).Choice()
+	return m.listModel.(listprompt.ListPrompt).Choice()
 }
 
 type Args struct {
-	StackList []inlinelist.ListItem
+	StackList []list.ListItem
 }
 
 type StackListItem struct {
@@ -77,10 +77,10 @@ func (s StackListItem) GetItemDescription() string {
 	return s.Provider
 }
 
-var _ inlinelist.ListItem = StackListItem{}
+var _ list.ListItem = StackListItem{}
 
 func New(args Args) Model {
-	listModel := listprompt.New(listprompt.Args{
+	listModel := listprompt.NewListPrompt(listprompt.ListPromptArgs{
 		Items:  args.StackList,
 		Tag:    "stack",
 		Prompt: "Which stack would you like to update?",

@@ -22,27 +22,27 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
-	"github.com/nitrictech/cli/pkgplus/view/tui/components/inlinelist"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 )
 
-type Model struct {
+type ListPrompt struct {
 	Prompt    string
-	listInput inlinelist.Model
+	listInput list.InlineList
 	Tag       string
 }
 
-func (m Model) Init() tea.Cmd {
+func (m ListPrompt) Init() tea.Cmd {
 	return nil
 }
 
-func (m Model) UpdateItems(items []inlinelist.ListItem) Model {
+func (m ListPrompt) UpdateItems(items []list.ListItem) ListPrompt {
 	m.listInput = m.listInput.UpdateItems(items)
 
 	return m
 }
 
-func (m Model) UpdateListPrompt(msg tea.Msg) (Model, tea.Cmd) {
+func (m ListPrompt) UpdateListPrompt(msg tea.Msg) (ListPrompt, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -58,92 +58,67 @@ func (m Model) UpdateListPrompt(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ListPrompt) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.UpdateListPrompt(msg)
 }
 
-func (m Model) IsComplete() bool {
+func (m ListPrompt) IsComplete() bool {
 	return m.listInput.Choice() != ""
 }
 
-func (m Model) Choice() string {
+func (m ListPrompt) Choice() string {
 	return m.listInput.Choice()
 }
 
-func (m *Model) SetChoice(choice string) {
+func (m *ListPrompt) SetChoice(choice string) {
 	m.listInput.SetChoice(choice)
 }
 
 var (
-	labelStyle  = lipgloss.NewStyle().MarginTop(1)
 	tagStyle    = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
 	promptStyle = lipgloss.NewStyle().MarginLeft(2)
 	inputStyle  = lipgloss.NewStyle().MarginLeft(8)
 	textStyle   = lipgloss.NewStyle().Foreground(tui.Colors.Gray).MarginLeft(10)
 )
 
-func (m Model) View() string {
+func (m ListPrompt) View() string {
 	listView := view.New()
 
 	// render the list header
-	listView.AddRow(
-		view.NewFragment(m.Tag).WithStyle(tagStyle),
-		view.NewFragment(m.Prompt).WithStyle(promptStyle),
-		view.Break(),
-	).WithStyle(labelStyle)
+	listView.Add(m.Tag).WithStyle(tagStyle, lipgloss.NewStyle().MarginTop(1))
+	listView.Addln(m.Prompt).WithStyle(promptStyle)
+	listView.Break()
 
-	// render the list view
-	listView.AddRow(
-		view.WhenOr(
-			m.Choice() == "",
-			view.NewFragment(m.listInput.View()).WithStyle(inputStyle),
-			view.NewFragment(m.Choice()).WithStyle(textStyle),
-		),
-	)
+	// render the list
+	if m.Choice() == "" {
+		listView.Addln(m.listInput.View()).WithStyle(inputStyle)
+	} else {
+		listView.Addln(m.Choice()).WithStyle(textStyle)
+	}
 
 	return listView.Render()
 }
 
-type Args struct {
+type ListPromptArgs struct {
 	MaxDisplayedItems int
-	Items             []inlinelist.ListItem
+	Items             []list.ListItem
 	Prompt            string
 	Tag               string
 }
 
-func New(args Args) Model {
+func NewListPrompt(args ListPromptArgs) ListPrompt {
 	if args.MaxDisplayedItems < 1 {
 		args.MaxDisplayedItems = 5
 	}
 
-	listInput := inlinelist.New(inlinelist.Args{
+	listInput := list.NewInlineList(list.InlineListArgs{
 		Items:             args.Items,
 		MaxDisplayedItems: args.MaxDisplayedItems,
 	})
 
-	return Model{
+	return ListPrompt{
 		Prompt:    args.Prompt,
 		listInput: listInput,
 		Tag:       args.Tag,
 	}
-}
-
-type StringItem struct {
-	Value string
-}
-
-func (s StringItem) GetItemValue() string {
-	return s.Value
-}
-
-func (s StringItem) GetItemDescription() string {
-	return ""
-}
-
-func ConvertStringsToListItems(strings []string) []inlinelist.ListItem {
-	items := make([]inlinelist.ListItem, len(strings))
-	for i, str := range strings {
-		items[i] = StringItem{Value: str}
-	}
-	return items
 }

@@ -137,14 +137,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 const maxOutputLines = 5
 
-func (m Model) View() string {
-	// print the stack?
-	treeView := view.New()
+var (
+	titleStyle          = lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)
+	terminalBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tui.Colors.Gray)
+	errorStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+)
 
-	treeView.AddRow(
-		view.NewFragment("Nitric Up"+m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)),
-		view.Break(),
-	)
+func (m Model) View() string {
+	v := view.New()
+
+	v.Addln("nitric up %s", m.spinner.View()).WithStyle(titleStyle)
+	v.Break()
 
 	rows := []table.Row{}
 
@@ -168,40 +171,27 @@ func (m Model) View() string {
 	}
 	m.resourcesTable.SetRows(rows)
 
-	treeView.AddRow(view.NewFragment(m.resourcesTable.View()))
+	v.Addln(m.resourcesTable.View())
 
 	// Provider Stdout and Stderr rendering
 	if len(m.providerStdout) > 0 {
-		tealForTim := lipgloss.NewStyle().Foreground(tui.Colors.Gray)
+		v.Addln("Provider Output:").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 
-		providerTermView := view.New()
-
-		treeView.AddRow(
-			view.NewFragment("Provider Output:").WithStyle(tealForTim),
-		)
+		providerTerm := view.New(view.WithStyle(terminalBorderStyle))
 
 		for _, line := range m.providerStdout[max(0, len(m.providerStdout)-maxOutputLines):] {
-			providerTermView.AddRow(
-				view.NewFragment(line).WithStyle(lipgloss.NewStyle().Width(98)),
-			)
+			providerTerm.Addln(line).WithStyle(lipgloss.NewStyle().Width(98))
 		}
 
-		borderStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tui.Colors.Gray)
-
-		treeView.AddRow(
-			view.NewFragment(providerTermView.Render()).WithStyle(borderStyle),
-			view.Break(),
-		)
+		v.Addln(providerTerm.Render())
+		v.Break()
 	}
 
 	for _, e := range m.errs[max(0, len(m.errs)-maxOutputLines):] {
-		treeView.AddRow(
-			view.NewFragment("Error:"),
-			view.NewFragment(e.Error()),
-		).WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("205")))
+		v.Addln("Error: %s", e.Error()).WithStyle(errorStyle)
 	}
 
-	return treeView.Render()
+	return v.Render()
 }
 
 func New(updatesChan <-chan *deploymentspb.DeploymentUpEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {

@@ -37,14 +37,12 @@ import (
 	"github.com/nitrictech/cli/pkgplus/browser"
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/collector"
-	"github.com/nitrictech/cli/pkgplus/eventbus"
 	"github.com/nitrictech/cli/pkgplus/netx"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
-	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/storage"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
@@ -167,14 +165,16 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 			Name: name,
 		}
 
-		for _, eventType := range ws {
-			switch eventType {
-			case websocketspb.WebsocketEventType_Connect:
-				spec.Events = append(spec.Events, "connect")
-			case websocketspb.WebsocketEventType_Disconnect:
-				spec.Events = append(spec.Events, "disconnect")
-			case websocketspb.WebsocketEventType_Message:
-				spec.Events = append(spec.Events, "message")
+		for _, serviceWs := range ws {
+			for _, eventType := range serviceWs {
+				switch eventType {
+				case websocketspb.WebsocketEventType_Connect:
+					spec.Events = append(spec.Events, "connect")
+				case websocketspb.WebsocketEventType_Disconnect:
+					spec.Events = append(spec.Events, "disconnect")
+				case websocketspb.WebsocketEventType_Message:
+					spec.Events = append(spec.Events, "message")
+				}
 			}
 		}
 
@@ -189,7 +189,11 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 func (d *Dashboard) updateTopics(state topics.State) {
 	topics := []TopicSpec{}
 
-	for topic, count := range state {
+	for topic, services := range state {
+		count := 0
+		for _, serviceSubCount := range services {
+			count += serviceSubCount
+		}
 		topics = append(topics, TopicSpec{
 			Name:            topic,
 			SubscriberCount: count,
@@ -206,9 +210,9 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 
 	for _, schedule := range state {
 		schedules = append(schedules, ScheduleSpec{
-			Name:       schedule.GetScheduleName(),
-			Expression: schedule.GetCron().GetExpression(),
-			Rate:       schedule.GetEvery().GetRate(),
+			Name:       schedule.Schedule.GetScheduleName(),
+			Expression: schedule.Schedule.GetCron().GetExpression(),
+			Rate:       schedule.Schedule.GetEvery().GetRate(),
 		})
 	}
 
@@ -220,7 +224,11 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 func (d *Dashboard) updateBucketNotifications(state storage.State) {
 	var performUpdate bool
 
-	for bucketName, count := range state {
+	for bucketName, serviceListnerCount := range state {
+		count := 0
+		for _, serviceCount := range serviceListnerCount {
+			count += serviceCount
+		}
 		_, idx, found := lo.FindIndexOf[*BucketSpec](d.buckets, func(item *BucketSpec) bool {
 			return item.Name == bucketName
 		})
@@ -494,10 +502,11 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 
 	dash.debouncedUpdate = debouncedUpdate
 
-	err = eventbus.Bus().Subscribe(resources.DeclareBucketTopic, dash.addBucket)
-	if err != nil {
-		return nil, err
-	}
+	// FIXME:
+	// err = eventbus.Bus().Subscribe(resources.DeclareBucketTopic, dash.addBucket)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	localCloud.Apis.SubscribeToState(dash.updateApis)
 	localCloud.Websockets.SubscribeToState(dash.updateWebsockets)

@@ -34,10 +34,10 @@ func (pe ProjectErrors) Error() error {
 	if len(pe.errors) > 0 {
 		errorView := view.New()
 
-		errorView.AddRow(view.NewFragment("Errors found in project:"))
+		errorView.Addln("Errors found in project:")
 
 		for _, err := range pe.errors {
-			errorView.AddRow(view.NewFragment(fmt.Sprintf("- %s", err.Error())).WithStyle(lipgloss.NewStyle().MarginLeft(2)))
+			errorView.Addln("- %s", err.Error()).WithStyle(lipgloss.NewStyle().MarginLeft(2))
 		}
 
 		return fmt.Errorf(errorView.Render())

@@ -25,12 +25,18 @@ import (
 // Fragment represents a UI element
 type Fragment struct {
 	content any
-	style   lipgloss.Style
+	styles  []lipgloss.Style
 }
 
 // Render this fragment as a string, applying its style
 func (f Fragment) Render() string {
-	return f.style.Render(fmt.Sprint(f.content))
+	rendered := fmt.Sprint(f.content)
+
+	for _, style := range f.styles {
+		rendered = style.Render(rendered)
+	}
+
+	return rendered
 }
 
 // String returns the rendered fragment as a string
@@ -39,10 +45,19 @@ func (f Fragment) String() string {
 }
 
 // WithStyle adds a style to this fragment, which will be used when rendering
-func (f *Fragment) WithStyle(style lipgloss.Style) *Fragment {
-	f.style = style
+func (f *Fragment) WithStyle(style lipgloss.Style, styles ...lipgloss.Style) *Fragment {
+	s := make([]lipgloss.Style, 0, len(styles)+1)
+	s = append(s, style)
+	s = append(s, styles...)
+	f.styles = s
 	return f
 }
+
+// func (f *Fragment) Style() lipgloss.Style {
+// 	style := lipgloss.NewStyle()
+// 	f.styles = append(f.styles, style)
+// 	return style
+// }
 
 // NewFragment constructs a new fragment from its un-styled content
 func NewFragment(content any) *Fragment {

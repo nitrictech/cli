@@ -34,7 +34,7 @@ import (
 	stack_new "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/new"
 	stack_select "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/select"
 	stack_up "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/up"
-	"github.com/nitrictech/cli/pkgplus/view/tui/components/inlinelist"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
@@ -133,7 +133,7 @@ var stackUpdateCmd = &cobra.Command{
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
 		stackSelection := ""
 		if len(stackFiles) > 1 {
-			stackList := make([]inlinelist.ListItem, len(stackFiles))
+			stackList := make([]list.ListItem, len(stackFiles))
 
 			for i, stackFile := range stackFiles {
 				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stack.GetStackNameFromFileName(stackFile))
@@ -250,7 +250,7 @@ nitric stack down -s aws -y`,
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
 		stackSelection := ""
 		if len(stackFiles) > 1 {
-			stackList := make([]inlinelist.ListItem, len(stackFiles))
+			stackList := make([]list.ListItem, len(stackFiles))
 
 			for i, stackFile := range stackFiles {
 				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stack.GetStackNameFromFileName(stackFile))

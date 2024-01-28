@@ -14,11 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package inlinelist
+package list
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
@@ -28,11 +26,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 )
 
-type ListItem interface {
-	GetItemValue() string
-	GetItemDescription() string
-}
-type Model struct {
+type InlineList struct {
 	cursor             int
 	Items              []ListItem
 	MaxDisplayedItems  int
@@ -41,18 +35,18 @@ type Model struct {
 	Paginator          paginator.Model
 }
 
-type Args struct {
+type InlineListArgs struct {
 	Items             []ListItem
 	MaxDisplayedItems int
 }
 
-func New(args Args) Model {
+func NewInlineList(args InlineListArgs) InlineList {
 	p := paginator.New()
 	p.Type = paginator.Dots
 	p.ActiveDot = activePaginationDot.String()
 	p.InactiveDot = inactivePaginationDot.String()
 
-	return Model{
+	return InlineList{
 		cursor:             0,
 		firstDisplayedItem: 0,
 		Paginator:          p,
@@ -76,7 +70,7 @@ func max(a, b int) int {
 	return b
 }
 
-func (m Model) Init() tea.Cmd {
+func (m InlineList) Init() tea.Cmd {
 	return nil
 }
 
@@ -91,26 +85,25 @@ var (
 	activePaginationDot      = cursorIconOffset.Copy().Foreground(tui.Colors.White).SetString(bullet)
 )
 
-func (m Model) View() string {
+func (m InlineList) View() string {
 	listView := view.New()
 	maxDisplayedItems := min(m.MaxDisplayedItems, len(m.Items))
 
 	for i := 0; i < maxDisplayedItems; i++ {
-		listView.AddRow(
-			view.WhenOr(
-				i+m.firstDisplayedItem == m.cursor,
-				view.NewFragment(fmt.Sprintf("→ %s", m.Items[i+m.firstDisplayedItem].GetItemValue())).WithStyle(selected),
-				view.NewFragment(m.Items[i+m.firstDisplayedItem].GetItemValue()).WithStyle(unselected),
-			),
-		)
+		if i+m.firstDisplayedItem == m.cursor {
+			listView.Addln("→ %s", m.Items[i+m.firstDisplayedItem].GetItemValue()).WithStyle(selected)
+		} else {
+			listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemValue()).WithStyle(unselected)
+		}
 
 		if m.Items[i+m.firstDisplayedItem].GetItemDescription() != "" {
-			listView.AddRow(view.WhenOr(
-				i+m.firstDisplayedItem == m.cursor,
-				view.NewFragment(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionSelectedStyle),
-				view.NewFragment(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionStyle),
-			),
-				view.Break())
+			if i+m.firstDisplayedItem == m.cursor {
+				listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionSelectedStyle)
+			} else {
+				listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionStyle)
+			}
+
+			listView.Break()
 		}
 	}
 
@@ -118,7 +111,7 @@ func (m Model) View() string {
 		m.Paginator.TotalPages = (len(m.Items) + maxDisplayedItems - 1) / maxDisplayedItems
 		m.Paginator.Page = max(0, m.cursor/maxDisplayedItems)
 
-		listView.AddRow(view.NewFragment(m.Paginator.View()))
+		listView.Addln(m.Paginator.View())
 	}
 
 	return listView.Render()
@@ -129,7 +122,7 @@ type UpdateListItemsMsg []ListItem
 // UpdateInlineList does the same thing as Update, without erasing the component's type.
 //
 // useful when composing this model into another model
-func (m Model) UpdateInlineList(msg tea.Msg) (Model, tea.Cmd) {
+func (m InlineList) UpdateInlineList(msg tea.Msg) (InlineList, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -147,11 +140,11 @@ func (m Model) UpdateInlineList(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m InlineList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.UpdateInlineList(msg)
 }
 
-func (m Model) UpdateItems(items []ListItem) Model {
+func (m InlineList) UpdateItems(items []ListItem) InlineList {
 	m.Items = items
 	m.cursor = 0
 	m.firstDisplayedItem = 0
@@ -159,7 +152,7 @@ func (m Model) UpdateItems(items []ListItem) Model {
 	return m
 }
 
-func (m Model) CursorUp() Model {
+func (m InlineList) CursorUp() InlineList {
 	m.cursor--
 	if m.cursor < 0 {
 		m.cursor = len(m.Items) - 1
@@ -168,18 +161,18 @@ func (m Model) CursorUp() Model {
 	return m.refreshViewCursor()
 }
 
-func (m Model) CursorDown() Model {
+func (m InlineList) CursorDown() InlineList {
 	m.cursor = (m.cursor + 1) % len(m.Items)
 
 	return m.refreshViewCursor()
 }
 
 // lastDisplayedItem returns the index of the last item currently visible in the list
-func (m Model) lastDisplayedItem() int {
+func (m InlineList) lastDisplayedItem() int {
 	return m.firstDisplayedItem + (m.MaxDisplayedItems - 1)
 }
 
-func (m Model) refreshViewCursor() Model {
+func (m InlineList) refreshViewCursor() InlineList {
 	for m.cursor > m.lastDisplayedItem() {
 		m.firstDisplayedItem++
 	}
@@ -191,10 +184,10 @@ func (m Model) refreshViewCursor() Model {
 	return m
 }
 
-func (m Model) Choice() string {
+func (m InlineList) Choice() string {
 	return m.choice
 }
 
-func (m *Model) SetChoice(choice string) {
+func (m *InlineList) SetChoice(choice string) {
 	m.choice = choice
 }

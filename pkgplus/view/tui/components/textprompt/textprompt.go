@@ -31,7 +31,7 @@ type (
 	errMsg error
 )
 
-type Model struct {
+type TextPrompt struct {
 	ID               string
 	textInput        textinput.Model
 	Prompt           string
@@ -44,7 +44,7 @@ type Model struct {
 	err error
 }
 
-func (m Model) Init() tea.Cmd {
+func (m TextPrompt) Init() tea.Cmd {
 	return textinput.Blink
 }
 
@@ -53,7 +53,7 @@ type CompleteMsg struct {
 	Value string
 }
 
-func (m *Model) submit() tea.Cmd {
+func (m *TextPrompt) submit() tea.Cmd {
 	return func() tea.Msg {
 		return CompleteMsg{
 			ID:    m.ID,
@@ -62,7 +62,7 @@ func (m *Model) submit() tea.Cmd {
 	}
 }
 
-func (m Model) UpdateTextPrompt(msg tea.Msg) (Model, tea.Cmd) {
+func (m TextPrompt) UpdateTextPrompt(msg tea.Msg) (TextPrompt, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -105,12 +105,11 @@ func (m Model) UpdateTextPrompt(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m TextPrompt) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.UpdateTextPrompt(msg)
 }
 
 var (
-	labelStyle      = lipgloss.NewStyle().MarginTop(1)
 	tagStyle        = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
 	promptStyle     = lipgloss.NewStyle().MarginLeft(2)
 	shiftRightStyle = lipgloss.NewStyle().MarginLeft(10)
@@ -118,46 +117,49 @@ var (
 	errorStyle      = lipgloss.NewStyle().Foreground(tui.Colors.Red).Italic(true).MarginTop(1)
 )
 
-func (m Model) View() string {
-	renderer := view.New()
+func (m TextPrompt) View() string {
+	v := view.New()
 
-	renderer.AddRow(
-		view.NewFragment(m.Tag).WithStyle(tagStyle),
-		view.NewFragment(m.Prompt).WithStyle(promptStyle),
-		view.Break(),
-	).WithStyle(labelStyle)
+	v.Add(m.Tag).WithStyle(tagStyle, lipgloss.NewStyle().MarginTop(1))
+	v.Addln(m.Prompt).WithStyle(promptStyle)
+	v.Break()
 
-	renderer.AddRow(view.WhenOr(
-		m.textInput.Focused(),
-		view.NewFragment(m.textInput.View()),
-		view.NewFragment(m.textInput.Value()).WithStyle(textStyle),
-	), view.When(
-		m.err != nil,
-		view.NewFragment(m.err).WithStyle(errorStyle),
-	)).WithStyle(shiftRightStyle)
+	field := view.New(view.WithStyle(shiftRightStyle))
 
-	return renderer.Render()
+	if m.textInput.Focused() {
+		field.Addln(m.textInput.View())
+	} else {
+		field.Addln(m.textInput.Value()).WithStyle(textStyle)
+	}
+
+	if m.err != nil {
+		field.Addln(m.err.Error()).WithStyle(errorStyle)
+	}
+
+	v.Add(field.Render())
+
+	return v.Render()
 }
 
 // Focus sets the focus state on the model. When the model is in focus it can
 // receive keyboard input and the cursor will be shown.
-func (m *Model) Focus() tea.Cmd {
+func (m *TextPrompt) Focus() tea.Cmd {
 	m.focus = true
 	return m.textInput.Focus()
 }
 
 // Blur removes the focus state on the model.  When the model is blurred it can
 // not receive keyboard input and the cursor will be hidden.
-func (m *Model) Blur() {
+func (m *TextPrompt) Blur() {
 	m.focus = false
 	m.textInput.Blur()
 }
 
-func (m *Model) SetValue(value string) {
+func (m *TextPrompt) SetValue(value string) {
 	m.textInput.SetValue(value)
 }
 
-func (m Model) Value() string {
+func (m TextPrompt) Value() string {
 	return m.textInput.Value()
 }
 
@@ -170,13 +172,13 @@ type TextPromptArgs struct {
 	Tag               string
 }
 
-func NewTextPrompt(id string, args TextPromptArgs) Model {
+func NewTextPrompt(id string, args TextPromptArgs) TextPrompt {
 	ti := textinput.New()
 	ti.CharLimit = 156
 	ti.Width = 20
 	ti.Placeholder = args.Placeholder
 
-	return Model{
+	return TextPrompt{
 		ID:               id,
 		textInput:        ti,
 		Prompt:           args.Prompt,

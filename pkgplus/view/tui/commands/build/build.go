@@ -63,10 +63,8 @@ var (
 func (m Model) View() string {
 	buildView := view.New()
 
-	buildView.AddRow(
-		view.NewFragment("Building services"+m.spinner.View()).WithStyle(headingStyle),
-		view.Break(),
-	)
+	buildView.Addln("Building services%s", m.spinner.View()).WithStyle(headingStyle)
+	buildView.Break()
 
 	serviceNames := lo.Keys(m.serviceBuildUpdates)
 
@@ -80,13 +78,9 @@ func (m Model) View() string {
 			serviceProgStyle = doneStyle
 		}
 
-		buildView.AddRow(
-			view.NewFragment(serviceName),
-			view.NewFragment(" "),
-			view.NewFragment(service.Status).WithStyle(serviceProgStyle),
-			view.Break(),
-			view.NewFragment(service.Message).WithStyle(messageStyle),
-		)
+		buildView.Add("%s ", serviceName)
+		buildView.Addln("%s", service.Status).WithStyle(serviceProgStyle)
+		buildView.Addln(service.Message).WithStyle(messageStyle)
 	}
 
 	return buildView.Render()

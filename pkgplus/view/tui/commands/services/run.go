@@ -62,23 +62,16 @@ var headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF
 func (m Model) View() string {
 	runView := view.New()
 
-	// viewport := viewport.Model{}
+	runView.Addln(m.localServicesModel.View())
 
-	runView.AddRow(view.NewFragment(m.localServicesModel.View()))
-
-	runView.AddRow(view.NewFragment("Running services").WithStyle(headingStyle), view.Break())
+	runView.Addln("Running services").WithStyle(headingStyle)
+	runView.Break()
 
 	for _, service := range m.serviceStatus {
-		runView.AddRow(
-			view.NewFragment(service.ServiceName),
-			view.NewFragment(" - "),
-			view.NewFragment(service.Status),
-		)
+		runView.Addln("%s - %s", service.ServiceName, service.Status)
 
 		if service.Err != nil {
-			runView.AddRow(
-				view.NewFragment(service.Err.Error()),
-			)
+			runView.Addln(service.Err.Error())
 		}
 	}
 

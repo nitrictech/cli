@@ -200,7 +200,7 @@ func (d *Dashboard) updateApis(state apis.State) {
 		apiSpec := ApiSpec{
 			BaseResourceSpec: &BaseResourceSpec{
 				Name:               apiName,
-				RequestingServices: lo.Keys(resources),
+				RequestingServices: lo.Uniq(lo.Keys(resources)),
 			},
 		}
 
@@ -228,7 +228,7 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 		spec := WebsocketSpec{
 			BaseResourceSpec: &BaseResourceSpec{
 				Name:               name,
-				RequestingServices: lo.Keys(ws),
+				RequestingServices: lo.Uniq(lo.Keys(ws)),
 			},
 		}
 

@@ -1,4 +1,4 @@
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 
 interface Tab {
   name: string;
@@ -37,7 +37,7 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round, pill }) => {
       </div>
       <div className="hidden sm:block">
         <nav
-          className={classNames(
+          className={cn(
             pill
               ? "flex space-x-4"
               : "isolate flex divide-x divide-gray-200 shadow",
@@ -50,7 +50,7 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round, pill }) => {
               key={tab.name}
               onClick={() => setIndex(tabIdx)}
               data-testid={`${tab.name}-tab-btn`}
-              className={classNames(
+              className={cn(
                 tabIdx === index
                   ? pill
                     ? "bg-gray-100 text-gray-700"
@@ -77,7 +77,7 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round, pill }) => {
               <span>{tab.name}</span>
               {tab.count ? (
                 <span
-                  className={classNames(
+                  className={cn(
                     tabIdx === index
                       ? "bg-indigo-100 text-primary"
                       : "bg-gray-100 text-gray-900",
@@ -90,7 +90,7 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round, pill }) => {
               {!pill && (
                 <span
                   aria-hidden="true"
-                  className={classNames(
+                  className={cn(
                     tabIdx === index ? "bg-blue-500" : "bg-transparent",
                     "absolute inset-x-0 bottom-0 h-0.5"
                   )}

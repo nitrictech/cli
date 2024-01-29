@@ -1,4 +1,4 @@
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 import type { PropsWithChildren } from "react";
 
 interface Props extends PropsWithChildren {
@@ -14,7 +14,7 @@ const Badge: React.FC<Props> = ({
 }) => {
   return (
     <span
-      className={classNames(
+      className={cn(
         "inline-flex justify-center items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
         status === "red" && "text-red-800 bg-red-100",
         status === "green" && "text-green-800 bg-green-100",

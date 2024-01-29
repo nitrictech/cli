@@ -38,11 +38,12 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/netx"
-	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
+	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/storage"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
@@ -52,63 +53,90 @@ import (
 	"github.com/nitrictech/cli/pkgplus/version"
 )
 
+type BaseResourceSpec struct {
+	Name               string   `json:"name"`
+	RequestingServices []string `json:"requestingServices"`
+}
+
+type ApiSpec struct {
+	*BaseResourceSpec
+
+	OpenApiSpec *openapi3.T `json:"spec"`
+}
 type WebsocketSpec struct {
-	Name   string   `json:"name,omitempty"`
+	*BaseResourceSpec
+
 	Events []string `json:"events,omitempty"`
 }
 
 type ScheduleSpec struct {
-	Name       string `json:"name,omitempty"`
+	*BaseResourceSpec
+
 	Expression string `json:"expression,omitempty"`
 	Rate       string `json:"rate,omitempty"`
 }
 
 type TopicSpec struct {
-	Name            string `json:"name,omitempty"`
-	SubscriberCount int    `json:"subscriberCount"`
+	*BaseResourceSpec
+
+	SubscriberCount int `json:"subscriberCount"`
 }
 
 type BucketSpec struct {
-	Name              string `json:"name,omitempty"`
-	NotificationCount int    `json:"notificationCount"`
+	*BaseResourceSpec
+
+	NotificationCount int `json:"notificationCount"`
+}
+
+type PolicyResource struct {
+	Name      string   `json:"name"`
+	Type      string   `json:"type"`
+}
+type PolicySpec struct {
+	*BaseResourceSpec
+
+	Actions []string `json:"actions"`
+	Resources []PolicyResource `json:"resources"`
 }
 
 type Dashboard struct {
-	project                    *project.Project
-	storageService             *storage.LocalStorageService
-	gatewayService             *gateway.LocalGatewayService
-	apis                       []*openapi3.T
-	schedules                  []ScheduleSpec
-	topics                     []TopicSpec
-	buckets                    []*BucketSpec
-	websockets                 []WebsocketSpec
-	envMap                     map[string]string
-	stackWebSocket             *melody.Melody
-	historyWebSocket           *melody.Melody
-	wsWebSocket                *melody.Melody
-	websocketsInfo             map[string]*websockets.WebsocketInfo
-	bucketResourcesLastUpdated time.Time
-	port                       int
-	browserHasOpened           bool
-	noBrowser                  bool
-	browserLock                sync.Mutex
-	debouncedUpdate            func()
+	project              *project.Project
+	storageService       *storage.LocalStorageService
+	gatewayService       *gateway.LocalGatewayService
+	apis                 []ApiSpec
+	schedules            []ScheduleSpec
+	topics               []TopicSpec
+	buckets              []*BucketSpec
+	websockets           []WebsocketSpec
+	policies             map[string]PolicySpec
+	envMap               map[string]string
+	stackWebSocket       *melody.Melody
+	historyWebSocket     *melody.Melody
+	wsWebSocket          *melody.Melody
+	websocketsInfo       map[string]*websockets.WebsocketInfo
+	resourcesLastUpdated time.Time
+	port                 int
+	browserHasOpened     bool
+	noBrowser            bool
+	browserLock          sync.Mutex
+	debouncedUpdate      func()
 }
 
 type DashboardResponse struct {
-	Apis               []*openapi3.T     `json:"apis"`
-	Buckets            []*BucketSpec     `json:"buckets"`
-	Schedules          []ScheduleSpec    `json:"schedules"`
-	Topics             []TopicSpec       `json:"topics"`
-	Websockets         []WebsocketSpec   `json:"websockets"`
-	ProjectName        string            `json:"projectName"`
-	ApiAddresses       map[string]string `json:"apiAddresses"`
-	WebsocketAddresses map[string]string `json:"websocketAddresses"`
-	TriggerAddress     string            `json:"triggerAddress"`
-	StorageAddress     string            `json:"storageAddress"`
-	CurrentVersion     string            `json:"currentVersion"`
-	LatestVersion      string            `json:"latestVersion"`
-	Connected          bool              `json:"connected"`
+	Apis               []ApiSpec             `json:"apis"`
+	Buckets            []*BucketSpec         `json:"buckets"`
+	Schedules          []ScheduleSpec        `json:"schedules"`
+	Topics             []TopicSpec           `json:"topics"`
+	Websockets         []WebsocketSpec       `json:"websockets"`
+	Policies           map[string]PolicySpec `json:"policies"`
+	ProjectName        string                `json:"projectName"`
+	ApiAddresses       map[string]string     `json:"apiAddresses"`
+	WebsocketAddresses map[string]string     `json:"websocketAddresses"`
+	TriggerAddress     string                `json:"triggerAddress"`
+	StorageAddress     string                `json:"storageAddress"`
+	CurrentVersion     string                `json:"currentVersion"`
+	LatestVersion      string                `json:"latestVersion"`
+	Connected          bool                  `json:"connected"`
 }
 
 type Bucket struct {
@@ -119,38 +147,74 @@ type Bucket struct {
 //go:embed dist/*
 var content embed.FS
 
-func (d *Dashboard) addBucket(name string) {
+func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	// reset buckets to allow for most recent resources only
-	if !d.bucketResourcesLastUpdated.IsZero() && time.Since(d.bucketResourcesLastUpdated) > time.Second*5 {
+	if !d.resourcesLastUpdated.IsZero() && time.Since(d.resourcesLastUpdated) > time.Second*5 {
 		d.buckets = []*BucketSpec{}
+		d.policies = map[string]PolicySpec{}
 	}
 
-	for _, b := range d.buckets {
-		if b.Name == name {
-			return
+	for bucketName, resource := range lrs.Buckets.GetAll() {
+		exists := lo.ContainsBy(d.buckets, func(item *BucketSpec) bool {
+			return item.Name == bucketName
+		})
+
+		if !exists {
+			d.buckets = append(d.buckets, &BucketSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               bucketName,
+					RequestingServices: resource.RequestingServices,
+				},
+				NotificationCount: 0,
+			})
 		}
 	}
 
-	d.buckets = append(d.buckets, &BucketSpec{
-		Name:              name,
-		NotificationCount: 0,
-	})
+	for policyName, policy := range lrs.Policies.GetAll() {
+		d.policies[policyName] = PolicySpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name:               policyName,
+				RequestingServices: policy.RequestingServices,
+			},
+			Actions: lo.Map(policy.Resource.Actions, func(item resourcespb.Action, index int) string {
+				return item.String()
+			}),
+			Resources: lo.Map(policy.Resource.Resources, func(item *resourcespb.ResourceIdentifier, index int) PolicyResource  {
+				return PolicyResource{
+					Name: item.Name,
+					Type: strings.ToLower(item.Type.String()),
+				}
+			}),
+		}
+	}
 
-	d.bucketResourcesLastUpdated = time.Now()
+	d.resourcesLastUpdated = time.Now()
 
 	d.refresh()
 }
 
 func (d *Dashboard) updateApis(state apis.State) {
-	apis := make(map[string][]*apispb.RegistrationRequest, 0)
+	apiSpecs := []ApiSpec{}
 
-	for apiName, api := range state {
-		for _, routes := range lo.Values(api) {
-			apis[apiName] = append(apis[apiName], routes...)
+	for apiName, resources := range state {
+		apiSpec := ApiSpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name:               apiName,
+				RequestingServices: lo.Uniq(lo.Keys(resources)),
+			},
 		}
-	}
 
-	apiSpecs, _ := collector.ApisToOpenApiSpecs(apis, &collector.ProjectErrors{})
+		specs, _ := collector.ApisToOpenApiSpecs(resources, &collector.ProjectErrors{})
+
+		if len(specs) > 0 {
+			// set title to api name
+			specs[0].Info.Title = apiName
+
+			apiSpec.OpenApiSpec = specs[0]
+		}
+
+		apiSpecs = append(apiSpecs, apiSpec)
+	}
 
 	d.apis = apiSpecs
 
@@ -162,7 +226,10 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 
 	for name, ws := range state {
 		spec := WebsocketSpec{
-			Name: name,
+			BaseResourceSpec: &BaseResourceSpec{
+				Name:               name,
+				RequestingServices: lo.Uniq(lo.Keys(ws)),
+			},
 		}
 
 		for _, serviceWs := range ws {
@@ -189,15 +256,20 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 func (d *Dashboard) updateTopics(state topics.State) {
 	topics := []TopicSpec{}
 
-	for topic, services := range state {
-		count := 0
-		for _, serviceSubCount := range services {
-			count += serviceSubCount
+	for topicName, functions := range state {
+		spec := TopicSpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name: topicName,
+			},
+			SubscriberCount: 0,
 		}
-		topics = append(topics, TopicSpec{
-			Name:            topic,
-			SubscriberCount: count,
-		})
+
+		for name, count := range functions {
+			spec.SubscriberCount = spec.SubscriberCount + count
+			spec.RequestingServices = append(spec.RequestingServices, name)
+		}
+
+		topics = append(topics, spec)
 	}
 
 	d.topics = topics
@@ -208,11 +280,14 @@ func (d *Dashboard) updateTopics(state topics.State) {
 func (d *Dashboard) updateSchedules(state schedules.State) {
 	schedules := []ScheduleSpec{}
 
-	for _, schedule := range state {
+	for _, srvc := range state {
 		schedules = append(schedules, ScheduleSpec{
-			Name:       schedule.Schedule.GetScheduleName(),
-			Expression: schedule.Schedule.GetCron().GetExpression(),
-			Rate:       schedule.Schedule.GetEvery().GetRate(),
+			BaseResourceSpec: &BaseResourceSpec{
+				Name:               srvc.Schedule.GetScheduleName(),
+				RequestingServices: []string{srvc.ServiceName},
+			},
+			Expression: srvc.Schedule.GetCron().GetExpression(),
+			Rate:       srvc.Schedule.GetEvery().GetRate(),
 		})
 	}
 
@@ -224,17 +299,19 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 func (d *Dashboard) updateBucketNotifications(state storage.State) {
 	var performUpdate bool
 
-	for bucketName, serviceListnerCount := range state {
-		count := 0
-		for _, serviceCount := range serviceListnerCount {
-			count += serviceCount
-		}
+	for bucketName, functions := range state {
 		_, idx, found := lo.FindIndexOf[*BucketSpec](d.buckets, func(item *BucketSpec) bool {
 			return item.Name == bucketName
 		})
 
+		totalCount := 0
+
+		for _, count := range functions {
+			totalCount = totalCount + count
+		}
+
 		if found && d.buckets[idx] != nil {
-			d.buckets[idx].NotificationCount = count
+			d.buckets[idx].NotificationCount = totalCount
 			performUpdate = true
 		}
 	}
@@ -418,6 +495,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		Buckets:            d.buckets,
 		Schedules:          d.schedules,
 		Websockets:         d.websockets,
+		Policies:           d.policies,
 		ProjectName:        d.project.Name,
 		ApiAddresses:       d.gatewayService.GetApiAddresses(),
 		WebsocketAddresses: d.gatewayService.GetWebsocketAddresses(),
@@ -480,7 +558,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		project:          p,
 		storageService:   localCloud.Storage,
 		gatewayService:   localCloud.Gateway,
-		apis:             []*openapi3.T{},
+		apis:             []ApiSpec{},
 		envMap:           map[string]string{},
 		stackWebSocket:   stackWebSocket,
 		historyWebSocket: historyWebSocket,
@@ -488,6 +566,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		schedules:        []ScheduleSpec{},
 		topics:           []TopicSpec{},
 		websockets:       []WebsocketSpec{},
+		policies:         map[string]PolicySpec{},
 		websocketsInfo:   map[string]*websockets.WebsocketInfo{},
 		noBrowser:        noBrowser,
 	}
@@ -502,11 +581,8 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 
 	dash.debouncedUpdate = debouncedUpdate
 
-	// FIXME:
-	// err = eventbus.Bus().Subscribe(resources.DeclareBucketTopic, dash.addBucket)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	// subscribe to resource, used for visualizer and buckets
+	localCloud.Resources.SubscribeToState(dash.updateResources)
 
 	localCloud.Apis.SubscribeToState(dash.updateApis)
 	localCloud.Websockets.SubscribeToState(dash.updateWebsockets)

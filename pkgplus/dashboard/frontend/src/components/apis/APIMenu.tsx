@@ -1,11 +1,10 @@
 import { Menu, Transition } from "@headlessui/react";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
-import classNames from "classnames";
 import { Fragment } from "react";
 import type { Endpoint } from "../../types";
 import { LOCAL_STORAGE_KEY } from "./APIExplorer";
 import { useHistory } from "../../lib/hooks/use-history";
-import { formatJSON } from "../../lib/utils";
+import { cn, formatJSON } from "@/lib/utils";
 
 interface Props {
   selected: Endpoint;
@@ -66,7 +65,7 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
           <Menu.Item>
             {({ active }) => (
               <button
-                className={classNames(
+                className={cn(
                   active ? "bg-gray-50" : "",
                   "flex px-3 py-1 w-full text-sm leading-6 text-gray-900"
                 )}
@@ -80,7 +79,7 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
             {({ active }) => (
               <button
                 onClick={clearHistory}
-                className={classNames(
+                className={cn(
                   active ? "bg-gray-50" : "",
                   "flex px-3 py-1 w-full text-sm leading-6 text-gray-900"
                 )}

@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 
 interface Props extends PropsWithChildren {
   delay: number;
@@ -43,7 +43,7 @@ const Loading: React.FC<Props> = ({
       role="status"
       className="w-full h-full flex flex-col items-center justify-center"
     >
-      <div className={classNames("w-40 my-20", className)}>
+      <div className={cn("w-40 my-20", className)}>
         <Lottie
           initialSegment={[40, 149]}
           loop

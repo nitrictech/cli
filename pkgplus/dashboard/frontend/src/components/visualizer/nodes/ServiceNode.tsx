@@ -7,11 +7,12 @@ export type ServiceNodeData = NodeBaseData<Record<string, any>>;
 
 export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = ({
   data,
+  selected,
 }) => {
   return (
     <NodeBase
       {...data}
-      title={`${data.title} Service`}
+      selected={selected}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

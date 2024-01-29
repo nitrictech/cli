@@ -8,11 +8,12 @@ export type WebsocketNodeData = NodeBaseData<WebSocket>;
 
 export const WebsocketNode: ComponentType<NodeProps<WebsocketNodeData>> = ({
   data,
+  selected,
 }) => {
   return (
     <NodeBase
       {...data}
-      title={`${data.title} Websocket`}
+      selected={selected}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

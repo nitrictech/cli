@@ -6,11 +6,14 @@ import NodeBase, { type NodeBaseData } from "./NodeBase";
 
 export type ApiNodeData = NodeBaseData<Api>;
 
-export const APINode: ComponentType<NodeProps<ApiNodeData>> = ({ data }) => {
+export const APINode: ComponentType<NodeProps<ApiNodeData>> = ({
+  data,
+  selected,
+}) => {
   return (
     <NodeBase
       {...data}
-      title={`${data.title} API`}
+      selected={selected}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

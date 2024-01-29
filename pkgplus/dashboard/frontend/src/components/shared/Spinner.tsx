@@ -1,4 +1,4 @@
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 
 export interface SpinnerProps
   extends Omit<React.ComponentProps<"span">, "color"> {
@@ -36,7 +36,7 @@ const Spinner: React.FC<SpinnerProps> = ({
   return (
     <span role="status" {...props}>
       <svg
-        className={classNames(
+        className={cn(
           "inline animate-spin text-gray-200",
           theme.color![color],
           light ? "on" : "dark:text-gray-600",

@@ -1,4 +1,4 @@
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 import { FC, Fragment } from "react";
 
 interface Group {
@@ -39,7 +39,7 @@ const TableGroup: FC<Props> = ({ headers, groups, rowDataClassName }) => {
                 {group.rows.map((row, rowIdx) => (
                   <tr
                     key={rowIdx}
-                    className={classNames(
+                    className={cn(
                       rowIdx === 0 ? "border-gray-300" : "border-gray-200",
                       "border-t"
                     )}
@@ -48,7 +48,7 @@ const TableGroup: FC<Props> = ({ headers, groups, rowDataClassName }) => {
                       <td
                         key={rowDataIdx}
                         title={rowData}
-                        className={classNames(
+                        className={cn(
                           "truncate py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-3",
                           rowDataClassName
                         )}

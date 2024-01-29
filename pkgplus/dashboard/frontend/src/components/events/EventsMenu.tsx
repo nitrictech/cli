@@ -1,8 +1,7 @@
 import { Menu, Transition } from "@headlessui/react";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 import { Fragment } from "react";
-import type { WorkerResource } from "../../types";
 import { useHistory } from "../../lib/hooks/use-history";
 
 interface Props {
@@ -60,7 +59,7 @@ const EventsMenu: React.FC<Props> = ({
             {({ active }) => (
               <button
                 onClick={clearHistory}
-                className={classNames(
+                className={cn(
                   active ? "bg-gray-50" : "",
                   "flex px-3 py-1 w-full text-sm leading-6 text-gray-900"
                 )}

@@ -3,7 +3,6 @@ import {
   type PropsWithChildren,
   type ReactNode,
   useState,
-  useEffect,
 } from "react";
 import { Dialog, Popover, Transition } from "@headlessui/react";
 import {
@@ -18,8 +17,9 @@ import {
   PaperAirplaneIcon,
   ChatBubbleBottomCenterIcon,
   ChatBubbleLeftRightIcon,
+  MapIcon,
 } from "@heroicons/react/24/outline";
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 import { useWebSocket } from "../../lib/hooks/use-web-socket";
 import { Toaster } from "react-hot-toast";
 import {
@@ -32,7 +32,6 @@ import { Button } from "../ui/button";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Spinner } from "../shared";
-import { cn } from "@/lib/utils";
 
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
@@ -89,13 +88,17 @@ const communityLinks = [
 interface Props extends PropsWithChildren {
   title: string;
   routePath: string;
-  secondLevelNav: ReactNode;
+  secondLevelNav?: ReactNode;
+  mainClassName?: string;
+  hideTitle?: boolean;
 }
 
 const AppLayout: React.FC<Props> = ({
-  title = "Dev Dashboard",
+  title = "Local Dashboard",
   children,
   secondLevelNav,
+  mainClassName,
+  hideTitle,
   routePath = "/",
 }) => {
   const { data, state } = useWebSocket();
@@ -106,7 +109,7 @@ const AppLayout: React.FC<Props> = ({
 
   const navigation = [
     {
-      name: "API Explorer",
+      name: "APIs",
       href: "/",
       icon: GlobeAltIcon,
       count: data?.apis?.length || 0,
@@ -214,7 +217,7 @@ const AppLayout: React.FC<Props> = ({
                               <li key={item.name}>
                                 <a
                                   href={item.href}
-                                  className={classNames(
+                                  className={cn(
                                     item.href === routePath
                                       ? "bg-gray-50 text-primary"
                                       : "text-gray-700 hover:text-primary hover:bg-gray-50",
@@ -222,7 +225,7 @@ const AppLayout: React.FC<Props> = ({
                                   )}
                                 >
                                   <item.icon
-                                    className={classNames(
+                                    className={cn(
                                       item.href === routePath
                                         ? "text-primary"
                                         : "text-gray-400 group-hover:text-primary",
@@ -256,7 +259,7 @@ const AppLayout: React.FC<Props> = ({
                                     href={link.href}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className={classNames(
+                                    className={cn(
                                       "text-gray-700 hover:text-primary items-center hover:bg-gray-50",
                                       "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
                                     )}
@@ -296,7 +299,7 @@ const AppLayout: React.FC<Props> = ({
                     <TooltipTrigger asChild>
                       <a
                         href={item.href}
-                        className={classNames(
+                        className={cn(
                           item.href === routePath
                             ? "bg-gray-100 text-primary"
                             : "text-gray-400 hover:text-primary hover:bg-gray-100",
@@ -327,15 +330,16 @@ const AppLayout: React.FC<Props> = ({
             </ul>
           </nav>
         </div>
-
-        <aside
-          className={cn(
-            "fixed inset-y-0 left-20 pt-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 pb-6 lg:block",
-            showAlert && "lg:mt-24"
-          )}
-        >
-          {secondLevelNav}
-        </aside>
+        {secondLevelNav && (
+          <aside
+            className={cn(
+              "fixed inset-y-0 left-20 pt-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 pb-6 lg:block",
+              showAlert && "lg:mt-24"
+            )}
+          >
+            {secondLevelNav}
+          </aside>
+        )}
 
         <main className="lg:pl-20">
           <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 sm:gap-x-6 sm:px-6 lg:px-8">
@@ -352,9 +356,24 @@ const AppLayout: React.FC<Props> = ({
               className="h-6 w-px bg-gray-900/10 lg:hidden"
               aria-hidden="true"
             />
-            <div className="flex gap-2 items-center md:text-lg font-semibold leading-6 text-gray-900">
-              Nitric Dashboard <span className="text-gray-300">/</span> {title}
-            </div>
+            {data?.projectName && (
+              <div className="flex gap-6 items-center md:text-lg font-semibold leading-6 text-gray-900">
+                {data.projectName} <span className="text-gray-300">/</span>{" "}
+                <Button
+                  className={cn(
+                    "/visualizer" === routePath && "bg-accent",
+                    "font-semibold"
+                  )}
+                  variant="outline"
+                  asChild
+                >
+                  <a href="/visualizer">
+                    <MapIcon className="w-5 h-5 mr-2 text-gray-500" />{" "}
+                    Visualizer
+                  </a>
+                </Button>
+              </div>
+            )}
 
             <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
               <div className="flex ml-auto items-center gap-x-4 lg:gap-x-6">
@@ -367,14 +386,14 @@ const AppLayout: React.FC<Props> = ({
                         <Popover.Button
                           as={Button}
                           variant={"destructive"}
-                          className={classNames(
+                          className={cn(
                             open && "text-opacity-90",
                             "font-semibold bg-orange-500 hover:bg-orange-600"
                           )}
                         >
                           <span>Update Available</span>
                           <ExclamationCircleIcon
-                            className={classNames(
+                            className={cn(
                               "ml-2 h-5 w-5 transition duration-150 ease-in-out group-hover:text-opacity-80",
                               open && "text-opacity-70"
                             )}
@@ -456,25 +475,28 @@ const AppLayout: React.FC<Props> = ({
                     )}
                   </Popover>
                 ) : null}
+                <span className="font-semibold hidden md:block">
+                  Local Dashboard
+                </span>
                 <Popover className="relative">
                   {({ open }) => (
                     <>
                       <Popover.Button
                         as={Button}
                         variant={"outline"}
-                        className={classNames(
+                        className={cn(
                           open && "text-opacity-90",
                           "font-semibold"
                         )}
                       >
-                        <span>Help</span>
                         <QuestionMarkCircleIcon
-                          className={classNames(
-                            "ml-2 h-5 w-5 text-blue-300 transition duration-150 ease-in-out group-hover:text-opacity-80",
+                          className={cn(
+                            "mr-2 h-5 w-5 text-gray-500 transition duration-150 ease-in-out group-hover:text-opacity-80",
                             open && "text-opacity-70"
                           )}
                           aria-hidden="true"
                         />
+                        <span>Help</span>
                       </Popover.Button>
                       <Transition
                         as={Fragment}
@@ -569,9 +591,21 @@ const AppLayout: React.FC<Props> = ({
               </AlertDescription>
             </Alert>
           )}
-          <div className="lg:pl-80">
-            <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
-              <h1 className="text-4xl font-bold mb-12">{title}</h1>
+          <div className={secondLevelNav ? "lg:pl-80" : undefined}>
+            <div
+              className={cn(
+                "px-4 py-10 sm:px-6 lg:px-8 lg:py-12",
+                mainClassName
+              )}
+            >
+              <h1
+                className={cn(
+                  "text-4xl font-bold mb-12",
+                  hideTitle && "sr-only"
+                )}
+              >
+                {title}
+              </h1>
               {children}
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { ExclamationCircleIcon, XMarkIcon } from "@heroicons/react/20/solid";
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 import React, { useEffect, useId } from "react";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -108,7 +108,7 @@ const FieldRows: React.FC<Props> = ({
                   name={valueId}
                   id={valueId}
                   value={r.value}
-                  className={classNames(
+                  className={cn(
                     valueHasError &&
                       "placeholder:text-red-300 text-red-900 !ring-red-500"
                   )}
@@ -134,7 +134,7 @@ const FieldRows: React.FC<Props> = ({
                   newArray.splice(i, 1);
                   setRows(newArray);
                 }}
-                className={classNames(
+                className={cn(
                   "rounded-full hidden absolute right-0 bg-gray-600 p-1 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
                   rows.length > 1 && (r.key || r.value)
                     ? "group-hover:block"

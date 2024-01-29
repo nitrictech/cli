@@ -94,7 +94,7 @@ interface Props extends PropsWithChildren {
 }
 
 const AppLayout: React.FC<Props> = ({
-  title = "Dev Dashboard",
+  title = "Local Dashboard",
   children,
   secondLevelNav,
   mainClassName,

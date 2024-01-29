@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+
+	"github.com/samber/lo"
 )
 
 type ResourceRegister[R any] struct {
@@ -86,12 +88,10 @@ func (r *ResourceRegistrar[R]) ClearRequestingService(requestingService string) 
 	defer r.lock.Unlock()
 
 	for name, registration := range r.resources {
-		for i, service := range registration.RequestingServices {
-			if service == requestingService {
-				// TODO investigate slice bounds error when refreshing code, could just append to a new slice
-				registration.RequestingServices = slices.Delete(registration.RequestingServices, i, i+1)
-			}
-		}
+		registration.RequestingServices = lo.Filter(registration.RequestingServices, func(item string, index int) bool {
+			return item != requestingService
+		})
+
 		if len(registration.RequestingServices) == 0 {
 			delete(r.resources, name)
 		}

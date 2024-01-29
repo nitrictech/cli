@@ -89,14 +89,15 @@ type BucketSpec struct {
 }
 
 type PolicyResource struct {
-	Name      string   `json:"name"`
-	Type      string   `json:"type"`
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 type PolicySpec struct {
 	*BaseResourceSpec
 
-	Actions []string `json:"actions"`
-	Resources []PolicyResource `json:"resources"`
+	Principals []PolicyResource `json:"principals"`
+	Actions    []string         `json:"actions"`
+	Resources  []PolicyResource `json:"resources"`
 }
 
 type Dashboard struct {
@@ -105,7 +106,7 @@ type Dashboard struct {
 	gatewayService       *gateway.LocalGatewayService
 	apis                 []ApiSpec
 	schedules            []ScheduleSpec
-	topics               []TopicSpec
+	topics               []*TopicSpec
 	buckets              []*BucketSpec
 	websockets           []WebsocketSpec
 	policies             map[string]PolicySpec
@@ -126,7 +127,7 @@ type DashboardResponse struct {
 	Apis               []ApiSpec             `json:"apis"`
 	Buckets            []*BucketSpec         `json:"buckets"`
 	Schedules          []ScheduleSpec        `json:"schedules"`
-	Topics             []TopicSpec           `json:"topics"`
+	Topics             []*TopicSpec          `json:"topics"`
 	Websockets         []WebsocketSpec       `json:"websockets"`
 	Policies           map[string]PolicySpec `json:"policies"`
 	ProjectName        string                `json:"projectName"`
@@ -151,6 +152,7 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	// reset buckets to allow for most recent resources only
 	if !d.resourcesLastUpdated.IsZero() && time.Since(d.resourcesLastUpdated) > time.Second*5 {
 		d.buckets = []*BucketSpec{}
+		d.topics = []*TopicSpec{}
 		d.policies = map[string]PolicySpec{}
 	}
 
@@ -170,6 +172,22 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 		}
 	}
 
+	for topicName, resource := range lrs.Topics.GetAll() {
+		exists := lo.ContainsBy(d.topics, func(item *TopicSpec) bool {
+			return item.Name == topicName
+		})
+
+		if !exists {
+			d.topics = append(d.topics, &TopicSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               topicName,
+					RequestingServices: resource.RequestingServices,
+				},
+				SubscriberCount: 0,
+			})
+		}
+	}
+
 	for policyName, policy := range lrs.Policies.GetAll() {
 		d.policies[policyName] = PolicySpec{
 			BaseResourceSpec: &BaseResourceSpec{
@@ -179,7 +197,13 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 			Actions: lo.Map(policy.Resource.Actions, func(item resourcespb.Action, index int) string {
 				return item.String()
 			}),
-			Resources: lo.Map(policy.Resource.Resources, func(item *resourcespb.ResourceIdentifier, index int) PolicyResource  {
+			Resources: lo.Map(policy.Resource.Resources, func(item *resourcespb.ResourceIdentifier, index int) PolicyResource {
+				return PolicyResource{
+					Name: item.Name,
+					Type: strings.ToLower(item.Type.String()),
+				}
+			}),
+			Principals: lo.Map(policy.Resource.Principals, func(item *resourcespb.ResourceIdentifier, index int) PolicyResource {
 				return PolicyResource{
 					Name: item.Name,
 					Type: strings.ToLower(item.Type.String()),
@@ -253,28 +277,42 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 	d.refresh()
 }
 
-func (d *Dashboard) updateTopics(state topics.State) {
-	topics := []TopicSpec{}
+func (d *Dashboard) updateTopicSubscriptions(state topics.State) {
+	var performUpdate bool
 
 	for topicName, functions := range state {
-		spec := TopicSpec{
-			BaseResourceSpec: &BaseResourceSpec{
-				Name: topicName,
-			},
-			SubscriberCount: 0,
+		_, idx, found := lo.FindIndexOf[*TopicSpec](d.topics, func(item *TopicSpec) bool {
+			return item.Name == topicName
+		})
+
+		totalCount := 0
+
+		if !found {
+			d.topics = append(d.topics, &TopicSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               topicName,
+					RequestingServices: []string{},
+				},
+				SubscriberCount: 0,
+			})
 		}
 
-		for name, count := range functions {
-			spec.SubscriberCount = spec.SubscriberCount + count
-			spec.RequestingServices = append(spec.RequestingServices, name)
+		for functionName, count := range functions {
+			totalCount = totalCount + count
+			if !lo.Contains(d.topics[idx].RequestingServices, functionName) {
+				d.topics[idx].RequestingServices = append(d.topics[idx].RequestingServices, functionName)
+			}
 		}
 
-		topics = append(topics, spec)
+		if d.topics[idx] != nil {
+			d.topics[idx].SubscriberCount = totalCount
+			performUpdate = true
+		}
 	}
 
-	d.topics = topics
-
-	d.refresh()
+	if performUpdate {
+		d.refresh()
+	}
 }
 
 func (d *Dashboard) updateSchedules(state schedules.State) {
@@ -304,13 +342,27 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 			return item.Name == bucketName
 		})
 
-		totalCount := 0
-
-		for _, count := range functions {
-			totalCount = totalCount + count
+		if !found {
+			d.buckets = append(d.buckets, &BucketSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               bucketName,
+					RequestingServices: []string{},
+				},
+				NotificationCount: 0,
+			})
 		}
 
-		if found && d.buckets[idx] != nil {
+		totalCount := 0
+
+		for functionName, count := range functions {
+			totalCount = totalCount + count
+
+			if !lo.Contains(d.buckets[idx].RequestingServices, functionName) {
+				d.buckets[idx].RequestingServices = append(d.buckets[idx].RequestingServices, functionName)
+			}
+		}
+
+		if d.buckets[idx] != nil {
 			d.buckets[idx].NotificationCount = totalCount
 			performUpdate = true
 		}
@@ -564,7 +616,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		historyWebSocket: historyWebSocket,
 		wsWebSocket:      wsWebSocket,
 		schedules:        []ScheduleSpec{},
-		topics:           []TopicSpec{},
+		topics:           []*TopicSpec{},
 		websockets:       []WebsocketSpec{},
 		policies:         map[string]PolicySpec{},
 		websocketsInfo:   map[string]*websockets.WebsocketInfo{},
@@ -587,7 +639,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	localCloud.Apis.SubscribeToState(dash.updateApis)
 	localCloud.Websockets.SubscribeToState(dash.updateWebsockets)
 	localCloud.Schedules.SubscribeToState(dash.updateSchedules)
-	localCloud.Topics.SubscribeToState(dash.updateTopics)
+	localCloud.Topics.SubscribeToState(dash.updateTopicSubscriptions)
 	localCloud.Storage.SubscribeToState(dash.updateBucketNotifications)
 
 	// subscribe to history events from gateway

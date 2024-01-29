@@ -64,6 +64,7 @@ interface Resource {
   type: ResourceType;
 }
 export interface Policy extends BaseResource {
+  principals: Resource[];
   actions: string[];
   resources: Resource[];
 }

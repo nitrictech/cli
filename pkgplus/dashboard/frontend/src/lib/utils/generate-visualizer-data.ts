@@ -52,30 +52,38 @@ const createNode = <T>(
   const edges: Edge[] = [];
   const nodeId = `${type}-${resource.name}`;
 
-  const policy = policies.find((p) =>
-    p.resources.some((r) => r.name === resource.name)
-  );
-
-  console.log(resource.name, policy);
-
   // Generate edges from requestingServices
   resource.requestingServices.forEach((service) => {
     let edgeLabel = "";
+    let source = nodeId;
+    let target = service;
+
+    const policy = policies.find((p) =>
+      p.resources.some((r) => r.name === resource.name) && p.principals.some((principal) => principal.name === service)
+    );
+
+    console.log(resource.name, policy);
 
     if (policy) {
+      source = service;
+      target = nodeId;
       edgeLabel = policy?.actions
         .map((action) => title(action).split(" ").pop())
         .join(", ");
     } else if (type === "api") {
       edgeLabel = "Routes";
     } else if (type === "schedule") {
-      edgeLabel = "Trigger";
+      edgeLabel = "Triggers";
+    } else if (type === "topic") {
+      edgeLabel = "Subscribes"
+    } else if (type === 'bucket') {
+      edgeLabel = "Notifies"
     }
 
     const edge: Edge = {
-      id: `e-${nodeId}-${service}`,
-      source: nodeId,
-      target: service,
+      id: `e-${source}-${target}`,
+      source,
+      target,
       data: {
         label: edgeLabel,
       },
@@ -123,6 +131,10 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
     nodes.push(node);
     edges.push(...apiEdges);
+
+    api.requestingServices.forEach((svc) => {
+      uniqueServices.add(svc)
+    })
   });
 
   // Generate nodes from websockets
@@ -143,6 +155,10 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
     nodes.push(node);
     edges.push(...wsEdges);
+
+    ws.requestingServices.forEach((svc) => {
+      uniqueServices.add(svc)
+    })
   });
 
   // Generate nodes from schedules
@@ -161,6 +177,10 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
     nodes.push(node);
     edges.push(...schedulesEdges);
+
+    schedule.requestingServices.forEach((svc) => {
+      uniqueServices.add(svc)
+    });
   });
 
   // Generate nodes from buckets
@@ -181,6 +201,10 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
     nodes.push(node);
     edges.push(...bucketEdges);
+
+    bucket.requestingServices.forEach((svc) => {
+      uniqueServices.add(svc)
+    });
   });
 
   // Generate nodes from buckets
@@ -199,6 +223,10 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
     nodes.push(node);
     edges.push(...topicEdges);
+
+    topic.requestingServices.forEach((svc) => {
+      uniqueServices.add(svc)
+    });
   });
 
   // Generate nodes for containers
@@ -216,24 +244,23 @@ export function generateVisualizerData(data: WebSocketResponse): {
   //   });
   // });
 
-  // Collect unique services in a single pass
-  edges.forEach(({ target: serviceName }) => {
-    if (!uniqueServices.has(serviceName)) {
-      const node: Node<ServiceNodeData> = {
-        id: serviceName,
-        position: { x: 0, y: 0 },
-        data: {
-          title: `${serviceName}`,
-          description: "",
-          resource: {},
-          icon: CubeIcon,
-        },
-        type: "service",
-      };
-      nodes.push(node);
-      uniqueServices.add(serviceName);
-    }
-  });
+  uniqueServices.forEach((serviceName) => {
+    const node: Node<ServiceNodeData> = {
+            id: serviceName,
+            position: { x: 0, y: 0 },
+            data: {
+              title: `${serviceName}`,
+              description: "",
+              resource: {},
+              icon: CubeIcon,
+            },
+            type: "service",
+          };
+          nodes.push(node);
+  })
+
+  console.log("nodes:", nodes);
+  console.log("edges:", edges);
 
   return { nodes, edges };
 }

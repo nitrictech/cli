@@ -351,7 +351,7 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 				},
 				NotificationCount: 0,
 			})
-			idx = len(d.topics) - 1
+			idx = len(d.buckets) - 1
 		}
 
 		totalCount := 0

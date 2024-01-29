@@ -295,6 +295,7 @@ func (d *Dashboard) updateTopicSubscriptions(state topics.State) {
 				},
 				SubscriberCount: 0,
 			})
+			idx = len(d.topics) - 1
 		}
 
 		for functionName, count := range functions {
@@ -350,6 +351,7 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 				},
 				NotificationCount: 0,
 			})
+			idx = len(d.topics) - 1
 		}
 
 		totalCount := 0

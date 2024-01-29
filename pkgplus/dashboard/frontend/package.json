@@ -48,6 +48,7 @@
     "chonky-icon-fontawesome": "^2.3.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "cronstrue": "^2.47.0",
     "date-fns": "^3.2.0",
     "html-to-image": "^1.11.11",
     "lottie-react": "^2.4.0",

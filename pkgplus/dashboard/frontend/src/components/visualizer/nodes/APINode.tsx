@@ -8,12 +8,12 @@ export type ApiNodeData = NodeBaseData<Api>;
 
 export const APINode: ComponentType<NodeProps<ApiNodeData>> = ({
   data,
-  selected,
+  ...rest
 }) => {
   return (
     <NodeBase
       {...data}
-      selected={selected}
+      {...rest}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

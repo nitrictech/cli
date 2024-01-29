@@ -1,9 +1,9 @@
-import type { FC, PropsWithChildren, ReactNode } from "react";
-import { Handle, Position } from "reactflow";
+import type { FC, PropsWithChildren } from "react";
+import { Handle, Position, type NodeProps } from "reactflow";
 import { DetailsDrawer } from "../DetailsDrawer";
 import { cn } from "@/lib/utils";
 
-export interface NodeBaseData<T = Record<string, any>> {
+export interface NodeBaseData<T = Record<string, any>> extends NodeProps {
   resource: T;
   title: string;
   icon: React.ForwardRefExoticComponent<
@@ -23,7 +23,6 @@ interface DrawerOptions extends PropsWithChildren {
 
 interface Props extends NodeBaseData {
   drawerOptions?: DrawerOptions;
-  selected: boolean;
 }
 
 const NodeBase: FC<PropsWithChildren<Props>> = ({
@@ -32,10 +31,14 @@ const NodeBase: FC<PropsWithChildren<Props>> = ({
   title,
   iconClassName,
   selected,
+  dragging,
+  ...rest
 }) => {
   return (
     <>
-      {drawerOptions && <DetailsDrawer {...drawerOptions} open={selected} />}
+      {drawerOptions && (
+        <DetailsDrawer {...drawerOptions} open={selected && !dragging} />
+      )}
       <div className="overflow-hidden flex p-0.5 relative flex-grow rounded-md wrapper gradient">
         <div className="bg-white rounded items-center gap-4 pr-4 flex justify-center grow relative">
           <div className="h-full w-14 flex items-center justify-center">

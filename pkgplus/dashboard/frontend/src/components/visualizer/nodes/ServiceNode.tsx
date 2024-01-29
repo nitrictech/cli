@@ -7,15 +7,15 @@ export type ServiceNodeData = NodeBaseData<Record<string, any>>;
 
 export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = ({
   data,
-  selected,
+  ...rest
 }) => {
   const cleanedTitle = data.title.replace(/\\/g, "/");
 
   return (
     <NodeBase
       {...data}
+      {...rest}
       title={cleanedTitle}
-      selected={selected}
       drawerOptions={{
         title: `Details - ${cleanedTitle}`,
         description: data.description,

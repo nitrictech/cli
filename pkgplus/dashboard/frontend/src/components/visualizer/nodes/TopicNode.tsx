@@ -8,12 +8,12 @@ export type TopicNodeData = NodeBaseData<Topic>;
 
 export const TopicNode: ComponentType<NodeProps<TopicNodeData>> = ({
   data,
-  selected,
+  ...rest
 }) => {
   return (
     <NodeBase
       {...data}
-      selected={selected}
+      {...rest}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

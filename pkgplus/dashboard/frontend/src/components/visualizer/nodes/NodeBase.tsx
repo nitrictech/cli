@@ -47,13 +47,17 @@ const NodeBase: FC<PropsWithChildren<Props>> = ({
       <div className="overflow-hidden flex p-0.5 relative flex-grow rounded-md wrapper gradient">
         <div className="bg-white rounded p-4 flex flex-col justify-center grow relative">
           <div className="flex flex-col gap-y-1">
-            <div className="text-sm">{title}</div>
+            <div className="text-sm font-semibold">{title}</div>
             {description && (
               <div className="text-xs text-gray-500">{description}</div>
             )}
           </div>
-          <Handle type="target" position={Position.Top} />
-          <Handle type="source" position={Position.Bottom} />
+          <Handle type="target" isConnectable={false} position={Position.Top} />
+          <Handle
+            type="source"
+            isConnectable={false}
+            position={Position.Bottom}
+          />
         </div>
       </div>
     </>

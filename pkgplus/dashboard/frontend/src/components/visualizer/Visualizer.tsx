@@ -10,6 +10,7 @@ import ReactFlow, {
   type Edge,
   ReactFlowProvider,
   Position,
+  Panel,
 } from "reactflow";
 import Dagre from "@dagrejs/dagre";
 import "reactflow/dist/style.css";
@@ -23,19 +24,12 @@ import {
   generateVisualizerData,
   nodeTypes,
 } from "@/lib/utils/generate-visualizer-data";
+import NitricEdge from "./NitricEdge";
 
 const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
 const nodeWidth = 150;
 const nodeHeight = 150;
-
-const initialEdges: Edge[] = [
-  {
-    id: "e1-1",
-    source: "main",
-    target: "second",
-  },
-];
 
 const getLayoutedElements = (
   nodes: Node<any, string | undefined>[],
@@ -70,11 +64,15 @@ const getLayoutedElements = (
   };
 };
 
+const edgeTypes = {
+  nitric: NitricEdge,
+};
+
 function ReactFlowLayout() {
   const { fitView } = useReactFlow();
   const { data } = useWebSocket();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => addEdge(params, eds)),
@@ -108,11 +106,14 @@ function ReactFlowLayout() {
           <ReactFlow
             nodes={nodes}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             defaultEdgeOptions={{
               animated: true,
+              type: "nitric",
+              markerEnd: "edge-circle",
             }}
             onConnect={onConnect}
             fitView
@@ -120,8 +121,37 @@ function ReactFlowLayout() {
             <MiniMap pannable zoomable className="!bg-blue-300" />
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
             {data?.projectName && (
-              <ShareButton projectName={data.projectName} />
+              <Panel position="top-right">
+                <ShareButton projectName={data.projectName} />
+              </Panel>
             )}
+            <svg>
+              <defs>
+                <linearGradient id="edge-gradient">
+                  <stop offset="0%" stopColor="#1d30d4" />
+                  <stop offset="100%" stopColor="#2c40f7" />
+                </linearGradient>
+
+                <marker
+                  id="edge-circle"
+                  viewBox="-5 -5 10 10"
+                  refX="0"
+                  refY="0"
+                  markerUnits="strokeWidth"
+                  markerWidth="10"
+                  markerHeight="10"
+                  orient="auto"
+                >
+                  <circle
+                    stroke="#2c40f7"
+                    strokeOpacity="0.75"
+                    r="2"
+                    cx="0"
+                    cy="0"
+                  />
+                </marker>
+              </defs>
+            </svg>
           </ReactFlow>
         </div>
       </div>

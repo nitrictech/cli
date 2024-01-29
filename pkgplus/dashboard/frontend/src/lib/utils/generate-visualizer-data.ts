@@ -6,7 +6,7 @@ import {
   BucketNode,
   type BucketNodeData,
 } from "@/components/visualizer/nodes/BucketNode";
-import type { BaseResource, WebSocketResponse } from "@/types";
+import type { BaseResource, Policy, WebSocketResponse } from "@/types";
 import {
   ChatBubbleLeftRightIcon,
   CircleStackIcon,
@@ -32,6 +32,7 @@ import {
   ServiceNode,
   type ServiceNodeData,
 } from "@/components/visualizer/nodes/ServiceNode";
+import { title } from "radash";
 
 export const nodeTypes = {
   api: APINode,
@@ -45,17 +46,39 @@ export const nodeTypes = {
 const createNode = <T>(
   resource: BaseResource,
   type: keyof typeof nodeTypes,
+  policies: Policy[],
   data: T
 ): { node: Node<T>; edges: Edge[] } => {
   const edges: Edge[] = [];
   const nodeId = `${type}-${resource.name}`;
 
+  const policy = policies.find((p) =>
+    p.resources.some((r) => r.name === resource.name)
+  );
+
+  console.log(resource.name, policy);
+
   // Generate edges from requestingServices
   resource.requestingServices.forEach((service) => {
+    let edgeLabel = "";
+
+    if (policy) {
+      edgeLabel = policy?.actions
+        .map((action) => title(action).split(" ").pop())
+        .join(", ");
+    } else if (type === "api") {
+      edgeLabel = "Routes";
+    } else if (type === "schedule") {
+      edgeLabel = "Trigger";
+    }
+
     const edge: Edge = {
       id: `e-${nodeId}-${service}`,
       source: nodeId,
       target: service,
+      data: {
+        label: edgeLabel,
+      },
     };
     edges.push(edge);
   });
@@ -78,19 +101,25 @@ export function generateVisualizerData(data: WebSocketResponse): {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   const uniqueServices: Set<string> = new Set();
+  const policies = Object.entries(data.policies).map(([_, p]) => p);
 
   // Generate nodes from APIs
   data.apis.forEach((api) => {
     const routes = Object.keys(api.spec.paths);
 
-    const { node, edges: apiEdges } = createNode<ApiNodeData>(api, "api", {
-      title: api.name,
-      resource: api,
-      icon: GlobeAltIcon,
-      description: `${routes.length} ${
-        routes.length === 1 ? "Route" : "Routes"
-      }`,
-    });
+    const { node, edges: apiEdges } = createNode<ApiNodeData>(
+      api,
+      "api",
+      policies,
+      {
+        title: api.name,
+        resource: api,
+        icon: GlobeAltIcon,
+        description: `${routes.length} ${
+          routes.length === 1 ? "Route" : "Routes"
+        }`,
+      }
+    );
 
     nodes.push(node);
     edges.push(...apiEdges);
@@ -101,6 +130,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
     const { node, edges: wsEdges } = createNode<WebsocketNodeData>(
       ws,
       "websocket",
+      policies,
       {
         title: ws.name,
         resource: ws,
@@ -120,6 +150,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
     const { node, edges: schedulesEdges } = createNode<ScheduleNodeData>(
       schedule,
       "schedule",
+      policies,
       {
         title: schedule.name,
         resource: schedule,
@@ -137,6 +168,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
     const { node, edges: bucketEdges } = createNode<BucketNodeData>(
       bucket,
       "bucket",
+      policies,
       {
         title: bucket.name,
         resource: bucket,
@@ -156,6 +188,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
     const { node, edges: topicEdges } = createNode<TopicNodeData>(
       topic,
       "topic",
+      policies,
       {
         title: topic.name,
         resource: topic,

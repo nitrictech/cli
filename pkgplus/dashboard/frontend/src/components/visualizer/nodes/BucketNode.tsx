@@ -8,11 +8,12 @@ export type BucketNodeData = NodeBaseData<Bucket>;
 
 export const BucketNode: ComponentType<NodeProps<BucketNodeData>> = ({
   data,
+  selected,
 }) => {
   return (
     <NodeBase
       {...data}
-      title={`${data.title} Bucket`}
+      selected={selected}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

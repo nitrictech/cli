@@ -8,11 +8,12 @@ export type ScheduleNodeData = NodeBaseData<Schedule>;
 
 export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = ({
   data,
+  selected,
 }) => {
   return (
     <NodeBase
       {...data}
-      title={`${data.title} Schedule`}
+      selected={selected}
       drawerOptions={{
         title: `Schedule - ${data.title}`,
         description: data.description,

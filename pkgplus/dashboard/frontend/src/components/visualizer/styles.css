@@ -1,5 +1,5 @@
 .react-flow__node {
-  @apply flex h-[70px] min-w-[150px] font-medium shadow-xl rounded-md;
+  @apply flex h-[50px] font-medium shadow-xl rounded-md;
 }
 
 .gradient:before {

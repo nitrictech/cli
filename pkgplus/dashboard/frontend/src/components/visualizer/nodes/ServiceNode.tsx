@@ -5,19 +5,16 @@ import NodeBase, { type NodeBaseData } from "./NodeBase";
 
 export type ServiceNodeData = NodeBaseData<Record<string, any>>;
 
-export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = ({
-  data,
-  ...rest
-}) => {
-  const cleanedTitle = data.title.replace(/\\/g, "/");
+export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = (
+  props
+) => {
+  const { data } = props;
 
   return (
     <NodeBase
-      {...data}
-      {...rest}
-      title={cleanedTitle}
+      {...props}
       drawerOptions={{
-        title: `Details - ${cleanedTitle}`,
+        title: `Details - ${data.title}`,
         description: data.description,
         children: <div className="flex flex-col">TODO</div>,
       }}

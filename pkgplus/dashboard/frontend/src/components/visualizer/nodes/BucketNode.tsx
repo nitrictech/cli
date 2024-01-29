@@ -1,19 +1,17 @@
 import { type ComponentType } from "react";
 
 import type { Bucket } from "@/types";
-import type { Node, NodeProps } from "reactflow";
+import type { NodeProps } from "reactflow";
 import NodeBase, { type NodeBaseData } from "./NodeBase";
 
 export type BucketNodeData = NodeBaseData<Bucket>;
 
-export const BucketNode: ComponentType<NodeProps<BucketNodeData>> = ({
-  data,
-  ...rest
-}) => {
+export const BucketNode: ComponentType<NodeProps<BucketNodeData>> = (props) => {
+  const { data } = props;
+
   return (
     <NodeBase
-      {...data}
-      {...rest}
+      {...props}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

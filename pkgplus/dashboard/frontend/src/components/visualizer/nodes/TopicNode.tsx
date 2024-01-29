@@ -6,14 +6,12 @@ import NodeBase, { type NodeBaseData } from "./NodeBase";
 
 export type TopicNodeData = NodeBaseData<Topic>;
 
-export const TopicNode: ComponentType<NodeProps<TopicNodeData>> = ({
-  data,
-  ...rest
-}) => {
+export const TopicNode: ComponentType<NodeProps<TopicNodeData>> = (props) => {
+  const { data } = props;
+
   return (
     <NodeBase
-      {...data}
-      {...rest}
+      {...props}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

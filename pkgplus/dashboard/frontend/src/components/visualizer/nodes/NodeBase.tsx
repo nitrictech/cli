@@ -3,7 +3,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { DetailsDrawer } from "../DetailsDrawer";
 import { cn } from "@/lib/utils";
 
-export interface NodeBaseData<T = Record<string, any>> extends NodeProps {
+export interface NodeBaseData<T = Record<string, any>> {
   resource: T;
   title: string;
   icon: React.ForwardRefExoticComponent<
@@ -21,18 +21,15 @@ interface DrawerOptions extends PropsWithChildren {
   description?: string;
 }
 
-interface Props extends NodeBaseData {
+interface Props extends NodeProps<NodeBaseData> {
   drawerOptions?: DrawerOptions;
 }
 
 const NodeBase: FC<PropsWithChildren<Props>> = ({
   drawerOptions,
-  icon: Icon,
-  title,
-  iconClassName,
   selected,
   dragging,
-  ...rest
+  data: { icon: Icon, title, iconClassName },
 }) => {
   return (
     <>

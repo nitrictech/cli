@@ -6,14 +6,14 @@ import NodeBase, { type NodeBaseData } from "./NodeBase";
 
 export type ScheduleNodeData = NodeBaseData<Schedule>;
 
-export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = ({
-  data,
-  ...rest
-}) => {
+export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
+  props
+) => {
+  const { data } = props;
+
   return (
     <NodeBase
-      {...data}
-      {...rest}
+      {...props}
       drawerOptions={{
         title: `Schedule - ${data.title}`,
         description: data.description,

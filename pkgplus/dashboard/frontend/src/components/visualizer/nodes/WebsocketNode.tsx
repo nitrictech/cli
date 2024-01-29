@@ -6,14 +6,14 @@ import NodeBase, { type NodeBaseData } from "./NodeBase";
 
 export type WebsocketNodeData = NodeBaseData<WebSocket>;
 
-export const WebsocketNode: ComponentType<NodeProps<WebsocketNodeData>> = ({
-  data,
-  ...rest
-}) => {
+export const WebsocketNode: ComponentType<NodeProps<WebsocketNodeData>> = (
+  props
+) => {
+  const { data } = props;
+
   return (
     <NodeBase
-      {...data}
-      {...rest}
+      {...props}
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,

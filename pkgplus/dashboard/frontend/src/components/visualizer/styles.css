@@ -40,9 +40,3 @@
 .react-flow__handle {
   opacity: 0;
 }
-
-.react-flow__edge .react-flow__edge-path {
-  stroke: url(#edge-gradient);
-  stroke-width: 2;
-  stroke-opacity: 0.75;
-}

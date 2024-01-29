@@ -1,4 +1,9 @@
-import { type EdgeProps, getBezierPath, EdgeLabelRenderer } from "reactflow";
+import {
+  type EdgeProps,
+  getBezierPath,
+  EdgeLabelRenderer,
+  BaseEdge,
+} from "reactflow";
 
 export default function NitricEdge({
   id,
@@ -26,13 +31,7 @@ export default function NitricEdge({
 
   return (
     <>
-      <path
-        id={id}
-        style={style}
-        className="react-flow__edge-path"
-        d={edgePath}
-        markerEnd={markerEnd}
-      />
+      <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
       {data?.label && (
         <EdgeLabelRenderer>
           <div

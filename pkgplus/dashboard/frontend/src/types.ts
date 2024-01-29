@@ -29,7 +29,11 @@ export interface Schedule extends BaseResource {
 
 export interface Topic extends BaseResource {
   subscriberCount: number;
+  subscribers: Map<string, number>;
 }
+
+export interface Service extends BaseResource {}
+
 export interface History {
   apis: ApiHistoryItem[];
   schedules: EventHistoryItem[];
@@ -42,6 +46,7 @@ export interface WebSocket extends BaseResource {
 
 export interface WebSocket {
   connectionCount: number;
+  targets: Map<string, string>;
   messages: {
     data: string;
     time: string;
@@ -55,6 +60,7 @@ export interface WebSocketsInfo {
 
 export interface Bucket extends BaseResource {
   notificationCount: number;
+  notifiers: Map<string, number>;
 }
 
 type ResourceType = "bucket" | "topic" | "websocket" | "collection" | "secret";
@@ -74,6 +80,7 @@ export interface WebSocketResponse {
   apis: Api[];
   schedules: Schedule[];
   topics: Topic[];
+  services: Service[];
   subscriptions: string[];
   websockets: WebSocket[];
   policies: {

@@ -34,6 +34,10 @@ import {
 } from "@/components/visualizer/nodes/ServiceNode";
 import { title } from "radash";
 
+import {
+  OpenAPIV3
+} from 'openapi-types';
+
 export const nodeTypes = {
   api: APINode,
   bucket: BucketNode,
@@ -102,18 +106,32 @@ const createNode = <T>(
   };
 };
 
+const AllHttpMethods = [
+  OpenAPIV3.HttpMethods.GET,
+  OpenAPIV3.HttpMethods.PUT,
+  OpenAPIV3.HttpMethods.POST,
+  OpenAPIV3.HttpMethods.DELETE,
+  OpenAPIV3.HttpMethods.OPTIONS,
+  // OpenAPIV3.HttpMethods.HEAD,
+  // OpenAPIV3.HttpMethods.PATCH,
+  // OpenAPIV3.HttpMethods.TRACE,
+];
+
 export function generateVisualizerData(data: WebSocketResponse): {
   nodes: Node[];
   edges: Edge[];
 } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
-  const uniqueServices: Set<string> = new Set();
+  // const uniqueServices: Set<string> = new Set();
   const policies = Object.entries(data.policies).map(([_, p]) => p);
+
+  console.log("data:", data);
+  // console.log("apis:", data.apis);
 
   // Generate nodes from APIs
   data.apis.forEach((api) => {
-    const routes = Object.keys(api.spec.paths);
+    const routes = (api.spec && Object.keys(api.spec.paths)) || [];
 
     const { node, edges: apiEdges } = createNode<ApiNodeData>(
       api,
@@ -129,12 +147,29 @@ export function generateVisualizerData(data: WebSocketResponse): {
       }
     );
 
-    nodes.push(node);
-    edges.push(...apiEdges);
+    const specEntries = (api.spec && api.spec.paths) || [];
 
-    api.requestingServices.forEach((svc) => {
-      uniqueServices.add(svc)
-    })
+    Object.entries(specEntries).forEach(([path, operations]) => {
+      AllHttpMethods.forEach((m) => {
+        const method = operations && operations[m] as any
+
+        if (!method) {
+          return;
+        }
+
+        edges.push({
+          id: `e-${api.name}-${path}-${method}`,
+          source: `api-${api.name}`,
+          target: method['x-nitric-target']['name'],
+          data: {
+            label: "Routes",
+          },
+        })
+      })
+    });
+
+    nodes.push(node);
+    // edges.push(...apiEdges);
   });
 
   // Generate nodes from websockets
@@ -153,12 +188,18 @@ export function generateVisualizerData(data: WebSocketResponse): {
       }
     );
 
-    nodes.push(node);
-    edges.push(...wsEdges);
+    edges.push(...Object.entries(ws.targets).map(([eventType, target]) => {
+      return {
+        id: `e-${ws.name}-${target}`,
+        source: ws.name,
+        target,
+        data: {
+          label: eventType,
+        },
+      };
+    }));
 
-    ws.requestingServices.forEach((svc) => {
-      uniqueServices.add(svc)
-    })
+    nodes.push(node);
   });
 
   // Generate nodes from schedules
@@ -178,9 +219,6 @@ export function generateVisualizerData(data: WebSocketResponse): {
     nodes.push(node);
     edges.push(...schedulesEdges);
 
-    schedule.requestingServices.forEach((svc) => {
-      uniqueServices.add(svc)
-    });
   });
 
   // Generate nodes from buckets
@@ -199,12 +237,15 @@ export function generateVisualizerData(data: WebSocketResponse): {
       }
     );
 
-    nodes.push(node);
-    edges.push(...bucketEdges);
+    edges.push(...Object.keys(bucket.notifiers).map((subscriber) => {
+      return {
+        id: `e-${bucket.name}-${subscriber}`,
+        source: `bucket-${bucket.name}`,
+        target: subscriber,
+      };
+    }));
 
-    bucket.requestingServices.forEach((svc) => {
-      uniqueServices.add(svc)
-    });
+    nodes.push(node);
   });
 
   // Generate nodes from buckets
@@ -220,14 +261,25 @@ export function generateVisualizerData(data: WebSocketResponse): {
         description: ``,
       }
     );
-
     nodes.push(node);
-    edges.push(...topicEdges);
 
-    topic.requestingServices.forEach((svc) => {
-      uniqueServices.add(svc)
-    });
+    edges.push(...Object.keys(topic.subscribers).map((subscriber) => {
+      return {
+        id: `e-${topic.name}-${subscriber}`,
+        source: `topic-${topic.name}`,
+        target: subscriber,
+      };
+    }));
+
+    edges.push(...Object.entries(data.policies).map(([_, policy]) => {
+      return {
+        id: `e-${policy.name}`,
+        source: policy.principals[0].name,
+        target: `${policy.resources[0].type}-${policy.resources[0].name}`,
+      }
+    }));
   });
+
 
   // Generate nodes for containers
 
@@ -244,19 +296,19 @@ export function generateVisualizerData(data: WebSocketResponse): {
   //   });
   // });
 
-  uniqueServices.forEach((serviceName) => {
+  data.services.forEach((service) => {
     const node: Node<ServiceNodeData> = {
-            id: serviceName,
-            position: { x: 0, y: 0 },
-            data: {
-              title: `${serviceName}`,
-              description: "",
-              resource: {},
-              icon: CubeIcon,
-            },
-            type: "service",
-          };
-          nodes.push(node);
+      id: service.name,
+      position: { x: 0, y: 0 },
+      data: {
+        title: `${service.name}`,
+        description: "",
+        resource: {},
+        icon: CubeIcon,
+      },
+      type: "service",
+    };
+    nodes.push(node);
   })
 
   console.log("nodes:", nodes);

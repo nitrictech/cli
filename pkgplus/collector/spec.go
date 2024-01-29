@@ -727,16 +727,37 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 
 func ApisToOpenApiSpecs(apiRegistrationRequests map[string][]*apispb.RegistrationRequest, projectErrors *ProjectErrors) ([]*openapi3.T, error) {
 	specs := []*openapi3.T{}
-	apiResources := map[string]*resourcespb.ApiResource{}
+	// apiResources := map[string]*resourcespb.ApiResource{}
 
-	// transform apiRegistrationRequests into routes and apis for ServiceRequirements call
-	for apiName := range apiRegistrationRequests {
-		apiResources[apiName] = &resourcespb.ApiResource{}
+	// // transform apiRegistrationRequests into routes and apis for ServiceRequirements call
+	// for apiName := range apiRegistrationRequests {
+	// 	apiResources[apiName] = &resourcespb.ApiResource{}
+	// }
+
+	allServiceRequirements := []*ServiceRequirements{}
+
+	for serviceName, registrationRequests := range apiRegistrationRequests {
+		apiRouteMap := map[string][]*apispb.RegistrationRequest{}
+		allApis := map[string]*resourcespb.ApiResource{}
+
+		for _, registrationRequest := range registrationRequests {
+			allApis[registrationRequest.Api] = &resourcespb.ApiResource{}
+		}
+
+		for _, registrationRequest := range registrationRequests {
+			apiRouteMap[registrationRequest.Api] = append(apiRouteMap[registrationRequest.Api], registrationRequest)
+		}
+
+		allServiceRequirements = append(allServiceRequirements, &ServiceRequirements{
+			serviceName: serviceName,
+			apis:        allApis,
+			routes:      apiRouteMap,
+		})
 	}
 
-	requirements := []*ServiceRequirements{{routes: apiRegistrationRequests, apis: apiResources}}
+	// requirements := []*ServiceRequirements{{routes: apiRegistrationRequests, apis: apiResources}}
 
-	apiRequirements, err := buildApiRequirements(requirements, projectErrors)
+	apiRequirements, err := buildApiRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}

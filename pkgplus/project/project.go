@@ -418,7 +418,7 @@ func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 	updatesChan := make(chan ServiceBuildUpdate)
 
 	if len(p.Services) == 0 {
-		return nil, fmt.Errorf("no services found in project, nothing to build")
+		return nil, fmt.Errorf("no services found in project, nothing to build. This may indicate misconfigured `match` patterns in your nitric.yaml file")
 	}
 
 	waitGroup := sync.WaitGroup{}

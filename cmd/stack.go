@@ -151,6 +151,9 @@ var stackUpdateCmd = &cobra.Command{
 			selection, err := tea.NewProgram(promptModel).Run()
 			cobra.CheckErr(err)
 			stackSelection = selection.(stack_select.Model).Choice()
+			if stackSelection == "" {
+				return
+			}
 		} else {
 			stackSelection = stack.GetStackNameFromFileName(stackFiles[0])
 		}
@@ -160,9 +163,6 @@ var stackUpdateCmd = &cobra.Command{
 
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
-
-		// make provider from the provider name
-		// providerName := stackConfig.Provider
 
 		// Step 0a. Locate/Download provider where applicable.
 		prov, err := provider.NewProvider(stackConfig.Provider)

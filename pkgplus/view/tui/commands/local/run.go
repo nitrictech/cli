@@ -13,9 +13,8 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
-	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	viewr "github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 )
@@ -197,21 +196,10 @@ func (t *TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return t, tea.Batch(cmds...)
 }
 
-var (
-	textStyle = lipgloss.NewStyle().Foreground(tui.Colors.White).Align(lipgloss.Left)
-	// TODO: Extract into common title styles
-	titleStyle = lipgloss.NewStyle().
-			Padding(0, 1).
-			Foreground(tui.Colors.White).
-			Background(tui.Colors.Blue).
-			MarginRight(2)
-	tagStyle = lipgloss.NewStyle().Width(10).Background(tui.Colors.Purple).Foreground(tui.Colors.White)
-)
-
 func (t *TuiModel) View() string {
-	output := viewr.New(view.WithStyle(textStyle))
+	output := viewr.New()
 
-	output.Addln("Nitric").WithStyle(titleStyle)
+	output.Addln(fragments.NitricTag())
 	output.Break()
 
 	apisRegistered := len(t.apis) > 0
@@ -223,14 +211,14 @@ func (t *TuiModel) View() string {
 	noWorkersRegistered := !apisRegistered && !websocketsRegistered && !httpProxiesRegistered && !topicsRegistered && !schedulesRegistered
 
 	if t.dashboardUrl != "" && !noWorkersRegistered {
-		output.Add("Dashboard: ").WithStyle(tagStyle)
+		output.Addln(fragments.Tag("dash"))
 		output.Addln(t.dashboardUrl).WithStyle(lipgloss.NewStyle().Bold(true))
 		output.Break()
 	}
 
 	// Show APIs
 	if apisRegistered {
-		output.Addln("APIs:").WithStyle(tagStyle)
+		output.Addln(fragments.Tag("apis"))
 		output.Break()
 
 		for _, api := range t.apis {
@@ -243,7 +231,7 @@ func (t *TuiModel) View() string {
 
 	// Show HTTP Servers
 	if httpProxiesRegistered {
-		output.Addln("HTTP Servers:").WithStyle(tagStyle)
+		output.Addln(fragments.Tag("http"))
 		output.Break()
 
 		for _, httpProxy := range t.httpProxies {
@@ -255,7 +243,7 @@ func (t *TuiModel) View() string {
 
 	// Show APIs
 	if websocketsRegistered {
-		output.Addln("Websockets:").WithStyle(tagStyle)
+		output.Addln(fragments.Tag("websockets"))
 		output.Break()
 
 		for _, websocket := range t.websockets {
@@ -266,7 +254,7 @@ func (t *TuiModel) View() string {
 	}
 
 	if topicsRegistered {
-		output.Addln("Topics:").WithStyle(tagStyle)
+		output.Addln(fragments.Tag("topics"))
 		output.Break()
 
 		for _, topic := range t.topics {
@@ -277,7 +265,7 @@ func (t *TuiModel) View() string {
 	}
 
 	if schedulesRegistered {
-		output.Addln("Schedules:").WithStyle(tagStyle)
+		output.Addln(fragments.Tag("schedules"))
 		output.Break()
 
 		for _, schedule := range t.schedules {

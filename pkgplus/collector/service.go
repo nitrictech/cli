@@ -20,10 +20,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
@@ -84,12 +82,10 @@ var _ resourcespb.ResourcesServer = (*ServiceRequirements)(nil)
 func (s *ServiceRequirements) Error() error {
 	if len(s.errors) > 0 {
 		errorView := view.New()
-
-		errorView.Add("Errors found in service ")
-		errorView.Addln(s.serviceFile).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple))
+		errorView.Addln("Errors found in service %s", s.serviceFile)
 
 		for _, err := range s.errors {
-			errorView.Addln("- %s", err.Error()).WithStyle(lipgloss.NewStyle().MarginLeft(2).Foreground(tui.Colors.Gray))
+			errorView.Addln("- %s", err.Error())
 		}
 
 		return fmt.Errorf(errorView.Render())

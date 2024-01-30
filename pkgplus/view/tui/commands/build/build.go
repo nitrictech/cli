@@ -2,6 +2,7 @@ package build
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,8 +10,9 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkgplus/project"
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 )
 
@@ -53,35 +55,47 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-var (
-	headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFDF5"))
-	inProgStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#0000A0"))
-	doneStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#00A000"))
-	messageStyle = lipgloss.NewStyle().MarginLeft(2).Foreground(tui.Colors.Gray)
-)
-
 func (m Model) View() string {
-	buildView := view.New()
 
-	buildView.Addln("Building services%s", m.spinner.View()).WithStyle(headingStyle)
+	buildView := view.New()
+	buildView.Break()
+	buildView.Add(fragments.Tag("build"))
+	buildView.Addln("  Building services%s", m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.White))
+
+	gap := strings.Builder{}
+	for i := 0; i < fragments.TagWidth()+2; i++ {
+		gap.WriteString(" ")
+	}
+
+	buildView.Addln("%sthis may take a few minutes for new services", gap.String()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray).Italic(true))
 	buildView.Break()
 
 	serviceNames := lo.Keys(m.serviceBuildUpdates)
 
 	sort.Strings(serviceNames)
 
+	serviceUpdates := view.New(view.WithStyle(lipgloss.NewStyle().MarginLeft(fragments.TagWidth() + 2)))
 	for _, serviceName := range serviceNames {
 		service := m.serviceBuildUpdates[serviceName]
 
-		serviceProgStyle := inProgStyle
+		statusColor := tui.Colors.Gray
 		if service.Status == project.ServiceBuildStatus_Complete {
-			serviceProgStyle = doneStyle
+			statusColor = tui.Colors.Green
+		} else if service.Status == project.ServiceBuildStatus_InProgress {
+			statusColor = tui.Colors.Blue
+		} else if service.Status == project.ServiceBuildStatus_Error {
+			statusColor = tui.Colors.Red
 		}
 
-		buildView.Add("%s ", serviceName)
-		buildView.Addln("%s", service.Status).WithStyle(serviceProgStyle)
-		buildView.Addln(service.Message).WithStyle(messageStyle)
+		messageLines := strings.Split(strings.TrimSpace(service.Message), "\n")
+
+		serviceUpdates.Add("%s ", serviceName)
+		serviceUpdates.Addln("%s", service.Status).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+		if len(messageLines) > 0 && service.Status != project.ServiceBuildStatus_Complete {
+			serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+		}
 	}
+	buildView.Addln(serviceUpdates.Render())
 
 	return buildView.Render()
 }

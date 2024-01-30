@@ -22,7 +22,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/validation"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 )

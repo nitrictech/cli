@@ -11,9 +11,10 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 
+	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
@@ -33,7 +34,6 @@ type Model struct {
 var _ tea.Model = Model{}
 
 func (m Model) Init() tea.Cmd {
-	m.errs = make([]error, 0)
 	return tea.Batch(
 		m.spinner.Tick,
 		reactive.AwaitChannel(m.updatesChan),
@@ -139,48 +139,79 @@ const maxOutputLines = 5
 
 var (
 	titleStyle          = lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)
-	terminalBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tui.Colors.Gray)
+	terminalBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tui.Colors.Yellow)
 	errorStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+)
+
+const (
+	connected   = "├─"
+	wrapped     = "│ "
+	last        = "└─"
+	lastWrapped = "  "
 )
 
 func (m Model) View() string {
 	v := view.New()
-
-	v.Addln("nitric up %s", m.spinner.View()).WithStyle(titleStyle)
+	v.Break()
+	v.Add(fragments.Tag("up"))
+	v.Addln("  Deploying your project%s", m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.White))
 	v.Break()
 
-	rows := []table.Row{}
+	// tv := view.New()
+	statusTree := fragments.NewStatusNode("stack", "")
 
 	for _, child := range m.stack.Children {
-		// print the child
-		rows = append(rows, table.Row{
-			lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Blue).Render(child.Name),
-			"", // "", verbMap[child.action][child.status],
-		})
+		currentNode := statusTree.AddNode(child.Name, "")
+		// tv.Addln(child.Name).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Blue))
 
-		for ix, grandchild := range child.Children {
-			linkChar := lo.Ternary(ix < len(child.Children)-1, "├─", "└─")
+		for _, grandchild := range child.Children {
+			// lastGrandchild := ix == len(child.Children)-1
+			// linkStyle := lipgloss.NewStyle().MarginLeft(1).Foreground(tui.Colors.Blue)
 
 			resourceTime := lo.Ternary(grandchild.FinishTime.IsZero(), time.Since(grandchild.StartTime).Round(time.Second), grandchild.FinishTime.Sub(grandchild.StartTime))
 
-			rows = append(rows, table.Row{
-				lipgloss.NewStyle().MarginLeft(1).Foreground(tui.Colors.Blue).Render(linkChar) + lipgloss.NewStyle().Foreground(tui.Colors.Gray).Render(grandchild.Name),
-				stack.VerbMap[grandchild.Action][grandchild.Status] + fmt.Sprintf(" (%s)", resourceTime.Round(time.Second)),
-			})
+			// resourceName := lipgloss.NewStyle().Foreground(tui.Colors.Gray).Width(78).Render(grandchild.Name)
+
+			currentNode.AddNode(grandchild.Name, fmt.Sprintf("%s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second)))
+			// nameParts := strings.Split(resourceName, "\n")
+			// for i, nameWrapPart := range nameParts {
+			// 	if lastGrandchild {
+			// 		if i == 0 {
+			// 			tv.Add(last).WithStyle(linkStyle)
+			// 		} else {
+			// 			tv.Add(lastWrapped).WithStyle(linkStyle)
+			// 		}
+			// 	} else {
+			// 		if i == 0 {
+			// 			tv.Add(connected).WithStyle(linkStyle)
+			// 		} else {
+			// 			tv.Add(wrapped).WithStyle(linkStyle)
+			// 		}
+			// 	}
+
+			// 	tv.Add(nameWrapPart)
+			// 	if i == 0 {
+			// 		tv.Addln("  %s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second)).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+			// 	} else {
+			// 		tv.Break()
+			// 	}
+			// }
 		}
 	}
-	m.resourcesTable.SetRows(rows)
 
-	v.Addln(m.resourcesTable.View())
+	v.Addln(statusTree.Render(60))
 
 	// Provider Stdout and Stderr rendering
 	if len(m.providerStdout) > 0 {
-		v.Addln("Provider Output:").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+		v.Addln("provider output:").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 
 		providerTerm := view.New(view.WithStyle(terminalBorderStyle))
 
-		for _, line := range m.providerStdout[max(0, len(m.providerStdout)-maxOutputLines):] {
-			providerTerm.Addln(line).WithStyle(lipgloss.NewStyle().Width(98))
+		for i, line := range m.providerStdout[max(0, len(m.providerStdout)-maxOutputLines):] {
+			providerTerm.Add(line).WithStyle(lipgloss.NewStyle().Width(98))
+			if i < len(m.providerStdout)-1 {
+				providerTerm.Break()
+			}
 		}
 
 		v.Addln(providerTerm.Render())
@@ -188,7 +219,8 @@ func (m Model) View() string {
 	}
 
 	for _, e := range m.errs[max(0, len(m.errs)-maxOutputLines):] {
-		v.Addln("Error: %s", e.Error()).WithStyle(errorStyle)
+		v.Add(fragments.ErrorTag())
+		v.Addln("  %s", e.Error()).WithStyle(errorStyle)
 	}
 
 	return v.Render()

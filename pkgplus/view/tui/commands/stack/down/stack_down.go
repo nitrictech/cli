@@ -11,8 +11,8 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 
+	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"

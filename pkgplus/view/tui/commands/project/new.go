@@ -31,7 +31,7 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/templates"
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/listprompt"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/textprompt"

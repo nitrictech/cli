@@ -71,6 +71,25 @@ const AllHttpMethods = [
   // OpenAPIV3.HttpMethods.TRACE,
 ];
 
+const actionVerbs = [
+  "Get",
+  "List",
+  "Put",
+  "Delete",
+  "Publish",
+  "Detail",
+];
+
+function verbFromNitricAction(action: string) {
+  for (const verb of actionVerbs) {
+    if (action.endsWith(verb)) {
+      return verb;
+    }
+  }
+
+  return action;
+}
+
 export function generateVisualizerData(data: WebSocketResponse): {
   nodes: Node[];
   edges: Edge[];
@@ -262,7 +281,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
           type: MarkerType.ArrowClosed,
           orient: "auto-start-reverse",
         },
-        label: "Uses",
+        label: policy.actions.map(verbFromNitricAction).join(", "),
       } as Edge;
     })
   );

@@ -78,6 +78,7 @@ const actionVerbs = [
   "Delete",
   "Publish",
   "Detail",
+  "Manage",
 ];
 
 function verbFromNitricAction(action: string) {
@@ -127,7 +128,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
         edges.push({
           id: `e-${api.name}-${path}-${m}`,
-          source: `api-${api.name}`,
+          source: node.id,
           target: method["x-nitric-target"]["name"],
           animated: true,
           markerEnd: {
@@ -159,8 +160,8 @@ export function generateVisualizerData(data: WebSocketResponse): {
     edges.push(
       ...Object.entries(ws.targets).map(([eventType, target]) => {
         return {
-          id: `e-${ws.name}-${target}`,
-          source: ws.name,
+          id: `e-${ws.name}-${target}-${eventType}`,
+          source: node.id,
           target,
           animated: true,
           markerEnd: {
@@ -191,7 +192,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
     edges.push({
         id: `e-${schedule.name}-${schedule.target}`,
-        source: `schedule-${schedule.name}`,
+        source: node.id,
         target: schedule.target,
         animated: true,
         markerEnd: {
@@ -220,7 +221,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       ...Object.keys(bucket.notifiers).map((subscriber) => {
         return {
           id: `e-${bucket.name}-${subscriber}`,
-          source: `bucket-${bucket.name}`,
+          source: node.id,
           target: subscriber,
           animated: true,
           markerEnd: {
@@ -252,7 +253,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       ...Object.keys(topic.subscribers).map((subscriber) => {
         return {
           id: `e-${topic.name}-${subscriber}`,
-          source: `topic-${topic.name}`,
+          source: node.id,
           target: subscriber,
           animated: true,
           markerEnd: {

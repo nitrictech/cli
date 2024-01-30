@@ -11,7 +11,6 @@ import ReactFlow, {
   ReactFlowProvider,
   Position,
   Panel,
-  MarkerType,
 } from "reactflow";
 import Dagre from "@dagrejs/dagre";
 import "reactflow/dist/style.css";
@@ -20,7 +19,7 @@ import "./styles.css";
 import AppLayout from "../layout/AppLayout";
 import { useCallback, useEffect } from "react";
 import { useWebSocket } from "@/lib/hooks/use-web-socket";
-import ShareButton from "./ShareButton";
+import ExportButton from "./ExportButton";
 import {
   generateVisualizerData,
   nodeTypes,
@@ -121,7 +120,7 @@ function ReactFlowLayout() {
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
             {data?.projectName && (
               <Panel position="top-right">
-                <ShareButton projectName={data.projectName} />
+                <ExportButton projectName={data.projectName} />
               </Panel>
             )}
           </ReactFlow>

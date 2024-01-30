@@ -58,9 +58,9 @@ function ShareButton({ projectName }: { projectName: string }) {
           new Promise((resolve) => setTimeout(resolve, 1000)), // create visual timeout for spinner, incase it is fast
         ]),
         {
-          loading: "Creating image",
-          success: "Image created",
-          error: "Failed to create image, try again",
+          loading: "Exporting image",
+          success: "Image exported",
+          error: "Failed to export image, try again",
         }
       );
 
@@ -70,7 +70,7 @@ function ShareButton({ projectName }: { projectName: string }) {
 
   return (
     <Panel position="top-right">
-      <Button onClick={onClick}>Share</Button>
+      <Button onClick={onClick}>Export</Button>
     </Panel>
   );
 }

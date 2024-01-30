@@ -2,6 +2,8 @@ import { type ComponentType } from "react";
 
 import type { NodeProps } from "reactflow";
 import NodeBase, { type NodeBaseData } from "./NodeBase";
+import { CodeBracketIcon } from "@heroicons/react/24/outline";
+import { Button } from "@/components/ui/button";
 
 type ServiceData = {
   filePath: string,
@@ -21,7 +23,12 @@ export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = (
         title: `Details - ${data.title}`,
         description: data.description,
         children: <div className="flex flex-col">
-          <a href={`vscode://file${data.resource.filePath}`}>Open in Vscode</a>
+          <Button asChild>
+            <a href={`vscode://file${data.resource.filePath}`}>
+              <CodeBracketIcon className="w-4 h-4 mr-2"/>
+              <span>Open in VScode</span>
+            </a>
+          </Button>
         </div>,
       }}
     />

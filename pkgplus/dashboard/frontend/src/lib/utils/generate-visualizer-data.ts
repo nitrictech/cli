@@ -50,59 +50,16 @@ export const nodeTypes = {
 const createNode = <T>(
   resource: BaseResource,
   type: keyof typeof nodeTypes,
-  policies: Policy[],
   data: T
-): { node: Node<T>; edges: Edge[] } => {
-  const edges: Edge[] = [];
+): Node<T> => {
   const nodeId = `${type}-${resource.name}`;
 
   // Generate edges from requestingServices
-  resource.requestingServices.forEach((service) => {
-    let edgeLabel = "";
-    let source = nodeId;
-    let target = service;
-
-    const policy = policies.find((p) =>
-      p.resources.some((r) => r.name === resource.name) && p.principals.some((principal) => principal.name === service)
-    );
-
-    console.log(resource.name, policy);
-
-    if (policy) {
-      source = service;
-      target = nodeId;
-      edgeLabel = policy?.actions
-        .map((action) => title(action).split(" ").pop())
-        .join(", ");
-    } else if (type === "api") {
-      edgeLabel = "Routes";
-    } else if (type === "schedule") {
-      edgeLabel = "Triggers";
-    } else if (type === "topic") {
-      edgeLabel = "Subscribes"
-    } else if (type === 'bucket') {
-      edgeLabel = "Notifies"
-    }
-
-    const edge: Edge = {
-      id: `e-${source}-${target}`,
-      source,
-      target,
-      data: {
-        label: edgeLabel,
-      },
-    };
-    edges.push(edge);
-  });
-
   return {
-    node: {
       id: nodeId,
       position: { x: 0, y: 0 },
       type,
       data,
-    },
-    edges,
   };
 };
 
@@ -133,10 +90,9 @@ export function generateVisualizerData(data: WebSocketResponse): {
   data.apis.forEach((api) => {
     const routes = (api.spec && Object.keys(api.spec.paths)) || [];
 
-    const { node, edges: apiEdges } = createNode<ApiNodeData>(
+    const node = createNode<ApiNodeData>(
       api,
       "api",
-      policies,
       {
         title: api.name,
         resource: api,
@@ -169,15 +125,13 @@ export function generateVisualizerData(data: WebSocketResponse): {
     });
 
     nodes.push(node);
-    // edges.push(...apiEdges);
   });
 
   // Generate nodes from websockets
   data.websockets.forEach((ws) => {
-    const { node, edges: wsEdges } = createNode<WebsocketNodeData>(
+    const node = createNode<WebsocketNodeData>(
       ws,
       "websocket",
-      policies,
       {
         title: ws.name,
         resource: ws,
@@ -204,10 +158,9 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from schedules
   data.schedules.forEach((schedule) => {
-    const { node, edges: schedulesEdges } = createNode<ScheduleNodeData>(
+    const node = createNode<ScheduleNodeData>(
       schedule,
       "schedule",
-      policies,
       {
         title: schedule.name,
         resource: schedule,
@@ -217,16 +170,15 @@ export function generateVisualizerData(data: WebSocketResponse): {
     );
 
     nodes.push(node);
-    edges.push(...schedulesEdges);
+    // edges.push(...schedulesEdges);
 
   });
 
   // Generate nodes from buckets
   data.buckets.forEach((bucket) => {
-    const { node, edges: bucketEdges } = createNode<BucketNodeData>(
+    const node = createNode<BucketNodeData>(
       bucket,
       "bucket",
-      policies,
       {
         title: bucket.name,
         resource: bucket,
@@ -242,6 +194,9 @@ export function generateVisualizerData(data: WebSocketResponse): {
         id: `e-${bucket.name}-${subscriber}`,
         source: `bucket-${bucket.name}`,
         target: subscriber,
+        data: {
+          label: "Notifies",
+        },
       };
     }));
 
@@ -250,10 +205,9 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from buckets
   data.topics.forEach((topic) => {
-    const { node, edges: topicEdges } = createNode<TopicNodeData>(
+    const node = createNode<TopicNodeData>(
       topic,
       "topic",
-      policies,
       {
         title: topic.name,
         resource: topic,
@@ -268,33 +222,23 @@ export function generateVisualizerData(data: WebSocketResponse): {
         id: `e-${topic.name}-${subscriber}`,
         source: `topic-${topic.name}`,
         target: subscriber,
+        data: {
+          label: "Subscribes",
+        },
       };
-    }));
-
-    edges.push(...Object.entries(data.policies).map(([_, policy]) => {
-      return {
-        id: `e-${policy.name}`,
-        source: policy.principals[0].name,
-        target: `${policy.resources[0].type}-${policy.resources[0].name}`,
-      }
     }));
   });
 
-
-  // Generate nodes for containers
-
-  // Generate edges from policies
-  // TODO use policies to add more info via edges or nodes
-  // Object.values(data.policies).forEach((policy) => {
-  //   policy.resources.forEach((resource) => {
-  //     const edge: Edge = {
-  //       id: `e-${resource.name}-${policy.name}`,
-  //       source: resource.name,
-  //       target: resource.name,
-  //     };
-  //     edges.push(edge);
-  //   });
-  // });
+  edges.push(...Object.entries(data.policies).map(([_, policy]) => {
+    return {
+      id: `e-${policy.name}`,
+      source: policy.principals[0].name,
+      target: `${policy.resources[0].type}-${policy.resources[0].name}`,
+      data: {
+        label: "Uses",
+      },
+    }
+  }));
 
   data.services.forEach((service) => {
     const node: Node<ServiceNodeData> = {

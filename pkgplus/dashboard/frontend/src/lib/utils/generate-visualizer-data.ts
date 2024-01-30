@@ -113,7 +113,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
         }
 
         edges.push({
-          id: `e-${api.name}-${path}-${method}`,
+          id: `e-${api.name}-${path}-${m}`,
           source: `api-${api.name}`,
           target: method['x-nitric-target']['name'],
           animated: true,
@@ -124,9 +124,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
             type: MarkerType.ArrowClosed,
             orient: 'auto-start-reverse',
           },
-          data: {
-            label: "Routes",
-          },
+          label: `${m} ${path}`,
         })
       })
     });
@@ -161,9 +159,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
           type: MarkerType.ArrowClosed,
           orient: 'auto-start-reverse',
         },
-        data: {
-          label: eventType,
-        },
+        label: eventType,
       };
     }));
 
@@ -215,9 +211,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
           type: MarkerType.ArrowClosed,
           orient: 'auto-start-reverse',
         },
-        data: {
-          label: "Notifies",
-        },
+        label: "Notifies",
       };
     }));
 
@@ -251,9 +245,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
           type: MarkerType.ArrowClosed,
           orient: 'auto-start-reverse',
         },
-        data: {
-          label: "Subscribes",
-        },
+        label: "Subscribes",
       };
     }));
   });
@@ -270,11 +262,8 @@ export function generateVisualizerData(data: WebSocketResponse): {
         type: MarkerType.ArrowClosed,
         orient: 'auto-start-reverse',
       },
-      data: {
-
-        label: "Uses",
-      },
-    }
+      label: "Uses",
+    } as Edge
   }));
 
   data.services.forEach((service) => {
@@ -294,6 +283,8 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   console.log("nodes:", nodes);
   console.log("edges:", edges);
+
+  
 
   return { nodes, edges };
 }

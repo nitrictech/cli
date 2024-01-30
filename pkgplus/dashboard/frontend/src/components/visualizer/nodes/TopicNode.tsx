@@ -15,6 +15,7 @@ export const TopicNode: ComponentType<NodeProps<TopicNodeData>> = (props) => {
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,
+        testHref: `/topics`, // TODO add url param to switch to resource
         children: (
           <div className="flex flex-col">
             <span className="font-bold">Requested by:</span>

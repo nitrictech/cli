@@ -15,6 +15,7 @@ export const BucketNode: ComponentType<NodeProps<BucketNodeData>> = (props) => {
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,
+        testHref: `/storage`, // TODO add url param to switch to resource
         children: (
           <div className="flex flex-col">
             <span className="font-bold">Requested by:</span>

@@ -10,10 +10,11 @@ import {
 import { Button } from "../ui/button";
 import type { PropsWithChildren } from "react";
 import { useStoreApi } from "reactflow";
-interface Props extends PropsWithChildren {
+export interface DetailsDrawerProps extends PropsWithChildren {
   title: string;
   description?: string;
   open: boolean;
+  testHref?: string;
 }
 
 export const DetailsDrawer = ({
@@ -21,7 +22,8 @@ export const DetailsDrawer = ({
   description,
   children,
   open,
-}: Props) => {
+  testHref,
+}: DetailsDrawerProps) => {
   const store = useStoreApi();
 
   return (
@@ -45,6 +47,13 @@ export const DetailsDrawer = ({
           </DrawerHeader>
           <div className="p-4">{children}</div>
           <DrawerFooter>
+            {testHref && (
+              <Button asChild>
+                <a href={testHref} target="_blank">
+                  Test
+                </a>
+              </Button>
+            )}
             <DrawerClose asChild>
               <Button variant="outline">Close</Button>
             </DrawerClose>

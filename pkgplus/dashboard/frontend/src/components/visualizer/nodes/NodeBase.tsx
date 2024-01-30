@@ -1,6 +1,6 @@
 import type { FC, PropsWithChildren } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { DetailsDrawer } from "../DetailsDrawer";
+import { DetailsDrawer, type DetailsDrawerProps } from "../DetailsDrawer";
 import { cn } from "@/lib/utils";
 
 export interface NodeBaseData<T = Record<string, any>> {
@@ -15,13 +15,8 @@ export interface NodeBaseData<T = Record<string, any>> {
   description?: string;
 }
 
-interface DrawerOptions extends PropsWithChildren {
-  title: string;
-  description?: string;
-}
-
 interface Props extends NodeProps<NodeBaseData> {
-  drawerOptions?: DrawerOptions;
+  drawerOptions?: Omit<DetailsDrawerProps, "open">;
 }
 
 const NodeBase: FC<PropsWithChildren<Props>> = ({

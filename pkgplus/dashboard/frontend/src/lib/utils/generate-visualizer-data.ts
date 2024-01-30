@@ -15,7 +15,7 @@ import {
   MegaphoneIcon,
   GlobeAltIcon,
 } from "@heroicons/react/24/outline";
-import type { Edge, Node } from "reactflow";
+import { MarkerType, type Edge, type Node } from "reactflow";
 import {
   TopicNode,
   type TopicNodeData,
@@ -56,10 +56,10 @@ const createNode = <T>(
 
   // Generate edges from requestingServices
   return {
-      id: nodeId,
-      position: { x: 0, y: 0 },
-      type,
-      data,
+    id: nodeId,
+    position: { x: 0, y: 0 },
+    type,
+    data,
   };
 };
 
@@ -97,9 +97,8 @@ export function generateVisualizerData(data: WebSocketResponse): {
         title: api.name,
         resource: api,
         icon: GlobeAltIcon,
-        description: `${routes.length} ${
-          routes.length === 1 ? "Route" : "Routes"
-        }`,
+        description: `${routes.length} ${routes.length === 1 ? "Route" : "Routes"
+          }`,
       }
     );
 
@@ -117,6 +116,14 @@ export function generateVisualizerData(data: WebSocketResponse): {
           id: `e-${api.name}-${path}-${method}`,
           source: `api-${api.name}`,
           target: method['x-nitric-target']['name'],
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+          markerStart: {
+            type: MarkerType.ArrowClosed,
+            orient: 'auto-start-reverse',
+          },
           data: {
             label: "Routes",
           },
@@ -136,9 +143,8 @@ export function generateVisualizerData(data: WebSocketResponse): {
         title: ws.name,
         resource: ws,
         icon: ChatBubbleLeftRightIcon,
-        description: `${ws.events.length} ${
-          ws.events.length === 1 ? "Event" : "Events"
-        }`,
+        description: `${ws.events.length} ${ws.events.length === 1 ? "Event" : "Events"
+          }`,
       }
     );
 
@@ -147,6 +153,14 @@ export function generateVisualizerData(data: WebSocketResponse): {
         id: `e-${ws.name}-${target}`,
         source: ws.name,
         target,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
         data: {
           label: eventType,
         },
@@ -183,9 +197,8 @@ export function generateVisualizerData(data: WebSocketResponse): {
         title: bucket.name,
         resource: bucket,
         icon: CircleStackIcon,
-        description: `${bucket.notificationCount} ${
-          bucket.notificationCount === 1 ? "Notification" : "Notifications"
-        }`,
+        description: `${bucket.notificationCount} ${bucket.notificationCount === 1 ? "Notification" : "Notifications"
+          }`,
       }
     );
 
@@ -194,6 +207,14 @@ export function generateVisualizerData(data: WebSocketResponse): {
         id: `e-${bucket.name}-${subscriber}`,
         source: `bucket-${bucket.name}`,
         target: subscriber,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
         data: {
           label: "Notifies",
         },
@@ -222,6 +243,14 @@ export function generateVisualizerData(data: WebSocketResponse): {
         id: `e-${topic.name}-${subscriber}`,
         source: `topic-${topic.name}`,
         target: subscriber,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
         data: {
           label: "Subscribes",
         },
@@ -234,7 +263,15 @@ export function generateVisualizerData(data: WebSocketResponse): {
       id: `e-${policy.name}`,
       source: policy.principals[0].name,
       target: `${policy.resources[0].type}-${policy.resources[0].name}`,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+      },
+      markerStart: {
+        type: MarkerType.ArrowClosed,
+        orient: 'auto-start-reverse',
+      },
       data: {
+
         label: "Uses",
       },
     }

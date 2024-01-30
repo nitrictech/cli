@@ -6,6 +6,7 @@ import {
 } from "reactflow";
 import { toPng } from "html-to-image";
 import { Button } from "../ui/button";
+import toast from "react-hot-toast";
 
 const filter = (node: HTMLElement) => {
   return !node.classList?.contains("nitric-remove-on-share");
@@ -41,17 +42,27 @@ function ShareButton({ projectName }: { projectName: string }) {
     const el = document.querySelector(".react-flow__viewport");
 
     if (el) {
-      const dataUrl = await toPng(el as HTMLElement, {
-        backgroundColor: "#fff",
-        width: imageWidth,
-        height: imageHeight,
-        style: {
-          width: `${imageWidth}px`,
-          height: `${imageHeight}px`,
-          transform: `translate(${transform[0]}px, ${transform[1]}px) scale(${transform[2]})`,
-        },
-        filter,
-      });
+      const [dataUrl] = await toast.promise(
+        Promise.all([
+          toPng(el as HTMLElement, {
+            backgroundColor: "#fff",
+            width: imageWidth,
+            height: imageHeight,
+            style: {
+              width: `${imageWidth}px`,
+              height: `${imageHeight}px`,
+              transform: `translate(${transform[0]}px, ${transform[1]}px) scale(${transform[2]})`,
+            },
+            filter,
+          }),
+          new Promise((resolve) => setTimeout(resolve, 1000)), // create visual timeout for spinner, incase it is fast
+        ]),
+        {
+          loading: "Creating image",
+          success: "Image created",
+          error: "Failed to create image, try again",
+        }
+      );
 
       downloadImage(projectName, dataUrl);
     }

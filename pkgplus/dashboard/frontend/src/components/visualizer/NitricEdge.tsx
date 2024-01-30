@@ -1,8 +1,9 @@
+import { source } from "axe-core";
 import {
   type EdgeProps,
-  getBezierPath,
   EdgeLabelRenderer,
   BaseEdge,
+  getBezierPath,
 } from "reactflow";
 
 export default function NitricEdge({
@@ -11,6 +12,7 @@ export default function NitricEdge({
   sourceY,
   targetX,
   targetY,
+  label,
   sourcePosition,
   targetPosition,
   style = {},
@@ -32,7 +34,7 @@ export default function NitricEdge({
   return (
     <>
       <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
-      {data?.label && (
+      {label && (
         <EdgeLabelRenderer>
           <div
             className="nodrag nopan border border-gray-500 absolute bg-white p-1.5 text-[10px] tracking-normal font-semibold rounded-sm"
@@ -40,7 +42,7 @@ export default function NitricEdge({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}
           >
-            {data.label}
+            {label}
           </div>
         </EdgeLabelRenderer>
       )}

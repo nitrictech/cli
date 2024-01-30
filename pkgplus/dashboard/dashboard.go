@@ -24,6 +24,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -112,6 +113,8 @@ type PolicySpec struct {
 
 type ServiceSpec struct {
 	*BaseResourceSpec
+
+	FilePath string `json:"filePath"`
 }
 
 type Dashboard struct {
@@ -171,10 +174,12 @@ func (d *Dashboard) updateServices(services []string) {
 		if _, exists := lo.Find(d.services, func(item *ServiceSpec) bool {
 			return item.Name == service
 		}); !exists {
+			absolutePath, _ := filepath.Abs(service)
 			d.services = append(d.services, &ServiceSpec{
 				BaseResourceSpec: &BaseResourceSpec{
 					Name: service,
 				},
+				FilePath: absolutePath,
 			})
 		}
 	}

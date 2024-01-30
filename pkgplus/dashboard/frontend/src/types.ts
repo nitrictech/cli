@@ -15,6 +15,7 @@ export type Method =
 
 export interface BaseResource {
   name: string;
+  filePath: string;
   requestingServices: string[];
 }
 

@@ -3,7 +3,11 @@ import { type ComponentType } from "react";
 import type { NodeProps } from "reactflow";
 import NodeBase, { type NodeBaseData } from "./NodeBase";
 
-export type ServiceNodeData = NodeBaseData<Record<string, any>>;
+type ServiceData = {
+  filePath: string,
+}
+
+export type ServiceNodeData = NodeBaseData<ServiceData>;
 
 export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = (
   props
@@ -16,7 +20,9 @@ export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = (
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,
-        children: <div className="flex flex-col">TODO</div>,
+        children: <div className="flex flex-col">
+          <a href={`vscode://file${data.resource.filePath}`}>Open in Vscode</a>
+        </div>,
       }}
     />
   );

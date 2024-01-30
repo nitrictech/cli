@@ -97,11 +97,8 @@ export function generateVisualizerData(data: WebSocketResponse): {
 } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
-  // const uniqueServices: Set<string> = new Set();
-  const policies = Object.entries(data.policies).map(([_, p]) => p);
 
   console.log("data:", data);
-  // console.log("apis:", data.apis);
 
   // Generate nodes from APIs
   data.apis.forEach((api) => {
@@ -294,7 +291,9 @@ export function generateVisualizerData(data: WebSocketResponse): {
       data: {
         title: `${service.name.replace(/\\/g, "/")}`,
         description: "",
-        resource: {},
+        resource: {
+          filePath: service.filePath,
+        },
         icon: CubeIcon,
       },
       type: "service",

@@ -22,9 +22,7 @@ func (r *ResourceRegistrar[R]) isAlreadyRegistered(name string, requestingServic
 	_, exists := r.resources[name]
 	if exists {
 		duplicate := slices.Contains(r.resources[name].RequestingServices, requestingService)
-		if !duplicate {
-			return true
-		}
+		return duplicate
 	}
 
 	return false

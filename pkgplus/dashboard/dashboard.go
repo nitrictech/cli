@@ -77,6 +77,7 @@ type ScheduleSpec struct {
 
 	Expression string `json:"expression,omitempty"`
 	Rate       string `json:"rate,omitempty"`
+	Target     string `json:"target,omitempty"`
 }
 
 type TopicSpec struct {
@@ -203,7 +204,6 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 					Name:               bucketName,
 					RequestingServices: resource.RequestingServices,
 				},
-				// NotificationCount: 0,
 				Notifiers: map[string]int{},
 			})
 		}
@@ -354,9 +354,6 @@ func (d *Dashboard) updateTopicSubscriptions(state topics.State) {
 
 		for functionName, count := range functions {
 			d.topics[idx].Subscribers[functionName] = count
-			// if !lo.Contains(d.topics[idx].RequestingServices, functionName) {
-			// 	d.topics[idx].RequestingServices = append(d.topics[idx].RequestingServices, functionName)
-			// }
 		}
 
 		d.updateServices(lo.Keys(functions))
@@ -379,6 +376,7 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 			},
 			Expression: srvc.Schedule.GetCron().GetExpression(),
 			Rate:       srvc.Schedule.GetEvery().GetRate(),
+			Target:     srvc.ServiceName,
 		})
 	}
 

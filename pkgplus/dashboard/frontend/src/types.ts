@@ -25,6 +25,7 @@ export interface Api extends BaseResource {
 export interface Schedule extends BaseResource {
   expression?: string;
   rate?: string;
+  target: string;
 }
 
 export interface Topic extends BaseResource {

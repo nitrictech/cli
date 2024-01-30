@@ -32,7 +32,6 @@ import {
   ServiceNode,
   type ServiceNodeData,
 } from "@/components/visualizer/nodes/ServiceNode";
-import { title } from "radash";
 
 import { OpenAPIV3 } from "openapi-types";
 
@@ -170,7 +169,21 @@ export function generateVisualizerData(data: WebSocketResponse): {
     });
 
     nodes.push(node);
-    // edges.push(...schedulesEdges);
+
+    edges.push({
+        id: `e-${schedule.name}-${schedule.target}`,
+        source: `schedule-${schedule.name}`,
+        target: schedule.target,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: "Triggers",
+      });
   });
 
   // Generate nodes from buckets

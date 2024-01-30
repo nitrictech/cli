@@ -12,7 +12,6 @@ export interface NodeBaseData<T = Record<string, any>> {
       titleId?: string | undefined;
     } & React.RefAttributes<SVGSVGElement>
   >;
-  iconClassName?: string;
   description?: string;
 }
 
@@ -29,7 +28,7 @@ const NodeBase: FC<PropsWithChildren<Props>> = ({
   drawerOptions,
   selected,
   dragging,
-  data: { icon: Icon, title, iconClassName },
+  data: { icon: Icon, title },
 }) => {
   return (
     <>
@@ -41,7 +40,7 @@ const NodeBase: FC<PropsWithChildren<Props>> = ({
           <div className="h-full w-14 flex items-center justify-center">
             <div className="rounded-full gradient relative overflow-hidden size-10 flex items-center justify-center">
               <div className="z-10 bg-white size-9 rounded-full flex items-center justify-center">
-                <Icon className={cn("size-6", iconClassName)} />
+                <Icon className={"size-6 resource-icon"} />
               </div>
             </div>
           </div>

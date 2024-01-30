@@ -35,7 +35,7 @@ export default function NitricEdge({
       {data?.label && (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan border border-primary absolute bg-white p-1.5 text-[10px] tracking-normal font-semibold rounded-sm"
+            className="nodrag nopan border border-gray-500 absolute bg-white p-1.5 text-[10px] tracking-normal font-semibold rounded-sm"
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}

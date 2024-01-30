@@ -1,4 +1,3 @@
-import { source } from "axe-core";
 import {
   type EdgeProps,
   EdgeLabelRenderer,

@@ -725,15 +725,7 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 	return newSpec, projectErrors.Error()
 }
 
-func ApisToOpenApiSpecs(apiRegistrationRequests map[string][]*apispb.RegistrationRequest, projectErrors *ProjectErrors) ([]*openapi3.T, error) {
-	specs := []*openapi3.T{}
-	// apiResources := map[string]*resourcespb.ApiResource{}
-
-	// // transform apiRegistrationRequests into routes and apis for ServiceRequirements call
-	// for apiName := range apiRegistrationRequests {
-	// 	apiResources[apiName] = &resourcespb.ApiResource{}
-	// }
-
+func ApiToOpenApiSpec(apiRegistrationRequests map[string][]*apispb.RegistrationRequest, projectErrors *ProjectErrors) (*openapi3.T, error) {
 	allServiceRequirements := []*ServiceRequirements{}
 
 	for serviceName, registrationRequests := range apiRegistrationRequests {
@@ -755,35 +747,25 @@ func ApisToOpenApiSpecs(apiRegistrationRequests map[string][]*apispb.Registratio
 		})
 	}
 
-	// requirements := []*ServiceRequirements{{routes: apiRegistrationRequests, apis: apiResources}}
-
 	apiRequirements, err := buildApiRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
 
-	// convert back to openapi for dashboard json
-	for _, r := range apiRequirements {
-		openapiString := r.GetApi().GetOpenapi()
-
-		// Unmarshal the OpenAPI JSON string into openapi3.T
-		var openapiDoc *openapi3.T
-		err := json.Unmarshal([]byte(openapiString), &openapiDoc)
-		if err != nil {
-			return nil, err
-		}
-
-		specs = append(specs, openapiDoc)
+	if len(apiRequirements) != 1 {
+		return nil, fmt.Errorf("there should only be one api requirement")
 	}
 
-	// sort apis by title
-	slices.SortFunc(specs, func(a, b *openapi3.T) int {
-		if a.Info.Title < b.Info.Title {
-			return -1
-		}
+	r := apiRequirements[0]
 
-		return 1
-	})
+	openapiString := r.GetApi().GetOpenapi()
 
-	return specs, nil
+	// Unmarshal the OpenAPI JSON string into openapi3.T
+	var openapiDoc *openapi3.T
+	err = json.Unmarshal([]byte(openapiString), &openapiDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	return openapiDoc, nil
 }

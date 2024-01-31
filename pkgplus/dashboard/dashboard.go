@@ -138,7 +138,6 @@ type Dashboard struct {
 	historyWebSocket     *melody.Melody
 	wsWebSocket          *melody.Melody
 	websocketsInfo       map[string]*websockets.WebsocketInfo
-	resourcesLastUpdated time.Time
 	port                 int
 	browserHasOpened     bool
 	noBrowser            bool
@@ -265,8 +264,6 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 		d.updateServices(policy.RequestingServices)
 	}
 
-	d.resourcesLastUpdated = time.Now()
-
 	d.refresh()
 }
 
@@ -284,14 +281,13 @@ func (d *Dashboard) updateApis(state apis.State) {
 			},
 		}
 
-		// TODO: why return a slice where there is only 1?
-		specs, _ := collector.ApisToOpenApiSpecs(resources, &collector.ProjectErrors{})
+		spec, _ := collector.ApiToOpenApiSpec(resources, &collector.ProjectErrors{})
 
-		if len(specs) > 0 {
+		if spec != nil {
 			// set title to api name
-			specs[0].Info.Title = apiName
+			spec.Info.Title = apiName
 
-			apiSpec.OpenApiSpec = specs[0]
+			apiSpec.OpenApiSpec = spec
 		}
 
 		apiSpecs = append(apiSpecs, apiSpec)
@@ -392,7 +388,6 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 
 	for bucketName, functions := range state {
 		for functionName := range functions {
-
 			d.notifications = append(d.notifications, &NotifierSpec{
 				Bucket: bucketName,
 				Target: functionName,

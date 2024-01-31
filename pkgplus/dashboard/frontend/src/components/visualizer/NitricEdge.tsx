@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import {
   type EdgeProps,
   EdgeLabelRenderer,
@@ -16,6 +17,7 @@ export default function NitricEdge({
   targetPosition,
   style = {},
   markerEnd,
+  selected,
   data,
 }: EdgeProps) {
   const xEqual = sourceX === targetX;
@@ -36,7 +38,10 @@ export default function NitricEdge({
       {label && (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan border border-gray-500 absolute bg-white p-1.5 text-[10px] tracking-normal font-semibold rounded-sm"
+            className={cn(
+              "nodrag transition-all border absolute bg-white p-1.5 text-[10px] tracking-normal font-semibold rounded-sm",
+              selected ? "border-primary" : "border-gray-500"
+            )}
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}

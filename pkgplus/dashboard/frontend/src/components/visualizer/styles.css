@@ -1,9 +1,9 @@
 .react-flow__node {
   @apply flex h-[50px] font-medium shadow-xl rounded-md;
-}
 
-.react-flow__node .resource-icon {
-  color: var(--nitric-node-icon-color, #000);
+  .resource-icon {
+    color: var(--nitric-node-icon-color, #000);
+  }
 }
 
 .gradient:before {
@@ -47,6 +47,12 @@
 
 .react-flow__edge-path {
   @apply stroke-black/80;
+}
+
+.react-flow__edge.selected {
+  .react-flow__edge-path {
+    @apply stroke-primary;
+  }
 }
 
 .react-flow__node-api {

@@ -11,6 +11,10 @@ import ReactFlow, {
   ReactFlowProvider,
   Position,
   Panel,
+  useOnSelectionChange,
+  getConnectedEdges,
+  applyEdgeChanges,
+  type EdgeSelectionChange,
 } from "reactflow";
 import Dagre from "@dagrejs/dagre";
 import "reactflow/dist/style.css";
@@ -30,7 +34,7 @@ const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
 const nodeWidth = 150;
 const nodeHeight = 150;
-
+ 
 const getLayoutedElements = (
   nodes: Node<any, string | undefined>[],
   edges: Edge[],
@@ -79,6 +83,29 @@ function ReactFlowLayout() {
     [setEdges]
   );
 
+  useOnSelectionChange({
+    onChange: ({ nodes: nodesChanged, edges: edgesChanged }) => {
+      const connectedEdges = getConnectedEdges(nodesChanged, edges);
+
+      // select all connected edges if node is selected
+      if (connectedEdges.length) {
+        setEdges(
+          applyEdgeChanges(
+            connectedEdges.map(
+              (edge) =>
+                ({
+                  id: edge.id,
+                  type: "select",
+                  selected: true,
+                } as EdgeSelectionChange)
+            ),
+            edges
+          )
+        );
+      }
+    },
+  });
+
   useEffect(() => {
     if (!data) return;
 
@@ -96,13 +123,13 @@ function ReactFlowLayout() {
 
   return (
     <AppLayout
-      title="Visualizer"
+      title='Visualizer'
       hideTitle
-      mainClassName="py-0 px-0 sm:px-0 lg:px-0 lg:py-0"
+      mainClassName='py-0 px-0 sm:px-0 lg:px-0 lg:py-0'
       routePath={"/visualizer"}
     >
-      <div className="overflow-hidden h-full">
-        <div className="w-full h-[calc(100vh-58px)] overflow-x-hidden">
+      <div className='overflow-hidden h-full'>
+        <div className='w-full h-[calc(100vh-58px)] overflow-x-hidden'>
           <ReactFlow
             nodes={nodes}
             nodeTypes={nodeTypes}
@@ -116,10 +143,10 @@ function ReactFlowLayout() {
             onConnect={onConnect}
             fitView
           >
-            <MiniMap pannable zoomable className="!bg-blue-300" />
+            <MiniMap pannable zoomable className='!bg-blue-300' />
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
             {data?.projectName && (
-              <Panel position="top-right">
+              <Panel position='top-right'>
                 <ExportButton projectName={data.projectName} />
               </Panel>
             )}

@@ -25,7 +25,7 @@ export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = (
         children: (
           <div className="flex flex-col">
             <Button asChild>
-              <a href={`vscode://file${data.resource.filePath}`}>
+              <a href={`vscode://file/${data.resource.filePath}`}>
                 <CodeBracketIcon className="mr-2 h-4 w-4" />
                 <span>Open in VScode</span>
               </a>

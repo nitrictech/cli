@@ -49,7 +49,7 @@ export const DetailsDrawer = ({
           <DrawerFooter>
             {testHref && (
               <Button asChild>
-                <a href={testHref} target="_blank">
+                <a href={testHref} target="_blank" rel="noreferrer">
                   Test
                 </a>
               </Button>

@@ -34,7 +34,7 @@ export interface Topic extends BaseResource {
   subscribers: Map<string, number>
 }
 
-export interface Service extends BaseResource {}
+export type Service = BaseResource
 
 export interface History {
   apis: ApiHistoryItem[]

@@ -15,12 +15,14 @@ export interface DetailsDrawerProps extends PropsWithChildren {
   description?: string
   open: boolean
   testHref?: string
+  footerChildren?: React.ReactNode
 }
 
 export const DetailsDrawer = ({
   title,
   description,
   children,
+  footerChildren,
   open,
   testHref,
 }: DetailsDrawerProps) => {
@@ -47,6 +49,7 @@ export const DetailsDrawer = ({
           </DrawerHeader>
           <div className="p-4">{children}</div>
           <DrawerFooter>
+            {footerChildren}
             {testHref && (
               <Button asChild>
                 <a href={testHref} target="_blank" rel="noreferrer">

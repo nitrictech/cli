@@ -22,15 +22,13 @@ export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = (
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,
-        children: (
-          <div className="flex flex-col">
-            <Button asChild>
-              <a href={`vscode://file/${data.resource.filePath}`}>
-                <CodeBracketIcon className="mr-2 h-4 w-4" />
-                <span>Open in VScode</span>
-              </a>
-            </Button>
-          </div>
+        footerChildren: (
+          <Button asChild>
+            <a href={`vscode://file/${data.resource.filePath}`}>
+              <CodeBracketIcon className="mr-2 h-4 w-4" />
+              <span>Open in VScode</span>
+            </a>
+          </Button>
         ),
       }}
     />

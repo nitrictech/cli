@@ -34,6 +34,7 @@ import {
 } from '@/components/visualizer/nodes/ServiceNode'
 
 import { OpenAPIV3 } from 'openapi-types'
+import { getBucketNotifications } from './get-bucket-notifications'
 
 export const nodeTypes = {
   api: APINode,
@@ -205,18 +206,18 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from buckets
   data.buckets.forEach((bucket) => {
+    const bucketNotifications = getBucketNotifications(
+      bucket,
+      data.notifications,
+    )
     const node = createNode<BucketNodeData>(bucket, 'bucket', {
       title: bucket.name,
       resource: bucket,
       icon: CircleStackIcon,
-      description: `${bucket.notificationCount} ${
-        bucket.notificationCount === 1 ? 'Notification' : 'Notifications'
+      description: `${bucketNotifications.length} ${
+        bucketNotifications.length === 1 ? 'Notification' : 'Notifications'
       }`,
     })
-
-    const bucketNotifications = data.notifications.filter(
-      (listener) => listener.bucket === bucket.name,
-    )
 
     edges.push(
       ...bucketNotifications.map((notify) => {

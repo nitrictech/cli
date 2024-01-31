@@ -1,47 +1,47 @@
-import { Menu, Transition } from "@headlessui/react";
-import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
-import { Fragment } from "react";
-import type { Endpoint } from "../../types";
-import { LOCAL_STORAGE_KEY } from "./APIExplorer";
-import { useHistory } from "../../lib/hooks/use-history";
-import { cn, formatJSON } from "@/lib/utils";
+import { Menu, Transition } from '@headlessui/react'
+import { EllipsisHorizontalIcon } from '@heroicons/react/20/solid'
+import { Fragment } from 'react'
+import type { Endpoint } from '../../types'
+import { LOCAL_STORAGE_KEY } from './APIExplorer'
+import { useHistory } from '../../lib/hooks/use-history'
+import { cn, formatJSON } from '@/lib/utils'
 
 interface Props {
-  selected: Endpoint;
-  onAfterClear: () => void;
+  selected: Endpoint
+  onAfterClear: () => void
 }
 
 const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
-  const { deleteHistory } = useHistory("apis");
+  const { deleteHistory } = useHistory('apis')
   const clearHistory = async () => {
-    const prefix = `${LOCAL_STORAGE_KEY}-${selected.api}-`;
+    const prefix = `${LOCAL_STORAGE_KEY}-${selected.api}-`
 
     for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
+      const key = localStorage.key(i)
       if (key?.startsWith(prefix)) {
-        localStorage.removeItem(key);
+        localStorage.removeItem(key)
       }
     }
 
-    localStorage.removeItem(`${LOCAL_STORAGE_KEY}-requests`);
+    localStorage.removeItem(`${LOCAL_STORAGE_KEY}-requests`)
 
-    await deleteHistory();
+    await deleteHistory()
 
-    onAfterClear();
-  };
+    onAfterClear()
+  }
 
   const downloadSpec = () => {
-    const json = formatJSON(selected.doc);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${selected.api}-spec.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+    const json = formatJSON(selected.doc)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${selected.api}-spec.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <Menu as="div" className="relative ml-auto">
@@ -66,8 +66,8 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
             {({ active }) => (
               <button
                 className={cn(
-                  active ? "bg-gray-50" : "",
-                  "flex px-3 py-1 w-full text-sm leading-6 text-gray-900"
+                  active ? 'bg-gray-50' : '',
+                  'flex w-full px-3 py-1 text-sm leading-6 text-gray-900',
                 )}
                 onClick={downloadSpec}
               >
@@ -80,8 +80,8 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
               <button
                 onClick={clearHistory}
                 className={cn(
-                  active ? "bg-gray-50" : "",
-                  "flex px-3 py-1 w-full text-sm leading-6 text-gray-900"
+                  active ? 'bg-gray-50' : '',
+                  'flex w-full px-3 py-1 text-sm leading-6 text-gray-900',
                 )}
               >
                 Clear History
@@ -91,7 +91,7 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
         </Menu.Items>
       </Transition>
     </Menu>
-  );
-};
+  )
+}
 
-export default APIMenu;
+export default APIMenu

@@ -1,13 +1,13 @@
-import { type ComponentType } from "react";
+import { type ComponentType } from 'react'
 
-import type { Topic } from "@/types";
-import type { NodeProps } from "reactflow";
-import NodeBase, { type NodeBaseData } from "./NodeBase";
+import type { Topic } from '@/types'
+import type { NodeProps } from 'reactflow'
+import NodeBase, { type NodeBaseData } from './NodeBase'
 
-export type TopicNodeData = NodeBaseData<Topic>;
+export type TopicNodeData = NodeBaseData<Topic>
 
 export const TopicNode: ComponentType<NodeProps<TopicNodeData>> = (props) => {
-  const { data } = props;
+  const { data } = props
 
   return (
     <NodeBase
@@ -19,10 +19,10 @@ export const TopicNode: ComponentType<NodeProps<TopicNodeData>> = (props) => {
         children: (
           <div className="flex flex-col">
             <span className="font-bold">Requested by:</span>
-            <span>{data.resource.requestingServices.join(", ")}</span>
+            <span>{data.resource.requestingServices.join(', ')}</span>
           </div>
         ),
       }}
     />
-  );
-};
+  )
+}

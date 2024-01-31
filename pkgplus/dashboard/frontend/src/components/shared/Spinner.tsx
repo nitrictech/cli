@@ -1,35 +1,35 @@
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils'
 
 export interface SpinnerProps
-  extends Omit<React.ComponentProps<"span">, "color"> {
-  color?: "cta" | "failure" | "gray" | "info" | "success" | "warning";
-  light?: boolean;
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
-  className?: string;
+  extends Omit<React.ComponentProps<'span'>, 'color'> {
+  color?: 'cta' | 'failure' | 'gray' | 'info' | 'success' | 'warning'
+  light?: boolean
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  className?: string
 }
 
 const theme = {
   color: {
-    cta: "fill-brand",
-    failure: "fill-red-600",
-    gray: "fill-gray-600",
-    info: "fill-blue-600",
-    success: "fill-green-500",
-    warning: "fill-yellow-400",
+    cta: 'fill-brand',
+    failure: 'fill-red-600',
+    gray: 'fill-gray-600',
+    info: 'fill-blue-600',
+    success: 'fill-green-500',
+    warning: 'fill-yellow-400',
   },
   size: {
-    xs: "w-3 h-3",
-    sm: "w-4 h-4",
-    md: "w-6 h-6",
-    lg: "w-8 h-8",
-    xl: "w-10 h-10",
+    xs: 'w-3 h-3',
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8',
+    xl: 'w-10 h-10',
   },
-};
+}
 
 const Spinner: React.FC<SpinnerProps> = ({
-  color = "cta",
+  color = 'cta',
   light,
-  size = "md",
+  size = 'md',
   className,
   ...props
 }): JSX.Element => {
@@ -37,15 +37,15 @@ const Spinner: React.FC<SpinnerProps> = ({
     <span role="status" {...props}>
       <svg
         className={cn(
-          "inline animate-spin text-gray-200",
+          'inline animate-spin text-gray-200',
           theme.color![color],
-          light ? "on" : "dark:text-gray-600",
-          light && color === "gray"
-            ? "dark:fill-gray-300 dark:text-gray-600"
-            : "dark:text-gray-600",
+          light ? 'on' : 'dark:text-gray-600',
+          light && color === 'gray'
+            ? 'dark:fill-gray-300 dark:text-gray-600'
+            : 'dark:text-gray-600',
 
           theme.size![size],
-          className
+          className,
         )}
         fill="none"
         viewBox="0 0 100 101"
@@ -60,7 +60,7 @@ const Spinner: React.FC<SpinnerProps> = ({
         />
       </svg>
     </span>
-  );
-};
+  )
+}
 
-export default Spinner;
+export default Spinner

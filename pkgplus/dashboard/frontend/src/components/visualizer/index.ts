@@ -1,3 +1,3 @@
-import Visualizer from "./Visualizer";
+import Visualizer from './Visualizer'
 
-export default Visualizer;
+export default Visualizer

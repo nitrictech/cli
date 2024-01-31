@@ -75,8 +75,10 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background font-body text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 
   html {
@@ -84,8 +86,15 @@
   }
 
   code {
-    font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
-      DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
+    font-family:
+      Menlo,
+      Monaco,
+      Lucida Console,
+      Liberation Mono,
+      DejaVu Sans Mono,
+      Bitstream Vera Sans Mono,
+      Courier New,
+      monospace;
   }
 
   h1,

@@ -1,57 +1,57 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 
-import { Loading, Select } from "../shared";
-import { useWebSocket } from "../../lib/hooks/use-web-socket";
-import AppLayout from "../layout/AppLayout";
-import StorageTreeView from "./StorageTreeView";
-import FileBrowser from "./FileBrowser";
-import type { Bucket } from "@/types";
+import { Loading, Select } from '../shared'
+import { useWebSocket } from '../../lib/hooks/use-web-socket'
+import AppLayout from '../layout/AppLayout'
+import StorageTreeView from './StorageTreeView'
+import FileBrowser from './FileBrowser'
+import type { Bucket } from '@/types'
 
-const LOCAL_STORAGE_KEY = "nitric-local-dash-storage-history";
+const LOCAL_STORAGE_KEY = 'nitric-local-dash-storage-history'
 
 const StorageExplorer = () => {
-  const [selectedBucket, setSelectedBucket] = useState<Bucket>();
-  const { data, loading } = useWebSocket();
+  const [selectedBucket, setSelectedBucket] = useState<Bucket>()
+  const { data, loading } = useWebSocket()
 
-  const { buckets } = data || {};
+  const { buckets } = data || {}
 
   useEffect(() => {
     if (buckets?.length && !selectedBucket) {
       const previousBucket = localStorage.getItem(
-        `${LOCAL_STORAGE_KEY}-last-bucket`
-      );
+        `${LOCAL_STORAGE_KEY}-last-bucket`,
+      )
 
       setSelectedBucket(
-        buckets.find((b) => b.name === previousBucket) || buckets[0]
-      );
+        buckets.find((b) => b.name === previousBucket) || buckets[0],
+      )
     }
-  }, [buckets]);
+  }, [buckets])
 
   useEffect(() => {
     if (selectedBucket) {
       // set history
       localStorage.setItem(
         `${LOCAL_STORAGE_KEY}-last-bucket`,
-        selectedBucket.name
-      );
+        selectedBucket.name,
+      )
     }
-  }, [selectedBucket]);
+  }, [selectedBucket])
 
   return (
     <AppLayout
       title="Storage"
-      routePath={"/storage"}
+      routePath={'/storage'}
       secondLevelNav={
         buckets &&
         selectedBucket && (
           <>
-            <div className="flex mb-2 items-center justify-between px-2">
+            <div className="mb-2 flex items-center justify-between px-2">
               <span className="text-lg">Buckets</span>
             </div>
             <StorageTreeView
               initialItem={selectedBucket}
               onSelect={(b) => {
-                setSelectedBucket(b);
+                setSelectedBucket(b)
               }}
               buckets={buckets}
             />
@@ -61,8 +61,8 @@ const StorageExplorer = () => {
     >
       <Loading delay={400} conditionToShow={!loading}>
         {buckets && selectedBucket ? (
-          <div className="flex max-w-7xl flex-col md:flex-row gap-8 md:pr-8">
-            <div className="w-full flex flex-col gap-8">
+          <div className="flex max-w-7xl flex-col gap-8 md:flex-row md:pr-8">
+            <div className="flex w-full flex-col gap-8">
               <h2 className="text-2xl font-medium">{selectedBucket.name}</h2>
               <div className="md:hidden">
                 <nav className="flex items-end gap-4" aria-label="Breadcrumb">
@@ -75,7 +75,7 @@ const StorageExplorer = () => {
                         selected={selectedBucket}
                         setSelected={setSelectedBucket}
                         display={(v) => (
-                          <div className="flex items-center p-0.5 text-lg gap-4">
+                          <div className="flex items-center gap-4 p-0.5 text-lg">
                             {v.name}
                           </div>
                         )}
@@ -85,7 +85,7 @@ const StorageExplorer = () => {
                 </nav>
               </div>
               <div className="bg-white shadow sm:rounded-lg">
-                <div className="px-4 py-5 sm:p-6 flex flex-col gap-4">
+                <div className="flex flex-col gap-4 px-4 py-5 sm:p-6">
                   <FileBrowser bucket={selectedBucket.name} />
                 </div>
               </div>
@@ -94,7 +94,7 @@ const StorageExplorer = () => {
         ) : !buckets?.length ? (
           <div>
             <p>
-              Please refer to our documentation on{" "}
+              Please refer to our documentation on{' '}
               <a
                 className="underline"
                 target="_blank"
@@ -102,7 +102,7 @@ const StorageExplorer = () => {
                 rel="noreferrer"
               >
                 creating buckets
-              </a>{" "}
+              </a>{' '}
               as we are unable to find any existing buckets.
             </p>
             <p>
@@ -113,7 +113,7 @@ const StorageExplorer = () => {
         ) : null}
       </Loading>
     </AppLayout>
-  );
-};
+  )
+}
 
-export default StorageExplorer;
+export default StorageExplorer

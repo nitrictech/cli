@@ -1,15 +1,15 @@
-import { type ComponentType } from "react";
-import cronstrue from "cronstrue";
-import type { Schedule } from "@/types";
-import type { NodeProps } from "reactflow";
-import NodeBase, { type NodeBaseData } from "./NodeBase";
+import { type ComponentType } from 'react'
+import cronstrue from 'cronstrue'
+import type { Schedule } from '@/types'
+import type { NodeProps } from 'reactflow'
+import NodeBase, { type NodeBaseData } from './NodeBase'
 
-export type ScheduleNodeData = NodeBaseData<Schedule>;
+export type ScheduleNodeData = NodeBaseData<Schedule>
 
 export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
-  props
+  props,
 ) => {
-  const { data } = props;
+  const { data } = props
 
   return (
     <NodeBase
@@ -44,11 +44,11 @@ export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
 
             <div className="flex flex-col">
               <span className="font-bold">Requested by:</span>
-              <span>{data.resource.requestingServices.join(", ")}</span>
+              <span>{data.resource.requestingServices.join(', ')}</span>
             </div>
           </div>
         ),
       }}
     />
-  );
-};
+  )
+}

@@ -4,6 +4,6 @@
   @apply !text-primary;
 }
 
-[data-test-id="file-entry"] > *:first-child {
+[data-test-id='file-entry'] > *:first-child {
   @apply !bg-blue-100;
 }

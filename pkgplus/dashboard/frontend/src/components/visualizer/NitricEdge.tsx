@@ -1,10 +1,10 @@
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils'
 import {
   type EdgeProps,
   EdgeLabelRenderer,
   BaseEdge,
   getBezierPath,
-} from "reactflow";
+} from 'reactflow'
 
 export default function NitricEdge({
   id,
@@ -20,8 +20,8 @@ export default function NitricEdge({
   selected,
   data,
 }: EdgeProps) {
-  const xEqual = sourceX === targetX;
-  const yEqual = sourceY === targetY;
+  const xEqual = sourceX === targetX
+  const yEqual = sourceY === targetY
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: xEqual ? sourceX + 0.0001 : sourceX,
@@ -30,7 +30,7 @@ export default function NitricEdge({
     targetX,
     targetY,
     targetPosition,
-  });
+  })
 
   return (
     <>
@@ -39,8 +39,8 @@ export default function NitricEdge({
         <EdgeLabelRenderer>
           <div
             className={cn(
-              "nodrag transition-all border absolute bg-white p-1.5 text-[10px] tracking-normal font-semibold rounded-sm",
-              selected ? "border-primary" : "border-gray-500"
+              'nodrag absolute rounded-sm border bg-white p-1.5 text-[10px] font-semibold tracking-normal transition-all',
+              selected ? 'border-primary' : 'border-gray-500',
             )}
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
@@ -51,5 +51,5 @@ export default function NitricEdge({
         </EdgeLabelRenderer>
       )}
     </>
-  );
+  )
 }

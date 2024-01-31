@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
   APIRequest,
   APIResponse,
   Endpoint,
   LocalStorageHistoryItem,
-} from "../../types";
+} from '../../types'
 import {
   Select,
   Badge,
@@ -13,7 +13,7 @@ import {
   FieldRows,
   type FieldRow,
   Loading,
-} from "../shared";
+} from '../shared'
 import {
   flattenPaths,
   generatePath,
@@ -24,175 +24,175 @@ import {
   getHost,
   generateResponse,
   isValidUrl,
-} from "../../lib/utils";
-import APIResponseContent from "./APIResponseContent";
-import CodeEditor from "./CodeEditor";
-import APIMenu from "./APIMenu";
-import APIHistory from "./APIHistory";
+} from '../../lib/utils'
+import APIResponseContent from './APIResponseContent'
+import CodeEditor from './CodeEditor'
+import APIMenu from './APIMenu'
+import APIHistory from './APIHistory'
 
-import FileUpload from "../storage/FileUpload";
+import FileUpload from '../storage/FileUpload'
 
-import { useWebSocket } from "../../lib/hooks/use-web-socket";
-import { useHistory } from "../../lib/hooks/use-history";
-import AppLayout from "../layout/AppLayout";
-import APITreeView from "./APITreeView";
-import { copyToClipboard } from "../../lib/utils/copy-to-clipboard";
-import toast from "react-hot-toast";
-import { ClipboardIcon } from "@heroicons/react/24/outline";
-import { APIMethodBadge } from "./APIMethodBadge";
-import { Button } from "../ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useWebSocket } from '../../lib/hooks/use-web-socket'
+import { useHistory } from '../../lib/hooks/use-history'
+import AppLayout from '../layout/AppLayout'
+import APITreeView from './APITreeView'
+import { copyToClipboard } from '../../lib/utils/copy-to-clipboard'
+import toast from 'react-hot-toast'
+import { ClipboardIcon } from '@heroicons/react/24/outline'
+import { APIMethodBadge } from './APIMethodBadge'
+import { Button } from '../ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 
 const getTabCount = (rows: FieldRow[]) => {
-  if (!rows) return 0;
+  if (!rows) return 0
 
-  return rows.filter((r) => !!r.key).length;
-};
+  return rows.filter((r) => !!r.key).length
+}
 
-export const LOCAL_STORAGE_KEY = "nitric-local-dash-api-history";
+export const LOCAL_STORAGE_KEY = 'nitric-local-dash-api-history'
 
 const requestDefault = {
   pathParams: [],
   queryParams: [
     {
-      key: "",
-      value: "",
+      key: '',
+      value: '',
     },
   ],
   headers: [
     {
-      key: "Accept",
-      value: "*/*",
+      key: 'Accept',
+      value: '*/*',
     },
     {
-      key: "User-Agent",
-      value: "Nitric Client (https://www.nitric.io)",
+      key: 'User-Agent',
+      value: 'Nitric Client (https://www.nitric.io)',
     },
   ],
-};
+}
 
 const bodyTabs = [
   {
-    name: "JSON",
+    name: 'JSON',
   },
-  { name: "Binary" },
-];
+  { name: 'Binary' },
+]
 
 const APIExplorer = () => {
-  const { data, loading } = useWebSocket();
-  const [callLoading, setCallLoading] = useState(false);
+  const { data, loading } = useWebSocket()
+  const [callLoading, setCallLoading] = useState(false)
 
-  const { data: history } = useHistory("apis");
+  const { data: history } = useHistory('apis')
 
-  const [JSONBody, setJSONBody] = useState<string>("");
-  const [fileToUpload, setFileToUpload] = useState<File>();
+  const [JSONBody, setJSONBody] = useState<string>('')
+  const [fileToUpload, setFileToUpload] = useState<File>()
 
-  const [request, setRequest] = useState<APIRequest>(requestDefault);
-  const [response, setResponse] = useState<APIResponse>();
+  const [request, setRequest] = useState<APIRequest>(requestDefault)
+  const [response, setResponse] = useState<APIResponse>()
 
-  const [selectedApiEndpoint, setSelectedApiEndpoint] = useState<Endpoint>();
-  const [currentTabIndex, setCurrentTabIndex] = useState(0);
-  const [bodyTabIndex, setBodyTabIndex] = useState(0);
-  const [responseTabIndex, setResponseTabIndex] = useState(0);
+  const [selectedApiEndpoint, setSelectedApiEndpoint] = useState<Endpoint>()
+  const [currentTabIndex, setCurrentTabIndex] = useState(0)
+  const [bodyTabIndex, setBodyTabIndex] = useState(0)
+  const [responseTabIndex, setResponseTabIndex] = useState(0)
 
-  const [requiredPathParamErrors, setRequiredPathParamErrors] = useState({});
+  const [requiredPathParamErrors, setRequiredPathParamErrors] = useState({})
 
   const paths = useMemo(
     () => data?.apis?.map((api) => flattenPaths(api.spec)).flat(),
-    [data]
-  );
+    [data],
+  )
 
   // Load single history from localStorage on mount
   useEffect(() => {
     if (selectedApiEndpoint) {
       const storedHistory = localStorage.getItem(
-        `${LOCAL_STORAGE_KEY}-${selectedApiEndpoint.id}`
-      );
+        `${LOCAL_STORAGE_KEY}-${selectedApiEndpoint.id}`,
+      )
 
       if (storedHistory) {
-        const history: LocalStorageHistoryItem = JSON.parse(storedHistory);
-        setJSONBody(history.JSONBody);
+        const history: LocalStorageHistoryItem = JSON.parse(storedHistory)
+        setJSONBody(history.JSONBody)
         setRequest((prev) => ({
           ...prev,
           ...history.request,
           pathParams: generatePathParams(selectedApiEndpoint, history.request),
-        }));
+        }))
       } else {
         // clear
-        setJSONBody("");
+        setJSONBody('')
         setRequest((prev) => ({
           ...prev,
           ...requestDefault,
           pathParams: generatePathParams(selectedApiEndpoint, requestDefault),
-        }));
+        }))
       }
 
       // set history
       localStorage.setItem(
         `${LOCAL_STORAGE_KEY}-last-path-id`,
-        selectedApiEndpoint.id
-      );
+        selectedApiEndpoint.id,
+      )
 
       // clear response
-      setResponse(undefined);
+      setResponse(undefined)
     }
-  }, [selectedApiEndpoint]);
+  }, [selectedApiEndpoint])
 
   // Load request history
   useEffect(() => {
-    const localHistory = localStorage.getItem(`${LOCAL_STORAGE_KEY}-requests`);
+    const localHistory = localStorage.getItem(`${LOCAL_STORAGE_KEY}-requests`)
     if (!localHistory) {
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}-requests`, JSON.stringify([]));
-      return;
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}-requests`, JSON.stringify([]))
+      return
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
     if (paths?.length) {
       // restore history or select first if not selected
       if (!selectedApiEndpoint) {
         const previousId = localStorage.getItem(
-          `${LOCAL_STORAGE_KEY}-last-path-id`
-        );
+          `${LOCAL_STORAGE_KEY}-last-path-id`,
+        )
 
         const path =
-          (previousId && paths.find((p) => p.id === previousId)) || paths[0];
+          (previousId && paths.find((p) => p.id === previousId)) || paths[0]
 
-        setSelectedApiEndpoint(path);
+        setSelectedApiEndpoint(path)
         setRequest((prev) => ({
           ...prev,
           method: path.method,
-        }));
+        }))
       } else {
         // could be a refresh from ws, so update the selected endpoint
-        const latest = paths.find((p) => p.id === selectedApiEndpoint.id);
+        const latest = paths.find((p) => p.id === selectedApiEndpoint.id)
 
         if (latest) {
-          setSelectedApiEndpoint(latest);
+          setSelectedApiEndpoint(latest)
           setRequest((prev) => ({
             ...prev,
             method: latest.method,
-          }));
+          }))
         }
       }
     }
-  }, [paths]);
+  }, [paths])
 
   useEffect(() => {
     if (selectedApiEndpoint) {
       const generatedPath = generatePath(
         selectedApiEndpoint.path,
         request.pathParams,
-        request.queryParams
-      );
+        request.queryParams,
+      )
 
       setRequest((prev) => ({
         ...prev,
         path: generatedPath,
         method: selectedApiEndpoint.method,
-      }));
+      }))
     }
-  }, [selectedApiEndpoint, request.pathParams, request.queryParams]);
+  }, [selectedApiEndpoint, request.pathParams, request.queryParams])
 
   // Save state to local storage whenever it changes
   useEffect(() => {
@@ -202,153 +202,153 @@ const APIExplorer = () => {
         JSON.stringify({
           request,
           JSONBody,
-        })
-      );
+        }),
+      )
     }
-  }, [request, JSONBody]);
+  }, [request, JSONBody])
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => setFileToUpload(acceptedFiles[0]),
-    []
-  );
+    [],
+  )
 
   const apiAddress =
     selectedApiEndpoint && data?.apiAddresses
       ? data.apiAddresses[selectedApiEndpoint.api]
-      : null;
+      : null
 
   const tabs = [
     {
-      name: "Params",
+      name: 'Params',
       count: getTabCount(request.queryParams) + getTabCount(request.pathParams),
     },
-    { name: "Headers", count: getTabCount(request.headers) },
-    { name: "Body", count: JSONBody ? 1 : undefined },
-  ];
+    { name: 'Headers', count: getTabCount(request.headers) },
+    { name: 'Body', count: JSONBody ? 1 : undefined },
+  ]
 
-  const currentTabName = tabs[currentTabIndex].name;
+  const currentTabName = tabs[currentTabIndex].name
 
-  const currentBodyTabName = bodyTabs[bodyTabIndex].name;
+  const currentBodyTabName = bodyTabs[bodyTabIndex].name
 
   const refreshPathParamErrors = () => {
-    const newPathParamErrors: Record<number, FieldRow> = {};
+    const newPathParamErrors: Record<number, FieldRow> = {}
     const emptyParams = request.pathParams.filter((p, idx) => {
-      if (p.value === "") {
-        newPathParamErrors[idx] = p;
-        return true;
+      if (p.value === '') {
+        newPathParamErrors[idx] = p
+        return true
       }
 
-      return false;
-    });
+      return false
+    })
 
-    setRequiredPathParamErrors(newPathParamErrors);
+    setRequiredPathParamErrors(newPathParamErrors)
 
-    return emptyParams;
-  };
+    return emptyParams
+  }
 
   useEffect(() => {
     if (Object.keys(requiredPathParamErrors).length) {
-      refreshPathParamErrors();
+      refreshPathParamErrors()
     }
-  }, [request.pathParams]);
+  }, [request.pathParams])
 
   const handleSend = async (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
   ) => {
-    if (!selectedApiEndpoint) return;
-    setCallLoading(true);
-    e.preventDefault();
+    if (!selectedApiEndpoint) return
+    setCallLoading(true)
+    e.preventDefault()
 
     if (request.pathParams.length) {
-      const emptyParams = refreshPathParamErrors();
+      const emptyParams = refreshPathParamErrors()
 
       if (emptyParams.length) {
-        setCallLoading(false);
+        setCallLoading(false)
         toast.error(
           `Required path parameter(s) missing: ${emptyParams
             .map((p) => p.key)
-            .join(", ")}`
-        );
+            .join(', ')}`,
+        )
 
-        return;
+        return
       }
 
       const invalidValues = request.pathParams.filter(
-        (param) => !isValidUrl(param.value)
-      );
+        (param) => !isValidUrl(param.value),
+      )
 
       if (invalidValues.length) {
-        setCallLoading(false);
+        setCallLoading(false)
         toast.error(
           `Invalid path parameter value for: ${invalidValues
             .map((p) => p.key)
-            .join(", ")}`
-        );
+            .join(', ')}`,
+        )
 
-        return;
+        return
       }
     }
 
-    const { path, method, headers } = request;
+    const { path, method, headers } = request
 
-    const url = `http://${getHost()}/api/call` + path;
+    const url = `http://${getHost()}/api/call` + path
     const requestOptions: RequestInit = {
       method,
       headers: fieldRowArrToHeaders([
         ...headers,
         {
-          key: "X-Nitric-Local-Call-Address",
-          value: apiAddress || "localhost:4001",
+          key: 'X-Nitric-Local-Call-Address',
+          value: apiAddress || 'localhost:4001',
         },
       ]),
-    };
+    }
 
-    if (method !== "GET" && method !== "HEAD") {
+    if (method !== 'GET' && method !== 'HEAD') {
       // handle body in request
-      if (currentBodyTabName === "Binary" && fileToUpload) {
-        requestOptions.body = fileToUpload;
-      } else if (currentBodyTabName === "JSON" && JSONBody.trim()) {
-        requestOptions.body = JSONBody;
+      if (currentBodyTabName === 'Binary' && fileToUpload) {
+        requestOptions.body = fileToUpload
+      } else if (currentBodyTabName === 'JSON' && JSONBody.trim()) {
+        requestOptions.body = JSONBody
       }
     }
-    const startTime = window.performance.now();
-    const res = await fetch(url, requestOptions);
+    const startTime = window.performance.now()
+    const res = await fetch(url, requestOptions)
 
-    const callResponse = await generateResponse(res, startTime);
-    setResponse(callResponse);
+    const callResponse = await generateResponse(res, startTime)
+    setResponse(callResponse)
 
-    setTimeout(() => setCallLoading(false), 300);
-  };
+    setTimeout(() => setCallLoading(false), 300)
+  }
 
   return (
     <AppLayout
       title="APIs"
-      routePath={"/"}
+      routePath={'/'}
       secondLevelNav={
         paths?.length && selectedApiEndpoint && request?.method ? (
           <>
-            <div className="flex mb-2 items-center justify-between px-2">
+            <div className="mb-2 flex items-center justify-between px-2">
               <span className="text-lg">APIs</span>
               <APIMenu
                 selected={selectedApiEndpoint}
                 onAfterClear={() => {
-                  setJSONBody("");
+                  setJSONBody('')
                   setRequest({
                     ...requestDefault,
                     method: selectedApiEndpoint.method,
                     path: generatePath(selectedApiEndpoint.path, [], []),
                     pathParams: generatePathParams(
                       selectedApiEndpoint,
-                      requestDefault
+                      requestDefault,
                     ),
-                  });
+                  })
                 }}
               />
             </div>
             <APITreeView
               defaultTreeIndex={selectedApiEndpoint.id}
               onSelect={(endpoint) => {
-                setSelectedApiEndpoint(endpoint);
+                setSelectedApiEndpoint(endpoint)
               }}
               endpoints={paths}
             />
@@ -359,31 +359,31 @@ const APIExplorer = () => {
       <Loading delay={400} conditionToShow={!loading}>
         {paths?.length && selectedApiEndpoint && request?.method ? (
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
-            <div className="w-full flex flex-col gap-8">
+            <div className="flex w-full flex-col gap-8">
               <div>
                 <div className="flex md:hidden">
                   <h2 className="text-2xl">API - {selectedApiEndpoint.api}</h2>
                   <APIMenu
                     selected={selectedApiEndpoint}
                     onAfterClear={() => {
-                      setJSONBody("");
+                      setJSONBody('')
                       setRequest({
                         ...requestDefault,
                         method: selectedApiEndpoint.method,
                         path: generatePath(selectedApiEndpoint.path, [], []),
                         pathParams: generatePathParams(
                           selectedApiEndpoint,
-                          requestDefault
+                          requestDefault,
                         ),
-                      });
+                      })
                     }}
                   />
                 </div>
                 <nav
-                  className="flex items-end lg:items-center gap-4"
+                  className="flex items-end gap-4 lg:items-center"
                   aria-label="Breadcrumb"
                 >
-                  <ol className="flex w-full items-center lg:hidden gap-4">
+                  <ol className="flex w-full items-center gap-4 lg:hidden">
                     <li className="w-full">
                       <Select<Endpoint>
                         items={paths}
@@ -392,12 +392,12 @@ const APIExplorer = () => {
                         selected={selectedApiEndpoint}
                         setSelected={setSelectedApiEndpoint}
                         display={(v) => (
-                          <div className="grid grid-cols-12 items-center p-0.5 text-lg gap-4">
+                          <div className="grid grid-cols-12 items-center gap-4 p-0.5 text-lg">
                             <APIMethodBadge
                               method={v.method}
-                              className="!text-lg col-span-3 md:col-span-2"
+                              className="col-span-3 !text-lg md:col-span-2"
                             />
-                            <div className="col-span-9 md:col-span-10 flex gap-4">
+                            <div className="col-span-9 flex gap-4 md:col-span-10">
                               <span>{v?.api}</span>
                               <span>{v?.path}</span>
                             </div>
@@ -406,18 +406,18 @@ const APIExplorer = () => {
                       />
                     </li>
                   </ol>
-                  <div className="hidden lg:flex items-center gap-4">
+                  <div className="hidden items-center gap-4 lg:flex">
                     <APIMethodBadge
                       className="!text-lg"
                       method={request.method}
                     />
                     <span
-                      className="text-lg flex gap-2"
+                      className="flex gap-2 text-lg"
                       data-testid="generated-request-path"
                     >
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="truncate max-w-xl">
+                          <span className="max-w-xl truncate">
                             {request.path}
                           </span>
                         </TooltipTrigger>
@@ -431,13 +431,13 @@ const APIExplorer = () => {
                             type="button"
                             onClick={() => {
                               copyToClipboard(
-                                `http://${apiAddress}${request.path}`
-                              );
-                              toast.success("Copied Route URL");
+                                `http://${apiAddress}${request.path}`,
+                              )
+                              toast.success('Copied Route URL')
                             }}
                           >
                             <span className="sr-only">Copy Route URL</span>
-                            <ClipboardIcon className="w-5 h-5 text-gray-500" />
+                            <ClipboardIcon className="h-5 w-5 text-gray-500" />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -472,8 +472,8 @@ const APIExplorer = () => {
                           {currentTabName}
                         </h3>
                       </div>
-                      {currentTabName === "Params" && (
-                        <ul className="divide-gray-200 my-4">
+                      {currentTabName === 'Params' && (
+                        <ul className="my-4 divide-gray-200">
                           {request.pathParams.length > 0 && (
                             <li className="flex flex-col py-4">
                               <h4 className="text-lg font-medium text-gray-900">
@@ -489,7 +489,7 @@ const APIExplorer = () => {
                                   setRequest((prev) => ({
                                     ...prev,
                                     pathParams: rows,
-                                  }));
+                                  }))
                                 }}
                               />
                             </li>
@@ -505,13 +505,13 @@ const APIExplorer = () => {
                                 setRequest((prev) => ({
                                   ...prev,
                                   queryParams: rows,
-                                }));
+                                }))
                               }}
                             />
                           </li>
                         </ul>
                       )}
-                      {currentTabName === "Headers" && (
+                      {currentTabName === 'Headers' && (
                         <div className="my-4">
                           <FieldRows
                             rows={request.headers}
@@ -520,12 +520,12 @@ const APIExplorer = () => {
                               setRequest((prev) => ({
                                 ...prev,
                                 headers: rows,
-                              }));
+                              }))
                             }}
                           />
                         </div>
                       )}
-                      {currentTabName === "Body" && (
+                      {currentTabName === 'Body' && (
                         <div className="my-4 flex flex-col gap-4">
                           <Tabs
                             tabs={bodyTabs}
@@ -533,29 +533,29 @@ const APIExplorer = () => {
                             pill
                             setIndex={setBodyTabIndex}
                           />
-                          {currentBodyTabName === "JSON" && (
+                          {currentBodyTabName === 'JSON' && (
                             <CodeEditor
                               id="json-editor"
-                              contentType={"application/json"}
+                              contentType={'application/json'}
                               value={JSONBody}
                               includeLinters
                               onChange={(value) => {
-                                setJSONBody(value);
+                                setJSONBody(value)
                               }}
                             />
                           )}
-                          {currentBodyTabName === "Binary" && (
-                            <div className="flex flex-col mb-2">
-                              <h4 className="text-lg mb-2 font-medium text-gray-900">
+                          {currentBodyTabName === 'Binary' && (
+                            <div className="mb-2 flex flex-col">
+                              <h4 className="mb-2 text-lg font-medium text-gray-900">
                                 Binary File
                               </h4>
                               <FileUpload multiple={false} onDrop={onDrop} />
                               {fileToUpload && (
                                 <span
                                   data-testid="file-upload-info"
-                                  className="px-4 flex items-center py-4 sm:px-0"
+                                  className="flex items-center px-4 py-4 sm:px-0"
                                 >
-                                  {fileToUpload.name} -{" "}
+                                  {fileToUpload.name} -{' '}
                                   {formatFileSize(fileToUpload.size)}
                                 </span>
                               )}
@@ -570,7 +570,7 @@ const APIExplorer = () => {
               <div className="bg-white shadow sm:rounded-lg">
                 <div className="px-4 py-5 sm:p-6">
                   <div className="sm:flex sm:items-start sm:justify-between">
-                    <div className="w-full relative">
+                    <div className="relative w-full">
                       <div className="flex items-center gap-4">
                         <h3 className="text-xl font-semibold leading-6 text-gray-900">
                           Response
@@ -579,7 +579,7 @@ const APIExplorer = () => {
                           <Spinner
                             className="absolute top-0"
                             color="info"
-                            size={"md"}
+                            size={'md'}
                           />
                         )}
                       </div>
@@ -587,18 +587,18 @@ const APIExplorer = () => {
                         {response?.status && (
                           <Badge
                             data-testid="response-status"
-                            status={response.status >= 400 ? "red" : "green"}
+                            status={response.status >= 400 ? 'red' : 'green'}
                           >
                             Status: {response.status}
                           </Badge>
                         )}
                         {response?.time && (
-                          <Badge data-testid="response-time" status={"green"}>
+                          <Badge data-testid="response-time" status={'green'}>
                             Time: {formatResponseTime(response.time)}
                           </Badge>
                         )}
-                        {typeof response?.size === "number" && (
-                          <Badge data-testid="response-size" status={"green"}>
+                        {typeof response?.size === 'number' && (
+                          <Badge data-testid="response-size" status={'green'}>
                             Size: {formatFileSize(response.size)}
                           </Badge>
                         )}
@@ -610,10 +610,10 @@ const APIExplorer = () => {
                             <Tabs
                               tabs={[
                                 {
-                                  name: "Response",
+                                  name: 'Response',
                                 },
                                 {
-                                  name: "Headers",
+                                  name: 'Headers',
                                   count: Object.keys(response.headers || {})
                                     .length,
                                 },
@@ -647,7 +647,7 @@ const APIExplorer = () => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 bg-white">
                                       {Object.entries(
-                                        response.headers || {}
+                                        response.headers || {},
                                       ).map(([key, value]) => (
                                         <tr key={key}>
                                           <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
@@ -665,11 +665,11 @@ const APIExplorer = () => {
                             )}
                           </div>
                         ) : response ? (
-                          <span className="text-gray-500 text-lg">
+                          <span className="text-lg text-gray-500">
                             No response data available for this request.
                           </span>
                         ) : (
-                          <span className="text-gray-500 text-lg">
+                          <span className="text-lg text-gray-500">
                             Send a request to get a response.
                           </span>
                         )}
@@ -679,7 +679,7 @@ const APIExplorer = () => {
                 </div>
               </div>
             </div>
-            <div className="w-full flex flex-col gap-8 pb-20">
+            <div className="flex w-full flex-col gap-8 pb-20">
               <h3 className="text-2xl font-semibold leading-6">
                 Request History
               </h3>
@@ -694,7 +694,7 @@ const APIExplorer = () => {
           </div>
         ) : (
           <div>
-            Please refer to our documentation on{" "}
+            Please refer to our documentation on{' '}
             <a
               className="underline"
               target="_blank"
@@ -702,13 +702,13 @@ const APIExplorer = () => {
               rel="noreferrer"
             >
               creating APIs
-            </a>{" "}
+            </a>{' '}
             as we are unable to find any existing APIs.
           </div>
         )}
       </Loading>
     </AppLayout>
-  );
-};
+  )
+}
 
-export default APIExplorer;
+export default APIExplorer

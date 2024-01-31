@@ -1,17 +1,17 @@
-import { type FC, useMemo } from "react";
-import type { Endpoint, Method } from "../../types";
-import { APIMethodBadge } from "./APIMethodBadge";
-import TreeView, { type TreeItemType } from "../shared/TreeView";
-import type { TreeItem, TreeItemIndex } from "react-complex-tree";
+import { type FC, useMemo } from 'react'
+import type { Endpoint, Method } from '../../types'
+import { APIMethodBadge } from './APIMethodBadge'
+import TreeView, { type TreeItemType } from '../shared/TreeView'
+import type { TreeItem, TreeItemIndex } from 'react-complex-tree'
 
 export interface APITreeItemType extends TreeItemType<Endpoint> {
-  method?: Method;
+  method?: Method
 }
 
 interface Props {
-  endpoints: Endpoint[];
-  onSelect: (endpoint: Endpoint) => void;
-  defaultTreeIndex: TreeItemIndex;
+  endpoints: Endpoint[]
+  onSelect: (endpoint: Endpoint) => void
+  defaultTreeIndex: TreeItemIndex
 }
 
 const APITreeView: FC<Props> = ({ endpoints, onSelect, defaultTreeIndex }) => {
@@ -20,15 +20,15 @@ const APITreeView: FC<Props> = ({ endpoints, onSelect, defaultTreeIndex }) => {
     TreeItem<APITreeItemType>
   > = useMemo(() => {
     const rootItem: TreeItem = {
-      index: "root",
+      index: 'root',
       isFolder: true,
       children: [],
       data: null,
-    };
+    }
 
     const rootItems: Record<TreeItemIndex, TreeItem<APITreeItemType>> = {
       root: rootItem,
-    };
+    }
 
     for (const endpoint of endpoints) {
       // add api if not added already
@@ -40,13 +40,13 @@ const APITreeView: FC<Props> = ({ endpoints, onSelect, defaultTreeIndex }) => {
           data: {
             label: endpoint.api,
           },
-        };
+        }
 
-        rootItem.children!.push(endpoint.api);
+        rootItem.children!.push(endpoint.api)
       }
 
       // add each method of each path
-      const id = endpoint.id;
+      const id = endpoint.id
       rootItems[id] = {
         index: id,
         data: {
@@ -55,13 +55,13 @@ const APITreeView: FC<Props> = ({ endpoints, onSelect, defaultTreeIndex }) => {
           data: endpoint,
           parent: rootItems[endpoint.api],
         },
-      };
+      }
 
-      rootItems[endpoint.api].children?.push(id);
+      rootItems[endpoint.api].children?.push(id)
     }
 
-    return rootItems;
-  }, [endpoints]);
+    return rootItems
+  }, [endpoints])
 
   return (
     <TreeView<APITreeItemType>
@@ -71,7 +71,7 @@ const APITreeView: FC<Props> = ({ endpoints, onSelect, defaultTreeIndex }) => {
       getItemTitle={(item) => item.data.label}
       onPrimaryAction={(items) => {
         if (items.data.data) {
-          onSelect(items.data.data);
+          onSelect(items.data.data)
         }
       }}
       renderItemTitle={({ title, item }) => (
@@ -95,7 +95,7 @@ const APITreeView: FC<Props> = ({ endpoints, onSelect, defaultTreeIndex }) => {
         </>
       )}
     />
-  );
-};
+  )
+}
 
-export default APITreeView;
+export default APITreeView

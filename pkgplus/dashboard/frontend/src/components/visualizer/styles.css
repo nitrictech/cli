@@ -1,5 +1,5 @@
 .react-flow__node {
-  @apply flex h-[50px] font-medium shadow-xl rounded-md;
+  @apply flex h-[50px] rounded-md font-medium shadow-xl;
 
   .resource-icon {
     color: var(--nitric-node-icon-color, #000);
@@ -8,7 +8,7 @@
 
 .gradient:before {
   @apply absolute left-1/2 top-1/2 rounded-full;
-  content: "";
+  content: '';
   padding-bottom: calc(100% * 1.41421356237);
   width: calc(100% * 1.41421356237);
   background: conic-gradient(
@@ -22,7 +22,7 @@
 }
 
 .react-flow__node.selected .wrapper.gradient:before {
-  content: "";
+  content: '';
   background: conic-gradient(
     from -160deg at 50% 50%,
     var(--nitric-node-from, #c27afa) 0deg,

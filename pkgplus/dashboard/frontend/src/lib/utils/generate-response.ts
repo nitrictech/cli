@@ -1,28 +1,28 @@
-import { formatJSON, headersToObject } from "../utils";
+import { formatJSON, headersToObject } from '../utils'
 
 export const generateResponse = async (res: Response, startTime: number) => {
-  const contentType = res.headers.get("Content-Type");
+  const contentType = res.headers.get('Content-Type')
 
-  let data;
+  let data
 
-  if (contentType === "application/json") {
-    data = formatJSON(await res.json());
+  if (contentType === 'application/json') {
+    data = formatJSON(await res.json())
   } else if (
-    contentType?.startsWith("image/") ||
-    contentType?.startsWith("video/") ||
-    contentType?.startsWith("audio/") ||
-    contentType?.startsWith("application")
+    contentType?.startsWith('image/') ||
+    contentType?.startsWith('video/') ||
+    contentType?.startsWith('audio/') ||
+    contentType?.startsWith('application')
   ) {
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
 
-    data = url;
+    data = url
   } else {
-    data = await res.text();
+    data = await res.text()
   }
 
-  const endTime = window.performance.now();
-  const responseSize = res.headers.get("Content-Length");
+  const endTime = window.performance.now()
+  const responseSize = res.headers.get('Content-Length')
 
   return {
     data,
@@ -30,5 +30,5 @@ export const generateResponse = async (res: Response, startTime: number) => {
     status: res.status,
     size: responseSize ? parseInt(responseSize) : 0,
     headers: headersToObject(res.headers),
-  };
-};
+  }
+}

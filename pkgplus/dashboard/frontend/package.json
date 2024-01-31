@@ -77,8 +77,9 @@
     "eslint-plugin-jsx-a11y": "^6.7.1",
     "eslint-plugin-react": "^7.32.2",
     "openapi-types": "^12.1.0",
-    "prettier": "^2.8.7",
-    "prettier-plugin-astro": "^0.8.0",
+    "prettier": "^3.2.4",
+    "prettier-plugin-astro": "^0.13.0",
+    "prettier-plugin-tailwindcss": "^0.5.11",
     "typescript": "^5.2.2"
   }
 }

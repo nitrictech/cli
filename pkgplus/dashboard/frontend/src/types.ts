@@ -67,6 +67,16 @@ export interface Bucket extends BaseResource {
 
 type ResourceType = "bucket" | "topic" | "websocket" | "collection" | "secret";
 
+type Notification = {
+  bucket: string
+  target: string
+}
+
+type Subscriber = {
+  topic: string
+  target: string
+}
+
 interface Resource {
   name: string;
   type: ResourceType;
@@ -81,9 +91,11 @@ export interface WebSocketResponse {
   buckets: Bucket[];
   apis: Api[];
   schedules: Schedule[];
+  notifications: Notification[];
+  subscriptions: Subscriber[];
   topics: Topic[];
   services: Service[];
-  subscriptions: string[];
+  // subscriptions: string[];
   websockets: WebSocket[];
   policies: {
     [name: string]: Policy;

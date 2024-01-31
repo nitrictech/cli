@@ -17,12 +17,13 @@ type ServiceResourceRefresher struct {
 
 	resourcesPlugin *LocalResourcesService
 
-	lock             sync.RWMutex
-	apiWorkers       int
-	scheduleWorkers  int
-	httpWorkers      int
-	listenerWorkers  int
-	websocketWorkers int
+	lock              sync.RWMutex
+	apiWorkers        int
+	scheduleWorkers   int
+	httpWorkers       int
+	listenerWorkers   int
+	subscriberWorkers int
+	websocketWorkers  int
 }
 
 type UpdateArgs struct {
@@ -35,7 +36,7 @@ type UpdateArgs struct {
 }
 
 func (s *ServiceResourceRefresher) allWorkerCount() int {
-	return s.apiWorkers + s.scheduleWorkers + s.httpWorkers + s.listenerWorkers + s.websocketWorkers
+	return s.apiWorkers + s.scheduleWorkers + s.httpWorkers + s.listenerWorkers + s.subscriberWorkers + s.websocketWorkers
 }
 
 func (s *ServiceResourceRefresher) updatesWorkers(update UpdateArgs) {
@@ -47,6 +48,13 @@ func (s *ServiceResourceRefresher) updatesWorkers(update UpdateArgs) {
 		s.apiWorkers = 0
 		for _, api := range update.apiState {
 			s.apiWorkers += len(api[s.serviceName])
+		}
+	}
+
+	if update.topicSubscriberState != nil {
+		s.subscriberWorkers = 0
+		for _, topic := range update.topicSubscriberState {
+			s.subscriberWorkers += topic[s.serviceName]
 		}
 	}
 

@@ -203,6 +203,10 @@ export function generateVisualizerData(data: WebSocketResponse): {
       });
   });
 
+  
+
+  
+
   // Generate nodes from buckets
   data.buckets.forEach((bucket) => {
     const node = createNode<BucketNodeData>(bucket, "bucket", {
@@ -214,24 +218,24 @@ export function generateVisualizerData(data: WebSocketResponse): {
       }`,
     });
 
-    edges.push(
-      ...Object.keys(bucket.notifiers).map((subscriber) => {
-        return {
-          id: `e-${bucket.name}-${subscriber}`,
-          source: node.id,
-          target: subscriber,
-          animated: true,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-          },
-          markerStart: {
-            type: MarkerType.ArrowClosed,
-            orient: "auto-start-reverse",
-          },
-          label: "Notifies",
-        };
-      })
-    );
+    const bucketNotifications = data.notifications.filter(listener => listener.bucket === bucket.name)
+
+    edges.push(...bucketNotifications.map(notify => {
+      return {
+        id: `e-${notify.bucket}-${notify.target}`,
+        source: `bucket-${notify.bucket}`,
+        target: notify.target,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: "Triggers",
+      }
+    }))
 
     nodes.push(node);
   });
@@ -246,25 +250,27 @@ export function generateVisualizerData(data: WebSocketResponse): {
     });
     nodes.push(node);
 
-    edges.push(
-      ...Object.keys(topic.subscribers).map((subscriber) => {
-        return {
-          id: `e-${topic.name}-${subscriber}`,
-          source: node.id,
-          target: subscriber,
-          animated: true,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-          },
-          markerStart: {
-            type: MarkerType.ArrowClosed,
-            orient: "auto-start-reverse",
-          },
-          label: "Subscribes",
-        };
-      })
-    );
+    const topicSubscriptions = data.subscriptions.filter(sub => sub.topic === topic.name)
+
+    edges.push(...topicSubscriptions.map(subscription => {
+      return {
+        id: `e-${subscription.topic}-${subscription.target}`,
+        source: node.id,
+        target: subscription.target,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: "Triggers",
+      }
+    }))
   });
+
+  
 
   edges.push(
     ...Object.entries(data.policies).map(([_, policy]) => {

@@ -83,20 +83,20 @@ type ScheduleSpec struct {
 
 type TopicSpec struct {
 	*BaseResourceSpec
-
-	Subscribers map[string]int `json:"subscribers"`
-
-	// TODO: Remove this field
-	SubscriberCount int `json:"subscriberCount"`
 }
 
 type BucketSpec struct {
 	*BaseResourceSpec
+}
 
-	Notifiers map[string]int `json:"notifiers"`
+type NotifierSpec struct {
+	Bucket string `json:"bucket"`
+	Target string `json:"target"`
+}
 
-	// TODO: Remove this field
-	NotificationCount int `json:"notificationCount"`
+type SubscriberSpec struct {
+	Topic  string `json:"topic"`
+	Target string `json:"target"`
 }
 
 type PolicyResource struct {
@@ -128,8 +128,11 @@ type Dashboard struct {
 	buckets        []*BucketSpec
 	websockets     []WebsocketSpec
 	services       []*ServiceSpec
-	policies       map[string]PolicySpec
-	envMap         map[string]string
+	subscriptions  []*SubscriberSpec
+	notifications  []*NotifierSpec
+
+	policies map[string]PolicySpec
+	envMap   map[string]string
 
 	stackWebSocket       *melody.Melody
 	historyWebSocket     *melody.Melody
@@ -144,12 +147,15 @@ type Dashboard struct {
 }
 
 type DashboardResponse struct {
-	Apis               []ApiSpec             `json:"apis"`
-	Buckets            []*BucketSpec         `json:"buckets"`
-	Schedules          []ScheduleSpec        `json:"schedules"`
-	Topics             []*TopicSpec          `json:"topics"`
-	Services           []*ServiceSpec        `json:"services"`
-	Websockets         []WebsocketSpec       `json:"websockets"`
+	Apis          []ApiSpec         `json:"apis"`
+	Buckets       []*BucketSpec     `json:"buckets"`
+	Schedules     []ScheduleSpec    `json:"schedules"`
+	Topics        []*TopicSpec      `json:"topics"`
+	Services      []*ServiceSpec    `json:"services"`
+	Websockets    []WebsocketSpec   `json:"websockets"`
+	Subscriptions []*SubscriberSpec `json:"subscriptions"`
+	Notifications []*NotifierSpec   `json:"notifications"`
+
 	Policies           map[string]PolicySpec `json:"policies"`
 	ProjectName        string                `json:"projectName"`
 	ApiAddresses       map[string]string     `json:"apiAddresses"`
@@ -190,13 +196,11 @@ func (d *Dashboard) updateServices(services []string) {
 func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.resourcesLock.Lock()
 	defer d.resourcesLock.Unlock()
-	// reset buckets to allow for most recent resources only
-	if !d.resourcesLastUpdated.IsZero() && time.Since(d.resourcesLastUpdated) > time.Second*10 {
-		d.buckets = []*BucketSpec{}
-		d.topics = []*TopicSpec{}
-		d.policies = map[string]PolicySpec{}
-		d.services = []*ServiceSpec{}
-	}
+
+	d.buckets = []*BucketSpec{}
+	d.topics = []*TopicSpec{}
+	d.policies = map[string]PolicySpec{}
+	d.services = []*ServiceSpec{}
 
 	for bucketName, resource := range lrs.Buckets.GetAll() {
 		exists := lo.ContainsBy(d.buckets, func(item *BucketSpec) bool {
@@ -209,7 +213,7 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 					Name:               bucketName,
 					RequestingServices: resource.RequestingServices,
 				},
-				Notifiers: map[string]int{},
+				// Notifiers: map[string]int{},
 			})
 		}
 
@@ -228,7 +232,7 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 					RequestingServices: resource.RequestingServices,
 				},
 				// SubscriberCount: 0,
-				Subscribers: map[string]int{},
+				// Subscribers: map[string]int{},
 			})
 		}
 
@@ -280,6 +284,7 @@ func (d *Dashboard) updateApis(state apis.State) {
 			},
 		}
 
+		// TODO: why return a slice where there is only 1?
 		specs, _ := collector.ApisToOpenApiSpecs(resources, &collector.ProjectErrors{})
 
 		if len(specs) > 0 {
@@ -340,25 +345,14 @@ func (d *Dashboard) updateTopicSubscriptions(state topics.State) {
 	d.resourcesLock.Lock()
 	defer d.resourcesLock.Unlock()
 
+	d.subscriptions = []*SubscriberSpec{}
+
 	for topicName, functions := range state {
-		_, idx, found := lo.FindIndexOf[*TopicSpec](d.topics, func(item *TopicSpec) bool {
-			return item.Name == topicName
-		})
-
-		if !found {
-			d.topics = append(d.topics, &TopicSpec{
-				BaseResourceSpec: &BaseResourceSpec{
-					Name:               topicName,
-					RequestingServices: []string{},
-				},
-				SubscriberCount: 0,
-				Subscribers:     map[string]int{},
+		for functionName := range functions {
+			d.subscriptions = append(d.subscriptions, &SubscriberSpec{
+				Topic:  topicName,
+				Target: functionName,
 			})
-			idx = len(d.topics) - 1
-		}
-
-		for functionName, count := range functions {
-			d.topics[idx].Subscribers[functionName] = count
 		}
 
 		d.updateServices(lo.Keys(functions))
@@ -394,30 +388,15 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 	d.resourcesLock.Lock()
 	defer d.resourcesLock.Unlock()
 
+	d.notifications = []*NotifierSpec{}
+
 	for bucketName, functions := range state {
-		_, idx, found := lo.FindIndexOf[*BucketSpec](d.buckets, func(item *BucketSpec) bool {
-			return item.Name == bucketName
-		})
+		for functionName := range functions {
 
-		if !found {
-			d.buckets = append(d.buckets, &BucketSpec{
-				BaseResourceSpec: &BaseResourceSpec{
-					Name:               bucketName,
-					RequestingServices: []string{},
-				},
-				NotificationCount: 0,
-				Notifiers:         map[string]int{},
+			d.notifications = append(d.notifications, &NotifierSpec{
+				Bucket: bucketName,
+				Target: functionName,
 			})
-			idx = len(d.buckets) - 1
-		}
-
-		for functionName, count := range functions {
-
-			d.buckets[idx].Notifiers[functionName] = count
-
-			if !lo.Contains(d.buckets[idx].RequestingServices, functionName) {
-				d.buckets[idx].RequestingServices = append(d.buckets[idx].RequestingServices, functionName)
-			}
 
 			d.updateServices(lo.Keys(functions))
 		}
@@ -443,11 +422,11 @@ func (d *Dashboard) isConnected() bool {
 	bucketNotificationsRegistered := false
 
 	// Note: buckets arent completely removed at the moment, but the NotificationCount is.
-	for _, bs := range d.buckets {
-		if bs.NotificationCount > 0 {
-			return true
-		}
-	}
+	// for _, bs := range d.buckets {
+	// 	if bs.NotificationCount > 0 {
+	// 		return true
+	// 	}
+	// }
 
 	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || bucketNotificationsRegistered
 }
@@ -602,6 +581,8 @@ func (d *Dashboard) sendStackUpdate() error {
 		Websockets:         d.websockets,
 		Services:           d.services,
 		Policies:           d.policies,
+		Subscriptions:      d.subscriptions,
+		Notifications:      d.notifications,
 		ProjectName:        d.project.Name,
 		ApiAddresses:       d.gatewayService.GetApiAddresses(),
 		WebsocketAddresses: d.gatewayService.GetWebsocketAddresses(),
@@ -671,6 +652,8 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		wsWebSocket:      wsWebSocket,
 		schedules:        []ScheduleSpec{},
 		topics:           []*TopicSpec{},
+		subscriptions:    []*SubscriberSpec{},
+		notifications:    []*NotifierSpec{},
 		websockets:       []WebsocketSpec{},
 		policies:         map[string]PolicySpec{},
 		websocketsInfo:   map[string]*websockets.WebsocketInfo{},

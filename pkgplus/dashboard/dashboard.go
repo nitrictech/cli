@@ -134,15 +134,15 @@ type Dashboard struct {
 	policies map[string]PolicySpec
 	envMap   map[string]string
 
-	stackWebSocket       *melody.Melody
-	historyWebSocket     *melody.Melody
-	wsWebSocket          *melody.Melody
-	websocketsInfo       map[string]*websockets.WebsocketInfo
-	port                 int
-	browserHasOpened     bool
-	noBrowser            bool
-	browserLock          sync.Mutex
-	debouncedUpdate      func()
+	stackWebSocket   *melody.Melody
+	historyWebSocket *melody.Melody
+	wsWebSocket      *melody.Melody
+	websocketsInfo   map[string]*websockets.WebsocketInfo
+	port             int
+	browserHasOpened bool
+	noBrowser        bool
+	browserLock      sync.Mutex
+	debouncedUpdate  func()
 }
 
 type DashboardResponse struct {
@@ -199,7 +199,9 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.buckets = []*BucketSpec{}
 	d.topics = []*TopicSpec{}
 	d.policies = map[string]PolicySpec{}
-	d.services = []*ServiceSpec{}
+	// Don't clear services here, they're permanent fixtures of a local run anyway.
+	// clearing them here can cause services that don't use any resources to disappear.
+	// d.services = []*ServiceSpec{}
 
 	for bucketName, resource := range lrs.Buckets.GetAll() {
 		exists := lo.ContainsBy(d.buckets, func(item *BucketSpec) bool {
@@ -273,7 +275,7 @@ func (d *Dashboard) updateApis(state apis.State) {
 
 	apiSpecs := []ApiSpec{}
 
-	for apiName, rr  := range state {
+	for apiName, rr := range state {
 		resources := lo.Keys(rr)
 		apiSpec := ApiSpec{
 			BaseResourceSpec: &BaseResourceSpec{
@@ -400,7 +402,7 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 					Bucket: bucketName,
 					Target: functionName,
 				})
-	
+
 				d.updateServices(lo.Keys(functions))
 			}
 		}

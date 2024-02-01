@@ -394,13 +394,15 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 	d.notifications = []*NotifierSpec{}
 
 	for bucketName, functions := range state {
-		for functionName := range functions {
-			d.notifications = append(d.notifications, &NotifierSpec{
-				Bucket: bucketName,
-				Target: functionName,
-			})
-
-			d.updateServices(lo.Keys(functions))
+		for functionName, count := range functions {
+			if count > 0 {
+				d.notifications = append(d.notifications, &NotifierSpec{
+					Bucket: bucketName,
+					Target: functionName,
+				})
+	
+				d.updateServices(lo.Keys(functions))
+			}
 		}
 	}
 
@@ -644,6 +646,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		stackWebSocket:   stackWebSocket,
 		historyWebSocket: historyWebSocket,
 		wsWebSocket:      wsWebSocket,
+		buckets:          []*BucketSpec{},
 		schedules:        []ScheduleSpec{},
 		topics:           []*TopicSpec{},
 		subscriptions:    []*SubscriberSpec{},

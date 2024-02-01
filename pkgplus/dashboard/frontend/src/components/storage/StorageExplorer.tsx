@@ -50,6 +50,7 @@ const StorageExplorer = () => {
             </div>
             <StorageTreeView
               initialItem={selectedBucket}
+              notifications={data?.notifications || []}
               onSelect={(b) => {
                 setSelectedBucket(b)
               }}

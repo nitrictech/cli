@@ -1,20 +1,27 @@
 import { type FC, useMemo } from 'react'
 import TreeView, { type TreeItemType } from '../shared/TreeView'
 import type { TreeItem, TreeItemIndex } from 'react-complex-tree'
-import type { Bucket } from '@/types'
+import type { Bucket, Notification } from '@/types'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { Badge } from '../ui/badge'
 import { cn } from '@/lib/utils/cn'
+import { getBucketNotifications } from '@/lib/utils/get-bucket-notifications'
 
 export type StorageTreeItemType = TreeItemType<Bucket>
 
 interface Props {
   buckets: Bucket[]
+  notifications: Notification[]
   onSelect: (bucket: Bucket) => void
   initialItem: Bucket
 }
 
-const StorageTreeView: FC<Props> = ({ buckets, onSelect, initialItem }) => {
+const StorageTreeView: FC<Props> = ({
+  buckets,
+  notifications,
+  onSelect,
+  initialItem,
+}) => {
   const treeItems: Record<
     TreeItemIndex,
     TreeItem<StorageTreeItemType>
@@ -58,7 +65,10 @@ const StorageTreeView: FC<Props> = ({ buckets, onSelect, initialItem }) => {
         }
       }}
       renderItemTitle={({ item }) => {
-        const count = item.data.data?.notificationCount
+        const count = item.data.data
+          ? getBucketNotifications(item.data.data, notifications).length
+          : 0
+
         return (
           <span className="truncate">
             {count ? (

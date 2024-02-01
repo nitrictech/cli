@@ -60,14 +60,11 @@ export interface WebSocketsInfo {
   [socket: string]: WebSocket
 }
 
-export interface Bucket extends BaseResource {
-  notificationCount: number
-  notifiers: Map<string, number>
-}
+export type Bucket = BaseResource
 
 type ResourceType = 'bucket' | 'topic' | 'websocket' | 'collection' | 'secret'
 
-type Notification = {
+export type Notification = {
   bucket: string
   target: string
 }

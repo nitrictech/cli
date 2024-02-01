@@ -87,12 +87,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return r.Name == fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name)
 				})
 
-				if !found {
-					m.errs = append(m.errs, fmt.Errorf("received update for resource [%s], without associated nitric parent resource", content.Update.SubResource))
-					return m, tea.Quit
-				}
+				// FIXME: the !found path occurs, but rarely and unpredictably. Quitting isn't a good solution, since it locks a stack that otherwise would have succeeded.
+				// if !found {
+				// 	m.errs = append(m.errs, fmt.Errorf("received update for resource [%s], without associated nitric parent resource", content.Update.SubResource))
+				// 	return m, tea.Quit
+				// }
 
-				parent = nitricResource
+				if found {
+					parent = nitricResource
+				}
 			}
 
 			existingChild, found := lo.Find(parent.Children, func(item *stack.Resource) bool {
@@ -138,16 +141,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 const maxOutputLines = 5
 
 var (
-	titleStyle          = lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)
 	terminalBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tui.Colors.Yellow)
 	errorStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-)
-
-const (
-	connected   = "├─"
-	wrapped     = "│ "
-	last        = "└─"
-	lastWrapped = "  "
 )
 
 func (m Model) View() string {
@@ -157,45 +152,22 @@ func (m Model) View() string {
 	v.Addln("  Deploying your project%s", m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.White))
 	v.Break()
 
-	// tv := view.New()
 	statusTree := fragments.NewStatusNode("stack", "")
 
 	for _, child := range m.stack.Children {
 		currentNode := statusTree.AddNode(child.Name, "")
-		// tv.Addln(child.Name).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Blue))
 
 		for _, grandchild := range child.Children {
-			// lastGrandchild := ix == len(child.Children)-1
-			// linkStyle := lipgloss.NewStyle().MarginLeft(1).Foreground(tui.Colors.Blue)
-
 			resourceTime := lo.Ternary(grandchild.FinishTime.IsZero(), time.Since(grandchild.StartTime).Round(time.Second), grandchild.FinishTime.Sub(grandchild.StartTime))
+			statusColor := tui.Colors.Blue
+			if grandchild.Status == deploymentspb.ResourceDeploymentStatus_FAILED {
+				statusColor = tui.Colors.Red
+			} else if grandchild.Status == deploymentspb.ResourceDeploymentStatus_SUCCESS || grandchild.Action == deploymentspb.ResourceDeploymentAction_SAME {
+				statusColor = tui.Colors.Green
+			}
 
-			// resourceName := lipgloss.NewStyle().Foreground(tui.Colors.Gray).Width(78).Render(grandchild.Name)
-
-			currentNode.AddNode(grandchild.Name, fmt.Sprintf("%s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second)))
-			// nameParts := strings.Split(resourceName, "\n")
-			// for i, nameWrapPart := range nameParts {
-			// 	if lastGrandchild {
-			// 		if i == 0 {
-			// 			tv.Add(last).WithStyle(linkStyle)
-			// 		} else {
-			// 			tv.Add(lastWrapped).WithStyle(linkStyle)
-			// 		}
-			// 	} else {
-			// 		if i == 0 {
-			// 			tv.Add(connected).WithStyle(linkStyle)
-			// 		} else {
-			// 			tv.Add(wrapped).WithStyle(linkStyle)
-			// 		}
-			// 	}
-
-			// 	tv.Add(nameWrapPart)
-			// 	if i == 0 {
-			// 		tv.Addln("  %s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second)).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
-			// 	} else {
-			// 		tv.Break()
-			// 	}
-			// }
+			statusText := fmt.Sprintf("%s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second))
+			currentNode.AddNode(grandchild.Name, lipgloss.NewStyle().Foreground(statusColor).Render(statusText))
 		}
 	}
 

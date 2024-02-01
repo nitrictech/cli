@@ -367,15 +367,19 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 	schedules := []ScheduleSpec{}
 
 	for _, srvc := range state {
+		requestingServices := []string{srvc.ServiceName}
+
 		schedules = append(schedules, ScheduleSpec{
 			BaseResourceSpec: &BaseResourceSpec{
 				Name:               srvc.Schedule.GetScheduleName(),
-				RequestingServices: []string{srvc.ServiceName},
+				RequestingServices: requestingServices,
 			},
 			Expression: srvc.Schedule.GetCron().GetExpression(),
 			Rate:       srvc.Schedule.GetEvery().GetRate(),
 			Target:     srvc.ServiceName,
 		})
+
+		d.updateServices(requestingServices)
 	}
 
 	d.schedules = schedules

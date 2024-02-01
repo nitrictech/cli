@@ -273,15 +273,16 @@ func (d *Dashboard) updateApis(state apis.State) {
 
 	apiSpecs := []ApiSpec{}
 
-	for apiName, resources := range state {
+	for apiName, rr  := range state {
+		resources := lo.Keys(rr)
 		apiSpec := ApiSpec{
 			BaseResourceSpec: &BaseResourceSpec{
 				Name:               apiName,
-				RequestingServices: lo.Uniq(lo.Keys(resources)),
+				RequestingServices: resources,
 			},
 		}
 
-		spec, _ := collector.ApiToOpenApiSpec(resources, &collector.ProjectErrors{})
+		spec, _ := collector.ApiToOpenApiSpec(rr, &collector.ProjectErrors{})
 
 		if spec != nil {
 			// set title to api name
@@ -291,6 +292,8 @@ func (d *Dashboard) updateApis(state apis.State) {
 		}
 
 		apiSpecs = append(apiSpecs, apiSpec)
+
+		d.updateServices(resources)
 	}
 
 	d.apis = apiSpecs
@@ -413,17 +416,9 @@ func (d *Dashboard) isConnected() bool {
 	websocketsRegistered := len(d.websockets) > 0
 	topicsRegistered := len(d.topics) > 0
 	schedulesRegistered := len(d.schedules) > 0
+	notificationsRegistered := len(d.notifications) > 0
 
-	bucketNotificationsRegistered := false
-
-	// Note: buckets arent completely removed at the moment, but the NotificationCount is.
-	// for _, bs := range d.buckets {
-	// 	if bs.NotificationCount > 0 {
-	// 		return true
-	// 	}
-	// }
-
-	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || bucketNotificationsRegistered
+	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered
 }
 
 func (d *Dashboard) Start() error {

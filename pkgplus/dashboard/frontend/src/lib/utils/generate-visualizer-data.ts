@@ -9,9 +9,10 @@ import {
 import type { BaseResource, Policy, WebSocketResponse } from '@/types'
 import {
   ChatBubbleLeftRightIcon,
-  CircleStackIcon,
+  ArchiveBoxIcon,
   ClockIcon,
-  CubeIcon,
+  CircleStackIcon,
+  CpuChipIcon,
   MegaphoneIcon,
   GlobeAltIcon,
 } from '@heroicons/react/24/outline'
@@ -24,6 +25,10 @@ import {
   WebsocketNode,
   type WebsocketNodeData,
 } from '@/components/visualizer/nodes/WebsocketNode'
+import {
+  KeyValueNode,
+  type KeyValueNodeData,
+} from '@/components/visualizer/nodes/KeyValueNode'
 import {
   ScheduleNode,
   type ScheduleNodeData,
@@ -43,6 +48,7 @@ export const nodeTypes = {
   topic: TopicNode,
   websocket: WebsocketNode,
   service: ServiceNode,
+  keyvaluestore: KeyValueNode,
 }
 
 const createNode = <T>(
@@ -276,6 +282,16 @@ export function generateVisualizerData(data: WebSocketResponse): {
     })
   })
 
+  data.stores.forEach((store) => {
+    const node = createNode<BucketNodeData>(store, 'keyvaluestore', {
+      title: store.name,
+      resource: store,
+      icon: CircleStackIcon,
+    })
+
+    nodes.push(node)
+  })
+
   // Generate nodes from buckets
   data.buckets.forEach((bucket) => {
     const bucketNotifications = getBucketNotifications(
@@ -285,7 +301,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
     const node = createNode<BucketNodeData>(bucket, 'bucket', {
       title: bucket.name,
       resource: bucket,
-      icon: CircleStackIcon,
+      icon: ArchiveBoxIcon,
       description: `${bucketNotifications.length} ${
         bucketNotifications.length === 1 ? 'Notification' : 'Notifications'
       }`,
@@ -375,7 +391,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
         resource: {
           filePath: service.filePath,
         },
-        icon: CubeIcon,
+        icon: CpuChipIcon,
       },
       type: 'service',
     }

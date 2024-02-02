@@ -23,6 +23,8 @@ export interface Api extends BaseResource {
   spec: APIDoc
 }
 
+export interface KeyValue extends BaseResource {}
+
 export interface Schedule extends BaseResource {
   expression?: string
   rate?: string
@@ -92,6 +94,7 @@ export interface WebSocketResponse {
   subscriptions: Subscriber[]
   topics: Topic[]
   services: Service[]
+  stores: KeyValue[]
   // subscriptions: string[];
   websockets: WebSocket[]
   policies: {

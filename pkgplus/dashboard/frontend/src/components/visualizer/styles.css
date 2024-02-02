@@ -76,6 +76,14 @@
   --nitric-node-icon-color: #d97706; /* amber 600 */
 }
 
+.react-flow__node-keyvaluestore {
+  --nitric-node-from: #e11d48; /* rose 600 */
+  --nitric-node-via: #fb7185; /* rose 400 */
+  --nitric-node-to: #be123c; /* rose 700 */
+  --nitric-node-icon-color: #e11d48; /* rose 600 */
+}
+
+
 .react-flow__node-schedule {
   --nitric-node-from: #7c3aed; /* Violet 600 */
   --nitric-node-via: #a78bfa; /* Violet 400 */

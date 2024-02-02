@@ -93,6 +93,10 @@ type BucketSpec struct {
 	*BaseResourceSpec
 }
 
+type KeyValueSpec struct {
+	*BaseResourceSpec
+}
+
 type NotifierSpec struct {
 	Bucket string `json:"bucket"`
 	Target string `json:"target"`
@@ -124,6 +128,7 @@ type Dashboard struct {
 	schedules      []ScheduleSpec
 	topics         []*TopicSpec
 	buckets        []*BucketSpec
+	stores         []*KeyValueSpec
 	websockets     []WebsocketSpec
 	subscriptions  []*SubscriberSpec
 	notifications  []*NotifierSpec
@@ -150,6 +155,7 @@ type DashboardResponse struct {
 	Websockets    []WebsocketSpec   `json:"websockets"`
 	Subscriptions []*SubscriberSpec `json:"subscriptions"`
 	Notifications []*NotifierSpec   `json:"notifications"`
+	Stores        []*KeyValueSpec   `json:"stores"`
 
 	Services []*ServiceSpec `json:"services"`
 
@@ -198,7 +204,24 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 
 	d.buckets = []*BucketSpec{}
 	d.topics = []*TopicSpec{}
+	d.stores = []*KeyValueSpec{}
+
 	d.policies = map[string]PolicySpec{}
+
+	for keyvalue, resource := range lrs.KeyValueStores.GetAll() {
+		exists := lo.ContainsBy(d.stores, func(item *KeyValueSpec) bool {
+			return item.Name == keyvalue
+		})
+
+		if !exists {
+			d.stores = append(d.stores, &KeyValueSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               keyvalue,
+					RequestingServices: resource.RequestingServices,
+				},
+			})
+		}
+	}
 
 	for bucketName, resource := range lrs.Buckets.GetAll() {
 		exists := lo.ContainsBy(d.buckets, func(item *BucketSpec) bool {
@@ -560,6 +583,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		Apis:               d.apis,
 		Topics:             d.topics,
 		Buckets:            d.buckets,
+		Stores:             d.stores,
 		Schedules:          d.schedules,
 		Websockets:         d.websockets,
 		Policies:           d.policies,

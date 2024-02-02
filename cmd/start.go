@@ -50,7 +50,7 @@ var startCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		// Start dashboard
-		dash, err := dashboard.New(startNoBrowser, localCloud)
+		dash, err := dashboard.New(startNoBrowser, localCloud, proj)
 		tui.CheckErr(err)
 
 		err = dash.Start()

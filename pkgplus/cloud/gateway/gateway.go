@@ -667,7 +667,11 @@ func (s *LocalGatewayService) Stop() error {
 		_ = s.srv.ShutdownWithContext(ctx)
 	}
 
-	return s.serviceServer.Shutdown()
+	if s.serviceServer != nil {
+		return s.serviceServer.Shutdown()
+	}
+
+	return nil
 }
 
 // Create new HTTP gateway

@@ -64,8 +64,12 @@ func (m Model) View() string {
 
 	runView.Addln(m.localServicesModel.View())
 
-	runView.Addln("Running services").WithStyle(headingStyle)
-	runView.Break()
+	if len(m.serviceStatus) == 0 {
+		runView.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
+	} else {
+		runView.Addln("Running services").WithStyle(headingStyle)
+		runView.Break()
+	}
 
 	for _, service := range m.serviceStatus {
 		runView.Addln("%s - %s", service.ServiceName, service.Status)

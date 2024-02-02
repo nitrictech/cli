@@ -13,6 +13,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/topics"
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 	viewr "github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
@@ -199,9 +200,6 @@ func (t *TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (t *TuiModel) View() string {
 	output := viewr.New()
 
-	output.Addln(fragments.NitricTag())
-	output.Break()
-
 	apisRegistered := len(t.apis) > 0
 	websocketsRegistered := len(t.websockets) > 0
 	httpProxiesRegistered := len(t.httpProxies) > 0
@@ -209,6 +207,11 @@ func (t *TuiModel) View() string {
 	schedulesRegistered := len(t.schedules) > 0
 
 	noWorkersRegistered := !apisRegistered && !websocketsRegistered && !httpProxiesRegistered && !topicsRegistered && !schedulesRegistered
+
+	// Show waiting message if no workers are connected
+	output.Add(fragments.NitricTag())
+	output.Add(" started").WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Green))
+	output.Break()
 
 	if t.dashboardUrl != "" && !noWorkersRegistered {
 		output.Addln(fragments.Tag("dash"))
@@ -273,12 +276,6 @@ func (t *TuiModel) View() string {
 			output.Addln(" => %s (%s)", schedule.url, schedule.rate)
 			output.Break()
 		}
-	}
-
-	// Show waiting message if no workers are connected
-	if noWorkersRegistered {
-		output.Addln("waiting for connections, start your application to connect it with the local nitric server.").WithStyle(lipgloss.NewStyle().Bold(true))
-		output.Break()
 	}
 
 	// // Render resources

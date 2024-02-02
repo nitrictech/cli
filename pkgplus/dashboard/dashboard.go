@@ -24,7 +24,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,7 +32,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
 	"github.com/samber/lo"
-	"github.com/spf13/afero"
 
 	"github.com/nitrictech/cli/pkgplus/browser"
 	"github.com/nitrictech/cli/pkgplus/cloud"
@@ -71,6 +69,12 @@ type WebsocketSpec struct {
 	Events []string `json:"events,omitempty"`
 
 	Targets map[string]string `json:"targets,omitempty"`
+}
+
+type ServiceSpec struct {
+	*BaseResourceSpec
+
+	FilePath string `json:"filePath"`
 }
 
 type ScheduleSpec struct {
@@ -111,12 +115,6 @@ type PolicySpec struct {
 	Resources  []PolicyResource `json:"resources"`
 }
 
-type ServiceSpec struct {
-	*BaseResourceSpec
-
-	FilePath string `json:"filePath"`
-}
-
 type Dashboard struct {
 	resourcesLock  sync.Mutex
 	project        *project.Project
@@ -127,7 +125,6 @@ type Dashboard struct {
 	topics         []*TopicSpec
 	buckets        []*BucketSpec
 	websockets     []WebsocketSpec
-	services       []*ServiceSpec
 	subscriptions  []*SubscriberSpec
 	notifications  []*NotifierSpec
 
@@ -150,10 +147,11 @@ type DashboardResponse struct {
 	Buckets       []*BucketSpec     `json:"buckets"`
 	Schedules     []ScheduleSpec    `json:"schedules"`
 	Topics        []*TopicSpec      `json:"topics"`
-	Services      []*ServiceSpec    `json:"services"`
 	Websockets    []WebsocketSpec   `json:"websockets"`
 	Subscriptions []*SubscriberSpec `json:"subscriptions"`
 	Notifications []*NotifierSpec   `json:"notifications"`
+
+	Services []*ServiceSpec `json:"services"`
 
 	Policies           map[string]PolicySpec `json:"policies"`
 	ProjectName        string                `json:"projectName"`
@@ -174,22 +172,24 @@ type Bucket struct {
 //go:embed dist/*
 var content embed.FS
 
-func (d *Dashboard) updateServices(services []string) {
-	for _, service := range services {
-		if _, exists := lo.Find(d.services, func(item *ServiceSpec) bool {
-			return item.Name == service
-		}); !exists {
-			absolutePath, _ := filepath.Abs(service)
-			d.services = append(d.services, &ServiceSpec{
-				BaseResourceSpec: &BaseResourceSpec{
-					Name: service,
-				},
-				FilePath: absolutePath,
-			})
+func (d *Dashboard) getServices() ([]*ServiceSpec, error) {
+	serviceSpecs := []*ServiceSpec{}
+
+	for _, service := range d.project.GetServices() {
+		absPath, err := service.GetAbsoluteFilePath()
+		if err != nil {
+			return nil, err
 		}
+
+		serviceSpecs = append(serviceSpecs, &ServiceSpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name: service.GetFilePath(),
+			},
+			FilePath: absPath,
+		})
 	}
 
-	d.refresh()
+	return serviceSpecs, nil
 }
 
 func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
@@ -199,9 +199,6 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.buckets = []*BucketSpec{}
 	d.topics = []*TopicSpec{}
 	d.policies = map[string]PolicySpec{}
-	// Don't clear services here, they're permanent fixtures of a local run anyway.
-	// clearing them here can cause services that don't use any resources to disappear.
-	// d.services = []*ServiceSpec{}
 
 	for bucketName, resource := range lrs.Buckets.GetAll() {
 		exists := lo.ContainsBy(d.buckets, func(item *BucketSpec) bool {
@@ -214,11 +211,8 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 					Name:               bucketName,
 					RequestingServices: resource.RequestingServices,
 				},
-				// Notifiers: map[string]int{},
 			})
 		}
-
-		d.updateServices(resource.RequestingServices)
 	}
 
 	for topicName, resource := range lrs.Topics.GetAll() {
@@ -232,12 +226,8 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 					Name:               topicName,
 					RequestingServices: resource.RequestingServices,
 				},
-				// SubscriberCount: 0,
-				// Subscribers: map[string]int{},
 			})
 		}
-
-		d.updateServices(resource.RequestingServices)
 	}
 
 	for policyName, policy := range lrs.Policies.GetAll() {
@@ -262,8 +252,6 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 				}
 			}),
 		}
-
-		d.updateServices(policy.RequestingServices)
 	}
 
 	d.refresh()
@@ -294,8 +282,6 @@ func (d *Dashboard) updateApis(state apis.State) {
 		}
 
 		apiSpecs = append(apiSpecs, apiSpec)
-
-		d.updateServices(resources)
 	}
 
 	d.apis = apiSpecs
@@ -355,8 +341,6 @@ func (d *Dashboard) updateTopicSubscriptions(state topics.State) {
 				Target: functionName,
 			})
 		}
-
-		d.updateServices(lo.Keys(functions))
 	}
 
 	d.refresh()
@@ -380,8 +364,6 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 			Rate:       srvc.Schedule.GetEvery().GetRate(),
 			Target:     srvc.ServiceName,
 		})
-
-		d.updateServices(requestingServices)
 	}
 
 	d.schedules = schedules
@@ -402,8 +384,6 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 					Bucket: bucketName,
 					Target: functionName,
 				})
-
-				d.updateServices(lo.Keys(functions))
 			}
 		}
 	}
@@ -571,14 +551,19 @@ func (d *Dashboard) sendStackUpdate() error {
 	currentVersion := strings.TrimPrefix(version.Version, "v")
 	latestVersion := update.FetchLatestVersion()
 
+	services, err := d.getServices()
+	if err != nil {
+		return err
+	}
+
 	response := &DashboardResponse{
 		Apis:               d.apis,
 		Topics:             d.topics,
 		Buckets:            d.buckets,
 		Schedules:          d.schedules,
 		Websockets:         d.websockets,
-		Services:           d.services,
 		Policies:           d.policies,
+		Services:           services,
 		Subscriptions:      d.subscriptions,
 		Notifications:      d.notifications,
 		ProjectName:        d.project.Name,
@@ -627,20 +612,13 @@ func (d *Dashboard) sendWebsocketsUpdate() error {
 	return err
 }
 
-func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
-	fs := afero.NewOsFs()
-
-	p, err := project.FromFile(fs, "")
-	if err != nil {
-		return nil, err
-	}
-
+func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project) (*Dashboard, error) {
 	stackWebSocket := melody.New()
 	historyWebSocket := melody.New()
 	wsWebSocket := melody.New()
 
 	dash := &Dashboard{
-		project:          p,
+		project:          project,
 		storageService:   localCloud.Storage,
 		gatewayService:   localCloud.Gateway,
 		apis:             []ApiSpec{},

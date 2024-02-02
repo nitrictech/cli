@@ -9,6 +9,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 type Model struct {
@@ -36,7 +37,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			func() {
 				m.stopChan <- true
 			}()
-			return m, tea.Quit
+			return m, teax.Quit
 		}
 	case reactive.ChanMsg[project.ServiceRunUpdate]:
 		// we know we have a service update

@@ -24,6 +24,7 @@ import (
 
 	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 type InlineList struct {
@@ -127,7 +128,7 @@ func (m InlineList) UpdateInlineList(msg tea.Msg) (InlineList, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, tui.KeyMap.Quit):
-			return m, tea.Quit
+			return m, teax.Quit
 		case key.Matches(msg, tui.KeyMap.Enter):
 			m.choice = m.Items[m.cursor].GetItemValue()
 		case key.Matches(msg, tui.KeyMap.Down):

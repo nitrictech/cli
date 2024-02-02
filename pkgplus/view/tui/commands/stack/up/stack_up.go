@@ -16,11 +16,13 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
 type Model struct {
 	stack              *stack.Resource
+	defaultParent      *stack.Resource
 	updatesChan        <-chan *deploymentspb.DeploymentUpEvent
 	errorChan          <-chan error
 	providerStdoutChan <-chan string
@@ -48,7 +50,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
-			return m, tea.Quit
+			return m, teax.Quit
 		default:
 			m.resourcesTable, cmd = m.resourcesTable.Update(msg)
 			return m, cmd
@@ -64,9 +66,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, reactive.AwaitChannel(msg.Source)
 	case reactive.ChanMsg[*deploymentspb.DeploymentUpEvent]:
 
-		// the source channel is close
+		// the source channel is closed
 		if !msg.Ok {
-			return m, tea.Quit
+			// set the render nothing variable
+			return m, teax.Quit
 		}
 
 		switch content := msg.Value.Content.(type) {
@@ -87,14 +90,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return r.Name == fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name)
 				})
 
-				// FIXME: the !found path occurs, but rarely and unpredictably. Quitting isn't a good solution, since it locks a stack that otherwise would have succeeded.
-				// if !found {
-				// 	m.errs = append(m.errs, fmt.Errorf("received update for resource [%s], without associated nitric parent resource", content.Update.SubResource))
-				// 	return m, tea.Quit
-				// }
-
 				if found {
 					parent = nitricResource
+				} else {
+					// add to the default container, used for resources that are stack level, but not explicitly defined.
+					parent = m.defaultParent
 				}
 			}
 
@@ -198,7 +198,15 @@ func (m Model) View() string {
 	return v.Render()
 }
 
-func New(updatesChan <-chan *deploymentspb.DeploymentUpEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
+func New(stackName string, updatesChan <-chan *deploymentspb.DeploymentUpEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
+	orphanParent := &stack.Resource{
+		Name:     fmt.Sprintf("Stack::%s", stackName),
+		Message:  "",
+		Action:   deploymentspb.ResourceDeploymentAction_SAME,
+		Status:   deploymentspb.ResourceDeploymentStatus_PENDING,
+		Children: []*stack.Resource{},
+	}
+
 	return Model{
 		resourcesTable: table.New(
 			table.WithColumns([]table.Column{
@@ -221,10 +229,13 @@ func New(updatesChan <-chan *deploymentspb.DeploymentUpEvent, providerStdoutChan
 		updatesChan:        updatesChan,
 		providerStdoutChan: providerStdoutChan,
 		errorChan:          errorChan,
+		defaultParent:      orphanParent,
 		stack: &stack.Resource{
-			Name:     "stack",
-			Message:  "",
-			Children: make([]*stack.Resource, 0),
+			Name:    "stack",
+			Message: "",
+			Children: []*stack.Resource{
+				orphanParent,
+			},
 		},
 	}
 }

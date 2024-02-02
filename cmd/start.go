@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/services"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 var startNoBrowser bool
@@ -68,7 +68,7 @@ var startCmd = &cobra.Command{
 
 		tui.CheckErr(err)
 
-		runView := tea.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
+		runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
 
 		_, _ = runView.Run()
 		// cobra.CheckErr(err)

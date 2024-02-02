@@ -19,7 +19,6 @@ package cmd
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -35,6 +34,7 @@ import (
 	stack_select "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/select"
 	stack_up "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/up"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
@@ -99,7 +99,7 @@ var newStackCmd = &cobra.Command{
 		if len(args) >= 2 {
 			providerName = args[1]
 		}
-		_, err := tea.NewProgram(stack_new.New(afero.NewOsFs(), stack_new.Args{
+		_, err := teax.NewProgram(stack_new.New(afero.NewOsFs(), stack_new.Args{
 			StackName:    stackName,
 			ProviderName: providerName,
 			Force:        forceNewStack,
@@ -150,7 +150,7 @@ var stackUpdateCmd = &cobra.Command{
 				StackList: stackList,
 			})
 
-			selection, err := tea.NewProgram(promptModel).Run()
+			selection, err := teax.NewProgram(promptModel).Run()
 			tui.CheckErr(err)
 			stackSelection = selection.(stack_select.Model).Choice()
 			if stackSelection == "" {
@@ -178,7 +178,7 @@ var stackUpdateCmd = &cobra.Command{
 		buildUpdates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := tea.NewProgram(build.NewModel(buildUpdates))
+		prog := teax.NewProgram(build.NewModel(buildUpdates))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
 		tui.CheckErr(err)
@@ -221,10 +221,11 @@ var stackUpdateCmd = &cobra.Command{
 
 		// Step 5b. Communicate with server to share progress of ...
 
-		stackUp := stack_up.New(eventChan, providerStdout, errorChan)
+		stackUp := stack_up.New(stackConfig.Name, eventChan, providerStdout, errorChan)
 
-		_, err = tea.NewProgram(stackUp).Run()
+		_, err = teax.NewProgram(stackUp).Run()
 		tui.CheckErr(err)
+
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -270,7 +271,7 @@ nitric stack down -s aws -y`,
 				StackList: stackList,
 			})
 
-			selection, err := tea.NewProgram(promptModel).Run()
+			selection, err := teax.NewProgram(promptModel).Run()
 			tui.CheckErr(err)
 			stackSelection = selection.(stack_select.Model).Choice()
 		} else {
@@ -323,7 +324,7 @@ nitric stack down -s aws -y`,
 
 		stackDown := stack_down.New(eventChannel, providerStdout, errorChan)
 
-		_, err = tea.NewProgram(stackDown).Run()
+		_, err = teax.NewProgram(stackDown).Run()
 		tui.CheckErr(err)
 	},
 	Args: cobra.ExactArgs(0),

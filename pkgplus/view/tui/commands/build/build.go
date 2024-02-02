@@ -14,6 +14,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 type Model struct {
@@ -38,7 +39,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case reactive.ChanMsg[project.ServiceBuildUpdate]:
 		// channel closed, the build is complete.
 		if !msg.Ok {
-			return m, tea.Quit
+			return m, teax.Quit
 		}
 
 		m.serviceBuildUpdates[msg.Value.ServiceName] = msg.Value

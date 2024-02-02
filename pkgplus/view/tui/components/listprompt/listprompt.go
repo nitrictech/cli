@@ -25,6 +25,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 type ListPrompt struct {
@@ -50,7 +51,7 @@ func (m ListPrompt) UpdateListPrompt(msg tea.Msg) (ListPrompt, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, tui.KeyMap.Quit):
-			return m, tea.Quit
+			return m, teax.Quit
 		}
 	}
 

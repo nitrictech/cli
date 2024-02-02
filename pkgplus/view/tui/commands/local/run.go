@@ -17,6 +17,7 @@ import (
 	viewr "github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 )
 
@@ -184,7 +185,7 @@ func (t *TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch keyMsg.String() {
 		case "ctrl+c", "q":
-			return t, tea.Quit
+			return t, teax.Quit
 		}
 
 	// Using a wrapper here

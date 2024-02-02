@@ -15,6 +15,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
@@ -48,7 +49,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
-			return m, tea.Quit
+			return m, teax.Quit
 		default:
 			m.resourcesTable, cmd = m.resourcesTable.Update(msg)
 			return m, cmd
@@ -66,7 +67,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// the source channel is close
 		if !msg.Ok {
-			return m, tea.Quit
+			return m, teax.Quit
 		}
 
 		switch content := msg.Value.Content.(type) {

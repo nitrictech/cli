@@ -197,7 +197,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
         }
 
         edges.push({
-          id: `e-${api.name}-${path}-${m}`,
+          id: `e-${api.name}-${method['x-nitric-target']['name']}`,
           source: node.id,
           target: method['x-nitric-target']['name'],
           animated: true,
@@ -208,7 +208,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
             type: MarkerType.ArrowClosed,
             orient: 'auto-start-reverse',
           },
-          label: `${m} ${path}`,
+          label: "routes",
         })
       })
     })

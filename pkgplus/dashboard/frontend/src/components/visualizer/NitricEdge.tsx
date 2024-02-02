@@ -1,13 +1,17 @@
 import { cn } from '@/lib/utils'
+import { getEdgeParams } from '@/lib/utils/generate-visualizer-data';
 import {
   type EdgeProps,
   EdgeLabelRenderer,
   BaseEdge,
   getBezierPath,
+  useNodes,
 } from 'reactflow'
 
 export default function NitricEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -20,16 +24,23 @@ export default function NitricEdge({
   selected,
   data,
 }: EdgeProps) {
+  const allNodes = useNodes();
+
   const xEqual = sourceX === targetX
   const yEqual = sourceY === targetY
 
+  const sourceNode = allNodes.find(n => n.id === source);
+  const targetNode = allNodes.find(n => n.id === target);
+
+  const edgeParams = getEdgeParams(sourceNode, targetNode);
+
   const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX: xEqual ? sourceX + 0.0001 : sourceX,
-    sourceY: yEqual ? sourceY + 0.0001 : sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
+    sourceX: edgeParams.sx,
+    sourceY: edgeParams.sy,
+    sourcePosition: edgeParams.sourcePos,
+    targetX: edgeParams.tx,
+    targetY: edgeParams.ty,
+    targetPosition: edgeParams.targetPos,
   })
 
   return (

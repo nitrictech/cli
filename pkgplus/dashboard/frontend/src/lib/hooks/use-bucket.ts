@@ -1,45 +1,45 @@
-import { useCallback } from "react";
-import useSWR from "swr";
-import { fetcher } from "./fetcher";
-import type { BucketFile } from "../../types";
-import { STORAGE_API } from "../constants";
+import { useCallback } from 'react'
+import useSWR from 'swr'
+import { fetcher } from './fetcher'
+import type { BucketFile } from '../../types'
+import { STORAGE_API } from '../constants'
 
 export const useBucket = (bucket?: string, prefix?: string) => {
   const { data, mutate } = useSWR<BucketFile[]>(
     bucket && prefix
       ? `${STORAGE_API}?action=list-files&bucket=${bucket}`
       : null,
-    fetcher()
-  );
+    fetcher(),
+  )
 
   const writeFile = useCallback(
     async (file: File) => {
       return fetch(
         `${STORAGE_API}?action=write-file&bucket=${bucket}&fileKey=${encodeURI(
-          prefix === "/" ? file.name : prefix + file.name
+          prefix === '/' ? file.name : prefix + file.name,
         )}`,
         {
-          method: "PUT",
+          method: 'PUT',
           body: file,
-        }
-      );
+        },
+      )
     },
-    [bucket, prefix]
-  );
+    [bucket, prefix],
+  )
 
   const deleteFile = useCallback(
     (fileKey: string) => {
       return fetch(
         `${STORAGE_API}?action=delete-file&bucket=${bucket}&fileKey=${encodeURI(
-          fileKey
+          fileKey,
         )}`,
         {
-          method: "DELETE",
-        }
-      );
+          method: 'DELETE',
+        },
+      )
     },
-    [bucket, prefix]
-  );
+    [bucket, prefix],
+  )
 
   return {
     data,
@@ -47,5 +47,5 @@ export const useBucket = (bucket?: string, prefix?: string) => {
     deleteFile,
     writeFile,
     loading: !data,
-  };
-};
+  }
+}

@@ -1,165 +1,184 @@
-import type { OpenAPIV3 } from "openapi-types";
-import type { FieldRow } from "./components/shared/FieldRows";
+import type { OpenAPIV3 } from 'openapi-types'
+import type { FieldRow } from './components/shared/FieldRows'
 
-export type APIDoc = OpenAPIV3.Document;
+export type APIDoc = OpenAPIV3.Document
 
 export type Method =
-  | "GET"
-  | "PUT"
-  | "POST"
-  | "DELETE"
-  | "OPTIONS"
-  | "HEAD"
-  | "PATCH"
-  | "TRACE";
+  | 'GET'
+  | 'PUT'
+  | 'POST'
+  | 'DELETE'
+  | 'OPTIONS'
+  | 'HEAD'
+  | 'PATCH'
+  | 'TRACE'
 
 export interface BaseResource {
-  name: string;
-  requestingServices: string[];
+  name: string
+  filePath: string
+  requestingServices: string[]
 }
 
 export interface Api extends BaseResource {
-  spec: APIDoc;
+  spec: APIDoc
 }
 
 export interface Schedule extends BaseResource {
-  expression?: string;
-  rate?: string;
+  expression?: string
+  rate?: string
+  target: string
 }
 
 export interface Topic extends BaseResource {
-  subscriberCount: number;
+  subscriberCount: number
+  subscribers: Map<string, number>
 }
+
+export type Service = BaseResource
+
 export interface History {
-  apis: ApiHistoryItem[];
-  schedules: EventHistoryItem[];
-  topics: EventHistoryItem[];
+  apis: ApiHistoryItem[]
+  schedules: EventHistoryItem[]
+  topics: EventHistoryItem[]
 }
 
 export interface WebSocket extends BaseResource {
-  events: ("connect" | "disconnect" | "message")[];
+  events: ('connect' | 'disconnect' | 'message')[]
 }
 
 export interface WebSocket {
-  connectionCount: number;
+  connectionCount: number
+  targets: Map<string, string>
   messages: {
-    data: string;
-    time: string;
-    connectionId: string;
-  }[];
+    data: string
+    time: string
+    connectionId: string
+  }[]
 }
 
 export interface WebSocketsInfo {
-  [socket: string]: WebSocket;
+  [socket: string]: WebSocket
 }
 
-export interface Bucket extends BaseResource {
-  notificationCount: number;
+export type Bucket = BaseResource
+
+type ResourceType = 'bucket' | 'topic' | 'websocket' | 'collection' | 'secret'
+
+export type Notification = {
+  bucket: string
+  target: string
 }
 
-type ResourceType = "bucket" | "topic" | "websocket" | "collection" | "secret";
+type Subscriber = {
+  topic: string
+  target: string
+}
 
 interface Resource {
-  name: string;
-  type: ResourceType;
+  name: string
+  type: ResourceType
 }
 export interface Policy extends BaseResource {
-  actions: string[];
-  resources: Resource[];
+  principals: Resource[]
+  actions: string[]
+  resources: Resource[]
 }
 export interface WebSocketResponse {
-  projectName: string;
-  buckets: Bucket[];
-  apis: Api[];
-  schedules: Schedule[];
-  topics: Topic[];
-  subscriptions: string[];
-  websockets: WebSocket[];
+  projectName: string
+  buckets: Bucket[]
+  apis: Api[]
+  schedules: Schedule[]
+  notifications: Notification[]
+  subscriptions: Subscriber[]
+  topics: Topic[]
+  services: Service[]
+  // subscriptions: string[];
+  websockets: WebSocket[]
   policies: {
-    [name: string]: Policy;
-  };
-  triggerAddress: string;
-  apiAddresses: Record<string, string>;
-  websocketAddresses: Record<string, string>;
-  storageAddress: string; // has http:// prefix
-  currentVersion: string;
-  latestVersion: string;
-  connected: boolean;
+    [name: string]: Policy
+  }
+  triggerAddress: string
+  apiAddresses: Record<string, string>
+  websocketAddresses: Record<string, string>
+  storageAddress: string // has http:// prefix
+  currentVersion: string
+  latestVersion: string
+  connected: boolean
 }
 
 export interface Param {
-  path: string;
-  value: OpenAPIV3.ParameterObject[];
+  path: string
+  value: OpenAPIV3.ParameterObject[]
 }
 
 export interface Endpoint {
-  id: string;
-  api: string;
-  path: string;
-  method: Method;
-  params?: Param[];
-  doc: Api["spec"];
+  id: string
+  api: string
+  path: string
+  method: Method
+  params?: Param[]
+  doc: Api['spec']
 }
 
 export interface APIRequest {
-  path?: string;
-  method?: Method;
-  pathParams: FieldRow[] | [];
-  queryParams: FieldRow[];
-  headers: FieldRow[];
-  body?: BodyInit | null;
+  path?: string
+  method?: Method
+  pathParams: FieldRow[] | []
+  queryParams: FieldRow[]
+  headers: FieldRow[]
+  body?: BodyInit | null
 }
 
 export interface APIResponse {
-  data?: any;
-  status?: number;
-  time?: number;
-  size?: number;
-  headers?: Record<string, string>;
+  data?: any
+  status?: number
+  time?: number
+  size?: number
+  headers?: Record<string, string>
 }
 
 export interface BucketFile {
-  key: string;
+  key: string
 }
 
 // HISTORY //
 
 /** Used only in local storage to store the last used params in a request */
 export interface LocalStorageHistoryItem {
-  request: APIRequest;
-  JSONBody: string;
+  request: APIRequest
+  JSONBody: string
 }
 
 /** History that is received from the CLI web socket */
 export interface HistoryItem<T> {
-  time: number;
-  event: T;
+  time: number
+  event: T
 }
 
-export type EventHistoryItem = TopicHistoryItem | ScheduleHistoryItem;
+export type EventHistoryItem = TopicHistoryItem | ScheduleHistoryItem
 
 export type TopicHistoryItem = HistoryItem<{
-  name: string;
-  payload: string;
-  success: boolean;
-}>;
+  name: string
+  payload: string
+  success: boolean
+}>
 
 export type ScheduleHistoryItem = HistoryItem<{
-  name: string;
-  success: boolean;
-}>;
+  name: string
+  success: boolean
+}>
 
 export type ApiHistoryItem = HistoryItem<{
-  api: string;
-  request: RequestHistory;
-  response: APIResponse;
-}>;
+  api: string
+  request: RequestHistory
+  response: APIResponse
+}>
 
 export interface RequestHistory {
-  path?: string;
-  method?: Method;
-  pathParams: FieldRow[] | [];
-  queryParams: FieldRow[] | [];
-  headers: Record<string, string[]>;
-  body?: BodyInit | null;
+  path?: string
+  method?: Method
+  pathParams: FieldRow[] | []
+  queryParams: FieldRow[] | []
+  headers: Record<string, string[]>
+  body?: BodyInit | null
 }

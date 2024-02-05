@@ -1,15 +1,15 @@
-import { Fragment } from "react";
-import { Listbox, Transition } from "@headlessui/react";
-import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
-import { cn } from "@/lib/utils";
+import { Fragment } from 'react'
+import { Listbox, Transition } from '@headlessui/react'
+import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
+import { cn } from '@/lib/utils'
 
 interface Props<T> {
-  id: string;
-  label: string;
-  selected: T | undefined;
-  items: T[];
-  setSelected: (value: T) => any;
-  display: (value: T) => React.ReactElement | string;
+  id: string
+  label: string
+  selected: T | undefined
+  items: T[]
+  setSelected: (value: T) => any
+  display: (value: T) => React.ReactElement | string
 }
 
 const Select = <T extends Record<string, any> | string>({
@@ -54,8 +54,8 @@ const Select = <T extends Record<string, any> | string>({
                     key={i}
                     className={({ active }) =>
                       cn(
-                        active ? "bg-blue-600 text-white" : "text-gray-900",
-                        "relative cursor-default select-none py-2 pl-3 pr-9"
+                        active ? 'bg-blue-600 text-white' : 'text-gray-900',
+                        'relative cursor-default select-none py-2 pl-3 pr-9',
                       )
                     }
                     value={item}
@@ -64,8 +64,8 @@ const Select = <T extends Record<string, any> | string>({
                       <>
                         <span
                           className={cn(
-                            selected ? "font-semibold" : "font-normal",
-                            "block truncate"
+                            selected ? 'font-semibold' : 'font-normal',
+                            'block truncate',
                           )}
                         >
                           {display(item)}
@@ -74,8 +74,8 @@ const Select = <T extends Record<string, any> | string>({
                         {selected ? (
                           <span
                             className={cn(
-                              active ? "text-white" : "text-primary",
-                              "absolute inset-y-0 right-0 flex items-center pr-4"
+                              active ? 'text-white' : 'text-primary',
+                              'absolute inset-y-0 right-0 flex items-center pr-4',
                             )}
                           >
                             <CheckIcon className="h-5 w-5" aria-hidden="true" />
@@ -91,7 +91,7 @@ const Select = <T extends Record<string, any> | string>({
         </div>
       )}
     </Listbox>
-  );
-};
+  )
+}
 
-export default Select;
+export default Select

@@ -1,14 +1,14 @@
 export const formatJSON = (
   value: any,
-  space: string | number | undefined = 2
+  space: string | number | undefined = 2,
 ) => {
   try {
-    if (typeof value === "string") {
-      value = JSON.parse(value);
+    if (typeof value === 'string') {
+      value = JSON.parse(value)
     }
 
-    return JSON.stringify(value, null, space);
+    return JSON.stringify(value, null, space)
   } catch (e) {
-    return value;
+    return value
   }
-};
+}

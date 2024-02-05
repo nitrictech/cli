@@ -86,6 +86,14 @@ func (l *LocalApiGatewayService) unregisterApiWorker(serviceName string, registr
 	l.state[registrationRequest.Api][serviceName] = slices.DeleteFunc(l.state[registrationRequest.Api][serviceName], func(item *apispb.RegistrationRequest) bool {
 		return item == registrationRequest
 	})
+
+	if len(l.state[registrationRequest.Api][serviceName]) == 0 {
+		delete(l.state[registrationRequest.Api], serviceName)
+	}
+
+	if len(l.state[registrationRequest.Api]) == 0 {
+		delete(l.state, registrationRequest.Api)
+	}
 }
 
 func (l *LocalApiGatewayService) Serve(stream apispb.Api_ServeServer) error {

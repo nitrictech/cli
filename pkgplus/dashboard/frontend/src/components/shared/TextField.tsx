@@ -1,15 +1,15 @@
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils'
 import type {
   ForwardRefExoticComponent,
   InputHTMLAttributes,
   SVGProps,
-} from "react";
+} from 'react'
 
 interface Props extends InputHTMLAttributes<HTMLInputElement> {
-  label: string;
-  hideLabel?: boolean;
-  id: string;
-  icon?: ForwardRefExoticComponent<SVGProps<SVGSVGElement>>;
+  label: string
+  hideLabel?: boolean
+  id: string
+  icon?: ForwardRefExoticComponent<SVGProps<SVGSVGElement>>
 }
 
 const TextField = ({
@@ -25,8 +25,8 @@ const TextField = ({
         htmlFor={id}
         className={
           hideLabel
-            ? "sr-only"
-            : "block text-sm font-medium leading-6 text-gray-900"
+            ? 'sr-only'
+            : 'block text-sm font-medium leading-6 text-gray-900'
         }
       >
         {label}
@@ -41,13 +41,13 @@ const TextField = ({
           {...inputProps}
           id={id}
           className={cn(
-            "block w-full px-2 rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6",
-            Icon && "pl-10"
+            'block w-full rounded-md border-0 px-2 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+            Icon && 'pl-10',
           )}
         />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default TextField;
+export default TextField

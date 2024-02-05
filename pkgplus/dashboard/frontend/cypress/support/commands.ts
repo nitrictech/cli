@@ -38,28 +38,28 @@
 declare global {
   namespace Cypress {
     interface Chainable {
-      getTestEl(id: string, timeout?: number): Chainable<JQuery<HTMLElement>>;
-      getAPIResponseCodeEditor(): Chainable<JQuery<HTMLElement>>;
-      getJSONCodeEditorElement(): Chainable<JQuery<HTMLElement>>;
+      getTestEl(id: string, timeout?: number): Chainable<JQuery<HTMLElement>>
+      getAPIResponseCodeEditor(): Chainable<JQuery<HTMLElement>>
+      getJSONCodeEditorElement(): Chainable<JQuery<HTMLElement>>
     }
   }
 }
 
 // cypress/support/commands.js
-Cypress.Commands.add("getTestEl", (id: string, timeout = 3000) => {
-  return cy.get(`[data-testid='${id}']`, { timeout: timeout });
-});
+Cypress.Commands.add('getTestEl', (id: string, timeout = 3000) => {
+  return cy.get(`[data-testid='${id}']`, { timeout: timeout })
+})
 
-Cypress.Commands.add("getAPIResponseCodeEditor", () => {
-  return cy.get("#api-response .cm-content", {
+Cypress.Commands.add('getAPIResponseCodeEditor', () => {
+  return cy.get('#api-response .cm-content', {
     timeout: 5000,
-  });
-});
+  })
+})
 
-Cypress.Commands.add("getJSONCodeEditorElement", () => {
-  return cy.get("#json-editor .cm-content", {
+Cypress.Commands.add('getJSONCodeEditorElement', () => {
+  return cy.get('#json-editor .cm-content', {
     timeout: 5000,
-  });
-});
+  })
+})
 
-export {};
+export {}

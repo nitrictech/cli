@@ -1,22 +1,23 @@
-import { type ComponentType } from "react";
-import cronstrue from "cronstrue";
-import type { Schedule } from "@/types";
-import type { NodeProps } from "reactflow";
-import NodeBase, { type NodeBaseData } from "./NodeBase";
+import { type ComponentType } from 'react'
+import cronstrue from 'cronstrue'
+import type { Schedule } from '@/types'
+import type { NodeProps } from 'reactflow'
+import NodeBase, { type NodeBaseData } from './NodeBase'
 
-export type ScheduleNodeData = NodeBaseData<Schedule>;
+export type ScheduleNodeData = NodeBaseData<Schedule>
 
-export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = ({
-  data,
-  selected,
-}) => {
+export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
+  props,
+) => {
+  const { data } = props
+
   return (
     <NodeBase
-      {...data}
-      selected={selected}
+      {...props}
       drawerOptions={{
         title: `Schedule - ${data.title}`,
         description: data.description,
+        testHref: `/schedules`, // TODO add url param to switch to resource
         children: (
           <div className="space-y-4">
             {data.resource.expression ? (
@@ -43,11 +44,11 @@ export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = ({
 
             <div className="flex flex-col">
               <span className="font-bold">Requested by:</span>
-              <span>{data.resource.requestingServices.join(", ")}</span>
+              <span>{data.resource.requestingServices.join(', ')}</span>
             </div>
           </div>
         ),
       }}
     />
-  );
-};
+  )
+}

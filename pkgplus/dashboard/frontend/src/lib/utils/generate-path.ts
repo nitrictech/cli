@@ -1,29 +1,29 @@
-import type { FieldRow } from "../../components/shared";
+import type { FieldRow } from '../../components/shared'
 
 export function generatePath(
   path: string,
   pathParams: FieldRow[],
-  queryParams: FieldRow[]
+  queryParams: FieldRow[],
 ) {
   pathParams.forEach((p) => {
-    path = path.replace(`{${p.key}}`, p.value);
-  });
+    path = path.replace(`{${p.key}}`, p.value)
+  })
 
   if (queryParams.length) {
-    const searchParams = new URLSearchParams();
+    const searchParams = new URLSearchParams()
 
     queryParams.forEach((param) => {
       if (param.key) {
-        searchParams.append(param.key, param.value);
+        searchParams.append(param.key, param.value)
       }
-    });
+    })
 
-    const queryPath = searchParams.toString();
+    const queryPath = searchParams.toString()
 
     if (queryPath) {
-      path = `${path}?${queryPath.replace(/^(\?)/, "")}`;
+      path = `${path}?${queryPath.replace(/^(\?)/, '')}`
     }
   }
 
-  return path;
+  return path
 }

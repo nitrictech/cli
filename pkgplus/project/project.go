@@ -557,7 +557,7 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 
 		// start the service with the given file reference from its projects CWD
 		group.Go(func() error {
-			port, err := localCloud.AddService(svc.Name)
+			port, err := localCloud.AddService(svc.file)
 			if err != nil {
 				return err
 			}
@@ -585,7 +585,7 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 		svc := service
 
 		group.Go(func() error {
-			port, err := localCloud.AddService(svc.Name)
+			port, err := localCloud.AddService(svc.file)
 			if err != nil {
 				return err
 			}

@@ -1,19 +1,19 @@
-import { type FC, useMemo } from "react";
-import type { WebSocket } from "../../types";
-import TreeView, { type TreeItemType } from "../shared/TreeView";
-import type { TreeItem, TreeItemIndex } from "react-complex-tree";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { type FC, useMemo } from 'react'
+import type { WebSocket } from '../../types'
+import TreeView, { type TreeItemType } from '../shared/TreeView'
+import type { TreeItem, TreeItemIndex } from 'react-complex-tree'
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 
-export type EventsTreeItemType = TreeItemType<WebSocket>;
+export type EventsTreeItemType = TreeItemType<WebSocket>
 
 interface Props {
-  websockets: WebSocket[];
-  onSelect: (resource: WebSocket) => void;
-  initialItem: WebSocket;
+  websockets: WebSocket[]
+  onSelect: (resource: WebSocket) => void
+  initialItem: WebSocket
 }
 
-const REQUIRED_EVENTS = ["connect", "message", "disconnect"];
+const REQUIRED_EVENTS = ['connect', 'message', 'disconnect']
 
 const WSTreeView: FC<Props> = ({ websockets, onSelect, initialItem }) => {
   const treeItems: Record<
@@ -21,15 +21,15 @@ const WSTreeView: FC<Props> = ({ websockets, onSelect, initialItem }) => {
     TreeItem<EventsTreeItemType>
   > = useMemo(() => {
     const rootItem: TreeItem = {
-      index: "root",
+      index: 'root',
       isFolder: true,
       children: [],
       data: null,
-    };
+    }
 
     const rootItems: Record<TreeItemIndex, TreeItem<EventsTreeItemType>> = {
       root: rootItem,
-    };
+    }
 
     for (const resource of websockets) {
       // add api if not added already
@@ -40,14 +40,14 @@ const WSTreeView: FC<Props> = ({ websockets, onSelect, initialItem }) => {
             label: resource.name,
             data: resource,
           },
-        };
+        }
 
-        rootItem.children!.push(resource.name);
+        rootItem.children!.push(resource.name)
       }
     }
 
-    return rootItems;
-  }, [websockets]);
+    return rootItems
+  }, [websockets])
 
   return (
     <TreeView<EventsTreeItemType>
@@ -57,31 +57,31 @@ const WSTreeView: FC<Props> = ({ websockets, onSelect, initialItem }) => {
       getItemTitle={(item) => item.data.label}
       onPrimaryAction={(items) => {
         if (items.data.data) {
-          onSelect(items.data.data);
+          onSelect(items.data.data)
         }
       }}
       renderItemTitle={({ item }) => {
         const eventsNotRegistered = REQUIRED_EVENTS.filter(
-          (evt) => !item.data.data?.events.includes(evt as any)
-        );
+          (evt) => !item.data.data?.events.includes(evt as any),
+        )
         return (
-          <div className="flex items-center justify-between w-full">
+          <div className="flex w-full items-center justify-between">
             <span className="truncate">{item.data.label}</span>
             {eventsNotRegistered.length ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <ExclamationTriangleIcon className="w-5 h-5 text-destructive" />
+                  <ExclamationTriangleIcon className="h-5 w-5 text-destructive" />
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>Missing Events: {eventsNotRegistered.join(", ")}</p>
+                  <p>Missing Events: {eventsNotRegistered.join(', ')}</p>
                 </TooltipContent>
               </Tooltip>
             ) : null}
           </div>
-        );
+        )
       }}
     />
-  );
-};
+  )
+}
 
-export default WSTreeView;
+export default WSTreeView

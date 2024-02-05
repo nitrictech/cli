@@ -3,8 +3,8 @@ import {
   type PropsWithChildren,
   type ReactNode,
   useState,
-} from "react";
-import { Dialog, Popover, Transition } from "@headlessui/react";
+} from 'react'
+import { Dialog, Popover, Transition } from '@headlessui/react'
 import {
   DocumentDuplicateIcon,
   Bars3Icon,
@@ -18,20 +18,20 @@ import {
   ChatBubbleBottomCenterIcon,
   ChatBubbleLeftRightIcon,
   MapIcon,
-} from "@heroicons/react/24/outline";
-import { cn } from "@/lib/utils";
-import { useWebSocket } from "../../lib/hooks/use-web-socket";
-import { Toaster } from "react-hot-toast";
+} from '@heroicons/react/24/outline'
+import { cn } from '@/lib/utils'
+import { useWebSocket } from '../../lib/hooks/use-web-socket'
+import { Toaster } from 'react-hot-toast'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
-import { Button } from "../ui/button";
-import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Spinner } from "../shared";
+} from '../ui/tooltip'
+import { Button } from '../ui/button'
+import { ExclamationCircleIcon } from '@heroicons/react/20/solid'
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
+import { Spinner } from '../shared'
 
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
@@ -53,96 +53,96 @@ const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
       </g>
     </g>
   </svg>
-);
+)
 
 const resourceLinks = [
   {
-    name: "Nitric Docs",
-    href: "https://nitric.io/docs",
+    name: 'Nitric Docs',
+    href: 'https://nitric.io/docs',
     icon: DocumentDuplicateIcon,
     description:
-      "Unlock the power of knowledge! Dive into our docs for helpful tips, tricks, and all the information you need to make the most out of Nitric",
+      'Unlock the power of knowledge! Dive into our docs for helpful tips, tricks, and all the information you need to make the most out of Nitric',
   },
   {
-    name: "Send Feedback",
-    href: "https://github.com/nitrictech/nitric/discussions/new?category=general&title=Local%20Dashboard%20Feedback",
+    name: 'Send Feedback',
+    href: 'https://github.com/nitrictech/nitric/discussions/new?category=general&title=Local%20Dashboard%20Feedback',
     icon: PaperAirplaneIcon,
     description:
-      "Help us improve! Your feedback is valuable in shaping our roadmap",
+      'Help us improve! Your feedback is valuable in shaping our roadmap',
   },
-];
+]
 
 const communityLinks = [
   {
-    name: "Join us on Discord",
-    href: "https://nitric.io/chat",
+    name: 'Join us on Discord',
+    href: 'https://nitric.io/chat',
     icon: DiscordLogo,
   },
   {
-    name: "GitHub Discussions",
-    href: "https://github.com/nitrictech/nitric/discussions",
+    name: 'GitHub Discussions',
+    href: 'https://github.com/nitrictech/nitric/discussions',
     icon: ChatBubbleBottomCenterIcon,
   },
-];
+]
 
 interface Props extends PropsWithChildren {
-  title: string;
-  routePath: string;
-  secondLevelNav?: ReactNode;
-  mainClassName?: string;
-  hideTitle?: boolean;
+  title: string
+  routePath: string
+  secondLevelNav?: ReactNode
+  mainClassName?: string
+  hideTitle?: boolean
 }
 
 const AppLayout: React.FC<Props> = ({
-  title = "Local Dashboard",
+  title = 'Local Dashboard',
   children,
   secondLevelNav,
   mainClassName,
   hideTitle,
-  routePath = "/",
+  routePath = '/',
 }) => {
-  const { data, state } = useWebSocket();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { data, state } = useWebSocket()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // remove trailing slash
-  routePath = routePath !== "/" ? routePath.replace(/\/$/, "") : routePath;
+  routePath = routePath !== '/' ? routePath.replace(/\/$/, '') : routePath
 
   const navigation = [
     {
-      name: "APIs",
-      href: "/",
+      name: 'APIs',
+      href: '/',
       icon: GlobeAltIcon,
       count: data?.apis?.length || 0,
     },
     {
-      name: "Websockets",
-      href: "/websockets",
+      name: 'Websockets',
+      href: '/websockets',
       icon: ChatBubbleLeftRightIcon,
       count: data?.websockets?.length || 0,
     },
     {
-      name: "Schedules",
-      href: "/schedules",
+      name: 'Schedules',
+      href: '/schedules',
       icon: ClockIcon,
       count: data?.schedules?.length || 0,
     },
     {
-      name: "Storage",
-      href: "/storage",
+      name: 'Storage',
+      href: '/storage',
       icon: CircleStackIcon,
       count: data?.buckets?.length || 0,
     },
     {
-      name: "Topics",
-      href: "/topics",
+      name: 'Topics',
+      href: '/topics',
       icon: MegaphoneIcon,
       count: data?.topics?.length,
     },
     // { name: "Collections", href: "#", icon: FolderIcon, current: false },
     // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
-  ];
+  ]
 
-  const showAlert = data?.connected === false || state === "error";
+  const showAlert = data?.connected === false || state === 'error'
 
   return (
     <>
@@ -186,7 +186,7 @@ const AppLayout: React.FC<Props> = ({
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                   >
-                    <div className="absolute top-0 left-full flex w-16 justify-center pt-5">
+                    <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
                       <button
                         type="button"
                         className="-m-2.5 p-2.5"
@@ -219,17 +219,17 @@ const AppLayout: React.FC<Props> = ({
                                   href={item.href}
                                   className={cn(
                                     item.href === routePath
-                                      ? "bg-gray-50 text-primary"
-                                      : "text-gray-700 hover:text-primary hover:bg-gray-50",
-                                    "group flex gap-x-3 rounded-md p-2 items-center text-sm leading-6 font-semibold"
+                                      ? 'bg-gray-50 text-primary'
+                                      : 'text-gray-700 hover:bg-gray-50 hover:text-primary',
+                                    'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
                                   )}
                                 >
                                   <item.icon
                                     className={cn(
                                       item.href === routePath
-                                        ? "text-primary"
-                                        : "text-gray-400 group-hover:text-primary",
-                                      "h-6 w-6 shrink-0"
+                                        ? 'text-primary'
+                                        : 'text-gray-400 group-hover:text-primary',
+                                      'h-6 w-6 shrink-0',
                                     )}
                                     aria-hidden="true"
                                   />
@@ -237,7 +237,7 @@ const AppLayout: React.FC<Props> = ({
                                   {item.count ? (
                                     <span
                                       data-testid={`${item.name}-count`}
-                                      className="flex h-4 w-4 text-xs items-center justify-center rounded-full bg-white ring-2 ring-gray-100"
+                                      className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-xs ring-2 ring-gray-100"
                                     >
                                       {item.count}
                                     </span>
@@ -260,17 +260,17 @@ const AppLayout: React.FC<Props> = ({
                                     target="_blank"
                                     rel="noreferrer"
                                     className={cn(
-                                      "text-gray-700 hover:text-primary items-center hover:bg-gray-50",
-                                      "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
+                                      'items-center text-gray-700 hover:bg-gray-50 hover:text-primary',
+                                      'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
                                     )}
                                   >
                                     <span className="truncate">
                                       {link.name}
                                     </span>
-                                    <link.icon className="w-4 h-4" />
+                                    <link.icon className="h-4 w-4" />
                                   </a>
                                 </li>
-                              )
+                              ),
                             )}
                           </ul>
                         </li>
@@ -283,7 +283,7 @@ const AppLayout: React.FC<Props> = ({
           </Dialog>
         </Transition.Root>
 
-        <div className="hidden lg:fixed border-r lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-20 lg:overflow-y-auto lg:bg-white lg:pb-4">
+        <div className="hidden border-r lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-20 lg:overflow-y-auto lg:bg-white lg:pb-4">
           <div className="flex h-16 shrink-0 items-center justify-center">
             <img
               className="h-8 w-auto"
@@ -301,9 +301,9 @@ const AppLayout: React.FC<Props> = ({
                         href={item.href}
                         className={cn(
                           item.href === routePath
-                            ? "bg-gray-100 text-primary"
-                            : "text-gray-400 hover:text-primary hover:bg-gray-100",
-                          "group relative flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                            ? 'bg-gray-100 text-primary'
+                            : 'text-gray-400 hover:bg-gray-100 hover:text-primary',
+                          'group relative flex gap-x-3 rounded-md p-3 text-sm font-semibold leading-6',
                         )}
                       >
                         <item.icon
@@ -314,7 +314,7 @@ const AppLayout: React.FC<Props> = ({
                         {item.count ? (
                           <span
                             data-testid={`${item.name}-count`}
-                            className="absolute right-0 bottom-0 flex items-center justify-center h-4 w-4 text-xs -translate-y-1/2 translate-x-1/2 transform rounded-full bg-white ring-2 ring-gray-100"
+                            className="absolute bottom-0 right-0 flex h-4 w-4 -translate-y-1/2 translate-x-1/2 transform items-center justify-center rounded-full bg-white text-xs ring-2 ring-gray-100"
                           >
                             {item.count}
                           </span>
@@ -333,8 +333,8 @@ const AppLayout: React.FC<Props> = ({
         {secondLevelNav && (
           <aside
             className={cn(
-              "fixed inset-y-0 left-20 pt-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 pb-6 lg:block",
-              showAlert && "lg:mt-24"
+              'fixed inset-y-0 left-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 pb-6 pt-20 lg:block',
+              showAlert && 'lg:mt-24',
             )}
           >
             {secondLevelNav}
@@ -357,18 +357,18 @@ const AppLayout: React.FC<Props> = ({
               aria-hidden="true"
             />
             {data?.projectName && (
-              <div className="flex gap-6 items-center md:text-lg font-semibold leading-6 text-gray-900">
-                {data.projectName} <span className="text-gray-300">/</span>{" "}
+              <div className="flex items-center gap-6 font-semibold leading-6 text-gray-900 md:text-lg">
+                {data.projectName} <span className="text-gray-300">/</span>{' '}
                 <Button
                   className={cn(
-                    "/visualizer" === routePath && "bg-accent",
-                    "font-semibold"
+                    '/visualizer' === routePath && 'bg-accent',
+                    'font-semibold',
                   )}
                   variant="outline"
                   asChild
                 >
                   <a href="/visualizer">
-                    <MapIcon className="w-5 h-5 mr-2 text-gray-500" />{" "}
+                    <MapIcon className="mr-2 h-5 w-5 text-gray-500" />{' '}
                     Visualizer
                   </a>
                 </Button>
@@ -376,7 +376,7 @@ const AppLayout: React.FC<Props> = ({
             )}
 
             <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-              <div className="flex ml-auto items-center gap-x-4 lg:gap-x-6">
+              <div className="ml-auto flex items-center gap-x-4 lg:gap-x-6">
                 {data?.currentVersion &&
                 data?.latestVersion &&
                 data?.currentVersion < data?.latestVersion ? (
@@ -385,17 +385,17 @@ const AppLayout: React.FC<Props> = ({
                       <>
                         <Popover.Button
                           as={Button}
-                          variant={"destructive"}
+                          variant={'destructive'}
                           className={cn(
-                            open && "text-opacity-90",
-                            "font-semibold bg-orange-500 hover:bg-orange-600"
+                            open && 'text-opacity-90',
+                            'bg-orange-500 font-semibold hover:bg-orange-600',
                           )}
                         >
                           <span>Update Available</span>
                           <ExclamationCircleIcon
                             className={cn(
-                              "ml-2 h-5 w-5 transition duration-150 ease-in-out group-hover:text-opacity-80",
-                              open && "text-opacity-70"
+                              'ml-2 h-5 w-5 transition duration-150 ease-in-out group-hover:text-opacity-80',
+                              open && 'text-opacity-70',
                             )}
                             aria-hidden="true"
                           />
@@ -412,7 +412,7 @@ const AppLayout: React.FC<Props> = ({
                           <Popover.Panel className="absolute left-1/2 z-10 mt-3 w-screen max-w-sm -translate-x-1/2 transform px-4 sm:px-0 lg:max-w-3xl">
                             <div className="w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
                               <div className="p-4">
-                                <h3 className="text-sm font mb-2 text-center font-semibold leading-6 text-gray-500">
+                                <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-gray-500">
                                   A new version of Nitric is available
                                 </h3>
                                 <div className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50">
@@ -425,7 +425,7 @@ const AppLayout: React.FC<Props> = ({
                                   <div>
                                     <a
                                       href={
-                                        "https://nitric.io/docs/installation"
+                                        'https://nitric.io/docs/installation'
                                       }
                                       target="_blank"
                                       rel="noreferrer"
@@ -446,7 +446,7 @@ const AppLayout: React.FC<Props> = ({
 
                               <div className="bg-gray-50">
                                 <div className="flex flex-col justify-between">
-                                  <h3 className="text-sm font p-4 text-center font-semibold leading-6 text-gray-500">
+                                  <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-gray-500">
                                     Reach out to the community
                                   </h3>
                                   <div className="grid grid-cols-2 divide-x divide-gray-900/5">
@@ -475,7 +475,7 @@ const AppLayout: React.FC<Props> = ({
                     )}
                   </Popover>
                 ) : null}
-                <span className="font-semibold hidden md:block">
+                <span className="hidden font-semibold md:block">
                   Local Dashboard
                 </span>
                 <Popover className="relative">
@@ -483,16 +483,16 @@ const AppLayout: React.FC<Props> = ({
                     <>
                       <Popover.Button
                         as={Button}
-                        variant={"outline"}
+                        variant={'outline'}
                         className={cn(
-                          open && "text-opacity-90",
-                          "font-semibold"
+                          open && 'text-opacity-90',
+                          'font-semibold',
                         )}
                       >
                         <QuestionMarkCircleIcon
                           className={cn(
-                            "mr-2 h-5 w-5 text-gray-500 transition duration-150 ease-in-out group-hover:text-opacity-80",
-                            open && "text-opacity-70"
+                            'mr-2 h-5 w-5 text-gray-500 transition duration-150 ease-in-out group-hover:text-opacity-80',
+                            open && 'text-opacity-70',
                           )}
                           aria-hidden="true"
                         />
@@ -510,7 +510,7 @@ const AppLayout: React.FC<Props> = ({
                         <Popover.Panel className="absolute left-1/2 z-10 mt-3 w-screen max-w-sm -translate-x-1/2 transform px-4 sm:px-0 lg:max-w-3xl">
                           <div className="w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
                             <div className="p-4">
-                              <h3 className="text-sm font mb-2 text-center font-semibold leading-6 text-gray-500">
+                              <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-gray-500">
                                 Need help with your project?
                               </h3>
                               {resourceLinks.map((item) => (
@@ -544,7 +544,7 @@ const AppLayout: React.FC<Props> = ({
 
                             <div className="bg-gray-50">
                               <div className="flex flex-col justify-between">
-                                <h3 className="text-sm font p-4 text-center font-semibold leading-6 text-gray-500">
+                                <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-gray-500">
                                   Reach out to the community
                                 </h3>
                                 <div className="grid grid-cols-2 divide-x divide-gray-900/5">
@@ -564,7 +564,7 @@ const AppLayout: React.FC<Props> = ({
                                     </a>
                                   ))}
                                 </div>
-                                <p className="truncate w-full text-center border-t px-4 py-2 ml-auto text-gray-400">
+                                <p className="ml-auto w-full truncate border-t px-4 py-2 text-center text-gray-400">
                                   CLI Version: v{data?.currentVersion}
                                 </p>
                               </div>
@@ -579,29 +579,29 @@ const AppLayout: React.FC<Props> = ({
             </div>
           </div>
           {showAlert && (
-            <Alert className="flex rounded-none flex-col items-center bg-primary/90 text-white justify-center">
-              <AlertTitle className="text-xl flex items-center text-white gap-4 justify-center">
+            <Alert className="flex flex-col items-center justify-center rounded-none bg-primary/90 text-white">
+              <AlertTitle className="flex items-center justify-center gap-4 text-xl text-white">
                 Waiting for your application to start
                 <Spinner color="info" className="mb-0.5" />
               </AlertTitle>
-              <AlertDescription className="text-lg text-center">
+              <AlertDescription className="text-center text-lg">
                 {!data
-                  ? "Dashboard disconnected from nitric server, ensure nitric is running by executing `nitric start`."
+                  ? 'Dashboard disconnected from nitric server, ensure nitric is running by executing `nitric start`.'
                   : "Nitric is running but hasn't received a connection from your application, ensure your application is running."}
               </AlertDescription>
             </Alert>
           )}
-          <div className={secondLevelNav ? "lg:pl-80" : undefined}>
+          <div className={secondLevelNav ? 'lg:pl-80' : undefined}>
             <div
               className={cn(
-                "px-4 py-10 sm:px-6 lg:px-8 lg:py-12",
-                mainClassName
+                'px-4 py-10 sm:px-6 lg:px-8 lg:py-12',
+                mainClassName,
               )}
             >
               <h1
                 className={cn(
-                  "text-4xl font-bold mb-12",
-                  hideTitle && "sr-only"
+                  'mb-12 text-4xl font-bold',
+                  hideTitle && 'sr-only',
                 )}
               >
                 {title}
@@ -612,7 +612,7 @@ const AppLayout: React.FC<Props> = ({
         </main>
       </TooltipProvider>
     </>
-  );
-};
+  )
+}
 
-export default AppLayout;
+export default AppLayout

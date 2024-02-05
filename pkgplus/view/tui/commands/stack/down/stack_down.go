@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pterm/pterm"
@@ -14,27 +13,32 @@ import (
 	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
 type Model struct {
+	provider           string
 	stack              *stack.Resource
+	defaultParent      *stack.Resource
 	updatesChan        <-chan *deploymentspb.DeploymentDownEvent
 	errorChan          <-chan error
 	providerStdoutChan <-chan string
 	providerStdout     []string
 	errs               []error
 
-	spinner        spinner.Model
-	resourcesTable table.Model
+	done bool
+
+	windowSize tea.WindowSizeMsg
+
+	spinner spinner.Model
 }
 
 var _ tea.Model = Model{}
 
 func (m Model) Init() tea.Cmd {
-	m.errs = make([]error, 0)
 	return tea.Batch(
 		m.spinner.Tick,
 		reactive.AwaitChannel(m.updatesChan),
@@ -46,13 +50,13 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowSize = msg
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
+			m.done = true
 			return m, teax.Quit
-		default:
-			m.resourcesTable, cmd = m.resourcesTable.Update(msg)
-			return m, cmd
 		}
 
 	case reactive.ChanMsg[string]:
@@ -67,6 +71,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// the source channel is close
 		if !msg.Ok {
+			m.done = true
 			return m, teax.Quit
 		}
 
@@ -138,8 +143,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
-	default:
-		m.resourcesTable, cmd = m.resourcesTable.Update(msg)
 	}
 	return m, cmd
 }
@@ -147,90 +150,100 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 const maxOutputLines = 5
 
 var (
-	titleStyle          = lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true)
-	terminalBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tui.Colors.Gray)
+	terminalBorderStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(tui.Colors.Purple)
 	errorStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 )
 
 func (m Model) View() string {
 	// print the stack?
 	v := view.New()
-
-	v.Addln("nitric down%s", m.spinner.View()).WithStyle(titleStyle)
 	v.Break()
 
-	rows := []table.Row{}
+	v.Add(fragments.Tag("down"))
+	v.Add("  tearing down with %s", m.provider)
+	if m.done {
+		v.Break()
+	} else {
+		v.Addln(m.spinner.View())
+	}
+	v.Break()
+
+	statusTree := fragments.NewStatusNode("stack", "")
 
 	for _, child := range m.stack.Children {
-		// print the child
-		rows = append(rows, table.Row{
-			lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Blue).Render(child.Name),
-			"", // "", verbMap[child.action][child.status],
-		})
+		currentNode := statusTree.AddNode(child.Name, "")
 
-		for ix, grandchild := range child.Children {
-			linkChar := lo.Ternary(ix < len(child.Children)-1, "├─", "└─")
-
+		for _, grandchild := range child.Children {
 			resourceTime := lo.Ternary(grandchild.FinishTime.IsZero(), time.Since(grandchild.StartTime).Round(time.Second), grandchild.FinishTime.Sub(grandchild.StartTime))
+			statusColor := tui.Colors.Blue
+			if grandchild.Status == deploymentspb.ResourceDeploymentStatus_FAILED {
+				statusColor = tui.Colors.Red
+			} else if grandchild.Status == deploymentspb.ResourceDeploymentStatus_SUCCESS || grandchild.Action == deploymentspb.ResourceDeploymentAction_SAME {
+				statusColor = tui.Colors.Green
+			}
 
-			rows = append(rows, table.Row{
-				lipgloss.NewStyle().MarginLeft(1).Foreground(tui.Colors.Blue).Render(linkChar) + lipgloss.NewStyle().Foreground(tui.Colors.Gray).Render(grandchild.Name),
-				stack.VerbMap[grandchild.Action][grandchild.Status] + fmt.Sprintf(" (%s)", resourceTime.Round(time.Second)),
-			})
+			statusText := fmt.Sprintf("%s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second))
+			currentNode.AddNode(grandchild.Name, lipgloss.NewStyle().Foreground(statusColor).Render(statusText))
 		}
 	}
-	m.resourcesTable.SetRows(rows)
 
-	v.Addln(m.resourcesTable.View())
+	margin := 10
+	if m.windowSize.Width < 60 {
+		margin = 0
+	}
+
+	// when the final output is rendered the available output width is 5 characters narrower than the window size.
+	lastRunFix := 5
+
+	v.Addln(statusTree.Render(m.windowSize.Width - margin - lastRunFix)).WithStyle(lipgloss.NewStyle().MarginLeft(margin))
 
 	// Provider Stdout and Stderr rendering
 	if len(m.providerStdout) > 0 {
-		v.Addln("Provider Output:").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+		v.Addln("%s stdout:", m.provider).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Blue))
 
 		providerTerm := view.New(view.WithStyle(terminalBorderStyle))
 
-		for _, line := range m.providerStdout[max(0, len(m.providerStdout)-maxOutputLines):] {
-			providerTerm.Addln(line).WithStyle(lipgloss.NewStyle().Width(98))
+		for i, line := range m.providerStdout[max(0, len(m.providerStdout)-maxOutputLines):] {
+			providerTerm.Add(line).WithStyle(lipgloss.NewStyle().Width(min(m.windowSize.Width, 100)))
+			if i < len(m.providerStdout)-1 {
+				providerTerm.Break()
+			}
 		}
 
 		v.Addln(providerTerm.Render())
-		v.Break()
 	}
 
 	for _, e := range m.errs[max(0, len(m.errs)-maxOutputLines):] {
-		v.Addln("Error: %s", e.Error()).WithStyle(errorStyle)
+		v.Break()
+		v.Add(fragments.ErrorTag())
+		v.Addln("  %s", e.Error()).WithStyle(errorStyle)
 	}
 
 	return v.Render()
 }
 
-func New(updatesChan <-chan *deploymentspb.DeploymentDownEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
+func New(providerName string, stackName string, updatesChan <-chan *deploymentspb.DeploymentDownEvent, providerStdoutChan <-chan string, errorChan <-chan error) Model {
+	orphanParent := &stack.Resource{
+		Name:     fmt.Sprintf("Stack::%s", stackName),
+		Message:  "",
+		Action:   deploymentspb.ResourceDeploymentAction_SAME,
+		Status:   deploymentspb.ResourceDeploymentStatus_PENDING,
+		Children: []*stack.Resource{},
+	}
+
 	return Model{
-		resourcesTable: table.New(
-			table.WithColumns([]table.Column{
-				{
-					Title: "Name",
-					Width: 80,
-				},
-				{
-					Title: "Status",
-					Width: 20,
-				},
-			}),
-			table.WithStyles(table.Styles{
-				Selected: table.DefaultStyles().Cell,
-				Header:   table.DefaultStyles().Header,
-				Cell:     table.DefaultStyles().Cell,
-			}),
-		),
+		provider:           providerName,
 		spinner:            spinner.New(spinner.WithSpinner(spinner.Ellipsis)),
 		updatesChan:        updatesChan,
 		providerStdoutChan: providerStdoutChan,
 		errorChan:          errorChan,
+		defaultParent:      orphanParent,
 		stack: &stack.Resource{
-			Name:     "stack",
-			Message:  "",
-			Children: make([]*stack.Resource, 0),
+			Name:    "stack",
+			Message: "",
+			Children: []*stack.Resource{
+				orphanParent,
+			},
 		},
 	}
 }

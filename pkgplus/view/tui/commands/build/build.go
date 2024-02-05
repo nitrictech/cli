@@ -56,26 +56,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) AllDone() bool {
+	for _, service := range m.serviceBuildUpdates {
+		if service.Status == project.ServiceBuildStatus_Complete {
+			continue
+		}
+		if service.Status == project.ServiceBuildStatus_Error {
+			continue
+		}
+		return false
+	}
+
+	return true
+}
+
 func (m Model) View() string {
 
-	buildView := view.New()
-	buildView.Break()
-	buildView.Add(fragments.Tag("build"))
-	buildView.Addln("  Building services%s", m.spinner.View()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.White))
+	v := view.New()
+	v.Break()
+	v.Add(fragments.Tag("build"))
+	v.Add("  Services")
+	if !m.AllDone() {
+		v.Add(m.spinner.View())
+	}
+	v.Break()
 
 	gap := strings.Builder{}
 	for i := 0; i < fragments.TagWidth()+2; i++ {
 		gap.WriteString(" ")
 	}
 
-	buildView.Addln("%sthis may take a few minutes for new services", gap.String()).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray).Italic(true))
-	buildView.Break()
-
 	serviceNames := lo.Keys(m.serviceBuildUpdates)
 
 	sort.Strings(serviceNames)
 
 	serviceUpdates := view.New(view.WithStyle(lipgloss.NewStyle().MarginLeft(fragments.TagWidth() + 2)))
+	serviceUpdates.Break()
 	for _, serviceName := range serviceNames {
 		service := m.serviceBuildUpdates[serviceName]
 
@@ -90,15 +106,15 @@ func (m Model) View() string {
 
 		messageLines := strings.Split(strings.TrimSpace(service.Message), "\n")
 
-		serviceUpdates.Add("%s ", serviceName)
-		serviceUpdates.Addln("%s", service.Status).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+		serviceUpdates.Add("%s ", serviceName).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true))
+		serviceUpdates.Addln("%s", service.Status).WithStyle(lipgloss.NewStyle().Foreground(statusColor).Bold(true))
 		if len(messageLines) > 0 && service.Status != project.ServiceBuildStatus_Complete {
 			serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 		}
 	}
-	buildView.Addln(serviceUpdates.Render())
+	v.Add(serviceUpdates.Render())
 
-	return buildView.Render()
+	return v.Render()
 }
 
 func NewModel(serviceBuildUpdates chan project.ServiceBuildUpdate) Model {

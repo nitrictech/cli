@@ -36,6 +36,10 @@ const (
 )
 
 func wrap(text string, width int, indent int) []string {
+	if width <= 0 {
+		width = 1
+	}
+
 	parts := strings.Split(lipgloss.NewStyle().Width(width).Render(text), "\n")
 	if indent == 0 || len(parts) <= 1 {
 		return parts
@@ -64,9 +68,11 @@ func (n StatusNode) Children() []*StatusNode {
 // Render this node as a tree
 // maxNameWidth sets the maximum width of the names of nodes in the tree.
 // the total width is maxNameWidth + 1 + maxStatusWidth
-func (n StatusNode) Render(maxNameWidth int) string {
-	return n.render(true, maxNameWidth, 0)
+func (n StatusNode) Render(maxWidth int) string {
+	return n.render(true, maxWidth, 0)
 }
+
+const statusWidth = 20
 
 var linkStyle = lipgloss.NewStyle().MarginLeft(1).Foreground(tui.Colors.Blue)
 
@@ -79,7 +85,8 @@ func (n StatusNode) render(omitSelf bool, width int, depth int) string {
 	v := view.New()
 
 	if !omitSelf {
-		nameParts := wrap(n.name, width-((depth-1)*(indent+linkWidth)), indent)
+		nameWidth := width - statusWidth
+		nameParts := wrap(n.name, nameWidth-((depth-1)*(indent+linkWidth)), indent)
 		nameStyle := lipgloss.NewStyle().Foreground(tui.Colors.Gray)
 		if depth == 0 {
 			nameStyle = lipgloss.NewStyle().Foreground(tui.Colors.Blue)
@@ -88,7 +95,7 @@ func (n StatusNode) render(omitSelf bool, width int, depth int) string {
 			v.Add(namePart).WithStyle(nameStyle)
 			if i == 0 {
 				v.Add(" ").WithStyle(nameStyle)
-				v.Addln(n.status).WithStyle(nameStyle)
+				v.Addln(n.status).WithStyle(nameStyle.Copy().Width(statusWidth))
 			} else {
 				v.Break()
 			}

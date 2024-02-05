@@ -117,8 +117,6 @@ var stackUpdateCmd = &cobra.Command{
 	Long:    `Create or update a deployed stack`,
 	Example: `nitric stack update -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// s, err := stack.ConfigFromOptions()
-
 		fs := afero.NewOsFs()
 
 		stackFiles, err := stack.GetAllStackFiles(fs)
@@ -130,7 +128,7 @@ var stackUpdateCmd = &cobra.Command{
 			tui.CheckErr(fmt.Errorf("no stacks found in project, to create a new one run `nitric stack new`"))
 		}
 
-		// Step 0. Get the stack file, or proomptyboi if more than 1.
+		// Step 0. Get the stack file, or prompt if more than 1.
 		stackSelection := ""
 		if len(stackFiles) > 1 {
 			stackList := make([]list.ListItem, len(stackFiles))
@@ -221,7 +219,7 @@ var stackUpdateCmd = &cobra.Command{
 
 		// Step 5b. Communicate with server to share progress of ...
 
-		stackUp := stack_up.New(stackConfig.Name, eventChan, providerStdout, errorChan)
+		stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
 
 		_, err = teax.NewProgram(stackUp).Run()
 		tui.CheckErr(err)
@@ -274,6 +272,9 @@ nitric stack down -s aws -y`,
 			selection, err := teax.NewProgram(promptModel).Run()
 			tui.CheckErr(err)
 			stackSelection = selection.(stack_select.Model).Choice()
+			if stackSelection == "" {
+				return
+			}
 		} else {
 			stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
 			tui.CheckErr(err)
@@ -322,7 +323,7 @@ nitric stack down -s aws -y`,
 			Interactive: true,
 		})
 
-		stackDown := stack_down.New(eventChannel, providerStdout, errorChan)
+		stackDown := stack_down.New(stackConfig.Provider, stackConfig.Name, eventChannel, providerStdout, errorChan)
 
 		_, err = teax.NewProgram(stackDown).Run()
 		tui.CheckErr(err)

@@ -21,9 +21,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 type ListPrompt struct {
@@ -49,7 +51,7 @@ func (m ListPrompt) UpdateListPrompt(msg tea.Msg) (ListPrompt, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, tui.KeyMap.Quit):
-			return m, tea.Quit
+			return m, teax.Quit
 		}
 	}
 
@@ -85,7 +87,7 @@ func (m ListPrompt) View() string {
 	listView := view.New()
 
 	// render the list header
-	listView.Add(m.Tag).WithStyle(tagStyle, lipgloss.NewStyle().MarginTop(1))
+	listView.Add(fragments.Tag(m.Tag))
 	listView.Addln(m.Prompt).WithStyle(promptStyle)
 	listView.Break()
 

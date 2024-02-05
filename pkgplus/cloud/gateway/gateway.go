@@ -112,8 +112,10 @@ func (s *LocalGatewayService) GetApiAddresses() map[string]string {
 func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
 	addresses := make(map[string]string)
 
-	for idx, host := range s.httpWorkers {
-		addresses[host] = strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+	if len(s.httpServers) > 0 && len(s.httpWorkers) == len(s.httpServers) {
+		for idx, host := range s.httpWorkers {
+			addresses[host] = strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+		}
 	}
 
 	return addresses
@@ -134,12 +136,15 @@ func (s *LocalGatewayService) GetWebsocketAddresses() map[string]string {
 
 func (s *LocalGatewayService) handleHttpProxyRequest(idx int) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		// TODO: Use port to map to the correct http worker
-		// port := s.httpWorkers[idx]
+		port := s.httpWorkers[idx]
 
+		// set port so http plugin can find server from state
+		requestCopy := &fasthttp.Request{}
+		ctx.Request.CopyTo(requestCopy)
+		requestCopy.URI().SetHost(port)
 		// TODO: Need to support multiple HTTP handlers
 		// so a plugin wrapper will be required for this
-		resp, err := s.options.HttpPlugin.HandleRequest(&ctx.Request)
+		resp, err := s.options.HttpPlugin.HandleRequest(requestCopy)
 		if err != nil {
 			ctx.Error(fmt.Sprintf("Error handling HTTP Request: %v", err), 500)
 			return
@@ -443,6 +448,8 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 	sort.Strings(uniqHttpWorkers)
 
 	s.httpWorkers = append(s.httpWorkers, uniqHttpWorkers...)
+
+	s.createHttpServers()
 }
 
 func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
@@ -667,7 +674,11 @@ func (s *LocalGatewayService) Stop() error {
 		_ = s.srv.ShutdownWithContext(ctx)
 	}
 
-	return s.serviceServer.Shutdown()
+	if s.serviceServer != nil {
+		return s.serviceServer.Shutdown()
+	}
+
+	return nil
 }
 
 // Create new HTTP gateway

@@ -25,6 +25,7 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/project"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 var force bool
@@ -59,7 +60,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		})
 		tui.CheckErr(err)
 
-		if _, err := tea.NewProgram(projectModel, tea.WithANSICompressor()).Run(); err != nil {
+		if _, err := teax.NewProgram(projectModel, tea.WithANSICompressor()).Run(); err != nil {
 			return err
 		}
 

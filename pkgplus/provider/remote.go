@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 
 	deploy "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
@@ -75,7 +76,11 @@ func (p *DeploymentClient) Up(deploymentRequest *deploy.DeploymentUpRequest) (<-
 			evt, err := op.Recv()
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
-					errorChan <- err
+					if st, ok := status.FromError(err); ok {
+						errorChan <- fmt.Errorf("%s", st.Message())
+					} else {
+						errorChan <- err
+					}
 				}
 				break
 			}

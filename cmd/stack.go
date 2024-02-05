@@ -19,7 +19,6 @@ package cmd
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -35,6 +34,7 @@ import (
 	stack_select "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/select"
 	stack_up "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/up"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
@@ -99,7 +99,7 @@ var newStackCmd = &cobra.Command{
 		if len(args) >= 2 {
 			providerName = args[1]
 		}
-		_, err := tea.NewProgram(stack_new.New(afero.NewOsFs(), stack_new.Args{
+		_, err := teax.NewProgram(stack_new.New(afero.NewOsFs(), stack_new.Args{
 			StackName:    stackName,
 			ProviderName: providerName,
 			Force:        forceNewStack,
@@ -117,8 +117,6 @@ var stackUpdateCmd = &cobra.Command{
 	Long:    `Create or update a deployed stack`,
 	Example: `nitric stack update -s aws`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// s, err := stack.ConfigFromOptions()
-
 		fs := afero.NewOsFs()
 
 		stackFiles, err := stack.GetAllStackFiles(fs)
@@ -130,13 +128,15 @@ var stackUpdateCmd = &cobra.Command{
 			tui.CheckErr(fmt.Errorf("no stacks found in project, to create a new one run `nitric stack new`"))
 		}
 
-		// Step 0. Get the stack file, or proomptyboi if more than 1.
+		// Step 0. Get the stack file, or prompt if more than 1.
 		stackSelection := ""
 		if len(stackFiles) > 1 {
 			stackList := make([]list.ListItem, len(stackFiles))
 
 			for i, stackFile := range stackFiles {
-				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stack.GetStackNameFromFileName(stackFile))
+				stackName, err := stack.GetStackNameFromFileName(stackFile)
+				tui.CheckErr(err)
+				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
 				tui.CheckErr(err)
 				stackList[i] = stack_select.StackListItem{
 					Name:     stackConfig.Name,
@@ -148,11 +148,15 @@ var stackUpdateCmd = &cobra.Command{
 				StackList: stackList,
 			})
 
-			selection, err := tea.NewProgram(promptModel).Run()
-			cobra.CheckErr(err)
+			selection, err := teax.NewProgram(promptModel).Run()
+			tui.CheckErr(err)
 			stackSelection = selection.(stack_select.Model).Choice()
+			if stackSelection == "" {
+				return
+			}
 		} else {
-			stackSelection = stack.GetStackNameFromFileName(stackFiles[0])
+			stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
+			tui.CheckErr(err)
 		}
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
@@ -160,9 +164,6 @@ var stackUpdateCmd = &cobra.Command{
 
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
-
-		// make provider from the provider name
-		// providerName := stackConfig.Provider
 
 		// Step 0a. Locate/Download provider where applicable.
 		prov, err := provider.NewProvider(stackConfig.Provider)
@@ -175,7 +176,7 @@ var stackUpdateCmd = &cobra.Command{
 		buildUpdates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := tea.NewProgram(build.NewModel(buildUpdates))
+		prog := teax.NewProgram(build.NewModel(buildUpdates))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
 		tui.CheckErr(err)
@@ -218,9 +219,9 @@ var stackUpdateCmd = &cobra.Command{
 
 		// Step 5b. Communicate with server to share progress of ...
 
-		stackUp := stack_up.New(eventChan, providerStdout, errorChan)
+		stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
 
-		_, err = tea.NewProgram(stackUp).Run()
+		_, err = teax.NewProgram(stackUp).Run()
 		tui.CheckErr(err)
 	},
 	Args:    cobra.MinimumNArgs(0),
@@ -239,12 +240,12 @@ nitric stack down -s aws -y`,
 		fs := afero.NewOsFs()
 
 		stackFiles, err := stack.GetAllStackFiles(fs)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		if len(stackFiles) == 0 {
 			// no stack files found
 			// print error with suggestion for user to run stack new
-			cobra.CheckErr(fmt.Errorf("no stacks found in project, to create a new one run `nitric stack new`"))
+			tui.CheckErr(fmt.Errorf("no stacks found in project root, to create a new one run `nitric stack new`"))
 		}
 
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
@@ -253,7 +254,9 @@ nitric stack down -s aws -y`,
 			stackList := make([]list.ListItem, len(stackFiles))
 
 			for i, stackFile := range stackFiles {
-				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stack.GetStackNameFromFileName(stackFile))
+				stackName, err := stack.GetStackNameFromFileName(stackFile)
+				tui.CheckErr(err)
+				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
 				tui.CheckErr(err)
 				stackList[i] = stack_select.StackListItem{
 					Name:     stackConfig.Name,
@@ -265,34 +268,38 @@ nitric stack down -s aws -y`,
 				StackList: stackList,
 			})
 
-			selection, err := tea.NewProgram(promptModel).Run()
-			cobra.CheckErr(err)
+			selection, err := teax.NewProgram(promptModel).Run()
+			tui.CheckErr(err)
 			stackSelection = selection.(stack_select.Model).Choice()
+			if stackSelection == "" {
+				return
+			}
 		} else {
-			stackSelection = stack.GetStackNameFromFileName(stackFiles[0])
+			stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
+			tui.CheckErr(err)
 		}
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		proj, err := project.FromFile(fs, "")
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		// make provider from the provider name
 		// providerName := stackConfig.Provider
 
 		// Step 0a. Locate/Download provider where applicable.
 		prov, err := provider.NewProvider(stackConfig.Provider)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		providerFilePath, err := provider.EnsureProviderExists(fs, prov)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		providerStdout := make(chan string)
 
 		// Step 4. Start the deployment provider server
 		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout))
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 		defer providerProcess.Stop()
 
 		// Step 5a. Send specification to provider for deployment
@@ -308,16 +315,16 @@ nitric stack down -s aws -y`,
 		}
 
 		attributesStruct, err := structpb.NewStruct(attributes)
-		cobra.CheckErr(err)
+		tui.CheckErr(err)
 
 		eventChannel, errorChan := deploymentClient.Down(&deploymentspb.DeploymentDownRequest{
 			Attributes:  attributesStruct,
 			Interactive: true,
 		})
 
-		stackDown := stack_down.New(eventChannel, providerStdout, errorChan)
+		stackDown := stack_down.New(stackConfig.Provider, stackConfig.Name, eventChannel, providerStdout, errorChan)
 
-		_, err = tea.NewProgram(stackDown).Run()
+		_, err = teax.NewProgram(stackDown).Run()
 		tui.CheckErr(err)
 	},
 	Args: cobra.ExactArgs(0),

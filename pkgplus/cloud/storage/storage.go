@@ -41,8 +41,10 @@ import (
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
 
-type BucketName = string
-type serviceName = string
+type (
+	BucketName  = string
+	serviceName = string
+)
 
 type State = map[BucketName]map[serviceName]int
 

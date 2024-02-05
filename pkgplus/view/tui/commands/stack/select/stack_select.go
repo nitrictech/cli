@@ -21,6 +21,7 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/listprompt"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 // Model - represents the state of the stack selection list
@@ -40,13 +41,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
-			return m, tea.Quit
+			return m, teax.Quit
 		}
 	}
 
 	m.listModel, cmd = m.listModel.Update(msg)
 	if m.listModel.(listprompt.ListPrompt).IsComplete() {
-		return m, tea.Quit
+		return m, teax.Quit
 	}
 
 	return m, cmd

@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/services"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 var runNoBrowser bool
@@ -67,7 +67,7 @@ var runCmd = &cobra.Command{
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := tea.NewProgram(build.NewModel(updates))
+		prog := teax.NewProgram(build.NewModel(updates))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
 		tui.CheckErr(err)
@@ -84,7 +84,7 @@ var runCmd = &cobra.Command{
 
 		tui.CheckErr(err)
 
-		runView := tea.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
+		runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
 
 		_, _ = runView.Run()
 		// cobra.CheckErr(err)

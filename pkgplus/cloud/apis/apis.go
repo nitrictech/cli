@@ -14,9 +14,11 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/workers/apis"
 )
 
-type ApiName = string
-type ServiceName = string
-type State = map[ApiName]map[ServiceName][]*apispb.RegistrationRequest
+type (
+	ApiName     = string
+	ServiceName = string
+	State       = map[ApiName]map[ServiceName][]*apispb.RegistrationRequest
+)
 
 type ApiRequestState struct {
 	Api      string

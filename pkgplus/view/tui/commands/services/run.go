@@ -6,9 +6,11 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/project"
+	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 type Model struct {
@@ -36,7 +38,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			func() {
 				m.stopChan <- true
 			}()
-			return m, tea.Quit
+			return m, teax.Quit
 		}
 	case reactive.ChanMsg[project.ServiceRunUpdate]:
 		// we know we have a service update
@@ -57,25 +59,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-var headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFDF5"))
-
 func (m Model) View() string {
-	runView := view.New()
+	v := view.New()
 
-	runView.Addln(m.localServicesModel.View())
-
-	runView.Addln("Running services").WithStyle(headingStyle)
-	runView.Break()
-
-	for _, service := range m.serviceStatus {
-		runView.Addln("%s - %s", service.ServiceName, service.Status)
-
-		if service.Err != nil {
-			runView.Addln(service.Err.Error())
-		}
+	if len(m.serviceStatus) == 0 {
+		v.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
+	} else {
+		v.Add("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Addln(" services registered with local nitric server")
 	}
 
-	return runView.Render()
+	v.Addln(m.localServicesModel.View())
+
+	v.Addln("Press 'q' to quit")
+
+	return v.Render()
 }
 
 func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUpdate, localCloud *cloud.LocalCloud, dashboardUrl string) Model {

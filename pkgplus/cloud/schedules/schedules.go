@@ -16,8 +16,10 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/workers/schedules"
 )
 
-type scheduleName = string
-type serviceName = string
+type (
+	scheduleName = string
+	serviceName  = string
+)
 
 type ScheduledService struct {
 	ServiceName serviceName

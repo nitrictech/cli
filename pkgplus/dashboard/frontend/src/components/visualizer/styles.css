@@ -76,6 +76,13 @@
   --nitric-node-icon-color: #d97706; /* amber 600 */
 }
 
+.react-flow__node-keyvaluestore {
+  --nitric-node-from: #e11d48; /* rose 600 */
+  --nitric-node-via: #fb7185; /* rose 400 */
+  --nitric-node-to: #be123c; /* rose 700 */
+  --nitric-node-icon-color: #e11d48; /* rose 600 */
+}
+
 .react-flow__node-schedule {
   --nitric-node-from: #7c3aed; /* Violet 600 */
   --nitric-node-via: #a78bfa; /* Violet 400 */
@@ -95,4 +102,11 @@
   --nitric-node-via: #e879f9; /* Fuchsia 400 */
   --nitric-node-to: #a21caf; /* Fuchsia 700 */
   --nitric-node-icon-color: #c026d3; /* Fuchsia 600 */
+}
+
+.react-flow__node-httpproxy {
+  --nitric-node-from: #4f46e5; /* Indigo 600 */
+  --nitric-node-via: #818cf8; /* Indigo 400 */
+  --nitric-node-to: #4338ca; /* Indigo 700 */
+  --nitric-node-icon-color: #4f46e5; /* Indigo 600 */
 }

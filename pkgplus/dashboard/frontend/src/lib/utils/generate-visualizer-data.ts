@@ -9,13 +9,15 @@ import {
 import type { BaseResource, Policy, WebSocketResponse } from '@/types'
 import {
   ChatBubbleLeftRightIcon,
-  CircleStackIcon,
+  ArchiveBoxIcon,
   ClockIcon,
-  CubeIcon,
+  CircleStackIcon,
+  CpuChipIcon,
   MegaphoneIcon,
   GlobeAltIcon,
+  ArrowsRightLeftIcon,
 } from '@heroicons/react/24/outline'
-import { MarkerType, type Edge, type Node } from 'reactflow'
+import { MarkerType, type Edge, type Node, Position } from 'reactflow'
 import {
   TopicNode,
   type TopicNodeData,
@@ -24,6 +26,10 @@ import {
   WebsocketNode,
   type WebsocketNodeData,
 } from '@/components/visualizer/nodes/WebsocketNode'
+import {
+  KeyValueNode,
+  type KeyValueNodeData,
+} from '@/components/visualizer/nodes/KeyValueNode'
 import {
   ScheduleNode,
   type ScheduleNodeData,
@@ -35,6 +41,10 @@ import {
 
 import { OpenAPIV3 } from 'openapi-types'
 import { getBucketNotifications } from './get-bucket-notifications'
+import {
+  HttpProxyNode,
+  type HttpProxyNodeData,
+} from '@/components/visualizer/nodes/HttpProxyNode'
 
 export const nodeTypes = {
   api: APINode,
@@ -43,6 +53,8 @@ export const nodeTypes = {
   topic: TopicNode,
   websocket: WebsocketNode,
   service: ServiceNode,
+  keyvaluestore: KeyValueNode,
+  httpproxy: HttpProxyNode,
 }
 
 const createNode = <T>(
@@ -52,7 +64,6 @@ const createNode = <T>(
 ): Node<T> => {
   const nodeId = `${type}-${resource.name}`
 
-  // Generate edges from requestingServices
   return {
     id: nodeId,
     position: { x: 0, y: 0 },
@@ -71,6 +82,78 @@ const AllHttpMethods = [
   // OpenAPIV3.HttpMethods.PATCH,
   // OpenAPIV3.HttpMethods.TRACE,
 ]
+
+// this helper function returns the intersection point
+// of the line between the center of the intersectionNode and the target node
+function getNodeIntersection(intersectionNode: any, targetNode: any) {
+  // https://math.stackexchange.com/questions/1724792/an-algorithm-for-finding-the-intersection-point-between-a-center-of-vision-and-a
+  const {
+    width: intersectionNodeWidth,
+    height: intersectionNodeHeight,
+    positionAbsolute: intersectionNodePosition,
+  } = intersectionNode
+  const targetPosition = targetNode.positionAbsolute
+
+  const w = intersectionNodeWidth / 2
+  const h = intersectionNodeHeight / 2
+
+  const x2 = intersectionNodePosition.x + w
+  const y2 = intersectionNodePosition.y + h
+  const x1 = targetPosition.x + targetNode.width / 2
+  const y1 = targetPosition.y + targetNode.height / 2
+
+  const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h)
+  const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h)
+  const a = 1 / (Math.abs(xx1) + Math.abs(yy1))
+  const xx3 = a * xx1
+  const yy3 = a * yy1
+  const x = w * (xx3 + yy3) + x2
+  const y = h * (-xx3 + yy3) + y2
+
+  return { x, y }
+}
+
+// returns the position (top,right,bottom or right) passed node compared to the intersection point
+function getEdgePosition(node: any, intersectionPoint: any) {
+  const n = { ...node.positionAbsolute, ...node }
+  const nx = Math.round(n.x)
+  const ny = Math.round(n.y)
+  const px = Math.round(intersectionPoint.x)
+  const py = Math.round(intersectionPoint.y)
+
+  if (px <= nx + 1) {
+    return Position.Left
+  }
+  if (px >= nx + n.width - 1) {
+    return Position.Right
+  }
+  if (py <= ny + 1) {
+    return Position.Top
+  }
+  if (py >= n.y + n.height - 1) {
+    return Position.Bottom
+  }
+
+  return Position.Top
+}
+
+// returns the parameters (sx, sy, tx, ty, sourcePos, targetPos) you need to create an edge
+export function getEdgeParams(source: any, target: any) {
+  const sourceIntersectionPoint = getNodeIntersection(source, target)
+  const targetIntersectionPoint = getNodeIntersection(target, source)
+
+  const sourcePos = getEdgePosition(source, sourceIntersectionPoint)
+  const targetPos = getEdgePosition(target, targetIntersectionPoint)
+
+  return {
+    sx: sourceIntersectionPoint.x,
+    sy: sourceIntersectionPoint.y,
+    tx: targetIntersectionPoint.x,
+    ty: targetIntersectionPoint.y,
+    sourcePos,
+    targetPos,
+  }
+}
 
 const actionVerbs = [
   'Get',
@@ -125,7 +208,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
         }
 
         edges.push({
-          id: `e-${api.name}-${path}-${m}`,
+          id: `e-${api.name}-${method['x-nitric-target']['name']}`,
           source: node.id,
           target: method['x-nitric-target']['name'],
           animated: true,
@@ -136,7 +219,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
             type: MarkerType.ArrowClosed,
             orient: 'auto-start-reverse',
           },
-          label: `${m} ${path}`,
+          label: 'routes',
         })
       })
     })
@@ -204,6 +287,16 @@ export function generateVisualizerData(data: WebSocketResponse): {
     })
   })
 
+  data.stores.forEach((store) => {
+    const node = createNode<BucketNodeData>(store, 'keyvaluestore', {
+      title: store.name,
+      resource: store,
+      icon: CircleStackIcon,
+    })
+
+    nodes.push(node)
+  })
+
   // Generate nodes from buckets
   data.buckets.forEach((bucket) => {
     const bucketNotifications = getBucketNotifications(
@@ -213,7 +306,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
     const node = createNode<BucketNodeData>(bucket, 'bucket', {
       title: bucket.name,
       resource: bucket,
-      icon: CircleStackIcon,
+      icon: ArchiveBoxIcon,
       description: `${bucketNotifications.length} ${
         bucketNotifications.length === 1 ? 'Notification' : 'Notifications'
       }`,
@@ -275,6 +368,34 @@ export function generateVisualizerData(data: WebSocketResponse): {
     )
   })
 
+  data.httpProxies.forEach((proxy) => {
+    const proxyAddress = data.httpWorkerAddresses[proxy.name]
+
+    const node = createNode<HttpProxyNodeData>(proxy, 'httpproxy', {
+      title: `${proxyAddress.split(':')[1]}:${proxy.name.split(':')[1]}`,
+      description: `Forwarding ${proxyAddress} to ${proxy.name}`,
+      resource: proxy,
+      icon: ArrowsRightLeftIcon,
+    })
+
+    edges.push({
+      id: `e-${proxy.name}-${proxy.target}`,
+      source: `httpproxy-${proxy.name}`,
+      target: proxy.target,
+      animated: true,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+      },
+      markerStart: {
+        type: MarkerType.ArrowClosed,
+        orient: 'auto-start-reverse',
+      },
+      label: 'Routes',
+    })
+
+    nodes.push(node)
+  })
+
   edges.push(
     ...Object.entries(data.policies).map(([_, policy]) => {
       return {
@@ -303,7 +424,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
         resource: {
           filePath: service.filePath,
         },
-        icon: CubeIcon,
+        icon: CpuChipIcon,
       },
       type: 'service',
     }

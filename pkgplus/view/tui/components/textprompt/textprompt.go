@@ -22,9 +22,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/validation"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 type (
@@ -69,7 +70,7 @@ func (m TextPrompt) UpdateTextPrompt(msg tea.Msg) (TextPrompt, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, tui.KeyMap.Quit):
-			return m, tea.Quit
+			return m, teax.Quit
 		case key.Matches(msg, tui.KeyMap.Enter):
 			if m.textInput.Value() == "" {
 				m.textInput.SetValue(m.textInput.Placeholder)

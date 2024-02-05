@@ -11,6 +11,7 @@ import {
   GlobeAltIcon,
   XMarkIcon,
   ClockIcon,
+  ArchiveBoxIcon,
   CircleStackIcon,
   MegaphoneIcon,
   QuestionMarkCircleIcon,
@@ -129,7 +130,7 @@ const AppLayout: React.FC<Props> = ({
     {
       name: 'Storage',
       href: '/storage',
-      icon: CircleStackIcon,
+      icon: ArchiveBoxIcon,
       count: data?.buckets?.length || 0,
     },
     {

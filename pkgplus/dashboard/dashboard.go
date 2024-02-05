@@ -24,7 +24,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,7 +32,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
 	"github.com/samber/lo"
-	"github.com/spf13/afero"
 
 	"github.com/nitrictech/cli/pkgplus/browser"
 	"github.com/nitrictech/cli/pkgplus/cloud"
@@ -44,6 +42,7 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
+	httpproxy "github.com/nitrictech/cli/pkgplus/cloud/http"
 	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/storage"
@@ -72,7 +71,6 @@ type WebsocketSpec struct {
 
 	Targets map[string]string `json:"targets,omitempty"`
 }
-
 type ScheduleSpec struct {
 	*BaseResourceSpec
 
@@ -86,6 +84,10 @@ type TopicSpec struct {
 }
 
 type BucketSpec struct {
+	*BaseResourceSpec
+}
+
+type KeyValueSpec struct {
 	*BaseResourceSpec
 }
 
@@ -117,6 +119,12 @@ type ServiceSpec struct {
 	FilePath string `json:"filePath"`
 }
 
+type HttpProxySpec struct {
+	*BaseResourceSpec
+
+	Target string `json:"target"`
+}
+
 type Dashboard struct {
 	resourcesLock  sync.Mutex
 	project        *project.Project
@@ -126,13 +134,13 @@ type Dashboard struct {
 	schedules      []ScheduleSpec
 	topics         []*TopicSpec
 	buckets        []*BucketSpec
+	stores         []*KeyValueSpec
 	websockets     []WebsocketSpec
-	services       []*ServiceSpec
 	subscriptions  []*SubscriberSpec
 	notifications  []*NotifierSpec
-
-	policies map[string]PolicySpec
-	envMap   map[string]string
+	httpProxies    []*HttpProxySpec
+	policies       map[string]PolicySpec
+	envMap         map[string]string
 
 	stackWebSocket   *melody.Melody
 	historyWebSocket *melody.Melody
@@ -150,20 +158,24 @@ type DashboardResponse struct {
 	Buckets       []*BucketSpec     `json:"buckets"`
 	Schedules     []ScheduleSpec    `json:"schedules"`
 	Topics        []*TopicSpec      `json:"topics"`
-	Services      []*ServiceSpec    `json:"services"`
 	Websockets    []WebsocketSpec   `json:"websockets"`
 	Subscriptions []*SubscriberSpec `json:"subscriptions"`
 	Notifications []*NotifierSpec   `json:"notifications"`
+	Stores        []*KeyValueSpec   `json:"stores"`
+	HttpProxies   []*HttpProxySpec  `json:"httpProxies"`
 
-	Policies           map[string]PolicySpec `json:"policies"`
-	ProjectName        string                `json:"projectName"`
-	ApiAddresses       map[string]string     `json:"apiAddresses"`
-	WebsocketAddresses map[string]string     `json:"websocketAddresses"`
-	TriggerAddress     string                `json:"triggerAddress"`
-	StorageAddress     string                `json:"storageAddress"`
-	CurrentVersion     string                `json:"currentVersion"`
-	LatestVersion      string                `json:"latestVersion"`
-	Connected          bool                  `json:"connected"`
+	Services []*ServiceSpec `json:"services"`
+
+	Policies            map[string]PolicySpec `json:"policies"`
+	ProjectName         string                `json:"projectName"`
+	ApiAddresses        map[string]string     `json:"apiAddresses"`
+	WebsocketAddresses  map[string]string     `json:"websocketAddresses"`
+	HttpWorkerAddresses map[string]string     `json:"httpWorkerAddresses"`
+	TriggerAddress      string                `json:"triggerAddress"`
+	StorageAddress      string                `json:"storageAddress"`
+	CurrentVersion      string                `json:"currentVersion"`
+	LatestVersion       string                `json:"latestVersion"`
+	Connected           bool                  `json:"connected"`
 }
 
 type Bucket struct {
@@ -174,22 +186,24 @@ type Bucket struct {
 //go:embed dist/*
 var content embed.FS
 
-func (d *Dashboard) updateServices(services []string) {
-	for _, service := range services {
-		if _, exists := lo.Find(d.services, func(item *ServiceSpec) bool {
-			return item.Name == service
-		}); !exists {
-			absolutePath, _ := filepath.Abs(service)
-			d.services = append(d.services, &ServiceSpec{
-				BaseResourceSpec: &BaseResourceSpec{
-					Name: service,
-				},
-				FilePath: absolutePath,
-			})
+func (d *Dashboard) getServices() ([]*ServiceSpec, error) {
+	serviceSpecs := []*ServiceSpec{}
+
+	for _, service := range d.project.GetServices() {
+		absPath, err := service.GetAbsoluteFilePath()
+		if err != nil {
+			return nil, err
 		}
+
+		serviceSpecs = append(serviceSpecs, &ServiceSpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name: service.GetFilePath(),
+			},
+			FilePath: absPath,
+		})
 	}
 
-	d.refresh()
+	return serviceSpecs, nil
 }
 
 func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
@@ -198,10 +212,24 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 
 	d.buckets = []*BucketSpec{}
 	d.topics = []*TopicSpec{}
+	d.stores = []*KeyValueSpec{}
+
 	d.policies = map[string]PolicySpec{}
-	// Don't clear services here, they're permanent fixtures of a local run anyway.
-	// clearing them here can cause services that don't use any resources to disappear.
-	// d.services = []*ServiceSpec{}
+
+	for keyvalue, resource := range lrs.KeyValueStores.GetAll() {
+		exists := lo.ContainsBy(d.stores, func(item *KeyValueSpec) bool {
+			return item.Name == keyvalue
+		})
+
+		if !exists {
+			d.stores = append(d.stores, &KeyValueSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               keyvalue,
+					RequestingServices: resource.RequestingServices,
+				},
+			})
+		}
+	}
 
 	for bucketName, resource := range lrs.Buckets.GetAll() {
 		exists := lo.ContainsBy(d.buckets, func(item *BucketSpec) bool {
@@ -214,11 +242,8 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 					Name:               bucketName,
 					RequestingServices: resource.RequestingServices,
 				},
-				// Notifiers: map[string]int{},
 			})
 		}
-
-		d.updateServices(resource.RequestingServices)
 	}
 
 	for topicName, resource := range lrs.Topics.GetAll() {
@@ -232,12 +257,8 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 					Name:               topicName,
 					RequestingServices: resource.RequestingServices,
 				},
-				// SubscriberCount: 0,
-				// Subscribers: map[string]int{},
 			})
 		}
-
-		d.updateServices(resource.RequestingServices)
 	}
 
 	for policyName, policy := range lrs.Policies.GetAll() {
@@ -262,8 +283,6 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 				}
 			}),
 		}
-
-		d.updateServices(policy.RequestingServices)
 	}
 
 	d.refresh()
@@ -294,8 +313,6 @@ func (d *Dashboard) updateApis(state apis.State) {
 		}
 
 		apiSpecs = append(apiSpecs, apiSpec)
-
-		d.updateServices(resources)
 	}
 
 	d.apis = apiSpecs
@@ -355,8 +372,6 @@ func (d *Dashboard) updateTopicSubscriptions(state topics.State) {
 				Target: functionName,
 			})
 		}
-
-		d.updateServices(lo.Keys(functions))
 	}
 
 	d.refresh()
@@ -380,8 +395,6 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 			Rate:       srvc.Schedule.GetEvery().GetRate(),
 			Target:     srvc.ServiceName,
 		})
-
-		d.updateServices(requestingServices)
 	}
 
 	d.schedules = schedules
@@ -402,10 +415,26 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 					Bucket: bucketName,
 					Target: functionName,
 				})
-
-				d.updateServices(lo.Keys(functions))
 			}
 		}
+	}
+
+	d.refresh()
+}
+
+func (d *Dashboard) updateHttpProxies(state httpproxy.State) {
+	d.resourcesLock.Lock()
+	defer d.resourcesLock.Unlock()
+
+	d.httpProxies = []*HttpProxySpec{}
+
+	for host, srvc := range state {
+		d.httpProxies = append(d.httpProxies, &HttpProxySpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name: host,
+			},
+			Target: srvc.ServiceName,
+		})
 	}
 
 	d.refresh()
@@ -571,24 +600,32 @@ func (d *Dashboard) sendStackUpdate() error {
 	currentVersion := strings.TrimPrefix(version.Version, "v")
 	latestVersion := update.FetchLatestVersion()
 
+	services, err := d.getServices()
+	if err != nil {
+		return err
+	}
+
 	response := &DashboardResponse{
-		Apis:               d.apis,
-		Topics:             d.topics,
-		Buckets:            d.buckets,
-		Schedules:          d.schedules,
-		Websockets:         d.websockets,
-		Services:           d.services,
-		Policies:           d.policies,
-		Subscriptions:      d.subscriptions,
-		Notifications:      d.notifications,
-		ProjectName:        d.project.Name,
-		ApiAddresses:       d.gatewayService.GetApiAddresses(),
-		WebsocketAddresses: d.gatewayService.GetWebsocketAddresses(),
-		TriggerAddress:     d.gatewayService.GetTriggerAddress(),
-		StorageAddress:     d.storageService.GetStorageEndpoint(),
-		CurrentVersion:     currentVersion,
-		LatestVersion:      latestVersion,
-		Connected:          d.isConnected(),
+		Apis:                d.apis,
+		Topics:              d.topics,
+		Buckets:             d.buckets,
+		Stores:              d.stores,
+		Schedules:           d.schedules,
+		Websockets:          d.websockets,
+		Policies:            d.policies,
+		Services:            services,
+		Subscriptions:       d.subscriptions,
+		Notifications:       d.notifications,
+		HttpProxies:         d.httpProxies,
+		ProjectName:         d.project.Name,
+		ApiAddresses:        d.gatewayService.GetApiAddresses(),
+		WebsocketAddresses:  d.gatewayService.GetWebsocketAddresses(),
+		HttpWorkerAddresses: d.gatewayService.GetHttpWorkerAddresses(),
+		TriggerAddress:      d.gatewayService.GetTriggerAddress(),
+		StorageAddress:      d.storageService.GetStorageEndpoint(),
+		CurrentVersion:      currentVersion,
+		LatestVersion:       latestVersion,
+		Connected:           d.isConnected(),
 	}
 
 	// Encode the response as JSON
@@ -627,20 +664,13 @@ func (d *Dashboard) sendWebsocketsUpdate() error {
 	return err
 }
 
-func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
-	fs := afero.NewOsFs()
-
-	p, err := project.FromFile(fs, "")
-	if err != nil {
-		return nil, err
-	}
-
+func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project) (*Dashboard, error) {
 	stackWebSocket := melody.New()
 	historyWebSocket := melody.New()
 	wsWebSocket := melody.New()
 
 	dash := &Dashboard{
-		project:          p,
+		project:          project,
 		storageService:   localCloud.Storage,
 		gatewayService:   localCloud.Gateway,
 		apis:             []ApiSpec{},
@@ -654,6 +684,8 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 		subscriptions:    []*SubscriberSpec{},
 		notifications:    []*NotifierSpec{},
 		websockets:       []WebsocketSpec{},
+		stores:           []*KeyValueSpec{},
+		httpProxies:      []*HttpProxySpec{},
 		policies:         map[string]PolicySpec{},
 		websocketsInfo:   map[string]*websockets.WebsocketInfo{},
 		noBrowser:        noBrowser,
@@ -677,6 +709,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud) (*Dashboard, error) {
 	localCloud.Schedules.SubscribeToState(dash.updateSchedules)
 	localCloud.Topics.SubscribeToState(dash.updateTopicSubscriptions)
 	localCloud.Storage.SubscribeToState(dash.updateBucketNotifications)
+	localCloud.Http.SubscribeToState(dash.updateHttpProxies)
 
 	// subscribe to history events from gateway
 	localCloud.Apis.SubscribeToAction(dash.handleApiHistory)

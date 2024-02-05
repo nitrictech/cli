@@ -33,8 +33,10 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/workers/topics"
 )
 
-type topicName = string
-type serviceName = string
+type (
+	topicName   = string
+	serviceName = string
+)
 
 type State = map[topicName]map[serviceName]int
 

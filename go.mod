@@ -26,8 +26,8 @@ require (
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.6.0
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
-	github.com/nitrictech/nitric/cloud/aws v0.0.0-20240124234637-a8770fe6d35e
-	github.com/nitrictech/nitric/core v0.0.0-20240124234637-a8770fe6d35e
+	github.com/nitrictech/nitric/cloud/aws v0.0.0-20240205010417-2bd3247ab870
+	github.com/nitrictech/nitric/core v0.0.0-20240205004825-8a698cfa8c34
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.54
 	github.com/spf13/cobra v1.7.0

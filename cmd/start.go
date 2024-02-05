@@ -17,7 +17,9 @@
 package cmd
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	"fmt"
+
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -26,6 +28,8 @@ import (
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/services"
+	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 var startNoBrowser bool
@@ -45,16 +49,29 @@ var startCmd = &cobra.Command{
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
 
+		fmt.Print(fragments.NitricTag())
+		fmt.Println(" start")
+		fmt.Println()
+
 		// Start the local cloud service analogues
 		localCloud, err := cloud.New()
 		tui.CheckErr(err)
 
+		fmt.Println("local nitric server started")
+
 		// Start dashboard
-		dash, err := dashboard.New(startNoBrowser, localCloud)
+		dash, err := dashboard.New(startNoBrowser, localCloud, proj)
 		tui.CheckErr(err)
 
 		err = dash.Start()
 		tui.CheckErr(err)
+
+		bold := lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple)
+		numServices := fmt.Sprintf("%d", len(proj.GetServices()))
+
+		fmt.Print("found ")
+		fmt.Print(bold.Render(numServices))
+		fmt.Print(" services in project\n")
 
 		// Run the app code (project services)
 		stopChan := make(chan bool)
@@ -68,10 +85,11 @@ var startCmd = &cobra.Command{
 
 		tui.CheckErr(err)
 
-		runView := tea.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
+		runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
 
-		_, _ = runView.Run()
-		// cobra.CheckErr(err)
+		_, err = runView.Run()
+		tui.CheckErr(err)
+
 		localCloud.Stop()
 
 		return nil

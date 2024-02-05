@@ -32,8 +32,10 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/workers/websockets"
 )
 
-type socketName = string
-type serviceName = string
+type (
+	socketName  = string
+	serviceName = string
+)
 
 type State = map[socketName]map[serviceName][]nitricws.WebsocketEventType
 

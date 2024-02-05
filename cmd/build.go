@@ -17,13 +17,13 @@
 package cmd
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 var buildCmd = &cobra.Command{
@@ -40,7 +40,7 @@ var buildCmd = &cobra.Command{
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := tea.NewProgram(build.NewModel(updates))
+		prog := teax.NewProgram(build.NewModel(updates))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
 		tui.CheckErr(err)

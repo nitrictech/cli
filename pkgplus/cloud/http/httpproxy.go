@@ -35,7 +35,7 @@ func (l *LocalHttpProxy) publishState() {
 	l.bus.Publish(localHttpProxyTopic, maps.Clone(l.state))
 }
 
-func (l *LocalHttpProxy) SubscribeToState(fn func(map[HostAddress]*HttpProxyService)) {
+func (l *LocalHttpProxy) SubscribeToState(fn func(State)) {
 	l.bus.Subscribe(localHttpProxyTopic, fn)
 }
 

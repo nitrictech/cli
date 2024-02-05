@@ -30,13 +30,14 @@ import (
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/stack"
 	clitui "github.com/nitrictech/cli/pkgplus/view/tui"
+	tui "github.com/nitrictech/cli/pkgplus/view/tui"
 	validators "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack"
-	tui "github.com/nitrictech/cli/pkgplus/view/tui/components"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/listprompt"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/textprompt"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/validation"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
 
 type (
@@ -83,7 +84,7 @@ func (m Model) ProviderName() string {
 // Init initializes the model, used by Bubbletea
 func (m Model) Init() tea.Cmd {
 	if m.err != nil {
-		return tea.Quit
+		return teax.Quit
 	}
 
 	if m.nonInteractive {
@@ -101,7 +102,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
-			return m, tea.Quit
+			return m, teax.Quit
 		}
 
 	case stackCreateResultMsg:
@@ -113,11 +114,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.err
 		}
 
-		return m, tea.Quit
+		return m, teax.Quit
 
 	case errMsg:
 		m.err = msg
-		return m, tea.Quit
+		return m, teax.Quit
 	case textprompt.CompleteMsg:
 		if msg.ID == m.namePrompt.ID {
 			m.namePrompt.Blur()
@@ -146,7 +147,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case Pending:
 		m.spinner, cmd = m.spinner.Update(msg)
 	case Done:
-		return m, tea.Quit
+		return m, teax.Quit
 	}
 
 	return m, cmd

@@ -1,17 +1,17 @@
-import { type FC, useMemo } from "react";
-import type { Schedule, Topic } from "../../types";
-import TreeView, { type TreeItemType } from "../shared/TreeView";
-import type { TreeItem, TreeItemIndex } from "react-complex-tree";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { Badge } from "../ui/badge";
-import { cn } from "@/lib/utils";
+import { type FC, useMemo } from 'react'
+import type { Schedule, Topic } from '../../types'
+import TreeView, { type TreeItemType } from '../shared/TreeView'
+import type { TreeItem, TreeItemIndex } from 'react-complex-tree'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
+import { Badge } from '../ui/badge'
+import { cn } from '@/lib/utils'
 
-export type EventsTreeItemType = TreeItemType<Schedule | Topic>;
+export type EventsTreeItemType = TreeItemType<Schedule | Topic>
 
 interface Props {
-  resources: (Schedule | Topic)[];
-  onSelect: (resource: Schedule | Topic) => void;
-  initialItem: Schedule | Topic;
+  resources: (Schedule | Topic)[]
+  onSelect: (resource: Schedule | Topic) => void
+  initialItem: Schedule | Topic
 }
 
 const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
@@ -20,15 +20,15 @@ const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
     TreeItem<EventsTreeItemType>
   > = useMemo(() => {
     const rootItem: TreeItem = {
-      index: "root",
+      index: 'root',
       isFolder: true,
       children: [],
       data: null,
-    };
+    }
 
     const rootItems: Record<TreeItemIndex, TreeItem<EventsTreeItemType>> = {
       root: rootItem,
-    };
+    }
 
     for (const resource of resources) {
       // add api if not added already
@@ -39,14 +39,14 @@ const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
             label: resource.name,
             data: resource,
           },
-        };
+        }
 
-        rootItem.children!.push(resource.name);
+        rootItem.children!.push(resource.name)
       }
     }
 
-    return rootItems;
-  }, [resources]);
+    return rootItems
+  }, [resources])
 
   return (
     <TreeView<EventsTreeItemType>
@@ -56,14 +56,14 @@ const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
       getItemTitle={(item) => item.data.label}
       onPrimaryAction={(items) => {
         if (items.data.data) {
-          onSelect(items.data.data);
+          onSelect(items.data.data)
         }
       }}
       renderItemTitle={({ item }) => {
         const topicSubscriberCount =
-          typeof (item.data.data as Topic)?.subscriberCount == "number"
+          typeof (item.data.data as Topic)?.subscriberCount == 'number'
             ? (item.data.data as Topic)?.subscriberCount
-            : null;
+            : null
 
         return (
           <span className="truncate">
@@ -75,10 +75,10 @@ const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
                     <span>
                       <Badge
                         className={cn(
-                          "ml-2",
+                          'ml-2',
                           topicSubscriberCount > 0
-                            ? "bg-blue-600"
-                            : "bg-orange-400"
+                            ? 'bg-blue-600'
+                            : 'bg-orange-400',
                         )}
                       >
                         {topicSubscriberCount}
@@ -94,10 +94,10 @@ const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
               item.data.label
             )}
           </span>
-        );
+        )
       }}
     />
-  );
-};
+  )
+}
 
-export default EventsTreeView;
+export default EventsTreeView

@@ -1,12 +1,12 @@
 import {
   APINode,
   type ApiNodeData,
-} from "@/components/visualizer/nodes/APINode";
+} from '@/components/visualizer/nodes/APINode'
 import {
   BucketNode,
   type BucketNodeData,
-} from "@/components/visualizer/nodes/BucketNode";
-import type { BaseResource, Policy, WebSocketResponse } from "@/types";
+} from '@/components/visualizer/nodes/BucketNode'
+import type { BaseResource, Policy, WebSocketResponse } from '@/types'
 import {
   ChatBubbleLeftRightIcon,
   CircleStackIcon,
@@ -14,25 +14,27 @@ import {
   CubeIcon,
   MegaphoneIcon,
   GlobeAltIcon,
-} from "@heroicons/react/24/outline";
-import type { Edge, Node } from "reactflow";
+} from '@heroicons/react/24/outline'
+import { MarkerType, type Edge, type Node } from 'reactflow'
 import {
   TopicNode,
   type TopicNodeData,
-} from "@/components/visualizer/nodes/TopicNode";
+} from '@/components/visualizer/nodes/TopicNode'
 import {
   WebsocketNode,
   type WebsocketNodeData,
-} from "@/components/visualizer/nodes/WebsocketNode";
+} from '@/components/visualizer/nodes/WebsocketNode'
 import {
   ScheduleNode,
   type ScheduleNodeData,
-} from "@/components/visualizer/nodes/ScheduleNode";
+} from '@/components/visualizer/nodes/ScheduleNode'
 import {
   ServiceNode,
   type ServiceNodeData,
-} from "@/components/visualizer/nodes/ServiceNode";
-import { title } from "radash";
+} from '@/components/visualizer/nodes/ServiceNode'
+
+import { OpenAPIV3 } from 'openapi-types'
+import { getBucketNotifications } from './get-bucket-notifications'
 
 export const nodeTypes = {
   api: APINode,
@@ -41,199 +43,275 @@ export const nodeTypes = {
   topic: TopicNode,
   websocket: WebsocketNode,
   service: ServiceNode,
-};
+}
 
 const createNode = <T>(
   resource: BaseResource,
   type: keyof typeof nodeTypes,
-  policies: Policy[],
-  data: T
-): { node: Node<T>; edges: Edge[] } => {
-  const edges: Edge[] = [];
-  const nodeId = `${type}-${resource.name}`;
-
-  const policy = policies.find((p) =>
-    p.resources.some((r) => r.name === resource.name)
-  );
-
-  console.log(resource.name, policy);
+  data: T,
+): Node<T> => {
+  const nodeId = `${type}-${resource.name}`
 
   // Generate edges from requestingServices
-  resource.requestingServices.forEach((service) => {
-    let edgeLabel = "";
-
-    if (policy) {
-      edgeLabel = policy?.actions
-        .map((action) => title(action).split(" ").pop())
-        .join(", ");
-    } else if (type === "api") {
-      edgeLabel = "Routes";
-    } else if (type === "schedule") {
-      edgeLabel = "Trigger";
-    }
-
-    const edge: Edge = {
-      id: `e-${nodeId}-${service}`,
-      source: nodeId,
-      target: service,
-      data: {
-        label: edgeLabel,
-      },
-    };
-    edges.push(edge);
-  });
-
   return {
-    node: {
-      id: nodeId,
-      position: { x: 0, y: 0 },
-      type,
-      data,
-    },
-    edges,
-  };
-};
+    id: nodeId,
+    position: { x: 0, y: 0 },
+    type,
+    data,
+  }
+}
+
+const AllHttpMethods = [
+  OpenAPIV3.HttpMethods.GET,
+  OpenAPIV3.HttpMethods.PUT,
+  OpenAPIV3.HttpMethods.POST,
+  OpenAPIV3.HttpMethods.DELETE,
+  OpenAPIV3.HttpMethods.OPTIONS,
+  // OpenAPIV3.HttpMethods.HEAD,
+  // OpenAPIV3.HttpMethods.PATCH,
+  // OpenAPIV3.HttpMethods.TRACE,
+]
+
+const actionVerbs = [
+  'Get',
+  'List',
+  'Put',
+  'Delete',
+  'Publish',
+  'Detail',
+  'Manage',
+]
+
+function verbFromNitricAction(action: string) {
+  for (const verb of actionVerbs) {
+    if (action.endsWith(verb)) {
+      return verb
+    }
+  }
+
+  return action
+}
 
 export function generateVisualizerData(data: WebSocketResponse): {
-  nodes: Node[];
-  edges: Edge[];
+  nodes: Node[]
+  edges: Edge[]
 } {
-  const nodes: Node[] = [];
-  const edges: Edge[] = [];
-  const uniqueServices: Set<string> = new Set();
-  const policies = Object.entries(data.policies).map(([_, p]) => p);
+  const nodes: Node[] = []
+  const edges: Edge[] = []
+
+  console.log('data:', data)
 
   // Generate nodes from APIs
   data.apis.forEach((api) => {
-    const routes = Object.keys(api.spec.paths);
+    const routes = (api.spec && Object.keys(api.spec.paths)) || []
 
-    const { node, edges: apiEdges } = createNode<ApiNodeData>(
-      api,
-      "api",
-      policies,
-      {
-        title: api.name,
-        resource: api,
-        icon: GlobeAltIcon,
-        description: `${routes.length} ${
-          routes.length === 1 ? "Route" : "Routes"
-        }`,
-      }
-    );
+    const node = createNode<ApiNodeData>(api, 'api', {
+      title: api.name,
+      resource: api,
+      icon: GlobeAltIcon,
+      description: `${routes.length} ${
+        routes.length === 1 ? 'Route' : 'Routes'
+      }`,
+    })
 
-    nodes.push(node);
-    edges.push(...apiEdges);
-  });
+    const specEntries = (api.spec && api.spec.paths) || []
+
+    Object.entries(specEntries).forEach(([path, operations]) => {
+      AllHttpMethods.forEach((m) => {
+        const method = operations && (operations[m] as any)
+
+        if (!method) {
+          return
+        }
+
+        edges.push({
+          id: `e-${api.name}-${path}-${m}`,
+          source: node.id,
+          target: method['x-nitric-target']['name'],
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+          markerStart: {
+            type: MarkerType.ArrowClosed,
+            orient: 'auto-start-reverse',
+          },
+          label: `${m} ${path}`,
+        })
+      })
+    })
+
+    nodes.push(node)
+  })
 
   // Generate nodes from websockets
   data.websockets.forEach((ws) => {
-    const { node, edges: wsEdges } = createNode<WebsocketNodeData>(
-      ws,
-      "websocket",
-      policies,
-      {
-        title: ws.name,
-        resource: ws,
-        icon: ChatBubbleLeftRightIcon,
-        description: `${ws.events.length} ${
-          ws.events.length === 1 ? "Event" : "Events"
-        }`,
-      }
-    );
+    const node = createNode<WebsocketNodeData>(ws, 'websocket', {
+      title: ws.name,
+      resource: ws,
+      icon: ChatBubbleLeftRightIcon,
+      description: `${ws.events.length} ${
+        ws.events.length === 1 ? 'Event' : 'Events'
+      }`,
+    })
 
-    nodes.push(node);
-    edges.push(...wsEdges);
-  });
+    edges.push(
+      ...Object.entries(ws.targets).map(([eventType, target]) => {
+        return {
+          id: `e-${ws.name}-${target}-${eventType}`,
+          source: node.id,
+          target,
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+          markerStart: {
+            type: MarkerType.ArrowClosed,
+            orient: 'auto-start-reverse',
+          },
+          label: eventType,
+        }
+      }),
+    )
+
+    nodes.push(node)
+  })
 
   // Generate nodes from schedules
   data.schedules.forEach((schedule) => {
-    const { node, edges: schedulesEdges } = createNode<ScheduleNodeData>(
-      schedule,
-      "schedule",
-      policies,
-      {
-        title: schedule.name,
-        resource: schedule,
-        icon: ClockIcon,
-        description: ``,
-      }
-    );
+    const node = createNode<ScheduleNodeData>(schedule, 'schedule', {
+      title: schedule.name,
+      resource: schedule,
+      icon: ClockIcon,
+      description: ``,
+    })
 
-    nodes.push(node);
-    edges.push(...schedulesEdges);
-  });
+    nodes.push(node)
+
+    edges.push({
+      id: `e-${schedule.name}-${schedule.target}`,
+      source: node.id,
+      target: schedule.target,
+      animated: true,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+      },
+      markerStart: {
+        type: MarkerType.ArrowClosed,
+        orient: 'auto-start-reverse',
+      },
+      label: 'Triggers',
+    })
+  })
 
   // Generate nodes from buckets
   data.buckets.forEach((bucket) => {
-    const { node, edges: bucketEdges } = createNode<BucketNodeData>(
+    const bucketNotifications = getBucketNotifications(
       bucket,
-      "bucket",
-      policies,
-      {
-        title: bucket.name,
-        resource: bucket,
-        icon: CircleStackIcon,
-        description: `${bucket.notificationCount} ${
-          bucket.notificationCount === 1 ? "Notification" : "Notifications"
-        }`,
-      }
-    );
+      data.notifications,
+    )
+    const node = createNode<BucketNodeData>(bucket, 'bucket', {
+      title: bucket.name,
+      resource: bucket,
+      icon: CircleStackIcon,
+      description: `${bucketNotifications.length} ${
+        bucketNotifications.length === 1 ? 'Notification' : 'Notifications'
+      }`,
+    })
 
-    nodes.push(node);
-    edges.push(...bucketEdges);
-  });
+    edges.push(
+      ...bucketNotifications.map((notify) => {
+        return {
+          id: `e-${notify.bucket}-${notify.target}`,
+          source: `bucket-${notify.bucket}`,
+          target: notify.target,
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+          markerStart: {
+            type: MarkerType.ArrowClosed,
+            orient: 'auto-start-reverse',
+          },
+          label: 'Triggers',
+        }
+      }),
+    )
+
+    nodes.push(node)
+  })
 
   // Generate nodes from buckets
   data.topics.forEach((topic) => {
-    const { node, edges: topicEdges } = createNode<TopicNodeData>(
-      topic,
-      "topic",
-      policies,
-      {
-        title: topic.name,
-        resource: topic,
-        icon: MegaphoneIcon,
-        description: ``,
-      }
-    );
+    const node = createNode<TopicNodeData>(topic, 'topic', {
+      title: topic.name,
+      resource: topic,
+      icon: MegaphoneIcon,
+      description: ``,
+    })
+    nodes.push(node)
 
-    nodes.push(node);
-    edges.push(...topicEdges);
-  });
+    const topicSubscriptions = data.subscriptions.filter(
+      (sub) => sub.topic === topic.name,
+    )
 
-  // Generate nodes for containers
+    edges.push(
+      ...topicSubscriptions.map((subscription) => {
+        return {
+          id: `e-${subscription.topic}-${subscription.target}`,
+          source: node.id,
+          target: subscription.target,
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+          markerStart: {
+            type: MarkerType.ArrowClosed,
+            orient: 'auto-start-reverse',
+          },
+          label: 'Triggers',
+        }
+      }),
+    )
+  })
 
-  // Generate edges from policies
-  // TODO use policies to add more info via edges or nodes
-  // Object.values(data.policies).forEach((policy) => {
-  //   policy.resources.forEach((resource) => {
-  //     const edge: Edge = {
-  //       id: `e-${resource.name}-${policy.name}`,
-  //       source: resource.name,
-  //       target: resource.name,
-  //     };
-  //     edges.push(edge);
-  //   });
-  // });
-
-  // Collect unique services in a single pass
-  edges.forEach(({ target: serviceName }) => {
-    if (!uniqueServices.has(serviceName)) {
-      const node: Node<ServiceNodeData> = {
-        id: serviceName,
-        position: { x: 0, y: 0 },
-        data: {
-          title: `${serviceName}`,
-          description: "",
-          resource: {},
-          icon: CubeIcon,
+  edges.push(
+    ...Object.entries(data.policies).map(([_, policy]) => {
+      return {
+        id: `e-${policy.name}`,
+        source: policy.principals[0].name,
+        target: `${policy.resources[0].type}-${policy.resources[0].name}`,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
         },
-        type: "service",
-      };
-      nodes.push(node);
-      uniqueServices.add(serviceName);
-    }
-  });
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: policy.actions.map(verbFromNitricAction).join(', '),
+      } as Edge
+    }),
+  )
 
-  return { nodes, edges };
+  data.services.forEach((service) => {
+    const node: Node<ServiceNodeData> = {
+      id: service.name,
+      position: { x: 0, y: 0 },
+      data: {
+        title: `${service.name.replace(/\\/g, '/')}`,
+        description: '',
+        resource: {
+          filePath: service.filePath,
+        },
+        icon: CubeIcon,
+      },
+      type: 'service',
+    }
+    nodes.push(node)
+  })
+
+  console.log('nodes:', nodes)
+  console.log('edges:', edges)
+
+  return { nodes, edges }
 }

@@ -1,23 +1,23 @@
-import { ExclamationCircleIcon, XMarkIcon } from "@heroicons/react/20/solid";
-import { cn } from "@/lib/utils";
-import React, { useEffect, useId } from "react";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+import { ExclamationCircleIcon, XMarkIcon } from '@heroicons/react/20/solid'
+import { cn } from '@/lib/utils'
+import React, { useEffect, useId } from 'react'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
 
 export interface FieldRow {
-  key: string;
-  value: string;
+  key: string
+  value: string
 }
 
 interface Props {
-  testId: string;
-  rows: FieldRow[];
-  lockKeys?: boolean;
-  readOnly?: boolean;
-  canClearRow?: boolean;
-  valueRequired?: boolean;
-  valueErrors?: Record<number, FieldRow>;
-  setRows: (value: FieldRow[]) => void;
+  testId: string
+  rows: FieldRow[]
+  lockKeys?: boolean
+  readOnly?: boolean
+  canClearRow?: boolean
+  valueRequired?: boolean
+  valueErrors?: Record<number, FieldRow>
+  setRows: (value: FieldRow[]) => void
 }
 
 const FieldRows: React.FC<Props> = ({
@@ -30,7 +30,7 @@ const FieldRows: React.FC<Props> = ({
   valueRequired,
   canClearRow = true,
 }) => {
-  const id = useId();
+  const id = useId()
 
   useEffect(() => {
     if (
@@ -40,24 +40,24 @@ const FieldRows: React.FC<Props> = ({
       setRows([
         ...rows,
         {
-          key: "",
-          value: "",
+          key: '',
+          value: '',
         },
-      ]);
+      ])
     }
-  }, [rows]);
+  }, [rows])
 
   return (
     <ul className="divide-y divide-gray-200">
       {rows.map((r, i) => {
-        const keyId = `${id}-${i}-key`;
-        const valueId = `${id}-${i}-value`;
-        const valueHasError = Boolean(valueErrors && valueErrors[i]);
+        const keyId = `${id}-${i}-key`
+        const valueId = `${id}-${i}-value`
+        const valueHasError = Boolean(valueErrors && valueErrors[i])
 
         return (
           <li
             key={i}
-            className="grid relative group items-center grid-cols-2 gap-4 py-4"
+            className="group relative grid grid-cols-2 items-center gap-4 py-4"
           >
             <div>
               <Label htmlFor={keyId} className="sr-only">
@@ -70,12 +70,12 @@ const FieldRows: React.FC<Props> = ({
                   readOnly={lockKeys || readOnly}
                   placeholder="Key"
                   onChange={(e) => {
-                    const updatedRow: FieldRow = { ...r, key: e.target.value };
-                    const newArr = [...rows];
+                    const updatedRow: FieldRow = { ...r, key: e.target.value }
+                    const newArr = [...rows]
 
-                    newArr[i] = updatedRow;
+                    newArr[i] = updatedRow
 
-                    setRows(newArr);
+                    setRows(newArr)
                   }}
                   value={r.key}
                   name={keyId}
@@ -87,7 +87,7 @@ const FieldRows: React.FC<Props> = ({
               <Label htmlFor={valueId} className="sr-only">
                 {r.value}
               </Label>
-              <div className="mt-2 relative sm:col-span-2 sm:mt-0">
+              <div className="relative mt-2 sm:col-span-2 sm:mt-0">
                 <Input
                   type="text"
                   placeholder="Value"
@@ -97,12 +97,12 @@ const FieldRows: React.FC<Props> = ({
                     const updatedRow: FieldRow = {
                       ...r,
                       value: e.target.value,
-                    };
-                    const newArr = [...rows];
+                    }
+                    const newArr = [...rows]
 
-                    newArr[i] = updatedRow;
+                    newArr[i] = updatedRow
 
-                    setRows(newArr);
+                    setRows(newArr)
                   }}
                   required={valueRequired}
                   name={valueId}
@@ -110,7 +110,7 @@ const FieldRows: React.FC<Props> = ({
                   value={r.value}
                   className={cn(
                     valueHasError &&
-                      "placeholder:text-red-300 text-red-900 !ring-red-500"
+                      'text-red-900 !ring-red-500 placeholder:text-red-300',
                   )}
                 />
                 {valueHasError && (
@@ -130,25 +130,25 @@ const FieldRows: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const newArray = [...rows];
-                  newArray.splice(i, 1);
-                  setRows(newArray);
+                  const newArray = [...rows]
+                  newArray.splice(i, 1)
+                  setRows(newArray)
                 }}
                 className={cn(
-                  "rounded-full hidden absolute right-0 bg-gray-600 p-1 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
+                  'absolute right-0 hidden rounded-full bg-gray-600 p-1 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600',
                   rows.length > 1 && (r.key || r.value)
-                    ? "group-hover:block"
-                    : ""
+                    ? 'group-hover:block'
+                    : '',
                 )}
               >
                 <XMarkIcon className="h-5 w-5" aria-hidden="true" />
               </button>
             )}
           </li>
-        );
+        )
       })}
     </ul>
-  );
-};
+  )
+}
 
-export default FieldRows;
+export default FieldRows

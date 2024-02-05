@@ -21,8 +21,9 @@ import (
 )
 
 type ApiSummary struct {
-	name string
-	url  string
+	Name               string
+	Url                string
+	RequestingServices []string
 }
 
 type WebsocketSummary struct {
@@ -88,10 +89,16 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// update the api state by getting the latest API addresses
 		newApiSummary := []ApiSummary{}
 
-		for apiName, host := range t.localCloud.Gateway.GetApiAddresses() {
+		for apiName, serviceReg := range state {
+			reqSrvs := []string{}
+			for srv := range serviceReg {
+				reqSrvs = append(reqSrvs, srv)
+			}
+
 			newApiSummary = append(newApiSummary, ApiSummary{
-				name: apiName,
-				url:  host,
+				Name:               apiName,
+				Url:                t.localCloud.Gateway.GetApiAddresses()[apiName],
+				RequestingServices: reqSrvs,
 			})
 		}
 
@@ -227,8 +234,9 @@ func (t *TuiModel) View() string {
 		output.Break()
 
 		for _, api := range t.apis {
-			output.Add(api.name).WithStyle(lipgloss.NewStyle().Bold(true))
-			output.Addln(" => %s", api.url)
+			output.Add(api.Name).WithStyle(lipgloss.NewStyle().Bold(true))
+			output.Addln(" => %s", api.Url)
+			output.Addln(" for %s", strings.Join(api.RequestingServices, ", "))
 			output.Break()
 		}
 	}
@@ -285,21 +293,21 @@ func (t *TuiModel) View() string {
 		output.Break()
 	}
 
-	// Render resources
-	if t.resources != nil {
-		output.Addln("Resources:").WithStyle(tagStyle)
-		output.Break()
+	// // Render resources
+	// if t.resources != nil {
+	// 	output.Addln("Resources:").WithStyle(tagStyle)
+	// 	output.Break()
 
-		for name, bucket := range t.resources.Buckets.GetAll() {
-			output.Addln("Bucket::%s", name)
-			output.Addln(" for %s", strings.Join(bucket.RequestingServices, ", "))
-		}
+	// 	for name, bucket := range t.resources.Buckets.GetAll() {
+	// 		output.Addln("Bucket::%s", name)
+	// 		output.Addln(" for %s", strings.Join(bucket.RequestingServices, ", "))
+	// 	}
 
-		for name, policy := range t.resources.Policies.GetAll() {
-			output.Addln("Policy::%s", name)
-			output.Addln(" - %+v", policy.Resource)
-		}
-	}
+	// 	for name, policy := range t.resources.Policies.GetAll() {
+	// 		output.Addln("Policy::%s", name)
+	// 		output.Addln(" - %+v", policy.Resource)
+	// 	}
+	// }
 
 	// Show relevant links
 	return output.Render()

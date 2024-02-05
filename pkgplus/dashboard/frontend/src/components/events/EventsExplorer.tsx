@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { useWebSocket } from "../../lib/hooks/use-web-socket";
-import type { APIResponse, EventHistoryItem, Schedule, Topic } from "@/types";
-import { Badge, Select, Spinner, Tabs, Loading } from "../shared";
-import APIResponseContent from "../apis/APIResponseContent";
+import { useEffect, useState } from 'react'
+import { useWebSocket } from '../../lib/hooks/use-web-socket'
+import type { APIResponse, EventHistoryItem, Schedule, Topic } from '@/types'
+import { Badge, Select, Spinner, Tabs, Loading } from '../shared'
+import APIResponseContent from '../apis/APIResponseContent'
 import {
   fieldRowArrToHeaders,
   getHost,
@@ -10,126 +10,126 @@ import {
   formatFileSize,
   formatResponseTime,
   formatJSON,
-} from "../../lib/utils";
-import EventsHistory from "./EventsHistory";
-import { useHistory } from "../../lib/hooks/use-history";
-import CodeEditor from "../apis/CodeEditor";
-import EventsMenu from "./EventsMenu";
-import AppLayout from "../layout/AppLayout";
-import EventsTreeView from "./EventsTreeView";
-import { copyToClipboard } from "../../lib/utils/copy-to-clipboard";
-import ClipboardIcon from "@heroicons/react/24/outline/ClipboardIcon";
-import toast from "react-hot-toast";
-import { capitalize } from "radash";
-import { Button } from "../ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+} from '../../lib/utils'
+import EventsHistory from './EventsHistory'
+import { useHistory } from '../../lib/hooks/use-history'
+import CodeEditor from '../apis/CodeEditor'
+import EventsMenu from './EventsMenu'
+import AppLayout from '../layout/AppLayout'
+import EventsTreeView from './EventsTreeView'
+import { copyToClipboard } from '../../lib/utils/copy-to-clipboard'
+import ClipboardIcon from '@heroicons/react/24/outline/ClipboardIcon'
+import toast from 'react-hot-toast'
+import { capitalize } from 'radash'
+import { Button } from '../ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 
 interface Props {
-  workerType: "schedules" | "topics";
+  workerType: 'schedules' | 'topics'
 }
 
-type Worker = Schedule | Topic;
+type Worker = Schedule | Topic
 
 const EventsExplorer: React.FC<Props> = ({ workerType }) => {
-  const storageKey = `nitric-local-dash-${workerType}-history`;
+  const storageKey = `nitric-local-dash-${workerType}-history`
 
-  const { data, loading } = useWebSocket();
-  const [callLoading, setCallLoading] = useState(false);
+  const { data, loading } = useWebSocket()
+  const [callLoading, setCallLoading] = useState(false)
 
-  const { data: history } = useHistory(workerType);
+  const { data: history } = useHistory(workerType)
 
-  const [response, setResponse] = useState<APIResponse>();
+  const [response, setResponse] = useState<APIResponse>()
 
-  const [selectedWorker, setSelectedWorker] = useState<Worker>();
-  const [responseTabIndex, setResponseTabIndex] = useState(0);
+  const [selectedWorker, setSelectedWorker] = useState<Worker>()
+  const [responseTabIndex, setResponseTabIndex] = useState(0)
 
-  const [eventHistory, setEventHistory] = useState<EventHistoryItem[]>([]);
+  const [eventHistory, setEventHistory] = useState<EventHistoryItem[]>([])
 
-  const [body, setBody] = useState({});
+  const [body, setBody] = useState({})
 
   useEffect(() => {
     if (history) {
-      setEventHistory(history ? history[workerType] : []);
+      setEventHistory(history ? history[workerType] : [])
     }
-  }, [history]);
+  }, [history])
 
   useEffect(() => {
     if (data && data[workerType]) {
       // restore history or select first if not selected
       if (!selectedWorker) {
         const previousId = localStorage.getItem(
-          `${storageKey}-last-${workerType}`
-        );
+          `${storageKey}-last-${workerType}`,
+        )
 
         const worker =
           (previousId && data[workerType].find((s) => s.name === previousId)) ||
-          data[workerType][0];
+          data[workerType][0]
 
-        setSelectedWorker(worker);
+        setSelectedWorker(worker)
       } else {
         // could be a refresh from ws, so update the selected endpoint
         const latest = data[workerType].find(
-          (s) => s.name === selectedWorker.name
-        );
+          (s) => s.name === selectedWorker.name,
+        )
 
         if (latest) {
-          setSelectedWorker(latest);
+          setSelectedWorker(latest)
         }
       }
     }
-  }, [data]);
+  }, [data])
 
   useEffect(() => {
     if (selectedWorker) {
       // set history
       localStorage.setItem(
         `${storageKey}-last-${workerType}`,
-        selectedWorker.name
-      );
+        selectedWorker.name,
+      )
     }
-  }, [selectedWorker]);
+  }, [selectedWorker])
 
   const handleSend = async (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
   ) => {
-    if (!selectedWorker) return;
-    setCallLoading(true);
-    e.preventDefault();
+    if (!selectedWorker) return
+    setCallLoading(true)
+    e.preventDefault()
 
     const url =
-      `http://${getHost()}/api/call` + `/${workerType}/${selectedWorker.name}`;
+      `http://${getHost()}/api/call` + `/${workerType}/${selectedWorker.name}`
     const requestOptions: RequestInit = {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(body),
       headers: fieldRowArrToHeaders([
         {
-          key: "Accept",
-          value: "*/*",
+          key: 'Accept',
+          value: '*/*',
         },
         {
-          key: "User-Agent",
-          value: "Nitric Client (https://www.nitric.io)",
+          key: 'User-Agent',
+          value: 'Nitric Client (https://www.nitric.io)',
         },
         {
-          key: "X-Nitric-Local-Call-Address",
-          value: data?.triggerAddress || "localhost:4000",
+          key: 'X-Nitric-Local-Call-Address',
+          value: data?.triggerAddress || 'localhost:4000',
         },
       ]),
-    };
+    }
 
-    const startTime = window.performance.now();
-    const res = await fetch(url, requestOptions);
+    const startTime = window.performance.now()
+    const res = await fetch(url, requestOptions)
 
-    const callResponse = await generateResponse(res, startTime);
-    setResponse(callResponse);
+    const callResponse = await generateResponse(res, startTime)
+    setResponse(callResponse)
 
-    setTimeout(() => setCallLoading(false), 300);
-  };
+    setTimeout(() => setCallLoading(false), 300)
+  }
 
-  const workerTitleSingle = capitalize(workerType).slice(0, -1);
-  const generatedURL = `http://${data?.triggerAddress}/${workerType}/${selectedWorker?.name}`;
+  const workerTitleSingle = capitalize(workerType).slice(0, -1)
+  const generatedURL = `http://${data?.triggerAddress}/${workerType}/${selectedWorker?.name}`
 
-  const hasData = Boolean(data && data[workerType]?.length);
+  const hasData = Boolean(data && data[workerType]?.length)
 
   return (
     <AppLayout
@@ -139,21 +139,21 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
         data &&
         selectedWorker && (
           <>
-            <div className="flex mb-2 items-center justify-between px-2">
+            <div className="mb-2 flex items-center justify-between px-2">
               <span className="text-lg">{capitalize(workerType)}</span>
               <EventsMenu
                 selected={selectedWorker.name}
                 storageKey={storageKey}
                 workerType={workerType}
                 onAfterClear={() => {
-                  return;
+                  return
                 }}
               />
             </div>
             <EventsTreeView
               initialItem={selectedWorker}
               onSelect={(resource) => {
-                setSelectedWorker(resource);
+                setSelectedWorker(resource)
               }}
               resources={data[workerType] ?? []}
             />
@@ -164,23 +164,23 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
       <Loading delay={400} conditionToShow={!loading}>
         {selectedWorker && hasData ? (
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
-            <div className="w-full flex flex-col gap-8">
+            <div className="flex w-full flex-col gap-8">
               <div className="flex">
                 <h2 className="text-2xl">{selectedWorker.name}</h2>
-                <div className="flex ml-auto items-center md:hidden">
+                <div className="ml-auto flex items-center md:hidden">
                   <EventsMenu
                     selected={selectedWorker.name}
                     storageKey={storageKey}
                     workerType={workerType}
                     onAfterClear={() => {
-                      return;
+                      return
                     }}
                   />
                 </div>
               </div>
               <div>
                 <nav className="flex items-end gap-4" aria-label="Breadcrumb">
-                  <ol className="flex md:hidden w-11/12 items-center gap-4">
+                  <ol className="flex w-11/12 items-center gap-4 md:hidden">
                     <li className="w-full">
                       {data[workerType] && (
                         <Select
@@ -190,7 +190,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                           selected={selectedWorker}
                           setSelected={setSelectedWorker}
                           display={(w: Worker) => (
-                            <div className="flex items-center p-0.5 text-lg gap-4">
+                            <div className="flex items-center gap-4 p-0.5 text-lg">
                               {w.name}
                             </div>
                           )}
@@ -198,10 +198,10 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                       )}
                     </li>
                   </ol>
-                  <span className="text-lg hidden md:flex gap-2">
+                  <span className="hidden gap-2 text-lg md:flex">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="truncate max-w-lg">
+                        <span className="max-w-lg truncate">
                           {generatedURL}
                         </span>
                       </TooltipTrigger>
@@ -214,14 +214,14 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                         <button
                           type="button"
                           onClick={() => {
-                            copyToClipboard(generatedURL);
-                            toast.success(`Copied ${workerTitleSingle} URL`);
+                            copyToClipboard(generatedURL)
+                            toast.success(`Copied ${workerTitleSingle} URL`)
                           }}
                         >
                           <span className="sr-only">
                             Copy {workerTitleSingle} URL
                           </span>
-                          <ClipboardIcon className="w-5 h-5 text-gray-500" />
+                          <ClipboardIcon className="h-5 w-5 text-gray-500" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -230,7 +230,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                     </Tooltip>
                   </span>
                   <span className="hidden md:block"></span>
-                  {workerType === "schedules" && (
+                  {workerType === 'schedules' && (
                     <Button
                       size="lg"
                       className="ml-auto"
@@ -243,9 +243,9 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                 </nav>
               </div>
 
-              {workerType === "topics" && (
+              {workerType === 'topics' && (
                 <div className="flex flex-col py-4">
-                  <div className="bg-white shadow sm:rounded-lg px-4 py-5 sm:p-6">
+                  <div className="bg-white px-4 py-5 shadow sm:rounded-lg sm:p-6">
                     <h2>Payload</h2>
                     <div>
                       <CodeEditor
@@ -253,20 +253,20 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                         contentType="application/json"
                         onChange={(payload: string) => {
                           try {
-                            setBody(JSON.parse(payload));
+                            setBody(JSON.parse(payload))
                           } catch {
-                            return;
+                            return
                           }
                         }}
                       />
 
                       <Button
                         size="lg"
-                        className="ml-auto flex mt-6"
+                        className="ml-auto mt-6 flex"
                         data-testid={`trigger-${workerType}-btn`}
                         onClick={handleSend}
                       >
-                        {workerType === "topics" ? "Publish" : "Trigger"}
+                        {workerType === 'topics' ? 'Publish' : 'Trigger'}
                       </Button>
                     </div>
                   </div>
@@ -275,7 +275,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               <div className="bg-white shadow sm:rounded-lg">
                 <div className="px-4 py-5 sm:p-6">
                   <div className="sm:flex sm:items-start sm:justify-between">
-                    <div className="w-full relative">
+                    <div className="relative w-full">
                       <div className="flex items-center gap-4">
                         <h3 className="text-xl font-semibold leading-6 text-gray-900">
                           Response
@@ -284,25 +284,25 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                           <Spinner
                             className="absolute top-0"
                             color="info"
-                            size={"md"}
+                            size={'md'}
                           />
                         )}
                       </div>
                       <div className="absolute right-0 top-0 flex gap-2">
                         {response?.status && (
                           <Badge
-                            status={response.status >= 400 ? "red" : "green"}
+                            status={response.status >= 400 ? 'red' : 'green'}
                           >
                             Status: {response.status}
                           </Badge>
                         )}
                         {response?.time && (
-                          <Badge status={"green"}>
+                          <Badge status={'green'}>
                             Time: {formatResponseTime(response.time)}
                           </Badge>
                         )}
-                        {typeof response?.size === "number" && (
-                          <Badge status={"green"}>
+                        {typeof response?.size === 'number' && (
+                          <Badge status={'green'}>
                             Size: {formatFileSize(response.size)}
                           </Badge>
                         )}
@@ -314,10 +314,10 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                             <Tabs
                               tabs={[
                                 {
-                                  name: "Response",
+                                  name: 'Response',
                                 },
                                 {
-                                  name: "Headers",
+                                  name: 'Headers',
                                   count: Object.keys(response.headers || {})
                                     .length,
                                 },
@@ -351,7 +351,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 bg-white">
                                       {Object.entries(
-                                        response.headers || {}
+                                        response.headers || {},
                                       ).map(([key, value]) => (
                                         <tr key={key}>
                                           <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
@@ -369,11 +369,11 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                             )}
                           </div>
                         ) : response ? (
-                          <span className="text-gray-500 text-lg">
+                          <span className="text-lg text-gray-500">
                             No response data available for this request.
                           </span>
                         ) : (
-                          <span className="text-gray-500 text-lg">
+                          <span className="text-lg text-gray-500">
                             Send a request to get a response.
                           </span>
                         )}
@@ -383,7 +383,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                 </div>
               </div>
             </div>
-            <div className="w-full flex flex-col gap-8 pb-20">
+            <div className="flex w-full flex-col gap-8 pb-20">
               <h3 className="text-2xl font-semibold leading-6">History</h3>
               <EventsHistory
                 history={eventHistory}
@@ -394,7 +394,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
           </div>
         ) : !hasData ? (
           <div>
-            Please refer to our documentation on{" "}
+            Please refer to our documentation on{' '}
             <a
               className="underline"
               target="_blank"
@@ -402,13 +402,13 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               rel="noreferrer"
             >
               creating {capitalize(workerType)}
-            </a>{" "}
+            </a>{' '}
             as we are unable to find any existing {workerType}.
           </div>
         ) : null}
       </Loading>
     </AppLayout>
-  );
-};
+  )
+}
 
-export default EventsExplorer;
+export default EventsExplorer

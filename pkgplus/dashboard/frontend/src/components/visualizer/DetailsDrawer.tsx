@@ -6,23 +6,27 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from "../ui/drawer";
-import { Button } from "../ui/button";
-import type { PropsWithChildren } from "react";
-import { useStoreApi } from "reactflow";
-interface Props extends PropsWithChildren {
-  title: string;
-  description?: string;
-  open: boolean;
+} from '../ui/drawer'
+import { Button } from '../ui/button'
+import type { PropsWithChildren } from 'react'
+import { useStoreApi } from 'reactflow'
+export interface DetailsDrawerProps extends PropsWithChildren {
+  title: string
+  description?: string
+  open: boolean
+  testHref?: string
+  footerChildren?: React.ReactNode
 }
 
 export const DetailsDrawer = ({
   title,
   description,
   children,
+  footerChildren,
   open,
-}: Props) => {
-  const store = useStoreApi();
+  testHref,
+}: DetailsDrawerProps) => {
+  const store = useStoreApi()
 
   return (
     <Drawer
@@ -30,12 +34,12 @@ export const DetailsDrawer = ({
       open={open}
       onOpenChange={(open) => {
         if (!open) {
-          const { unselectNodesAndEdges } = store.getState();
-          unselectNodesAndEdges();
+          const { unselectNodesAndEdges } = store.getState()
+          unselectNodesAndEdges()
         }
       }}
     >
-      <DrawerContent className="bg-white flex flex-col inset-auto rounded-l-[10px] rounded-r-none h-full w-[400px] mt-24 fixed bottom-0 right-0">
+      <DrawerContent className="fixed inset-auto bottom-0 right-0 mt-24 flex h-full w-[400px] flex-col rounded-l-[10px] rounded-r-none bg-white">
         <div className="mx-auto w-full max-w-sm p-4">
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>
@@ -45,6 +49,14 @@ export const DetailsDrawer = ({
           </DrawerHeader>
           <div className="p-4">{children}</div>
           <DrawerFooter>
+            {footerChildren}
+            {testHref && (
+              <Button asChild>
+                <a href={testHref} target="_blank" rel="noreferrer">
+                  Test
+                </a>
+              </Button>
+            )}
             <DrawerClose asChild>
               <Button variant="outline">Close</Button>
             </DrawerClose>
@@ -52,5 +64,5 @@ export const DetailsDrawer = ({
         </div>
       </DrawerContent>
     </Drawer>
-  );
-};
+  )
+}

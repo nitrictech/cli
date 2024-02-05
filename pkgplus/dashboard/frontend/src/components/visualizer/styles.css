@@ -1,29 +1,33 @@
 .react-flow__node {
-  @apply flex h-[50px] font-medium shadow-xl rounded-md;
+  @apply flex h-[50px] rounded-md font-medium shadow-xl;
+
+  .resource-icon {
+    color: var(--nitric-node-icon-color, #000);
+  }
 }
 
 .gradient:before {
   @apply absolute left-1/2 top-1/2 rounded-full;
-  content: "";
+  content: '';
   padding-bottom: calc(100% * 1.41421356237);
   width: calc(100% * 1.41421356237);
   background: conic-gradient(
     from -160deg at 50% 50%,
-    #c27afa 0deg,
-    #1d30d4 120deg,
-    #2c40f7 240deg,
-    #c27afa 360deg
+    var(--nitric-node-from, #c27afa) 0deg,
+    var(--nitric-node-via, #1d30d4) 120deg,
+    var(--nitric-node-to, #2c40f7) 240deg,
+    var(--nitric-node-from, #c27afa) 360deg
   );
   transform: translate(-50%, -50%);
 }
 
 .react-flow__node.selected .wrapper.gradient:before {
-  content: "";
+  content: '';
   background: conic-gradient(
     from -160deg at 50% 50%,
-    #c27afa 0deg,
-    #1d30d4 120deg,
-    #2c40f7 240deg,
+    var(--nitric-node-from, #c27afa) 0deg,
+    var(--nitric-node-via, #1d30d4) 120deg,
+    var(--nitric-node-to, #2c40f7) 240deg,
     rgba(42, 138, 246, 0) 360deg
   );
   animation: spinner 4s linear infinite;
@@ -41,8 +45,54 @@
   opacity: 0;
 }
 
-.react-flow__edge .react-flow__edge-path {
-  stroke: url(#edge-gradient);
-  stroke-width: 2;
-  stroke-opacity: 0.75;
+.react-flow__edge-path {
+  @apply stroke-black/80;
+}
+
+.react-flow__edge.selected {
+  .react-flow__edge-path {
+    @apply stroke-primary;
+  }
+}
+
+.react-flow__node-api {
+  --nitric-node-from: #2563eb; /* Blue 600 */
+  --nitric-node-via: #60a5fa; /* Blue 400 */
+  --nitric-node-to: #1d4ed8; /* Blue 700 */
+  --nitric-node-icon-color: #2563eb; /* Blue 600 */
+}
+
+.react-flow__node-bucket {
+  --nitric-node-from: #059669; /* emerald 600 */
+  --nitric-node-via: #34d399; /* emerald 400 */
+  --nitric-node-to: #047857; /* emerald 700 */
+  --nitric-node-icon-color: #059669; /* emerald 600 */
+}
+
+.react-flow__node-topic {
+  --nitric-node-from: #d97706; /* amber 600 */
+  --nitric-node-via: #fbbf24; /* amber 400 */
+  --nitric-node-to: #b45309; /* amber 700 */
+  --nitric-node-icon-color: #d97706; /* amber 600 */
+}
+
+.react-flow__node-schedule {
+  --nitric-node-from: #7c3aed; /* Violet 600 */
+  --nitric-node-via: #a78bfa; /* Violet 400 */
+  --nitric-node-to: #6d28d9; /* Violet 700 */
+  --nitric-node-icon-color: #7c3aed; /* Violet 600 */
+}
+
+.react-flow__node-service {
+  --nitric-node-from: #0284c7; /* Sky 600 */
+  --nitric-node-via: #38bdf8; /* Sky 400 */
+  --nitric-node-to: #0369a1; /* Sky 700 */
+  --nitric-node-icon-color: #0284c7; /* Sky 600 */
+}
+
+.react-flow__node-websocket {
+  --nitric-node-from: #c026d3; /* Fuchsia 600 */
+  --nitric-node-via: #e879f9; /* Fuchsia 400 */
+  --nitric-node-to: #a21caf; /* Fuchsia 700 */
+  --nitric-node-icon-color: #c026d3; /* Fuchsia 600 */
 }

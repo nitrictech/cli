@@ -1,10 +1,10 @@
-import type { FC } from "react";
-import { Badge } from "../shared";
-import type { Method } from "../../types";
+import type { FC } from 'react'
+import { Badge } from '../shared'
+import type { Method } from '../../types'
 
 interface Props {
-  method: Method;
-  className?: string;
+  method: Method
+  className?: string
 }
 
 export const APIMethodBadge: FC<Props> = ({ method, className }) => {
@@ -14,16 +14,16 @@ export const APIMethodBadge: FC<Props> = ({ method, className }) => {
       status={
         (
           {
-            DELETE: "red",
-            POST: "green",
-            PUT: "yellow",
-            PATCH: "orange",
-            GET: "blue",
+            DELETE: 'red',
+            POST: 'green',
+            PUT: 'yellow',
+            PATCH: 'orange',
+            GET: 'blue',
           } as any
         )[method]
       }
     >
       {method}
     </Badge>
-  );
-};
+  )
+}

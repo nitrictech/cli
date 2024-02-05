@@ -1,3 +1,3 @@
-import StorageExplorer from "./StorageExplorer";
+import StorageExplorer from './StorageExplorer'
 
-export default StorageExplorer;
+export default StorageExplorer

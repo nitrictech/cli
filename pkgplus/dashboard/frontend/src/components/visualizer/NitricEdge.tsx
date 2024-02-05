@@ -1,4 +1,10 @@
-import { type EdgeProps, getBezierPath, EdgeLabelRenderer } from "reactflow";
+import { cn } from '@/lib/utils'
+import {
+  type EdgeProps,
+  EdgeLabelRenderer,
+  BaseEdge,
+  getBezierPath,
+} from 'reactflow'
 
 export default function NitricEdge({
   id,
@@ -6,14 +12,16 @@ export default function NitricEdge({
   sourceY,
   targetX,
   targetY,
+  label,
   sourcePosition,
   targetPosition,
   style = {},
   markerEnd,
+  selected,
   data,
 }: EdgeProps) {
-  const xEqual = sourceX === targetX;
-  const yEqual = sourceY === targetY;
+  const xEqual = sourceX === targetX
+  const yEqual = sourceY === targetY
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: xEqual ? sourceX + 0.0001 : sourceX,
@@ -22,29 +30,26 @@ export default function NitricEdge({
     targetX,
     targetY,
     targetPosition,
-  });
+  })
 
   return (
     <>
-      <path
-        id={id}
-        style={style}
-        className="react-flow__edge-path"
-        d={edgePath}
-        markerEnd={markerEnd}
-      />
-      {data?.label && (
+      <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
+      {label && (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan border border-primary absolute bg-white p-1.5 text-[10px] tracking-normal font-semibold rounded-sm"
+            className={cn(
+              'nodrag absolute rounded-sm border bg-white p-1.5 text-[10px] font-semibold tracking-normal transition-all',
+              selected ? 'border-primary' : 'border-gray-500',
+            )}
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}
           >
-            {data.label}
+            {label}
           </div>
         </EdgeLabelRenderer>
       )}
     </>
-  );
+  )
 }

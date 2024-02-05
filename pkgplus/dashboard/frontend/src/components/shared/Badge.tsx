@@ -1,13 +1,13 @@
-import { cn } from "@/lib/utils";
-import type { PropsWithChildren } from "react";
+import { cn } from '@/lib/utils'
+import type { PropsWithChildren } from 'react'
 
 interface Props extends PropsWithChildren {
-  status: "red" | "green" | "yellow" | "orange" | "blue" | "default";
-  className?: string;
+  status: 'red' | 'green' | 'yellow' | 'orange' | 'blue' | 'default'
+  className?: string
 }
 
 const Badge: React.FC<Props> = ({
-  status = "default",
+  status = 'default',
   className,
   children,
   ...rest
@@ -15,20 +15,20 @@ const Badge: React.FC<Props> = ({
   return (
     <span
       className={cn(
-        "inline-flex justify-center items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        status === "red" && "text-red-800 bg-red-100",
-        status === "green" && "text-green-800 bg-green-100",
-        status === "yellow" && "text-yellow-800 bg-yellow-100",
-        status === "orange" && "text-orange-800 bg-orange-100",
-        status === "blue" && "text-blue-800 bg-blue-100",
-        status === "default" && "text-gray-800 bg-gray-100",
-        className
+        'inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+        status === 'red' && 'bg-red-100 text-red-800',
+        status === 'green' && 'bg-green-100 text-green-800',
+        status === 'yellow' && 'bg-yellow-100 text-yellow-800',
+        status === 'orange' && 'bg-orange-100 text-orange-800',
+        status === 'blue' && 'bg-blue-100 text-blue-800',
+        status === 'default' && 'bg-gray-100 text-gray-800',
+        className,
       )}
       {...rest}
     >
       {children}
     </span>
-  );
-};
+  )
+}
 
-export default Badge;
+export default Badge

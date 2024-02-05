@@ -1,15 +1,15 @@
-import { cn } from "@/lib/utils";
-import { FC, Fragment } from "react";
+import { cn } from '@/lib/utils'
+import { FC, Fragment } from 'react'
 
 interface Group {
-  name: string;
-  rows: any[][];
+  name: string
+  rows: any[][]
 }
 
 interface Props {
-  headers: any[];
-  groups: Group[];
-  rowDataClassName?: string;
+  headers: any[]
+  groups: Group[]
+  rowDataClassName?: string
 }
 
 const TableGroup: FC<Props> = ({ headers, groups, rowDataClassName }) => {
@@ -40,8 +40,8 @@ const TableGroup: FC<Props> = ({ headers, groups, rowDataClassName }) => {
                   <tr
                     key={rowIdx}
                     className={cn(
-                      rowIdx === 0 ? "border-gray-300" : "border-gray-200",
-                      "border-t"
+                      rowIdx === 0 ? 'border-gray-300' : 'border-gray-200',
+                      'border-t',
                     )}
                   >
                     {row.map((rowData, rowDataIdx) => (
@@ -49,8 +49,8 @@ const TableGroup: FC<Props> = ({ headers, groups, rowDataClassName }) => {
                         key={rowDataIdx}
                         title={rowData}
                         className={cn(
-                          "truncate py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-3",
-                          rowDataClassName
+                          'truncate py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-3',
+                          rowDataClassName,
                         )}
                       >
                         {rowData}
@@ -64,7 +64,7 @@ const TableGroup: FC<Props> = ({ headers, groups, rowDataClassName }) => {
         </table>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default TableGroup;
+export default TableGroup

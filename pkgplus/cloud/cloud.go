@@ -26,9 +26,12 @@ type Subscribable[T any, A any] interface {
 	SubscribeToState(fn func(T))
 	SubscribeToAction(fn func(A)) // used to subscribe to api calls, ws messages, topic deliveries etc
 }
+
+type ServiceName = string
+
 type LocalCloud struct {
 	membraneLock sync.Mutex
-	membranes    map[string]*membrane.Membrane
+	membranes    map[ServiceName]*membrane.Membrane
 
 	Apis       *apis.LocalApiGatewayService
 	KeyValue   *keyvalue.BoltDocService
@@ -52,29 +55,6 @@ func (lc *LocalCloud) Stop() {
 	lc.Gateway.Stop()
 }
 
-// StartLocalNitric - starts the Nitric Server (membrane), including plugins and their local dependencies (e.g. local versions of cloud services
-// func (lc *LocalCloud) Start() error {
-// 	errs, _ := errgroup.WithContext(context.Background())
-
-// 	for serviceName, m := range lc.membranes {
-
-// 		localMembrane := m
-
-// 		errs.Go(func() error {
-// 			interceptor, streamInterceptor := grpcx.CreateServiceIdInterceptor(serviceName)
-
-// 			srv := grpc.NewServer(
-// 				grpc.UnaryInterceptor(interceptor),
-// 				grpc.StreamInterceptor(streamInterceptor),
-// 			)
-
-// 			return localMembrane.Start(membrane.WithGrpcServer(srv))
-// 		})
-// 	}
-
-// 	return errs.Wait()
-// }
-
 func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	lc.membraneLock.Lock()
 	defer lc.membraneLock.Unlock()
@@ -88,7 +68,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 		return 0, err
 	}
 
-	nitricMembraneServer, err := membrane.New(&membrane.MembraneOptions{
+	nitricMembraneServer, _ := membrane.New(&membrane.MembraneOptions{
 		// worker/listener plugins (these delegate incoming events/requests to handlers written with nitric)
 		ApiPlugin:               lc.Apis,
 		HttpPlugin:              lc.Http,

@@ -1,14 +1,14 @@
-import { Menu, Transition } from "@headlessui/react";
-import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
-import { cn } from "@/lib/utils";
-import { Fragment } from "react";
-import { useHistory } from "../../lib/hooks/use-history";
+import { Menu, Transition } from '@headlessui/react'
+import { EllipsisHorizontalIcon } from '@heroicons/react/20/solid'
+import { cn } from '@/lib/utils'
+import { Fragment } from 'react'
+import { useHistory } from '../../lib/hooks/use-history'
 
 interface Props {
-  storageKey: string;
-  workerType: string;
-  selected: string;
-  onAfterClear: () => void;
+  storageKey: string
+  workerType: string
+  selected: string
+  onAfterClear: () => void
 }
 
 const EventsMenu: React.FC<Props> = ({
@@ -17,24 +17,24 @@ const EventsMenu: React.FC<Props> = ({
   selected,
   onAfterClear,
 }) => {
-  const { deleteHistory } = useHistory(workerType);
+  const { deleteHistory } = useHistory(workerType)
 
   const clearHistory = async () => {
-    const prefix = `${storageKey}-${selected}-`;
+    const prefix = `${storageKey}-${selected}-`
 
     for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
+      const key = localStorage.key(i)
       if (key?.startsWith(prefix)) {
-        localStorage.removeItem(key);
+        localStorage.removeItem(key)
       }
     }
 
-    localStorage.removeItem(`${storageKey}-requests`);
+    localStorage.removeItem(`${storageKey}-requests`)
 
-    await deleteHistory();
+    await deleteHistory()
 
-    onAfterClear();
-  };
+    onAfterClear()
+  }
 
   return (
     <Menu as="div" className="relative ml-auto">
@@ -60,8 +60,8 @@ const EventsMenu: React.FC<Props> = ({
               <button
                 onClick={clearHistory}
                 className={cn(
-                  active ? "bg-gray-50" : "",
-                  "flex px-3 py-1 w-full text-sm leading-6 text-gray-900"
+                  active ? 'bg-gray-50' : '',
+                  'flex w-full px-3 py-1 text-sm leading-6 text-gray-900',
                 )}
               >
                 Clear History
@@ -71,7 +71,7 @@ const EventsMenu: React.FC<Props> = ({
         </Menu.Items>
       </Transition>
     </Menu>
-  );
-};
+  )
+}
 
-export default EventsMenu;
+export default EventsMenu

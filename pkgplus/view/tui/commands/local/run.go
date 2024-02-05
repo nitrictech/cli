@@ -1,8 +1,6 @@
 package local
 
 import (
-	"strings"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -15,7 +13,6 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud/websockets"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	viewr "github.com/nitrictech/cli/pkgplus/view/tui/components/view"
-	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
@@ -199,7 +196,7 @@ func (t *TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (t *TuiModel) View() string {
-	output := viewr.New()
+	v := viewr.New()
 
 	apisRegistered := len(t.apis) > 0
 	websocketsRegistered := len(t.websockets) > 0
@@ -209,94 +206,16 @@ func (t *TuiModel) View() string {
 
 	noWorkersRegistered := !apisRegistered && !websocketsRegistered && !httpProxiesRegistered && !topicsRegistered && !schedulesRegistered
 
-	// Show waiting message if no workers are connected
-	output.Add(fragments.NitricTag())
-	output.Add(" started").WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Green))
-	output.Break()
-
 	if t.dashboardUrl != "" && !noWorkersRegistered {
-		output.Addln(fragments.Tag("dash"))
-		output.Addln(t.dashboardUrl).WithStyle(lipgloss.NewStyle().Bold(true))
-		output.Break()
+		v.Addln("dashboard: %s", t.dashboardUrl).WithStyle(lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Purple).Margin(1).PaddingLeft(1).PaddingRight(1))
 	}
 
-	// Show APIs
-	if apisRegistered {
-		output.Addln(fragments.Tag("apis"))
-		output.Break()
-
-		for _, api := range t.apis {
-			output.Add(api.Name).WithStyle(lipgloss.NewStyle().Bold(true))
-			output.Addln(" => %s", api.Url)
-			output.Addln(" for %s", strings.Join(api.RequestingServices, ", "))
-			output.Break()
-		}
+	for _, api := range t.apis {
+		v.Add("api:%s -", api.Name)
+		v.Addln(" http://%s", api.Url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
-	// Show HTTP Servers
-	if httpProxiesRegistered {
-		output.Addln(fragments.Tag("http"))
-		output.Break()
-
-		for _, httpProxy := range t.httpProxies {
-			output.Add(httpProxy.name).WithStyle(lipgloss.NewStyle().Bold(true))
-			output.Addln(" => %s", httpProxy.url)
-			output.Break()
-		}
-	}
-
-	// Show APIs
-	if websocketsRegistered {
-		output.Addln(fragments.Tag("websockets"))
-		output.Break()
-
-		for _, websocket := range t.websockets {
-			output.Add(websocket.name).WithStyle(lipgloss.NewStyle().Bold(true))
-			output.Addln(" => %s", websocket.url)
-			output.Break()
-		}
-	}
-
-	if topicsRegistered {
-		output.Addln(fragments.Tag("topics"))
-		output.Break()
-
-		for _, topic := range t.topics {
-			output.Add(topic.name).WithStyle(lipgloss.NewStyle().Bold(true))
-			output.Addln(" => %s (%d subscribers)", topic.url, topic.subscriberCount)
-			output.Break()
-		}
-	}
-
-	if schedulesRegistered {
-		output.Addln(fragments.Tag("schedules"))
-		output.Break()
-
-		for _, schedule := range t.schedules {
-			output.Add(schedule.name).WithStyle(lipgloss.NewStyle().Bold(true))
-			output.Addln(" => %s (%s)", schedule.url, schedule.rate)
-			output.Break()
-		}
-	}
-
-	// // Render resources
-	// if t.resources != nil {
-	// 	output.Addln("Resources:").WithStyle(tagStyle)
-	// 	output.Break()
-
-	// 	for name, bucket := range t.resources.Buckets.GetAll() {
-	// 		output.Addln("Bucket::%s", name)
-	// 		output.Addln(" for %s", strings.Join(bucket.RequestingServices, ", "))
-	// 	}
-
-	// 	for name, policy := range t.resources.Policies.GetAll() {
-	// 		output.Addln("Policy::%s", name)
-	// 		output.Addln(" - %+v", policy.Resource)
-	// 	}
-	// }
-
-	// Show relevant links
-	return output.Render()
+	return v.Render()
 }
 
 func NewTuiModel(localCloud *cloud.LocalCloud, dashboardUrl string) *TuiModel {

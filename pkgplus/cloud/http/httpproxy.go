@@ -70,6 +70,19 @@ func (h *LocalHttpProxy) HandleRequest(request *fasthttp.Request) (*fasthttp.Res
 	return service.server.HandleRequest(request)
 }
 
+func (h *LocalHttpProxy) ClearForServiceName(serviceName string) {
+	h.httpWorkerLock.Lock()
+	defer h.httpWorkerLock.Unlock()
+
+	for host, service := range h.state {
+		if service.ServiceName == serviceName {
+			delete(h.state, host)
+		}
+	}
+
+	h.publishState()
+}
+
 func (h *LocalHttpProxy) Proxy(ctx context.Context, req *httppb.HttpProxyRequest) (*httppb.HttpProxyResponse, error) {
 	serviceName, err := grpcx.GetServiceNameFromIncomingContext(ctx)
 	if err != nil {

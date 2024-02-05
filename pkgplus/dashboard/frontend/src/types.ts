@@ -23,7 +23,11 @@ export interface Api extends BaseResource {
   spec: APIDoc
 }
 
-export interface KeyValue extends BaseResource {}
+export type KeyValue = BaseResource
+
+export interface HttpProxy extends BaseResource {
+  target: string
+}
 
 export interface Schedule extends BaseResource {
   expression?: string
@@ -95,7 +99,7 @@ export interface WebSocketResponse {
   topics: Topic[]
   services: Service[]
   stores: KeyValue[]
-  // subscriptions: string[];
+  httpProxies: HttpProxy[]
   websockets: WebSocket[]
   policies: {
     [name: string]: Policy
@@ -103,6 +107,7 @@ export interface WebSocketResponse {
   triggerAddress: string
   apiAddresses: Record<string, string>
   websocketAddresses: Record<string, string>
+  httpWorkerAddresses: Record<string, string>
   storageAddress: string // has http:// prefix
   currentVersion: string
   latestVersion: string

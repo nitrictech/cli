@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { getEdgeParams } from '@/lib/utils/generate-visualizer-data';
+import { getEdgeParams } from '@/lib/utils/generate-visualizer-data'
 import {
   type EdgeProps,
   EdgeLabelRenderer,
@@ -24,15 +24,15 @@ export default function NitricEdge({
   selected,
   data,
 }: EdgeProps) {
-  const allNodes = useNodes();
+  const allNodes = useNodes()
 
   const xEqual = sourceX === targetX
   const yEqual = sourceY === targetY
 
-  const sourceNode = allNodes.find(n => n.id === source);
-  const targetNode = allNodes.find(n => n.id === target);
+  const sourceNode = allNodes.find((n) => n.id === source)
+  const targetNode = allNodes.find((n) => n.id === target)
 
-  const edgeParams = getEdgeParams(sourceNode, targetNode);
+  const edgeParams = getEdgeParams(sourceNode, targetNode)
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: edgeParams.sx,

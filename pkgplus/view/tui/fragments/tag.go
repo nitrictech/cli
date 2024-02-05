@@ -4,13 +4,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 )
 
-var (
-	width = 0
-)
+var width = 0
 
 // CustomTag renders a tag with the given text, foreground, background and width
 // e.g. CustomTag("hello", tui.Colors.White, tui.Colors.Purple, 8)

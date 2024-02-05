@@ -1,12 +1,12 @@
 import { type ComponentType } from 'react'
 
-import type { KeyValue } from '@/types'
+import type { HttpProxy } from '@/types'
 import type { NodeProps } from 'reactflow'
 import NodeBase, { type NodeBaseData } from './NodeBase'
 
-export type KeyValueNodeData = NodeBaseData<KeyValue>
+export type HttpProxyNodeData = NodeBaseData<HttpProxy>
 
-export const KeyValueNode: ComponentType<NodeProps<KeyValueNodeData>> = (
+export const HttpProxyNode: ComponentType<NodeProps<HttpProxyNodeData>> = (
   props,
 ) => {
   const { data } = props
@@ -15,13 +15,13 @@ export const KeyValueNode: ComponentType<NodeProps<KeyValueNodeData>> = (
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Details - ${data.title}`,
+        title: `HTTP Proxy ${data.title}`,
         description: data.description,
-        // testHref: `/stores`, // TODO add url param to switch to resource
+        // testHref: `/proxies`, // TODO add url param to switch to resource
         children: (
           <div className="flex flex-col">
             <span className="font-bold">Requested by:</span>
-            <span>{data.resource.requestingServices.join(', ')}</span>
+            <span>{data.resource.target}</span>
           </div>
         ),
       }}

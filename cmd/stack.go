@@ -223,7 +223,6 @@ var stackUpdateCmd = &cobra.Command{
 
 		_, err = teax.NewProgram(stackUp).Run()
 		tui.CheckErr(err)
-
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},

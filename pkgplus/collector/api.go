@@ -3,8 +3,9 @@ package collector
 import (
 	"fmt"
 
-	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	"github.com/samber/lo"
+
+	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 )
 
 type ApiCollectorServer struct {

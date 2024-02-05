@@ -98,7 +98,11 @@ const APIExplorer = () => {
   const [requiredPathParamErrors, setRequiredPathParamErrors] = useState({})
 
   const paths = useMemo(
-    () => data?.apis?.filter(api => api.spec).map((api) => flattenPaths(api.spec)).flat(),
+    () =>
+      data?.apis
+        ?.filter((api) => api.spec)
+        .map((api) => flattenPaths(api.spec))
+        .flat(),
     [data],
   )
 

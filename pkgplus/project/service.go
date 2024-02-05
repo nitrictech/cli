@@ -13,11 +13,12 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
+	"github.com/samber/lo"
+	"github.com/spf13/afero"
+
 	"github.com/nitrictech/cli/pkgplus/docker"
 	"github.com/nitrictech/cli/pkgplus/netx"
 	"github.com/nitrictech/cli/pkgplus/project/runtime"
-	"github.com/samber/lo"
-	"github.com/spf13/afero"
 )
 
 type ServiceBuildStatus string

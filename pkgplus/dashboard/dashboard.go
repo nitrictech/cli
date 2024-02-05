@@ -42,6 +42,7 @@ import (
 
 	"github.com/nitrictech/cli/pkgplus/cloud/apis"
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
+	httpproxy "github.com/nitrictech/cli/pkgplus/cloud/http"
 	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/storage"
@@ -70,13 +71,6 @@ type WebsocketSpec struct {
 
 	Targets map[string]string `json:"targets,omitempty"`
 }
-
-type ServiceSpec struct {
-	*BaseResourceSpec
-
-	FilePath string `json:"filePath"`
-}
-
 type ScheduleSpec struct {
 	*BaseResourceSpec
 
@@ -119,6 +113,18 @@ type PolicySpec struct {
 	Resources  []PolicyResource `json:"resources"`
 }
 
+type ServiceSpec struct {
+	*BaseResourceSpec
+
+	FilePath string `json:"filePath"`
+}
+
+type HttpProxySpec struct {
+	*BaseResourceSpec
+
+	Target string `json:"target"`
+}
+
 type Dashboard struct {
 	resourcesLock  sync.Mutex
 	project        *project.Project
@@ -132,9 +138,9 @@ type Dashboard struct {
 	websockets     []WebsocketSpec
 	subscriptions  []*SubscriberSpec
 	notifications  []*NotifierSpec
-
-	policies map[string]PolicySpec
-	envMap   map[string]string
+	httpProxies    []*HttpProxySpec
+	policies       map[string]PolicySpec
+	envMap         map[string]string
 
 	stackWebSocket   *melody.Melody
 	historyWebSocket *melody.Melody
@@ -156,18 +162,20 @@ type DashboardResponse struct {
 	Subscriptions []*SubscriberSpec `json:"subscriptions"`
 	Notifications []*NotifierSpec   `json:"notifications"`
 	Stores        []*KeyValueSpec   `json:"stores"`
+	HttpProxies   []*HttpProxySpec  `json:"httpProxies"`
 
 	Services []*ServiceSpec `json:"services"`
 
-	Policies           map[string]PolicySpec `json:"policies"`
-	ProjectName        string                `json:"projectName"`
-	ApiAddresses       map[string]string     `json:"apiAddresses"`
-	WebsocketAddresses map[string]string     `json:"websocketAddresses"`
-	TriggerAddress     string                `json:"triggerAddress"`
-	StorageAddress     string                `json:"storageAddress"`
-	CurrentVersion     string                `json:"currentVersion"`
-	LatestVersion      string                `json:"latestVersion"`
-	Connected          bool                  `json:"connected"`
+	Policies            map[string]PolicySpec `json:"policies"`
+	ProjectName         string                `json:"projectName"`
+	ApiAddresses        map[string]string     `json:"apiAddresses"`
+	WebsocketAddresses  map[string]string     `json:"websocketAddresses"`
+	HttpWorkerAddresses map[string]string     `json:"httpWorkerAddresses"`
+	TriggerAddress      string                `json:"triggerAddress"`
+	StorageAddress      string                `json:"storageAddress"`
+	CurrentVersion      string                `json:"currentVersion"`
+	LatestVersion       string                `json:"latestVersion"`
+	Connected           bool                  `json:"connected"`
 }
 
 type Bucket struct {
@@ -414,6 +422,24 @@ func (d *Dashboard) updateBucketNotifications(state storage.State) {
 	d.refresh()
 }
 
+func (d *Dashboard) updateHttpProxies(state httpproxy.State) {
+	d.resourcesLock.Lock()
+	defer d.resourcesLock.Unlock()
+
+	d.httpProxies = []*HttpProxySpec{}
+
+	for host, srvc := range state {
+		d.httpProxies = append(d.httpProxies, &HttpProxySpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name: host,
+			},
+			Target: srvc.ServiceName,
+		})
+	}
+
+	d.refresh()
+}
+
 func (d *Dashboard) refresh() {
 	if !d.noBrowser && !d.browserHasOpened {
 		d.openBrowser()
@@ -580,24 +606,26 @@ func (d *Dashboard) sendStackUpdate() error {
 	}
 
 	response := &DashboardResponse{
-		Apis:               d.apis,
-		Topics:             d.topics,
-		Buckets:            d.buckets,
-		Stores:             d.stores,
-		Schedules:          d.schedules,
-		Websockets:         d.websockets,
-		Policies:           d.policies,
-		Services:           services,
-		Subscriptions:      d.subscriptions,
-		Notifications:      d.notifications,
-		ProjectName:        d.project.Name,
-		ApiAddresses:       d.gatewayService.GetApiAddresses(),
-		WebsocketAddresses: d.gatewayService.GetWebsocketAddresses(),
-		TriggerAddress:     d.gatewayService.GetTriggerAddress(),
-		StorageAddress:     d.storageService.GetStorageEndpoint(),
-		CurrentVersion:     currentVersion,
-		LatestVersion:      latestVersion,
-		Connected:          d.isConnected(),
+		Apis:                d.apis,
+		Topics:              d.topics,
+		Buckets:             d.buckets,
+		Stores:              d.stores,
+		Schedules:           d.schedules,
+		Websockets:          d.websockets,
+		Policies:            d.policies,
+		Services:            services,
+		Subscriptions:       d.subscriptions,
+		Notifications:       d.notifications,
+		HttpProxies:         d.httpProxies,
+		ProjectName:         d.project.Name,
+		ApiAddresses:        d.gatewayService.GetApiAddresses(),
+		WebsocketAddresses:  d.gatewayService.GetWebsocketAddresses(),
+		HttpWorkerAddresses: d.gatewayService.GetHttpWorkerAddresses(),
+		TriggerAddress:      d.gatewayService.GetTriggerAddress(),
+		StorageAddress:      d.storageService.GetStorageEndpoint(),
+		CurrentVersion:      currentVersion,
+		LatestVersion:       latestVersion,
+		Connected:           d.isConnected(),
 	}
 
 	// Encode the response as JSON
@@ -656,6 +684,8 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		subscriptions:    []*SubscriberSpec{},
 		notifications:    []*NotifierSpec{},
 		websockets:       []WebsocketSpec{},
+		stores:           []*KeyValueSpec{},
+		httpProxies:      []*HttpProxySpec{},
 		policies:         map[string]PolicySpec{},
 		websocketsInfo:   map[string]*websockets.WebsocketInfo{},
 		noBrowser:        noBrowser,
@@ -679,6 +709,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	localCloud.Schedules.SubscribeToState(dash.updateSchedules)
 	localCloud.Topics.SubscribeToState(dash.updateTopicSubscriptions)
 	localCloud.Storage.SubscribeToState(dash.updateBucketNotifications)
+	localCloud.Http.SubscribeToState(dash.updateHttpProxies)
 
 	// subscribe to history events from gateway
 	localCloud.Apis.SubscribeToAction(dash.handleApiHistory)

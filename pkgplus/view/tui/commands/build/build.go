@@ -75,7 +75,7 @@ func (m Model) View() string {
 	v := view.New()
 	v.Break()
 	v.Add(fragments.Tag("build"))
-	v.Add("  Services")
+	v.Add("  Building services")
 	if !m.AllDone() {
 		v.Add(m.spinner.View())
 	}
@@ -106,8 +106,8 @@ func (m Model) View() string {
 
 		messageLines := strings.Split(strings.TrimSpace(service.Message), "\n")
 
-		serviceUpdates.Add("%s ", serviceName).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple).Bold(true))
-		serviceUpdates.Addln("%s", service.Status).WithStyle(lipgloss.NewStyle().Foreground(statusColor).Bold(true))
+		serviceUpdates.Add("%s ", serviceName)
+		serviceUpdates.Addln(strings.ToLower(string(service.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
 		if len(messageLines) > 0 && service.Status != project.ServiceBuildStatus_Complete {
 			serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 		}

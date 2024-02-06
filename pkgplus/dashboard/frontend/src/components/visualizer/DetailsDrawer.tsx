@@ -8,7 +8,7 @@ import {
 } from '../ui/drawer'
 import { Button } from '../ui/button'
 import { useCallback, type PropsWithChildren } from 'react'
-import { applyNodeChanges, useNodes, useStoreApi, useNodeId } from 'reactflow'
+import { applyNodeChanges, useNodes, useNodeId, useReactFlow } from 'reactflow'
 import type { NodeBaseData } from './nodes/NodeBase'
 import type { nodeTypes } from '@/lib/utils/generate-visualizer-data'
 export interface DetailsDrawerProps extends PropsWithChildren {
@@ -36,16 +36,19 @@ export const DetailsDrawer = ({
   services,
 }: DetailsDrawerProps) => {
   const nodeId = useNodeId()
-  const store = useStoreApi()
+  const { setNodes } = useReactFlow()
   const nodes = useNodes()
 
   const selectServiceNode = useCallback(
     (serviceNodeId: string) => {
-      const { setNodes } = store.getState()
-
       setNodes(
         applyNodeChanges(
           [
+            {
+              id: nodeId || '',
+              type: 'select',
+              selected: false,
+            },
             {
               id: serviceNodeId,
               type: 'select',
@@ -56,12 +59,22 @@ export const DetailsDrawer = ({
         ),
       )
     },
-    [nodes, nodeId, store],
+    [nodes, nodeId],
   )
 
   const close = () => {
-    const { unselectNodesAndEdges } = store.getState()
-    unselectNodesAndEdges()
+    setNodes(
+      applyNodeChanges(
+        [
+          {
+            id: nodeId || '',
+            type: 'select',
+            selected: false,
+          },
+        ],
+        nodes,
+      ),
+    )
   }
 
   return (

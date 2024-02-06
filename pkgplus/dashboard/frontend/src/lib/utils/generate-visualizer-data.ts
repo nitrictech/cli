@@ -17,7 +17,13 @@ import {
   GlobeAltIcon,
   ArrowsRightLeftIcon,
 } from '@heroicons/react/24/outline'
-import { MarkerType, type Edge, type Node, Position } from 'reactflow'
+import {
+  MarkerType,
+  type Edge,
+  type Node,
+  Position,
+  getConnectedEdges,
+} from 'reactflow'
 import {
   TopicNode,
   type TopicNodeData,
@@ -425,9 +431,18 @@ export function generateVisualizerData(data: WebSocketResponse): {
           filePath: service.filePath,
         },
         icon: CpuChipIcon,
+        connectedEdges: [],
       },
       type: 'service',
     }
+
+    const connectedEdges = getConnectedEdges([node], edges)
+    node.data.connectedEdges = connectedEdges
+    node.data.description =
+      connectedEdges.length === 1
+        ? `${connectedEdges.length} connection`
+        : `${connectedEdges.length} connections`
+
     nodes.push(node)
   })
 

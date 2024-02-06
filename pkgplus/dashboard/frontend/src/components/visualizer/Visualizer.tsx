@@ -84,7 +84,7 @@ function ReactFlowLayout() {
   )
 
   useOnSelectionChange({
-    onChange: ({ nodes: nodesChanged, edges: edgesChanged }) => {
+    onChange: ({ nodes: nodesChanged }) => {
       const connectedEdges = getConnectedEdges(nodesChanged, edges)
 
       // select all connected edges if node is selected

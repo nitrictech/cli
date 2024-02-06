@@ -1,9 +1,9 @@
 .react-flow__node {
   @apply flex h-[50px] rounded-md font-medium shadow-xl;
+}
 
-  .resource-icon {
-    color: var(--nitric-node-icon-color, #000);
-  }
+.resource-icon {
+  color: var(--nitric-node-icon-color, #000);
 }
 
 .gradient:before {

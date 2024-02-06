@@ -15,15 +15,13 @@ export const HttpProxyNode: ComponentType<NodeProps<HttpProxyNodeData>> = (
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `HTTP Proxy ${data.title}`,
+        title: `HTTP Proxy - ${data.title}`,
         description: data.description,
-        // testHref: `/proxies`, // TODO add url param to switch to resource
-        children: (
-          <div className="flex flex-col">
-            <span className="font-bold">Requested by:</span>
-            <span>{data.resource.target}</span>
-          </div>
-        ),
+        icon: data.icon,
+        nodeType: 'httpproxy',
+        testHref: `http://${data.address}`,
+        address: `http://${data.address}`,
+        services: [data.resource.target],
       }}
     />
   )

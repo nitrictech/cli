@@ -1,10 +1,11 @@
 import { type FC, useMemo } from 'react'
-import type { Schedule, Topic } from '../../types'
+import type { Schedule, Subscriber, Topic } from '../../types'
 import TreeView, { type TreeItemType } from '../shared/TreeView'
 import type { TreeItem, TreeItemIndex } from 'react-complex-tree'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { Badge } from '../ui/badge'
 import { cn } from '@/lib/utils'
+import { getTopicSubscriptions } from '@/lib/utils/get-topic-subscriptions'
 
 export type EventsTreeItemType = TreeItemType<Schedule | Topic>
 
@@ -12,9 +13,17 @@ interface Props {
   resources: (Schedule | Topic)[]
   onSelect: (resource: Schedule | Topic) => void
   initialItem: Schedule | Topic
+  type: 'schedules' | 'topics'
+  subscriptions: Subscriber[]
 }
 
-const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
+const EventsTreeView: FC<Props> = ({
+  resources,
+  onSelect,
+  initialItem,
+  type,
+  subscriptions,
+}) => {
   const treeItems: Record<
     TreeItemIndex,
     TreeItem<EventsTreeItemType>
@@ -50,7 +59,7 @@ const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
 
   return (
     <TreeView<EventsTreeItemType>
-      label="Schedules"
+      label={type}
       items={treeItems}
       initialItem={initialItem.name}
       getItemTitle={(item) => item.data.label}
@@ -61,8 +70,9 @@ const EventsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
       }}
       renderItemTitle={({ item }) => {
         const topicSubscriberCount =
-          typeof (item.data.data as Topic)?.subscriberCount == 'number'
-            ? (item.data.data as Topic)?.subscriberCount
+          type === 'topics'
+            ? getTopicSubscriptions(item.data.data as Topic, subscriptions)
+                .length
             : null
 
         return (

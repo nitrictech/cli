@@ -17,7 +17,13 @@ import {
   GlobeAltIcon,
   ArrowsRightLeftIcon,
 } from '@heroicons/react/24/outline'
-import { MarkerType, type Edge, type Node, Position } from 'reactflow'
+import {
+  MarkerType,
+  type Edge,
+  type Node,
+  Position,
+  getConnectedEdges,
+} from 'reactflow'
 import {
   TopicNode,
   type TopicNodeData,
@@ -45,6 +51,7 @@ import {
   HttpProxyNode,
   type HttpProxyNodeData,
 } from '@/components/visualizer/nodes/HttpProxyNode'
+import { getTopicSubscriptions } from './get-topic-subscriptions'
 
 export const nodeTypes = {
   api: APINode,
@@ -186,12 +193,14 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from APIs
   data.apis.forEach((api) => {
+    const apiAddress = data.apiAddresses[api.name]
     const routes = (api.spec && Object.keys(api.spec.paths)) || []
 
     const node = createNode<ApiNodeData>(api, 'api', {
       title: api.name,
       resource: api,
       icon: GlobeAltIcon,
+      address: apiAddress,
       description: `${routes.length} ${
         routes.length === 1 ? 'Route' : 'Routes'
       }`,
@@ -208,7 +217,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
         }
 
         edges.push({
-          id: `e-${api.name}-${method['x-nitric-target']['name']}`,
+          id: `e-${api.name}-${method.operationId}-${method['x-nitric-target']['name']}`,
           source: node.id,
           target: method['x-nitric-target']['name'],
           animated: true,
@@ -229,6 +238,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from websockets
   data.websockets.forEach((ws) => {
+    const wsAddress = data.websocketAddresses[ws.name]
     const node = createNode<WebsocketNodeData>(ws, 'websocket', {
       title: ws.name,
       resource: ws,
@@ -236,6 +246,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       description: `${ws.events.length} ${
         ws.events.length === 1 ? 'Event' : 'Events'
       }`,
+      address: wsAddress,
     })
 
     edges.push(
@@ -267,6 +278,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       resource: schedule,
       icon: ClockIcon,
       description: ``,
+      address: `${data.triggerAddress}/schedules/${schedule.name}`,
     })
 
     nodes.push(node)
@@ -336,11 +348,16 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from buckets
   data.topics.forEach((topic) => {
+    const subscriptions = getTopicSubscriptions(topic, data.subscriptions)
+
     const node = createNode<TopicNodeData>(topic, 'topic', {
       title: topic.name,
       resource: topic,
       icon: MegaphoneIcon,
-      description: ``,
+      description: `${subscriptions.length} ${
+        subscriptions.length === 1 ? 'Subscriber' : 'Subscribers'
+      }`,
+      address: `${data.triggerAddress}/topics/${topic.name}`,
     })
     nodes.push(node)
 
@@ -376,6 +393,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       description: `Forwarding ${proxyAddress} to ${proxy.name}`,
       resource: proxy,
       icon: ArrowsRightLeftIcon,
+      address: proxyAddress,
     })
 
     edges.push({
@@ -425,9 +443,18 @@ export function generateVisualizerData(data: WebSocketResponse): {
           filePath: service.filePath,
         },
         icon: CpuChipIcon,
+        connectedEdges: [],
       },
       type: 'service',
     }
+
+    const connectedEdges = getConnectedEdges([node], edges)
+    node.data.connectedEdges = connectedEdges
+    node.data.description =
+      connectedEdges.length === 1
+        ? `${connectedEdges.length} connection`
+        : `${connectedEdges.length} connections`
+
     nodes.push(node)
   })
 

@@ -17,9 +17,13 @@ export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
       drawerOptions={{
         title: `Schedule - ${data.title}`,
         description: data.description,
+        icon: data.icon,
+        nodeType: 'schedule',
         testHref: `/schedules`, // TODO add url param to switch to resource
+        services: data.resource.requestingServices,
+        address: `http://${data.address}`,
         children: (
-          <div className="space-y-4">
+          <>
             {data.resource.expression ? (
               <>
                 <div className="flex flex-col">
@@ -41,12 +45,7 @@ export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
                 <span>Every {data.resource.rate}</span>
               </div>
             )}
-
-            <div className="flex flex-col">
-              <span className="font-bold">Requested by:</span>
-              <span>{data.resource.requestingServices.join(', ')}</span>
-            </div>
-          </div>
+          </>
         ),
       }}
     />

@@ -95,7 +95,6 @@ func (s *ServiceResourceRefresher) updatesWorkers(update UpdateArgs) {
 	// Typically this happens during a hot-reload/restarting a service and means the policies should be reset, since new policy requests will be coming in.
 	if previous > 0 && s.allWorkerCount() == 0 {
 		s.resourcesPlugin.ClearServiceResources(s.serviceName)
-		s.httpProxyPlugin.ClearForServiceName(s.serviceName)
 	}
 }
 

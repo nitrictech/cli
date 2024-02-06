@@ -208,7 +208,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
         }
 
         edges.push({
-          id: `e-${api.name}-${method['x-nitric-target']['name']}`,
+          id: `e-${api.name}-${method.operationId}-${method['x-nitric-target']['name']}`,
           source: node.id,
           target: method['x-nitric-target']['name'],
           animated: true,

@@ -20,6 +20,8 @@ export interface DetailsDrawerProps extends PropsWithChildren {
   footerChildren?: React.ReactNode
   nodeType: keyof typeof nodeTypes
   icon: NodeBaseData['icon']
+  address?: string
+  services?: string[]
 }
 
 export const DetailsDrawer = ({
@@ -31,6 +33,8 @@ export const DetailsDrawer = ({
   testHref,
   icon: Icon,
   nodeType,
+  address,
+  services,
 }: DetailsDrawerProps) => {
   const store = useStoreApi()
 
@@ -60,7 +64,34 @@ export const DetailsDrawer = ({
               )}
             </div>
           </DrawerHeader>
-          <div className="space-y-2 p-4">{children}</div>
+          <div className="space-y-2 p-4">
+            {children}
+            {address && (
+              <div className="flex flex-col">
+                <span className="font-bold">Address:</span>
+                {address.startsWith('http') ? (
+                  <a
+                    target="_blank"
+                    className="hover:underline"
+                    href={address}
+                    rel="noreferrer"
+                  >
+                    {address}
+                  </a>
+                ) : (
+                  address
+                )}
+              </div>
+            )}
+            {services?.length ? (
+              <div className="flex flex-col">
+                <span className="font-bold">Requested by:</span>
+                <span>
+                  {services.map((s) => s.replace(/\\/g, '/')).join(', ')}
+                </span>
+              </div>
+            ) : null}
+          </div>
           <DrawerFooter>
             {footerChildren}
             {testHref && (

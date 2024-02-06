@@ -51,6 +51,7 @@ import {
   HttpProxyNode,
   type HttpProxyNodeData,
 } from '@/components/visualizer/nodes/HttpProxyNode'
+import { getTopicSubscriptions } from './get-topic-subscriptions'
 
 export const nodeTypes = {
   api: APINode,
@@ -193,7 +194,6 @@ export function generateVisualizerData(data: WebSocketResponse): {
   // Generate nodes from APIs
   data.apis.forEach((api) => {
     const apiAddress = data.apiAddresses[api.name]
-
     const routes = (api.spec && Object.keys(api.spec.paths)) || []
 
     const node = createNode<ApiNodeData>(api, 'api', {
@@ -238,6 +238,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from websockets
   data.websockets.forEach((ws) => {
+    const wsAddress = data.websocketAddresses[ws.name]
     const node = createNode<WebsocketNodeData>(ws, 'websocket', {
       title: ws.name,
       resource: ws,
@@ -245,6 +246,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       description: `${ws.events.length} ${
         ws.events.length === 1 ? 'Event' : 'Events'
       }`,
+      address: wsAddress,
     })
 
     edges.push(
@@ -276,6 +278,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       resource: schedule,
       icon: ClockIcon,
       description: ``,
+      address: `${data.triggerAddress}/schedules/${schedule.name}`,
     })
 
     nodes.push(node)
@@ -345,11 +348,16 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from buckets
   data.topics.forEach((topic) => {
+    const subscriptions = getTopicSubscriptions(topic, data.subscriptions)
+
     const node = createNode<TopicNodeData>(topic, 'topic', {
       title: topic.name,
       resource: topic,
       icon: MegaphoneIcon,
-      description: ``,
+      description: `${subscriptions.length} ${
+        subscriptions.length === 1 ? 'Subscriber' : 'Subscribers'
+      }`,
+      address: `${data.triggerAddress}/topics/${topic.name}`,
     })
     nodes.push(node)
 
@@ -385,7 +393,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       description: `Forwarding ${proxyAddress} to ${proxy.name}`,
       resource: proxy,
       icon: ArrowsRightLeftIcon,
-      proxy: proxyAddress,
+      address: proxyAddress,
     })
 
     edges.push({

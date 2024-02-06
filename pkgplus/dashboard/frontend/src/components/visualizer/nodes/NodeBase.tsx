@@ -13,6 +13,7 @@ export interface NodeBaseData<T = Record<string, any>> {
     } & React.RefAttributes<SVGSVGElement>
   >
   description?: string
+  address?: string
 }
 
 interface Props extends NodeProps<NodeBaseData> {

@@ -19,13 +19,8 @@ export const KeyValueNode: ComponentType<NodeProps<KeyValueNodeData>> = (
         description: data.description,
         icon: data.icon,
         nodeType: 'keyvaluestore',
+        services: data.resource.requestingServices,
         // testHref: `/stores`, // TODO add url param to switch to resource
-        children: (
-          <div className="flex flex-col">
-            <span className="font-bold">Requested by:</span>
-            <span>{data.resource.requestingServices.join(', ')}</span>
-          </div>
-        ),
       }}
     />
   )

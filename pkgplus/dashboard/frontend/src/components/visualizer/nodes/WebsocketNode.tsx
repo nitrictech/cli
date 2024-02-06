@@ -15,17 +15,13 @@ export const WebsocketNode: ComponentType<NodeProps<WebsocketNodeData>> = (
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Details - ${data.title}`,
+        title: `Websocket - ${data.title}`,
         description: data.description,
         icon: data.icon,
         nodeType: 'websocket',
         testHref: `/websockets`, // TODO add url param to switch to resource
-        children: (
-          <div className="flex flex-col">
-            <span className="font-bold">Requested by:</span>
-            <span>{data.resource.requestingServices.join(', ')}</span>
-          </div>
-        ),
+        address: `ws://${data.address}`,
+        services: data.resource.requestingServices,
       }}
     />
   )

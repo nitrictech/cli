@@ -8,22 +8,18 @@ export type TopicNodeData = NodeBaseData<Topic>
 
 export const TopicNode: ComponentType<NodeProps<TopicNodeData>> = (props) => {
   const { data } = props
-
+  //http://localhost:4001/topics/updates
   return (
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Details - ${data.title}`,
+        title: `Topic - ${data.title}`,
         description: data.description,
         icon: data.icon,
         nodeType: 'topic',
         testHref: `/topics`, // TODO add url param to switch to resource
-        children: (
-          <div className="flex flex-col">
-            <span className="font-bold">Requested by:</span>
-            <span>{data.resource.requestingServices.join(', ')}</span>
-          </div>
-        ),
+        address: `http://${data.address}`,
+        services: data.resource.requestingServices,
       }}
     />
   )

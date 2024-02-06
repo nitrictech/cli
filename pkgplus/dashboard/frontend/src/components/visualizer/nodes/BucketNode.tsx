@@ -18,16 +18,7 @@ export const BucketNode: ComponentType<NodeProps<BucketNodeData>> = (props) => {
         icon: data.icon,
         nodeType: 'bucket',
         testHref: `/storage`, // TODO add url param to switch to resource
-        children: (
-          <div className="flex flex-col">
-            <span className="font-bold">Requested by:</span>
-            <span>
-              {data.resource.requestingServices
-                .map((s) => s.replace(/\\/g, '/'))
-                .join(', ')}
-            </span>
-          </div>
-        ),
+        services: data.resource.requestingServices,
       }}
     />
   )

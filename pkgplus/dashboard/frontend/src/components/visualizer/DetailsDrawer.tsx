@@ -1,6 +1,5 @@
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -8,8 +7,8 @@ import {
   DrawerTitle,
 } from '../ui/drawer'
 import { Button } from '../ui/button'
-import type { PropsWithChildren } from 'react'
-import { useStoreApi } from 'reactflow'
+import { useCallback, type PropsWithChildren } from 'react'
+import { applyNodeChanges, useNodes, useStoreApi, useNodeId } from 'reactflow'
 import type { NodeBaseData } from './nodes/NodeBase'
 import type { nodeTypes } from '@/lib/utils/generate-visualizer-data'
 export interface DetailsDrawerProps extends PropsWithChildren {
@@ -36,19 +35,37 @@ export const DetailsDrawer = ({
   address,
   services,
 }: DetailsDrawerProps) => {
+  const nodeId = useNodeId()
   const store = useStoreApi()
+  const nodes = useNodes()
+
+  const selectServiceNode = useCallback(
+    (serviceNodeId: string) => {
+      const { setNodes } = store.getState()
+
+      setNodes(
+        applyNodeChanges(
+          [
+            {
+              id: serviceNodeId,
+              type: 'select',
+              selected: true,
+            },
+          ],
+          nodes,
+        ),
+      )
+    },
+    [nodes, nodeId, store],
+  )
+
+  const close = () => {
+    const { unselectNodesAndEdges } = store.getState()
+    unselectNodesAndEdges()
+  }
 
   return (
-    <Drawer
-      direction="right"
-      open={open}
-      onOpenChange={(open) => {
-        if (!open) {
-          const { unselectNodesAndEdges } = store.getState()
-          unselectNodesAndEdges()
-        }
-      }}
-    >
+    <Drawer modal={false} direction="right" open={open}>
       <DrawerContent className="fixed inset-auto bottom-0 right-0 mt-24 flex h-full w-[380px] flex-col rounded-l-[10px] rounded-r-none bg-white">
         <div className="mx-auto w-full max-w-sm p-4">
           <DrawerHeader
@@ -86,9 +103,18 @@ export const DetailsDrawer = ({
             {services?.length ? (
               <div className="flex flex-col">
                 <span className="font-bold">Requested by:</span>
-                <span>
-                  {services.map((s) => s.replace(/\\/g, '/')).join(', ')}
-                </span>
+                <div className="flex flex-col items-start gap-y-1">
+                  {services.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className="hover:underline"
+                      onClick={() => selectServiceNode(s)}
+                    >
+                      {s.replace(/\\/g, '/')}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>
@@ -101,9 +127,9 @@ export const DetailsDrawer = ({
                 </a>
               </Button>
             )}
-            <DrawerClose asChild>
-              <Button variant="outline">Close</Button>
-            </DrawerClose>
+            <Button onClick={close} variant="outline">
+              Close
+            </Button>
           </DrawerFooter>
         </div>
       </DrawerContent>

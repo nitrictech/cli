@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 
 	tui "github.com/nitrictech/cli/pkgplus/view/tui"
@@ -28,6 +27,7 @@ type Model struct {
 	providerStdoutChan <-chan string
 	providerStdout     []string
 	errs               []error
+	resultOutput       string
 
 	done bool
 
@@ -124,9 +124,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// update its status
 			existingChild.Status = content.Update.Status
 			existingChild.Message = content.Update.Message
+		case *deploymentspb.DeploymentUpEvent_Result:
+			m.resultOutput = content.Result.Details
 		default:
 			// discard for now
-			pterm.Error.Println("unknown update type")
 		}
 
 		return m, reactive.AwaitChannel(msg.Source)
@@ -207,6 +208,12 @@ func (m Model) View() string {
 		v.Break()
 		v.Add(fragments.ErrorTag())
 		v.Addln("  %s", e.Error()).WithStyle(errorStyle)
+	}
+
+	if m.resultOutput != "" {
+		v.Break()
+		v.Addln(fragments.Tag("result"))
+		v.Addln("\n%s", m.resultOutput)
 	}
 
 	return v.Render()

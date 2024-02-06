@@ -192,7 +192,7 @@ var stackUpdateCmd = &cobra.Command{
 		providerStdout := make(chan string)
 
 		// Step 4. Start the deployment provider server
-		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout))
+		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout), provider.WithStderr(providerStdout))
 		tui.CheckErr(err)
 		defer providerProcess.Stop()
 

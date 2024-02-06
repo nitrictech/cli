@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"fmt"
 	"maps"
 	"sync"
@@ -70,33 +69,55 @@ func (h *LocalHttpProxy) HandleRequest(request *fasthttp.Request) (*fasthttp.Res
 	return service.server.HandleRequest(request)
 }
 
-func (h *LocalHttpProxy) Proxy(ctx context.Context, req *httppb.HttpProxyRequest) (*httppb.HttpProxyResponse, error) {
-	serviceName, err := grpcx.GetServiceNameFromIncomingContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (h *LocalHttpProxy) registerHttpProxy(host string, service *HttpProxyService) {
 	h.httpWorkerLock.Lock()
 	defer h.httpWorkerLock.Unlock()
-	host := req.GetHost()
 
-	srv := http.New()
+	// pterm.Error.Printfln("got a http proxy")
 
-	// pass down the the original handler for port watching and management
-	resp, err := srv.Proxy(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	h.state[host] = &HttpProxyService{
-		server:      srv,
-		ServiceName: serviceName,
-	}
+	h.state[host] = service
 
 	h.publishState()
+}
 
-	// return the original response
-	return resp, nil
+func (h *LocalHttpProxy) unregisterHttpProxy(host string) {
+	h.httpWorkerLock.Lock()
+	defer h.httpWorkerLock.Unlock()
+
+	delete(h.state, host)
+
+	h.publishState()
+}
+
+func (h *LocalHttpProxy) Proxy(stream httppb.Http_ProxyServer) error {
+	serviceName, err := grpcx.GetServiceNameFromStream(stream)
+	if err != nil {
+		return err
+	}
+
+	peekableStream := grpcx.NewPeekableStreamServer(stream)
+
+	firstRequest, err := peekableStream.Peek()
+	if err != nil {
+		return err
+	}
+
+	if firstRequest.Request == nil {
+		return fmt.Errorf("first request must be a proxy request")
+	}
+
+	host := firstRequest.Request.GetHost()
+	srv := http.New()
+
+	h.registerHttpProxy(host, &HttpProxyService{
+		server:      srv,
+		ServiceName: serviceName,
+	})
+	defer h.unregisterHttpProxy(host)
+
+	// pass down the the original handler for port watching and management
+	// let the proxy manage the connection
+	return srv.Proxy(peekableStream)
 }
 
 func NewLocalHttpProxyService() *LocalHttpProxy {

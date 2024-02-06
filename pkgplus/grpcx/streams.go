@@ -18,16 +18,23 @@ package grpcx
 
 import (
 	"github.com/samber/lo"
+	"google.golang.org/grpc"
 
 	"github.com/nitrictech/nitric/core/pkg/workers"
 )
 
-type PeekableStreamServer[ServerMessage workers.IdentifiableMessage, ClientMessage workers.IdentifiableMessage] struct {
-	buffer []lo.Tuple2[ClientMessage, error]
-	workers.GrpcBidiStreamServer[ServerMessage, ClientMessage]
+type GrpcBidiStreamServer[ServerMessage any, ClientMessage any] interface {
+	Send(ServerMessage) error
+	Recv() (ClientMessage, error)
+	grpc.ServerStream
 }
 
-func NewPeekableStreamServer[ServerMessage workers.IdentifiableMessage, ClientMessage workers.IdentifiableMessage](stream workers.GrpcBidiStreamServer[ServerMessage, ClientMessage]) *PeekableStreamServer[ServerMessage, ClientMessage] {
+type PeekableStreamServer[ServerMessage any, ClientMessage any] struct {
+	buffer []lo.Tuple2[ClientMessage, error]
+	GrpcBidiStreamServer[ServerMessage, ClientMessage]
+}
+
+func NewPeekableStreamServer[ServerMessage any, ClientMessage any](stream GrpcBidiStreamServer[ServerMessage, ClientMessage]) *PeekableStreamServer[ServerMessage, ClientMessage] {
 	return &PeekableStreamServer[ServerMessage, ClientMessage]{
 		buffer:               make([]lo.Tuple2[ClientMessage, error], 0),
 		GrpcBidiStreamServer: stream,

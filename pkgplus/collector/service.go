@@ -150,7 +150,7 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 	return &resourcespb.ResourceDeclareResponse{}, nil
 }
 
-func (s *ServiceRequirements) Proxy(ctx context.Context, req *httppb.HttpProxyRequest) (*httppb.HttpProxyResponse, error) {
+func (s *ServiceRequirements) Proxy(stream httppb.Http_ProxyServer) error {
 	s.resourceLock.Lock()
 	defer s.resourceLock.Unlock()
 
@@ -163,9 +163,19 @@ func (s *ServiceRequirements) Proxy(ctx context.Context, req *httppb.HttpProxyRe
 		s.errors = append(s.errors, fmt.Errorf("cannot register HTTP proxy, another proxy has already been registered"))
 	}
 
-	s.proxy = req
+	msg, err := stream.Recv()
+	if err != nil {
+		return err
+	}
 
-	return &httppb.HttpProxyResponse{}, nil
+	registrationRequest := msg.GetRequest()
+	if registrationRequest == nil {
+		return fmt.Errorf("first message must be a registration request")
+	}
+
+	s.proxy = registrationRequest
+
+	return nil
 }
 
 func (s *ServiceRequirements) Serve(stream apispb.Api_ServeServer) error {

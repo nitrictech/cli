@@ -16,6 +16,7 @@ type ServiceResourceRefresher struct {
 	serviceName string
 
 	resourcesPlugin *LocalResourcesService
+	httpProxyPlugin *http.LocalHttpProxy
 
 	lock              sync.RWMutex
 	apiWorkers        int
@@ -117,6 +118,7 @@ func NewServiceResourceRefresher(serviceName string, args NewServiceResourceRefr
 	serviceState := &ServiceResourceRefresher{
 		serviceName:     serviceName,
 		resourcesPlugin: args.Resources,
+		httpProxyPlugin: args.Http,
 		lock:            sync.RWMutex{},
 	}
 

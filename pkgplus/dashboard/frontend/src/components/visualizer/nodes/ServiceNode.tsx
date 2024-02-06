@@ -1,31 +1,36 @@
 import { type ComponentType } from 'react'
 
-import type { NodeProps } from 'reactflow'
+import type { Edge, NodeProps } from 'reactflow'
 import NodeBase, { type NodeBaseData } from './NodeBase'
-import { CpuChipIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui/button'
 
 type ServiceData = {
   filePath: string
 }
 
-export type ServiceNodeData = NodeBaseData<ServiceData>
+export interface ServiceNodeData extends NodeBaseData<ServiceData> {
+  connectedEdges: Edge[]
+}
 
 export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = (
   props,
 ) => {
   const { data } = props
 
+  const Icon = data.icon
+
   return (
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Details - ${data.title}`,
+        title: `Service - ${data.title}`,
+        icon: Icon,
+        nodeType: 'service',
         description: data.description,
         footerChildren: (
           <Button asChild>
             <a href={`vscode://file/${data.resource.filePath}`}>
-              <CpuChipIcon className="mr-2 h-4 w-4" />
+              <Icon className="mr-2 h-4 w-4" />
               <span>Open in VScode</span>
             </a>
           </Button>

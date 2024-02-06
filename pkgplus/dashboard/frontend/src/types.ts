@@ -35,10 +35,7 @@ export interface Schedule extends BaseResource {
   target: string
 }
 
-export interface Topic extends BaseResource {
-  subscriberCount: number
-  subscribers: Map<string, number>
-}
+export type Topic = BaseResource
 
 export type Service = BaseResource
 
@@ -75,7 +72,7 @@ export type Notification = {
   target: string
 }
 
-type Subscriber = {
+export type Subscriber = {
   topic: string
   target: string
 }

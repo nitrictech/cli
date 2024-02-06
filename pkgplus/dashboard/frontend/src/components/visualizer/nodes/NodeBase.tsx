@@ -1,7 +1,6 @@
 import type { FC, PropsWithChildren } from 'react'
 import { Handle, Position, type NodeProps } from 'reactflow'
 import { DetailsDrawer, type DetailsDrawerProps } from '../DetailsDrawer'
-import { cn } from '@/lib/utils'
 
 export interface NodeBaseData<T = Record<string, any>> {
   resource: T
@@ -13,6 +12,7 @@ export interface NodeBaseData<T = Record<string, any>> {
     } & React.RefAttributes<SVGSVGElement>
   >
   description?: string
+  address?: string
 }
 
 interface Props extends NodeProps<NodeBaseData> {

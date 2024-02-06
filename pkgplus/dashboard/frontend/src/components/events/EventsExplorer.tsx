@@ -151,6 +151,8 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               />
             </div>
             <EventsTreeView
+              type={workerType}
+              subscriptions={data.subscriptions}
               initialItem={selectedWorker}
               onSelect={(resource) => {
                 setSelectedWorker(resource)
@@ -182,10 +184,10 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                 <nav className="flex items-end gap-4" aria-label="Breadcrumb">
                   <ol className="flex w-11/12 items-center gap-4 md:hidden">
                     <li className="w-full">
-                      {data[workerType] && (
+                      {data![workerType] && (
                         <Select
                           id={`${workerType}-select`}
-                          items={data[workerType]}
+                          items={data![workerType]}
                           label={capitalize(workerType)}
                           selected={selectedWorker}
                           setSelected={setSelectedWorker}

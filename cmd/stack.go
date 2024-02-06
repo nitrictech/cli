@@ -19,6 +19,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -34,6 +35,7 @@ import (
 	stack_select "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/select"
 	stack_up "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/up"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/list"
+	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
 	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
@@ -330,6 +332,54 @@ nitric stack down -s aws -y`,
 	Args: cobra.ExactArgs(0),
 }
 
+var stackListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all stacks in the project",
+	Long:  `List all stacks in the project`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fs := afero.NewOsFs()
+
+		stackFiles, err := stack.GetAllStackFiles(fs)
+		tui.CheckErr(err)
+
+		if len(stackFiles) == 0 {
+			// no stack files found
+			// print error with suggestion for user to run stack new
+			tui.CheckErr(fmt.Errorf("no stacks found in project root, to create a new one run `nitric stack new`"))
+		}
+
+		nameLength := 4 // start with the width of the column heading "name".
+		for _, stackFile := range stackFiles {
+			stackName, err := stack.GetStackNameFromFileName(stackFile)
+			tui.CheckErr(err)
+
+			if len(stackName) > nameLength {
+				nameLength = len(stackName)
+			}
+		}
+
+		nameStyle := lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Blue).Width(nameLength + 1).PaddingRight(1).BorderRight(true).BorderStyle(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray)
+		providerStyle := lipgloss.NewStyle().Foreground(tui.Colors.Purple).PaddingLeft(1)
+
+		v := view.New()
+		v.Break()
+		v.Add("name").WithStyle(nameStyle)
+		v.Addln("provider").WithStyle(providerStyle)
+		v.Break()
+		for _, stackFile := range stackFiles {
+			stackName, err := stack.GetStackNameFromFileName(stackFile)
+			tui.CheckErr(err)
+
+			stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
+			tui.CheckErr(err)
+
+			v.Add(stackConfig.Name).WithStyle(nameStyle)
+			v.Addln(stackConfig.Provider).WithStyle(providerStyle)
+		}
+		fmt.Println(v.Render())
+	},
+}
+
 func init() {
 	stackCmd.AddCommand(newStackCmd)
 	newStackCmd.Flags().BoolVarP(&forceNewStack, "force", "f", false, "force stack creation.")
@@ -340,6 +390,8 @@ func init() {
 
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd, tui.Pulumi))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
+
+	stackCmd.AddCommand(stackListCmd)
 
 	rootCmd.AddCommand(stackCmd)
 

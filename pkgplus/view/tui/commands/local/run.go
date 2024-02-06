@@ -208,6 +208,8 @@ func (t *TuiModel) View() string {
 
 	if t.dashboardUrl != "" && !noWorkersRegistered {
 		v.Addln("dashboard: %s", t.dashboardUrl).WithStyle(lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Purple).Margin(1).PaddingLeft(1).PaddingRight(1))
+	} else {
+		v.Break()
 	}
 
 	for _, api := range t.apis {

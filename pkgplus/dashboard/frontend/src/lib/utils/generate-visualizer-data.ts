@@ -192,12 +192,15 @@ export function generateVisualizerData(data: WebSocketResponse): {
 
   // Generate nodes from APIs
   data.apis.forEach((api) => {
+    const apiAddress = data.apiAddresses[api.name]
+
     const routes = (api.spec && Object.keys(api.spec.paths)) || []
 
     const node = createNode<ApiNodeData>(api, 'api', {
       title: api.name,
       resource: api,
       icon: GlobeAltIcon,
+      address: apiAddress,
       description: `${routes.length} ${
         routes.length === 1 ? 'Route' : 'Routes'
       }`,
@@ -382,6 +385,7 @@ export function generateVisualizerData(data: WebSocketResponse): {
       description: `Forwarding ${proxyAddress} to ${proxy.name}`,
       resource: proxy,
       icon: ArrowsRightLeftIcon,
+      proxy: proxyAddress,
     })
 
     edges.push({

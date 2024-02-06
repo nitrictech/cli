@@ -17,6 +17,8 @@ export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
       drawerOptions={{
         title: `Schedule - ${data.title}`,
         description: data.description,
+        icon: data.icon,
+        nodeType: 'schedule',
         testHref: `/schedules`, // TODO add url param to switch to resource
         children: (
           <div className="space-y-4">

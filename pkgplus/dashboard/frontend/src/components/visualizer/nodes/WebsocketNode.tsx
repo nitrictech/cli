@@ -17,6 +17,8 @@ export const WebsocketNode: ComponentType<NodeProps<WebsocketNodeData>> = (
       drawerOptions={{
         title: `Details - ${data.title}`,
         description: data.description,
+        icon: data.icon,
+        nodeType: 'websocket',
         testHref: `/websockets`, // TODO add url param to switch to resource
         children: (
           <div className="flex flex-col">

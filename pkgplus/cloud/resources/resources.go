@@ -37,6 +37,7 @@ type LocalResourcesState struct {
 	Policies       *ResourceRegistrar[resourcespb.PolicyResource]
 	Secrets        *ResourceRegistrar[resourcespb.SecretResource]
 	Topics         *ResourceRegistrar[resourcespb.TopicResource]
+	Queues         *ResourceRegistrar[resourcespb.QueueResource]
 }
 
 type LocalResourcesService struct {
@@ -99,6 +100,8 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 		err = l.state.Secrets.Register(req.Id.Name, serviceName, req.GetSecret())
 	case resourcespb.ResourceType_Topic:
 		err = l.state.Topics.Register(req.Id.Name, serviceName, req.GetTopic())
+	case resourcespb.ResourceType_Queue:
+		err = l.state.Queues.Register(req.Id.Name, serviceName, req.GetQueue())
 	}
 	if err != nil {
 		return nil, err
@@ -116,6 +119,7 @@ func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
 	l.state.Policies.ClearRequestingService(serviceName)
 	l.state.Secrets.ClearRequestingService(serviceName)
 	l.state.Topics.ClearRequestingService(serviceName)
+	l.state.Queues.ClearRequestingService(serviceName)
 }
 
 // TODO: Refactor Declare and Details into their respected resources contracts (e.g. Storage/Apis/Collections etc.)
@@ -127,6 +131,7 @@ func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService
 			Policies:       NewResourceRegistrar[resourcespb.PolicyResource](),
 			Secrets:        NewResourceRegistrar[resourcespb.SecretResource](),
 			Topics:         NewResourceRegistrar[resourcespb.TopicResource](),
+			Queues:         NewResourceRegistrar[resourcespb.QueueResource](),
 		},
 		gateway: opts.Gateway,
 		bus:     EventBus.New(),

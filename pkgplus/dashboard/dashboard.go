@@ -84,6 +84,10 @@ type TopicSpec struct {
 	*BaseResourceSpec
 }
 
+type QueueSpec struct {
+	*BaseResourceSpec
+}
+
 type BucketSpec struct {
 	*BaseResourceSpec
 }
@@ -140,6 +144,7 @@ type Dashboard struct {
 	subscriptions  []*SubscriberSpec
 	notifications  []*NotifierSpec
 	httpProxies    []*HttpProxySpec
+	queues         []*QueueSpec
 	policies       map[string]PolicySpec
 	envMap         map[string]string
 
@@ -214,6 +219,7 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.buckets = []*BucketSpec{}
 	d.topics = []*TopicSpec{}
 	d.stores = []*KeyValueSpec{}
+	d.queues = []*QueueSpec{}
 
 	d.policies = map[string]PolicySpec{}
 
@@ -226,6 +232,21 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 			d.stores = append(d.stores, &KeyValueSpec{
 				BaseResourceSpec: &BaseResourceSpec{
 					Name:               keyvalue,
+					RequestingServices: resource.RequestingServices,
+				},
+			})
+		}
+	}
+
+	for queue, resource := range lrs.Queues.GetAll() {
+		exists := lo.ContainsBy(d.queues, func(item *QueueSpec) bool {
+			return item.Name == queue
+		})
+
+		if !exists {
+			d.queues = append(d.queues, &QueueSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               queue,
 					RequestingServices: resource.RequestingServices,
 				},
 			})
@@ -644,6 +665,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		Schedules:           d.schedules,
 		Websockets:          d.websockets,
 		Policies:            d.policies,
+		Queues:              d.queues,
 		Services:            services,
 		Subscriptions:       d.subscriptions,
 		Notifications:       d.notifications,

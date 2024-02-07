@@ -19,7 +19,6 @@ package queues
 import (
 	"context"
 	"fmt"
-	"slices"
 	"sync"
 	"time"
 
@@ -37,29 +36,30 @@ type (
 
 type State = map[queueName]map[serviceName]int
 
-type LeasedTask struct {
-	leasedTime time.Time
-	content    *structpb.Struct
+type Lease struct {
+	Id     string
+	Expiry time.Time
+}
+
+type QueueItem struct {
+	lease *Lease
+	task  *structpb.Struct
 }
 
 type LocalQueuesService struct {
 	queueLock sync.Mutex
 
-	leased map[queueName]map[string]*LeasedTask
-	queues map[queueName][]*structpb.Struct
+	queues map[queueName][]*QueueItem
 }
 
 var (
-	_ queuespb.QueuesServer = (*LocalQueuesService)(nil)
+	_                        queuespb.QueuesServer = (*LocalQueuesService)(nil)
+	defaultVisibilityTimeout                       = 30 * time.Second
 )
 
 func (l *LocalQueuesService) ensureQueue(queueName string) {
 	if _, ok := l.queues[queueName]; !ok {
-		l.queues[queueName] = []*structpb.Struct{}
-	}
-
-	if _, ok := l.leased[queueName]; !ok {
-		l.leased[queueName] = map[string]*LeasedTask{}
+		l.queues[queueName] = []*QueueItem{}
 	}
 }
 
@@ -70,8 +70,10 @@ func (l *LocalQueuesService) Send(ctx context.Context, req *queuespb.QueueSendRe
 	l.ensureQueue(req.QueueName)
 
 	// queue the payloads
-	l.queues[req.QueueName] = append(l.queues[req.QueueName], lo.Map(req.Requests, func(task *queuespb.QueueSendRequest, idx int) *structpb.Struct {
-		return task.Payload
+	l.queues[req.QueueName] = append(l.queues[req.QueueName], lo.Map(req.Requests, func(task *queuespb.QueueSendRequest, idx int) *QueueItem {
+		return &QueueItem{
+			task: task.Payload,
+		}
 	})...)
 
 	return &queuespb.QueueSendResponse{}, nil
@@ -89,29 +91,30 @@ func (l *LocalQueuesService) Receive(ctx context.Context, req *queuespb.QueueRec
 		return nil, fmt.Errorf("invalid depth: %d cannot be greater than 10", req.Depth)
 	}
 
-	leasedTasks := l.queues[req.QueueName][0:lo.Max([]int{len(l.queues[req.QueueName]), int(req.Depth)})]
-
 	resp := &queuespb.QueueReceiveResponse{
 		Tasks: []*queuespb.ReceivedTask{},
 	}
 
 	// remove the leased tasks from the queue
-	for _, leasedTask := range leasedTasks {
-		l.queues[req.QueueName] = slices.DeleteFunc(l.queues[req.QueueName], func(item *structpb.Struct) bool {
-			return item == leasedTask
-		})
+	for _, queueItem := range l.queues[req.QueueName] {
+		if queueItem.lease != nil && queueItem.lease.Expiry.After(time.Now()) {
+			// the task is still leased, so it's not available
+			continue
+		}
 
-		leaseId := uuid.New()
-
-		l.leased[req.QueueName][leaseId.String()] = &LeasedTask{
-			leasedTime: time.Now(),
-			content:    leasedTask,
+		queueItem.lease = &Lease{
+			Id:     uuid.New().String(),
+			Expiry: time.Now().Add(defaultVisibilityTimeout),
 		}
 
 		resp.Tasks = append(resp.Tasks, &queuespb.ReceivedTask{
-			LeaseId: leaseId.String(),
-			Payload: leasedTask,
+			LeaseId: queueItem.lease.Id,
+			Payload: queueItem.task,
 		})
+
+		if len(resp.Tasks) >= int(req.Depth) {
+			break
+		}
 	}
 
 	return resp, nil
@@ -123,49 +126,26 @@ func (l *LocalQueuesService) Complete(ctx context.Context, req *queuespb.QueueCo
 	defer l.queueLock.Unlock()
 	l.ensureQueue(req.QueueName)
 
-	_, ok := l.leased[req.QueueName][req.LeaseId]
-
-	if !ok {
-		return nil, fmt.Errorf("LeaseId: %s not found", req.LeaseId)
-	}
-
-	// remove the leased task
-	delete(l.leased[req.QueueName], req.LeaseId)
-
-	return &queuespb.QueueCompleteResponse{}, nil
-}
-
-func (l *LocalQueuesService) Requeue() {
-	l.queueLock.Lock()
-	defer l.queueLock.Unlock()
-
-	for queueName, queue := range l.leased {
-		for serviceName, task := range queue {
-			if time.Since(task.leasedTime) > (time.Second * 30) {
-				// re-queue the task
-				l.queues[queueName] = append(l.queues[queueName], task.content)
-				delete(l.leased[queueName], serviceName)
+	// find the leased task
+	for i, queueItem := range l.queues[req.QueueName] {
+		if queueItem.lease != nil && queueItem.lease.Id == req.LeaseId {
+			// remove the leased task
+			l.queues[req.QueueName] = append(l.queues[req.QueueName][:i], l.queues[req.QueueName][i+1:]...)
+			if queueItem.lease.Expiry.Before(time.Now()) {
+				return &queuespb.QueueCompleteResponse{}, nil
 			}
+			return nil, fmt.Errorf("LeaseId: %s has expired", req.LeaseId)
 		}
 	}
 
+	return nil, fmt.Errorf("LeaseId: %s not found", req.LeaseId)
 }
 
 // Create new Dev EventService
 func NewLocalQueuesService() (*LocalQueuesService, error) {
 	queueService := &LocalQueuesService{
-		queues: map[queueName][]*structpb.Struct{},
-		leased: map[queueName]map[string]*LeasedTask{},
+		queues: map[queueName][]*QueueItem{},
 	}
-
-	go func() {
-		requeueTimer := time.NewTicker(time.Second * 30)
-		defer requeueTimer.Stop()
-
-		for range requeueTimer.C {
-			queueService.Requeue()
-		}
-	}()
 
 	return queueService, nil
 }

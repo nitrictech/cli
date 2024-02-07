@@ -171,6 +171,9 @@ func New() (*LocalCloud, error) {
 	}
 
 	localQueueService, err := queues.NewLocalQueuesService()
+	if err != nil {
+		return nil, err
+	}
 
 	return &LocalCloud{
 		membranes:  make(map[string]*membrane.Membrane),

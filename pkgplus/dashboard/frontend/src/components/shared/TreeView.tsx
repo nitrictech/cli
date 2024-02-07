@@ -98,6 +98,7 @@ const TreeView = <T extends Record<string, any>>({
           label="Search"
           hideLabel
           icon={MagnifyingGlassIcon}
+          placeholder="Search"
           onChange={(event) => debouncedSearch(event.target.value)}
         />
       </div>

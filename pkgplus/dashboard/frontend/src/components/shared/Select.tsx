@@ -10,6 +10,7 @@ interface Props<T> {
   items: T[]
   setSelected: (value: T) => any
   display: (value: T) => React.ReactElement | string
+  className?: string
 }
 
 const Select = <T extends Record<string, any> | string>({
@@ -19,11 +20,12 @@ const Select = <T extends Record<string, any> | string>({
   setSelected,
   display,
   label,
+  className,
 }: Props<T>) => {
   return (
     <Listbox value={selected} onChange={setSelected}>
       {({ open }) => (
-        <div data-testid={id}>
+        <div data-testid={id} className={className}>
           <Listbox.Label className="block text-lg font-medium leading-6 text-gray-900">
             {label}
           </Listbox.Label>

@@ -31,7 +31,7 @@ export const ServiceNode: ComponentType<NodeProps<ServiceNodeData>> = (
           <Button asChild>
             <a href={`vscode://file/${data.resource.filePath}`}>
               <Icon className="mr-2 h-4 w-4" />
-              <span>Open in VScode</span>
+              <span>Open in VSCode</span>
             </a>
           </Button>
         ),

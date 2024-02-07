@@ -99,6 +99,10 @@ export const useWebSocket = () => {
     },
   )
 
+  if (import.meta.env.DEV) {
+    console.log('ws-data', data)
+  }
+
   return {
     data: data as WebSocketResponse | null,
     error,

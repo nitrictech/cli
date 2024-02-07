@@ -37,21 +37,6 @@ var runCmd = &cobra.Command{
 	Example:     `nitric run`,
 	Annotations: map[string]string{"commonCommand": "yes"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Divert default log output to pterm debug
-		// log.SetOutput(output.NewPtermWriter(pterm.Debug))
-		// log.SetFlags(0)
-
-		// if !utils.IsTerminal() && !output.CI {
-		// 	fmt.Println("")
-		// 	pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode")
-		// 	output.CI = true
-		// }
-
-		// if output.CI {
-		// 	return local_run.RunNonInteractive(runNoBrowser)
-		// }
-
-		// Build the project
 		fs := afero.NewOsFs()
 
 		proj, err := project.FromFile(fs, "")
@@ -60,9 +45,6 @@ var runCmd = &cobra.Command{
 		// Start the local cloud service analogues
 		localCloud, err := cloud.New()
 		tui.CheckErr(err)
-
-		// go localCloud.Start()
-		// tui.CheckErr(err)
 
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)

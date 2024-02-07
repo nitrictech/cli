@@ -65,6 +65,7 @@ const (
 
 type ServiceRunUpdate struct {
 	ServiceName string
+	Filepath    string
 	Message     string
 	Status      ServiceRunStatus
 	Err         error
@@ -73,6 +74,7 @@ type ServiceRunUpdate struct {
 type ServiceRunUpdateWriter struct {
 	updates     chan<- ServiceRunUpdate
 	serviceName string
+	filepath    string
 	status      ServiceRunStatus
 }
 
@@ -83,6 +85,7 @@ func (s *ServiceRunUpdateWriter) Write(data []byte) (int, error) {
 		ServiceName: s.serviceName,
 		Message:     msg,
 		Status:      s.status,
+		Filepath:    s.filepath,
 	}
 
 	return len(data), nil
@@ -205,12 +208,14 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, command
 	cmd.Stdout = &ServiceRunUpdateWriter{
 		updates:     updates,
 		serviceName: s.Name,
+		filepath:    s.filepath,
 		status:      ServiceRunStatus_Running,
 	}
 
 	cmd.Stderr = &ServiceRunUpdateWriter{
 		updates:     updates,
 		serviceName: s.Name,
+		filepath:    s.filepath,
 		status:      ServiceRunStatus_Error,
 	}
 

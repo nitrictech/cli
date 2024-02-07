@@ -183,8 +183,6 @@ func (s *LocalTopicsAndSubscribersService) deliverEvent(ctx context.Context, req
 		Payload:   string(json),
 	})
 
-	fmt.Printf("Publishing to %s topic, %d subscriber(s)\n", req.TopicName, s.WorkerCount())
-
 	return err
 }
 

@@ -1,17 +1,13 @@
-import {
-  api,
-  bucket,
-  keyvalue,
-  http,
-  schedule,
-  topic,
-  websocket,
-} from '@nitric/sdk'
+import { api, bucket, kv, http, schedule, topic, websocket } from '@nitric/sdk'
 
 const firstApi = api('first-api')
 const secondApi = api('second-api')
 
 const myBucket = bucket('test-bucket').for('reading', 'writing', 'deleting')
+
+myBucket.on('delete', '*', (ctx) => {
+  console.log(ctx)
+})
 
 const socket = websocket('socket')
 
@@ -19,13 +15,13 @@ const socket2 = websocket('socket-2')
 
 const socket3 = websocket('socket-3')
 
-const connections = keyvalue().store('connections')
+const connections = kv('connections').for('getting', 'setting', 'deleting')
 interface Doc {
   firstCount: number
   secondCount: number
 }
 
-const col = keyvalue().store<Doc>('test-collection')
+const col = kv<Doc>('test-collection').for('getting', 'setting', 'deleting')
 
 firstApi.get('/schedule-count', async (ctx) => {
   try {

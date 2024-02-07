@@ -42,6 +42,7 @@ import { ClipboardIcon } from '@heroicons/react/24/outline'
 import { APIMethodBadge } from './APIMethodBadge'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
+import BreadCrumbs from '../layout/BreadCrumbs'
 
 const getTabCount = (rows: FieldRow[]) => {
   if (!rows) return 0
@@ -327,6 +328,7 @@ const APIExplorer = () => {
   return (
     <AppLayout
       title="APIs"
+      hideTitle
       routePath={'/'}
       secondLevelNav={
         paths?.length && selectedApiEndpoint && request?.method ? (
@@ -364,9 +366,14 @@ const APIExplorer = () => {
         {paths?.length && selectedApiEndpoint && request?.method ? (
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
             <div className="flex w-full flex-col gap-8">
-              <div>
-                <div className="flex md:hidden">
-                  <h2 className="text-2xl">API - {selectedApiEndpoint.api}</h2>
+              <div className="space-y-4">
+                <div className="flex lg:hidden">
+                  <BreadCrumbs className="text-lg">
+                    APIs
+                    <h2 className="font-body text-lg font-semibold">
+                      {selectedApiEndpoint.api}
+                    </h2>
+                  </BreadCrumbs>
                   <APIMenu
                     selected={selectedApiEndpoint}
                     onAfterClear={() => {
@@ -383,73 +390,76 @@ const APIExplorer = () => {
                     }}
                   />
                 </div>
-                <nav
-                  className="flex items-end gap-4 lg:items-center"
-                  aria-label="Breadcrumb"
-                >
-                  <ol className="flex w-full items-center gap-4 lg:hidden">
-                    <li className="w-full">
-                      <Select<Endpoint>
-                        items={paths}
-                        label="Endpoint"
-                        id="endpoint-select"
-                        selected={selectedApiEndpoint}
-                        setSelected={setSelectedApiEndpoint}
-                        display={(v) => (
-                          <div className="grid grid-cols-12 items-center gap-4 p-0.5 text-lg">
-                            <APIMethodBadge
-                              method={v.method}
-                              className="col-span-3 !text-lg md:col-span-2"
-                            />
-                            <div className="col-span-9 flex gap-4 md:col-span-10">
-                              <span>{v?.api}</span>
-                              <span>{v?.path}</span>
-                            </div>
-                          </div>
-                        )}
+                <div className="lg:hidden">
+                  <Select<Endpoint>
+                    items={paths}
+                    label="Endpoint"
+                    id="endpoint-select"
+                    className="w-full"
+                    selected={selectedApiEndpoint}
+                    setSelected={setSelectedApiEndpoint}
+                    display={(v) => (
+                      <div className="grid grid-cols-12 items-center gap-4 p-0.5 text-lg">
+                        <APIMethodBadge
+                          method={v.method}
+                          className="col-span-3 w-20 px-1 !text-lg md:col-span-2"
+                        />
+                        <div className="col-span-9 flex gap-4 md:col-span-10">
+                          <span>{v?.api}</span>
+                          <span>{v?.path}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <BreadCrumbs className="hidden text-lg lg:block">
+                    APIs
+                    <h2 className="font-body text-lg font-semibold">
+                      {selectedApiEndpoint.api}
+                    </h2>
+                    <div className="flex items-center gap-4">
+                      <APIMethodBadge
+                        className="!text-lg"
+                        method={request.method}
                       />
-                    </li>
-                  </ol>
-                  <div className="hidden items-center gap-4 lg:flex">
-                    <APIMethodBadge
-                      className="!text-lg"
-                      method={request.method}
-                    />
-                    <span
-                      className="flex gap-2 text-lg"
-                      data-testid="generated-request-path"
-                    >
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="max-w-xl truncate">
-                            {request.path}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{request.path}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              copyToClipboard(
-                                `http://${apiAddress}${request.path}`,
-                              )
-                              toast.success('Copied Route URL')
-                            }}
-                          >
-                            <span className="sr-only">Copy Route URL</span>
-                            <ClipboardIcon className="h-5 w-5 text-gray-500" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Copy Route URL</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </span>
-                  </div>
+                      <span
+                        className="flex gap-2 text-lg"
+                        data-testid="generated-request-path"
+                      >
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="max-w-xl truncate">
+                              {request.path}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{request.path}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                copyToClipboard(
+                                  `http://${apiAddress}${request.path}`,
+                                )
+                                toast.success('Copied Route URL')
+                              }}
+                            >
+                              <span className="sr-only">Copy Route URL</span>
+                              <ClipboardIcon className="h-5 w-5 text-gray-500" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Copy Route URL</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </span>
+                    </div>
+                  </BreadCrumbs>
                   <div className="ml-auto">
                     <Button
                       size="lg"
@@ -459,7 +469,7 @@ const APIExplorer = () => {
                       Send
                     </Button>
                   </div>
-                </nav>
+                </div>
               </div>
 
               <div className="bg-white shadow sm:rounded-lg">

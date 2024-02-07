@@ -24,6 +24,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -246,6 +247,12 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 		}
 	}
 
+	if len(d.buckets) > 0 {
+		slices.SortFunc(d.buckets, func(a, b *BucketSpec) int {
+			return compare(a.Name, b.Name)
+		})
+	}
+
 	for topicName, resource := range lrs.Topics.GetAll() {
 		exists := lo.ContainsBy(d.topics, func(item *TopicSpec) bool {
 			return item.Name == topicName
@@ -259,6 +266,12 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 				},
 			})
 		}
+	}
+
+	if len(d.topics) > 0 {
+		slices.SortFunc(d.topics, func(a, b *TopicSpec) int {
+			return compare(a.Name, b.Name)
+		})
 	}
 
 	for policyName, policy := range lrs.Policies.GetAll() {
@@ -315,6 +328,10 @@ func (d *Dashboard) updateApis(state apis.State) {
 		apiSpecs = append(apiSpecs, apiSpec)
 	}
 
+	slices.SortFunc(apiSpecs, func(a, b ApiSpec) int {
+		return compare(a.Name, b.Name)
+	})
+
 	d.apis = apiSpecs
 
 	d.refresh()
@@ -353,6 +370,10 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 
 		wsSpec = append(wsSpec, spec)
 	}
+
+	slices.SortFunc(wsSpec, func(a, b WebsocketSpec) int {
+		return compare(a.Name, b.Name)
+	})
 
 	d.websockets = wsSpec
 
@@ -397,6 +418,10 @@ func (d *Dashboard) updateSchedules(state schedules.State) {
 		})
 	}
 
+	slices.SortFunc(schedules, func(a, b ScheduleSpec) int {
+		return compare(a.Name, b.Name)
+	})
+
 	d.schedules = schedules
 
 	d.refresh()
@@ -437,6 +462,10 @@ func (d *Dashboard) updateHttpProxies(state httpproxy.State) {
 		})
 	}
 
+	slices.SortFunc(d.httpProxies, func(a, b *HttpProxySpec) int {
+		return compare(a.Name, b.Name)
+	})
+
 	d.refresh()
 }
 
@@ -454,8 +483,10 @@ func (d *Dashboard) isConnected() bool {
 	topicsRegistered := len(d.topics) > 0
 	schedulesRegistered := len(d.schedules) > 0
 	notificationsRegistered := len(d.notifications) > 0
+	proxiesRegistered := len(d.httpProxies) > 0
+	storesRegistered := len(d.stores) > 0
 
-	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered
+	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered
 }
 
 func (d *Dashboard) Start() error {
@@ -662,6 +693,14 @@ func (d *Dashboard) sendWebsocketsUpdate() error {
 	err = d.wsWebSocket.Broadcast(jsonData)
 
 	return err
+}
+
+func compare(a string, b string) int {
+	if a > b {
+		return 1
+	}
+
+	return -1
 }
 
 func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project) (*Dashboard, error) {

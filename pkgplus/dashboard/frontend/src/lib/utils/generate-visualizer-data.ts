@@ -189,8 +189,6 @@ export function generateVisualizerData(data: WebSocketResponse): {
   const nodes: Node[] = []
   const edges: Edge[] = []
 
-  console.log('data:', data)
-
   // Generate nodes from APIs
   data.apis.forEach((api) => {
     const apiAddress = data.apiAddresses[api.name]
@@ -458,8 +456,10 @@ export function generateVisualizerData(data: WebSocketResponse): {
     nodes.push(node)
   })
 
-  console.log('nodes:', nodes)
-  console.log('edges:', edges)
+  if (import.meta.env.DEV) {
+    console.log('nodes:', nodes)
+    console.log('edges:', edges)
+  }
 
   return { nodes, edges }
 }

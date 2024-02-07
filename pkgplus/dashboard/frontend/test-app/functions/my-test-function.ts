@@ -1,7 +1,8 @@
 import {
   api,
   bucket,
-  collection,
+  keyvalue,
+  http,
   schedule,
   topic,
   websocket,
@@ -18,21 +19,17 @@ const socket2 = websocket('socket-2')
 
 const socket3 = websocket('socket-3')
 
-const connections = collection('connections').for(
-  'reading',
-  'writing',
-  'deleting',
-)
+const connections = keyvalue().store('connections')
 interface Doc {
   firstCount: number
   secondCount: number
 }
 
-const col = collection<Doc>('test-collection').for('writing', 'reading')
+const col = keyvalue().store<Doc>('test-collection')
 
 firstApi.get('/schedule-count', async (ctx) => {
   try {
-    const data = await col.doc('schedule-count').get()
+    const data = await col.get('schedule-count')
 
     return ctx.res.json(data)
   } catch (e) {
@@ -45,7 +42,7 @@ firstApi.get('/schedule-count', async (ctx) => {
 
 firstApi.get('/topic-count', async (ctx) => {
   try {
-    const data = await col.doc('topic-count').get()
+    const data = await col.get('topic-count')
 
     return ctx.res.json(data)
   } catch (e) {
@@ -221,14 +218,14 @@ secondApi.delete('/image-from-bucket', async (ctx) => {
 
 schedule('process-tests').every('5 minutes', async (ctx) => {
   try {
-    const data = await col.doc('schedule-count').get()
+    const data = await col.get('schedule-count')
 
-    await col.doc('schedule-count').set({
+    await col.set('schedule-count', {
       ...data,
       firstCount: data.firstCount + 1,
     })
   } catch (e) {
-    await col.doc('schedule-count').set({
+    await col.set('schedule-count', {
       firstCount: 1,
       secondCount: 0,
     })
@@ -237,14 +234,14 @@ schedule('process-tests').every('5 minutes', async (ctx) => {
 
 schedule('process-tests-2').every('5 minutes', async (ctx) => {
   try {
-    const data = await col.doc('schedule-count').get()
+    const data = await col.get('schedule-count')
 
-    await col.doc('schedule-count').set({
+    await col.set('schedule-count', {
       ...data,
       secondCount: data.secondCount + 1,
     })
   } catch (e) {
-    await col.doc('schedule-count').set({
+    await col.set('schedule-count', {
       firstCount: 0,
       secondCount: 1,
     })
@@ -253,14 +250,14 @@ schedule('process-tests-2').every('5 minutes', async (ctx) => {
 
 topic('subscribe-tests').subscribe(async (ctx) => {
   try {
-    const data = await col.doc('topic-count').get()
+    const data = await col.get('topic-count')
 
-    await col.doc('topic-count').set({
+    await col.set('topic-count', {
       ...data,
       firstCount: data.firstCount + 1,
     })
   } catch (e) {
-    await col.doc('topic-count').set({
+    await col.set('topic-count', {
       firstCount: 1,
       secondCount: 0,
     })
@@ -269,14 +266,14 @@ topic('subscribe-tests').subscribe(async (ctx) => {
 
 topic('subscribe-tests-2').subscribe(async (ctx) => {
   try {
-    const data = await col.doc('topic-count').get()
+    const data = await col.get('topic-count')
 
-    await col.doc('topic-count').set({
+    await col.set('topic-count', {
       ...data,
       secondCount: data.secondCount + 1,
     })
   } catch (e) {
-    await col.doc('topic-count').set({
+    await col.set('topic-count', {
       firstCount: 0,
       secondCount: 1,
     })
@@ -286,7 +283,7 @@ topic('subscribe-tests-2').subscribe(async (ctx) => {
 // web sockets
 socket.on('connect', async (ctx) => {
   try {
-    await connections.doc(ctx.req.connectionId).set({
+    await connections.set(ctx.req.connectionId, {
       // store any metadata related to the connection here
       connectionId: ctx.req.connectionId,
     })
@@ -304,36 +301,36 @@ socket2.on('message', (ctx) => {
 })
 
 socket.on('disconnect', async (ctx) => {
-  await connections.doc(ctx.req.connectionId).delete()
+  await connections.delete(ctx.req.connectionId)
 })
 
-const broadcast = async (data: string | Uint8Array) => {
-  try {
-    const connectionStream = connections.query().stream()
+// const broadcast = async (data: string | Uint8Array) => {
+//   try {
+//     const connectionStream = connections.query().stream()
 
-    const streamEnd = new Promise<any>((res) => {
-      connectionStream.on('end', res)
-    })
+//     const streamEnd = new Promise<any>((res) => {
+//       connectionStream.on('end', res)
+//     })
 
-    connectionStream.on('data', async ({ content }) => {
-      // Send message to a connection
-      try {
-        // will replace data with a strinified version of query if it exists (for tests)
-        await socket.send(content.connectionId, data)
-      } catch (e) {
-        if (e.message.startsWith('13 INTERNAL: could not get connection')) {
-          await connections.doc(content.connectionId).delete()
-        }
-      }
-    })
+//     connectionStream.on('data', async ({ content }) => {
+//       // Send message to a connection
+//       try {
+//         // will replace data with a strinified version of query if it exists (for tests)
+//         await socket.send(content.connectionId, data)
+//       } catch (e) {
+//         if (e.message.startsWith('13 INTERNAL: could not get connection')) {
+//           await connections.doc(content.connectionId).delete()
+//         }
+//       }
+//     })
 
-    await streamEnd
-  } catch (e) {}
-}
+//     await streamEnd
+//   } catch (e) {}
+// }
 
 socket.on('message', async (ctx) => {
   // broadcast message to all clients (including the sender)
-  await broadcast(ctx.req.data)
+  //await broadcast(ctx.req.data)
 })
 
 socket3.on('connect', (ctx) => {

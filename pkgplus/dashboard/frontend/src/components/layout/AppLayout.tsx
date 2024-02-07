@@ -593,12 +593,7 @@ const AppLayout: React.FC<Props> = ({
             </Alert>
           )}
           <div className={secondLevelNav ? 'lg:pl-80' : undefined}>
-            <div
-              className={cn(
-                'px-4 py-10 sm:px-6 lg:px-8 lg:py-12',
-                mainClassName,
-              )}
-            >
+            <div className={cn('px-4 py-8 sm:px-6 lg:px-8', mainClassName)}>
               <h1
                 className={cn(
                   'mb-12 text-4xl font-bold',

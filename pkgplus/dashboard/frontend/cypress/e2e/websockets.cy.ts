@@ -5,7 +5,6 @@ describe('Websockets Spec', () => {
   })
 
   it('should retrieve correct websockets', () => {
-    cy.get('h2').should('contain.text', 'socket')
     cy.getTestEl('Websockets-count').should('have.text', '3')
 
     const expectedWebsockets = ['socket', 'socket-2', 'socket-3']

@@ -1,4 +1,4 @@
-describe('API Explorer spec', () => {
+describe('APIs spec', () => {
   beforeEach(() => {
     cy.viewport('macbook-16')
     cy.visit('/')
@@ -6,7 +6,7 @@ describe('API Explorer spec', () => {
   })
 
   it('should retrieve correct apis and endpoints', () => {
-    cy.getTestEl('API Explorer-count').should('have.text', '2')
+    cy.getTestEl('APIs-count').should('have.text', '2')
 
     cy.get('[data-rct-item-id="second-api"]').click()
 

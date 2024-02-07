@@ -19,16 +19,15 @@ describe('Topics Spec', () => {
       cy.get(`[data-rct-item-id="${topic}"]`).click()
 
       cy.getTestEl('generated-request-path').should(
-        'have.attr',
-        'href',
-        `http://localhost:4000/topic/${topic}`,
+        'have.text',
+        `http://localhost:4000/topics/${topic}`,
       )
 
       cy.getTestEl('trigger-topics-btn').click()
 
       cy.getAPIResponseCodeEditor().should(
         'have.text',
-        '1 successful & 0 failed deliveries',
+        'Successfully delivered message to topic',
       )
     })
   })

@@ -79,10 +79,25 @@ var serviceColors = []lipgloss.CompleteColor{
 	tui.Colors.Green,
 }
 
+func tail(text string, take int) string {
+	if take < 1 {
+		return text
+	}
+
+	lines := strings.Split(text, "\n")
+	if len(lines) < 1 {
+		return ""
+	}
+
+	start := lo.Max([]int{0, len(lines) - take})
+
+	return strings.Join(lines[start:], "\n")
+}
+
 func (m Model) View() string {
 	heightStyle := lipgloss.NewStyle().MaxHeight(m.windowSize.Height - 4)
 	lv := view.New(view.WithStyle(heightStyle))
-	rv := view.New(view.WithStyle(heightStyle.Copy().BorderForeground(tui.Colors.Gray).Border(lipgloss.NormalBorder(), false, false, false, true).PaddingLeft(1).MarginLeft(1)))
+	rv := view.New(view.WithStyle(lipgloss.NewStyle().BorderForeground(tui.Colors.Gray).Border(lipgloss.NormalBorder(), false, false, false, true).PaddingLeft(1).MarginLeft(1)))
 
 	if len(m.serviceStatus) == 0 {
 		lv.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
@@ -102,9 +117,13 @@ func (m Model) View() string {
 		svcColors[svcName] = serviceColors[idx%len(serviceColors)]
 	}
 
-	for i, update := range m.serviceRunUpdates[lo.Max([]int{0, len(m.serviceRunUpdates) - m.windowSize.Height - 4}):] {
+	for i, update := range m.serviceRunUpdates {
+		statusColor := tui.Colors.Gray
+		if update.Status == project.ServiceRunStatus(project.ServiceBuildStatus_Error) {
+			statusColor = tui.Colors.Red
+		}
 		rv.Add("%s: ", update.Filepath).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
-		rv.Add(strings.TrimSpace(update.Message)).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+		rv.Add(strings.TrimSpace(update.Message)).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
 		if i < len(m.serviceRunUpdates)-1 {
 			rv.Break()
 		}
@@ -114,7 +133,7 @@ func (m Model) View() string {
 
 	lv.Addln("Press 'q' to quit")
 
-	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), rv.Render())
+	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), tail(rv.Render(), m.windowSize.Height-4))
 
 	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide)
 }

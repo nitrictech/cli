@@ -147,7 +147,7 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 		// add a topic
 		s.topics[req.Id.GetName()] = req.GetTopic()
 	case resourcespb.ResourceType_Queue:
-		// add a topic
+		// add a queue
 		s.queues[req.Id.GetName()] = req.GetQueue()
 	}
 

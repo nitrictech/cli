@@ -57,7 +57,7 @@ export default function NitricEdge({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}
           >
-            {label}
+            {label.toString().toLocaleLowerCase()}
           </div>
         </EdgeLabelRenderer>
       )}

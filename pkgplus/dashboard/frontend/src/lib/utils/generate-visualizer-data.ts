@@ -170,6 +170,8 @@ const actionVerbs = [
   'Publish',
   'Detail',
   'Manage',
+  'Read',
+  'Write',
 ]
 
 function verbFromNitricAction(action: string) {

@@ -129,9 +129,9 @@ func (l *LocalQueuesService) Complete(ctx context.Context, req *queuespb.QueueCo
 	// find the leased task
 	for i, queueItem := range l.queues[req.QueueName] {
 		if queueItem.lease != nil && queueItem.lease.Id == req.LeaseId {
-			// remove the leased task
-			l.queues[req.QueueName] = append(l.queues[req.QueueName][:i], l.queues[req.QueueName][i+1:]...)
 			if queueItem.lease.Expiry.Before(time.Now()) {
+				// remove the leased task
+				l.queues[req.QueueName] = append(l.queues[req.QueueName][:i], l.queues[req.QueueName][i+1:]...)
 				return &queuespb.QueueCompleteResponse{}, nil
 			}
 			return nil, fmt.Errorf("LeaseId: %s has expired", req.LeaseId)

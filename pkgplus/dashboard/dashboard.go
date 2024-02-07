@@ -168,6 +168,7 @@ type DashboardResponse struct {
 	Subscriptions []*SubscriberSpec `json:"subscriptions"`
 	Notifications []*NotifierSpec   `json:"notifications"`
 	Stores        []*KeyValueSpec   `json:"stores"`
+	Queues        []*QueueSpec      `json:"queues"`
 	HttpProxies   []*HttpProxySpec  `json:"httpProxies"`
 
 	Services []*ServiceSpec `json:"services"`

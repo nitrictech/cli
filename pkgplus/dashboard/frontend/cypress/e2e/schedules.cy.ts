@@ -19,16 +19,15 @@ describe('Schedules Spec', () => {
       cy.get(`[data-rct-item-id="${schedule}"]`).click()
 
       cy.getTestEl('generated-request-path').should(
-        'have.attr',
-        'href',
-        `http://localhost:4000/topic/${schedule}`,
+        'have.text',
+        `http://localhost:4000/schedules/${schedule}`,
       )
 
       cy.getTestEl('trigger-schedules-btn').click()
 
       cy.getAPIResponseCodeEditor().should(
         'have.text',
-        '1 successful & 0 failed deliveries',
+        'Successfully triggered schedule',
       )
     })
   })

@@ -203,7 +203,10 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                   <span className="hidden gap-2 text-lg md:flex">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="max-w-lg truncate">
+                        <span
+                          className="max-w-lg truncate"
+                          data-testid="generated-request-path"
+                        >
                           {generatedURL}
                         </span>
                       </TooltipTrigger>

@@ -279,7 +279,7 @@ const WSExplorer = () => {
 
   return (
     <AppLayout
-      title="Websocket Explorer"
+      title="Websockets"
       routePath={'/websockets'}
       secondLevelNav={
         data?.websockets?.length && selectedWebsocket ? (

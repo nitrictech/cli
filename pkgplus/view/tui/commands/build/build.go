@@ -71,7 +71,6 @@ func (m *Model) AllDone() bool {
 }
 
 func (m Model) View() string {
-
 	v := view.New()
 	v.Break()
 	v.Add(fragments.Tag("build"))

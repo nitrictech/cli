@@ -1,14 +1,19 @@
 package services
 
 import (
+	"slices"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
+	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
@@ -18,7 +23,10 @@ type Model struct {
 	updateChan         <-chan project.ServiceRunUpdate
 	localServicesModel tea.Model
 
-	serviceStatus map[string]project.ServiceRunUpdate
+	windowSize tea.WindowSizeMsg
+
+	serviceStatus     map[string]project.ServiceRunUpdate
+	serviceRunUpdates []project.ServiceRunUpdate
 }
 
 var _ tea.Model = (*Model)(nil)
@@ -32,6 +40,8 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowSize = msg
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
@@ -43,6 +53,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case reactive.ChanMsg[project.ServiceRunUpdate]:
 		// we know we have a service update
 		m.serviceStatus[msg.Value.ServiceName] = msg.Value
+		m.serviceRunUpdates = append(m.serviceRunUpdates, msg.Value)
 
 		return m, reactive.AwaitChannel(msg.Source)
 	default:
@@ -59,21 +70,53 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+var serviceColors = []lipgloss.CompleteColor{
+	tui.Colors.Blue,
+	tui.Colors.Purple,
+	tui.Colors.Teal,
+	tui.Colors.Red,
+	tui.Colors.Orange,
+	tui.Colors.Green,
+}
+
 func (m Model) View() string {
-	v := view.New()
+	heightStyle := lipgloss.NewStyle().MaxHeight(m.windowSize.Height - 4)
+	lv := view.New(view.WithStyle(heightStyle))
+	rv := view.New(view.WithStyle(heightStyle.Copy().BorderForeground(tui.Colors.Gray).Border(lipgloss.NormalBorder(), false, false, false, true).PaddingLeft(1).MarginLeft(1)))
 
 	if len(m.serviceStatus) == 0 {
-		v.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
+		lv.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
 	} else {
-		v.Add("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
-		v.Addln(" services registered with local nitric server")
+		lv.Add("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		lv.Addln(" services registered with local nitric server")
 	}
 
-	v.Addln(m.localServicesModel.View())
+	rv.Addln(fragments.Tag("logs"))
 
-	v.Addln("Press 'q' to quit")
+	svcColors := map[string]lipgloss.CompleteColor{}
+	serviceNames := lo.Keys(m.serviceStatus)
 
-	return v.Render()
+	slices.Sort(serviceNames)
+
+	for idx, svcName := range serviceNames {
+		svcColors[svcName] = serviceColors[idx%len(serviceColors)]
+	}
+
+	for i, update := range m.serviceRunUpdates[lo.Max([]int{0, len(m.serviceRunUpdates) - m.windowSize.Height - 4}):] {
+		rv.Add("%s: ", update.Filepath).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
+		rv.Add(strings.TrimSpace(update.Message)).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+		if i < len(m.serviceRunUpdates)-1 {
+			rv.Break()
+		}
+	}
+
+	lv.Addln(m.localServicesModel.View())
+
+	lv.Addln("Press 'q' to quit")
+
+	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), rv.Render())
+
+	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide)
 }
 
 func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUpdate, localCloud *cloud.LocalCloud, dashboardUrl string) Model {
@@ -84,5 +127,6 @@ func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUp
 		localServicesModel: localServicesModel,
 		updateChan:         updateChannel,
 		serviceStatus:      make(map[string]project.ServiceRunUpdate),
+		serviceRunUpdates:  []project.ServiceRunUpdate{},
 	}
 }

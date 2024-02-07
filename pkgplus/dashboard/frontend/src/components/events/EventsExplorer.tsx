@@ -23,6 +23,7 @@ import toast from 'react-hot-toast'
 import { capitalize } from 'radash'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
+import BreadCrumbs from '../layout/BreadCrumbs'
 
 interface Props {
   workerType: 'schedules' | 'topics'
@@ -134,6 +135,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
   return (
     <AppLayout
       title={capitalize(workerType)}
+      hideTitle
       routePath={`/${workerType}`}
       secondLevelNav={
         data &&
@@ -167,9 +169,8 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
         {selectedWorker && hasData ? (
           <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
             <div className="flex w-full flex-col gap-8">
-              <div className="flex">
-                <h2 className="text-2xl">{selectedWorker.name}</h2>
-                <div className="ml-auto flex items-center md:hidden">
+              <div className="lg:hidden">
+                <div className="ml-auto flex items-center">
                   <EventsMenu
                     selected={selectedWorker.name}
                     storageKey={storageKey}
@@ -179,73 +180,75 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                     }}
                   />
                 </div>
+                {data![workerType] && (
+                  <Select
+                    className="w-full"
+                    id={`${workerType}-select`}
+                    items={data![workerType]}
+                    label={capitalize(workerType)}
+                    selected={selectedWorker}
+                    setSelected={setSelectedWorker}
+                    display={(w: Worker) => (
+                      <div className="flex items-center gap-4 p-0.5 text-lg">
+                        {w.name}
+                      </div>
+                    )}
+                  />
+                )}
               </div>
-              <div>
-                <nav className="flex items-end gap-4" aria-label="Breadcrumb">
-                  <ol className="flex w-11/12 items-center gap-4 md:hidden">
-                    <li className="w-full">
-                      {data![workerType] && (
-                        <Select
-                          id={`${workerType}-select`}
-                          items={data![workerType]}
-                          label={capitalize(workerType)}
-                          selected={selectedWorker}
-                          setSelected={setSelectedWorker}
-                          display={(w: Worker) => (
-                            <div className="flex items-center gap-4 p-0.5 text-lg">
-                              {w.name}
-                            </div>
-                          )}
-                        />
-                      )}
-                    </li>
-                  </ol>
-                  <span className="hidden gap-2 text-lg md:flex">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span
-                          className="max-w-lg truncate"
-                          data-testid="generated-request-path"
-                        >
-                          {generatedURL}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{generatedURL}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            copyToClipboard(generatedURL)
-                            toast.success(`Copied ${workerTitleSingle} URL`)
-                          }}
-                        >
-                          <span className="sr-only">
-                            Copy {workerTitleSingle} URL
+              <div className="flex items-center gap-4">
+                <BreadCrumbs className="hidden text-lg lg:block">
+                  <span>{capitalize(workerType)}</span>
+                  <h2 className="font-body text-lg font-semibold">
+                    {selectedWorker.name}
+                  </h2>
+                  <div className="flex items-center">
+                    <span className="flex gap-2 text-lg">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className="max-w-lg truncate"
+                            data-testid="generated-request-path"
+                          >
+                            {generatedURL}
                           </span>
-                          <ClipboardIcon className="h-5 w-5 text-gray-500" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Copy {workerTitleSingle} URL</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </span>
-                  <span className="hidden md:block"></span>
-                  {workerType === 'schedules' && (
-                    <Button
-                      size="lg"
-                      className="ml-auto"
-                      data-testid={`trigger-${workerType}-btn`}
-                      onClick={handleSend}
-                    >
-                      Trigger
-                    </Button>
-                  )}
-                </nav>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{generatedURL}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(generatedURL)
+                              toast.success(`Copied ${workerTitleSingle} URL`)
+                            }}
+                          >
+                            <span className="sr-only">
+                              Copy {workerTitleSingle} URL
+                            </span>
+                            <ClipboardIcon className="h-5 w-5 text-gray-500" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Copy {workerTitleSingle} URL</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </span>
+                  </div>
+                </BreadCrumbs>
+                {workerType === 'schedules' && (
+                  <Button
+                    size="lg"
+                    className="ml-auto"
+                    data-testid={`trigger-${workerType}-btn`}
+                    onClick={handleSend}
+                  >
+                    Trigger
+                  </Button>
+                )}
               </div>
 
               {workerType === 'topics' && (

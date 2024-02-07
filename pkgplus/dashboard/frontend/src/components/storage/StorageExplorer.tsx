@@ -6,6 +6,7 @@ import AppLayout from '../layout/AppLayout'
 import StorageTreeView from './StorageTreeView'
 import FileBrowser from './FileBrowser'
 import type { Bucket } from '@/types'
+import BreadCrumbs from '../layout/BreadCrumbs'
 
 const LOCAL_STORAGE_KEY = 'nitric-local-dash-storage-history'
 
@@ -40,6 +41,7 @@ const StorageExplorer = () => {
   return (
     <AppLayout
       title="Storage"
+      hideTitle
       routePath={'/storage'}
       secondLevelNav={
         buckets &&
@@ -64,26 +66,27 @@ const StorageExplorer = () => {
         {buckets && selectedBucket ? (
           <div className="flex max-w-7xl flex-col gap-8 md:flex-row md:pr-8">
             <div className="flex w-full flex-col gap-8">
-              <h2 className="text-2xl font-medium">{selectedBucket.name}</h2>
-              <div className="md:hidden">
-                <nav className="flex items-end gap-4" aria-label="Breadcrumb">
-                  <ol className="flex min-w-[200px] items-center gap-4">
-                    <li className="w-full">
-                      <Select
-                        id="bucket-select"
-                        items={buckets || []}
-                        label="Select Bucket"
-                        selected={selectedBucket}
-                        setSelected={setSelectedBucket}
-                        display={(v) => (
-                          <div className="flex items-center gap-4 p-0.5 text-lg">
-                            {v.name}
-                          </div>
-                        )}
-                      />
-                    </li>
-                  </ol>
-                </nav>
+              <BreadCrumbs className="hidden text-lg lg:block">
+                Buckets
+                <h2 className="font-body text-lg font-semibold">
+                  {selectedBucket.name}
+                </h2>
+              </BreadCrumbs>
+
+              <div className="lg:hidden">
+                <Select
+                  className="w-full"
+                  id="bucket-select"
+                  items={buckets || []}
+                  label="Select Bucket"
+                  selected={selectedBucket}
+                  setSelected={setSelectedBucket}
+                  display={(v) => (
+                    <div className="flex items-center gap-4 p-0.5 text-lg">
+                      {v.name}
+                    </div>
+                  )}
+                />
               </div>
               <div className="bg-white shadow sm:rounded-lg">
                 <div className="flex flex-col gap-4 px-4 py-5 sm:p-6">

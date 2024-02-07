@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
-import format from 'date-fns/format'
+import { format } from 'date-fns/format'
 
 import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
@@ -48,6 +48,8 @@ import useSWRSubscription from 'swr/subscription'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { Badge } from '../ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
+import { Separator } from '../ui/separator'
+import BreadCrumbs from '../layout/BreadCrumbs'
 
 export const LOCAL_STORAGE_KEY = 'nitric-local-dash-api-history'
 
@@ -279,13 +281,14 @@ const WSExplorer = () => {
 
   return (
     <AppLayout
-      title="Websockets"
+      title="WebSockets"
       routePath={'/websockets'}
+      hideTitle
       secondLevelNav={
         data?.websockets?.length && selectedWebsocket ? (
           <>
             <div className="mb-2 flex items-center justify-between px-2">
-              <span className="text-lg">Websockets</span>
+              <span className="text-lg">WebSockets</span>
             </div>
             <WSTreeView
               initialItem={selectedWebsocket}
@@ -302,72 +305,90 @@ const WSExplorer = () => {
         {data?.websockets?.length && selectedWebsocket ? (
           <div className="flex max-w-6xl flex-col md:pr-8">
             <div className="flex w-full flex-col gap-8">
-              <h2 className="text-2xl">{selectedWebsocket?.name}</h2>
               <div>
-                <nav
-                  className="flex h-10 items-end gap-4 lg:items-center"
-                  aria-label="Breadcrumb"
-                >
-                  <div className="flex w-full items-center gap-4 lg:hidden">
-                    {data?.websockets?.length ? (
-                      <Select
-                        value={selectedWebsocket.name}
-                        onValueChange={(socketName) => {
-                          const ws = data?.websockets.find(
-                            (ws) => ws.name === socketName,
-                          )
+                <BreadCrumbs className="mb-2 lg:hidden">
+                  WebSockets
+                  <span className="font-semibold">
+                    {selectedWebsocket?.name}
+                  </span>
+                </BreadCrumbs>
 
-                          setSelectedWebsocket(ws)
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Message Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {data?.websockets.map((ws) => (
-                            <SelectItem key={ws.name} value={ws.name}>
-                              {ws.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : null}
-                  </div>
-                  <div className="hidden items-center lg:flex">
-                    <span className="flex gap-2 text-lg">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            data-testid="generated-request-path"
-                            className="max-w-xl truncate"
-                          >
-                            {websocketAddress}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{websocketAddress}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                <div className="flex w-full items-center gap-4 lg:hidden">
+                  {data?.websockets?.length ? (
+                    <Select
+                      value={selectedWebsocket.name}
+                      onValueChange={(socketName) => {
+                        const ws = data?.websockets.find(
+                          (ws) => ws.name === socketName,
+                        )
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              copyToClipboard(websocketAddress)
-                              toast.success('Copied Websocket URL')
-                            }}
-                          >
-                            <span className="sr-only">Copy Route URL</span>
-                            <ClipboardIcon className="h-5 w-5 text-gray-500" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Copy</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </span>
-                  </div>
+                        setSelectedWebsocket(ws)
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Message Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {data?.websockets.map((ws) => (
+                          <SelectItem key={ws.name} value={ws.name}>
+                            {ws.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : null}
+                  {tab === 'send-messages' && (
+                    <Button
+                      onClick={() => setConnected(!connected)}
+                      data-testid="connect-btn"
+                      variant={connected ? 'destructive' : 'default'}
+                    >
+                      {connected ? 'Disconnect' : 'Connect'}
+                    </Button>
+                  )}
+                </div>
+                <div className="hidden h-10 items-center lg:flex">
+                  <BreadCrumbs className="hidden text-lg lg:block">
+                    WebSockets
+                    <h2 className="font-body text-lg font-semibold">
+                      {selectedWebsocket?.name}
+                    </h2>
+                    <div className="flex items-center">
+                      <span className="flex gap-2 text-lg">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              data-testid="generated-request-path"
+                              className="max-w-xl truncate"
+                            >
+                              {websocketAddress}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{websocketAddress}</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                copyToClipboard(websocketAddress)
+                                toast.success('Copied Websocket URL')
+                              }}
+                            >
+                              <span className="sr-only">Copy Route URL</span>
+                              <ClipboardIcon className="h-5 w-5 text-gray-500" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Copy</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </span>
+                    </div>
+                  </BreadCrumbs>
                   {tab === 'send-messages' && (
                     <div className="ml-auto">
                       <Button
@@ -380,7 +401,7 @@ const WSExplorer = () => {
                       </Button>
                     </div>
                   )}
-                </nav>
+                </div>
               </div>
               <Tabs value={tab} onValueChange={setTab}>
                 <TabsList>
@@ -752,9 +773,9 @@ const WSExplorer = () => {
               href="https://nitric.io/docs/websockets"
               rel="noreferrer"
             >
-              creating Websockets
+              creating WebSockets
             </a>{' '}
-            as we are unable to find any existing Websockets.
+            as we are unable to find any existing WebSockets.
           </div>
         )}
       </Loading>

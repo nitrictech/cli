@@ -69,6 +69,7 @@ func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 				updatesChan <- ServiceBuildUpdate{
 					ServiceName: svc.Name,
 					Err:         err,
+					Message:     err.Error(),
 					Status:      ServiceBuildStatus_Error,
 				}
 			} else {

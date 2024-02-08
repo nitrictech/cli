@@ -126,15 +126,17 @@ func (l *LocalQueuesService) Complete(ctx context.Context, req *queuespb.QueueCo
 	defer l.queueLock.Unlock()
 	l.ensureQueue(req.QueueName)
 
+	completeTime := time.Now()
+
 	// find the leased task
 	for i, queueItem := range l.queues[req.QueueName] {
 		if queueItem.lease != nil && queueItem.lease.Id == req.LeaseId {
-			if queueItem.lease.Expiry.Before(time.Now()) {
+			if completeTime.Before(queueItem.lease.Expiry) {
 				// remove the leased task
 				l.queues[req.QueueName] = append(l.queues[req.QueueName][:i], l.queues[req.QueueName][i+1:]...)
 				return &queuespb.QueueCompleteResponse{}, nil
 			}
-			return nil, fmt.Errorf("LeaseId: %s has expired", req.LeaseId)
+			return nil, fmt.Errorf("LeaseId: %s expired at %s, current time %s", req.LeaseId, queueItem.lease.Expiry, completeTime)
 		}
 	}
 

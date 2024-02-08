@@ -6,9 +6,7 @@ import NodeBase, { type NodeBaseData } from './NodeBase'
 
 export type QueueNodeData = NodeBaseData<Queue>
 
-export const QueueNode: ComponentType<NodeProps<QueueNodeData>> = (
-  props,
-) => {
+export const QueueNode: ComponentType<NodeProps<QueueNodeData>> = (props) => {
   const { data } = props
 
   return (

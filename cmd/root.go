@@ -40,6 +40,8 @@ This will guide you through project creation, including selecting from available
 %s
 For further details visit our docs https://nitric.io/docs`
 
+var CI bool
+
 func usageString() string {
 	return fmt.Sprintf(usageTemplate, strings.Join(CommonCommandsUsage(), "\n"))
 }
@@ -57,9 +59,9 @@ var rootCmd = &cobra.Command{
 		// 	pterm.Info.Debugger = true
 		// }
 
-		// if output.CI {
-		// 	pterm.DisableStyling()
-		// }
+		if CI {
+			pterm.DisableStyling()
+		}
 
 		// Ensure the Nitric Home Directory Exists
 		if _, err := os.Stat(paths.NitricHomeDir()); os.IsNotExist(err) {
@@ -95,7 +97,7 @@ func Execute() {
 
 func init() {
 	// rootCmd.PersistentFlags().IntVarP(&output.VerboseLevel, "verbose", "v", 1, "set the verbosity of output (larger is more verbose)")
-	// rootCmd.PersistentFlags().BoolVar(&output.CI, "ci", false, "CI mode, disable output styling and auto-confirm all operations")
+	rootCmd.PersistentFlags().BoolVar(&CI, "ci", false, "CI mode, disable output styling and auto-confirm all operations")
 	// rootCmd.PersistentFlags().VarP(output.OutputTypeFlag, "output", "o", "output format")
 
 	// err := rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

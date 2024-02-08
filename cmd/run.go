@@ -17,6 +17,11 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -66,11 +71,36 @@ var runCmd = &cobra.Command{
 
 		tui.CheckErr(err)
 
-		runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
+		// non-interactive environment
+		if CI || !tui.IsTerminal() {
+			go func() {
+				sigChan := make(chan os.Signal, 1)
+				signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
-		_, _ = runView.Run()
-		// cobra.CheckErr(err)
-		localCloud.Stop()
+				// Wait for a signal
+				<-sigChan
+
+				// Send stop signal to stopChan
+				close(stopChan)
+
+				localCloud.Stop()
+			}()
+
+			for {
+				select {
+				case update := <-updatesChan:
+					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
+				case <-stopChan:
+					fmt.Println("Shutting down services - exiting")
+				}
+			}
+		} else {
+			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
+
+			_, _ = runView.Run()
+
+			localCloud.Stop()
+		}
 
 		return nil
 	},

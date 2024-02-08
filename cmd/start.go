@@ -18,6 +18,9 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/afero"
@@ -76,6 +79,7 @@ var startCmd = &cobra.Command{
 		// Run the app code (project services)
 		stopChan := make(chan bool)
 		updatesChan := make(chan project.ServiceRunUpdate)
+
 		go func() {
 			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan)
 			if err != nil {
@@ -85,12 +89,38 @@ var startCmd = &cobra.Command{
 
 		tui.CheckErr(err)
 
-		runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
+		// non-interactive environment
+		if CI || !tui.IsTerminal() {
+			go func() {
+				sigChan := make(chan os.Signal, 1)
+				signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
-		_, err = runView.Run()
-		tui.CheckErr(err)
+				// Wait for a signal
+				<-sigChan
 
-		localCloud.Stop()
+				// Send stop signal to stopChan
+				close(stopChan)
+
+				localCloud.Stop()
+			}()
+
+			for {
+				select {
+				case update := <-updatesChan:
+					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
+				case <-stopChan:
+					fmt.Println("Shutting down services - exiting")
+				}
+			}
+		} else {
+			// interactive environment
+			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
+
+			_, err = runView.Run()
+			tui.CheckErr(err)
+
+			localCloud.Stop()
+		}
 
 		return nil
 	},

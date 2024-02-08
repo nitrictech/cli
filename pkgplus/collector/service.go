@@ -96,11 +96,17 @@ func (s *ServiceRequirements) Error() error {
 }
 
 func (s *ServiceRequirements) WorkerCount() int {
-	return len(lo.Values(s.routes)) +
+	workerCount := len(lo.Values(s.routes)) +
 		len(s.listeners) +
 		len(s.schedules) +
 		len(lo.Values(s.subscriptions)) +
 		len(lo.Values(s.websockets))
+
+	if s.proxy != nil {
+		workerCount++
+	}
+
+	return workerCount
 }
 
 func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {

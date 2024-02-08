@@ -161,12 +161,12 @@ func buildQueueRequirements(allServiceRequirements []*ServiceRequirements, proje
 
 	for _, serviceRequirements := range allServiceRequirements {
 		for queueName := range serviceRequirements.queues {
-			res, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
+			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
 				return item.Id.Name == queueName
 			})
 
 			if !exists {
-				res = &deploymentspb.Resource{
+				res := &deploymentspb.Resource{
 					Id: &resourcespb.ResourceIdentifier{
 						Name: queueName,
 						Type: resourcespb.ResourceType_Queue,
@@ -563,7 +563,7 @@ func buildPolicyRequirements(allServiceRequirements []*ServiceRequirements, proj
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
-		compactedPoliciesByKey := lo.GroupBy(lo.Values(serviceRequirements.policies), func(item *resourcespb.PolicyResource) string {
+		compactedPoliciesByKey := lo.GroupBy(serviceRequirements.policies, func(item *resourcespb.PolicyResource) string {
 			// get the princpals and actions as a unique key (make sure they're sorted for consistency)
 			principalNames := lo.Reduce(item.Principals, func(agg []string, principal *resourcespb.ResourceIdentifier, idx int) []string {
 				return append(agg, principal.Name)

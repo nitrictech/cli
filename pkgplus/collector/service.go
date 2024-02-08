@@ -56,7 +56,7 @@ type ServiceRequirements struct {
 	topics                map[string]*resourcespb.TopicResource
 	queues                map[string]*resourcespb.QueueResource
 
-	policies map[string]*resourcespb.PolicyResource
+	policies []*resourcespb.PolicyResource
 	secrets  map[string]*resourcespb.SecretResource
 
 	errors []error
@@ -147,8 +147,9 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 				}
 			}
 		}
+
 		// Add a policy
-		s.policies[req.Id.GetName()] = req.GetPolicy()
+		s.policies = append(s.policies, req.GetPolicy())
 	case resourcespb.ResourceType_Topic:
 		// add a topic
 		s.topics[req.Id.GetName()] = req.GetTopic()
@@ -355,7 +356,7 @@ func NewServiceRequirements(serviceName string, serviceFile string, serviceType 
 		buckets:               make(map[string]*resourcespb.BucketResource),
 		keyValueStores:        make(map[string]*resourcespb.KeyValueStoreResource),
 		topics:                make(map[string]*resourcespb.TopicResource),
-		policies:              make(map[string]*resourcespb.PolicyResource),
+		policies:              []*resourcespb.PolicyResource{},
 		secrets:               make(map[string]*resourcespb.SecretResource),
 		listeners:             make(map[string]*storagepb.RegistrationRequest),
 		apis:                  make(map[string]*resourcespb.ApiResource),

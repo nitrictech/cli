@@ -44,6 +44,7 @@ type LocalWebsocketService struct {
 	connections map[string]map[string]*websocket.Conn
 	state       State
 	lock        sync.RWMutex
+	serversLock sync.RWMutex
 
 	servers map[string]string
 
@@ -99,8 +100,8 @@ func (r *LocalWebsocketService) GetState() State {
 }
 
 func (r *LocalWebsocketService) SetServers(server map[string]string) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+	r.serversLock.Lock()
+	defer r.serversLock.Unlock()
 
 	r.servers = server
 }

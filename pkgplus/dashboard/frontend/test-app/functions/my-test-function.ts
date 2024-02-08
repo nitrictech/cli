@@ -15,7 +15,11 @@ const socket2 = websocket('socket-2')
 
 const socket3 = websocket('socket-3')
 
-const connections = kv('connections').for('getting', 'setting', 'deleting')
+const connections = kv<Record<string, any>>('connections').for(
+  'getting',
+  'setting',
+  'deleting',
+)
 interface Doc {
   firstCount: number
   secondCount: number
@@ -278,14 +282,58 @@ topic('subscribe-tests-2').subscribe(async (ctx) => {
 
 // web sockets
 socket.on('connect', async (ctx) => {
+  let connectionsInfo = {}
+
   try {
-    await connections.set(ctx.req.connectionId, {
-      // store any metadata related to the connection here
-      connectionId: ctx.req.connectionId,
-    })
+    connectionsInfo = await connections.get('connections')
   } catch (e) {
     console.log(e)
   }
+
+  await connections.set('connections', {
+    ...(connectionsInfo || {}),
+    [ctx.req.connectionId]: {},
+  })
+})
+
+const deleteConnection = async (connectionId: string) => {
+  const connectionsObj = await connections.get('connections')
+
+  console.log(connectionsObj)
+
+  delete connectionsObj[connectionId]
+
+  console.log(connectionsObj)
+
+  await connections.set('connections', connectionsObj)
+}
+
+const broadcast = async (data: string | Uint8Array) => {
+  try {
+    const connectionsObj = await connections.get('connections')
+
+    await Promise.all(
+      Object.keys(connectionsObj).map(async (connectionId) => {
+        try {
+          // will replace data with a strinified version of query if it exists (for tests)
+          await socket.send(connectionId, data)
+        } catch (e) {
+          if (e.message.startsWith('13 INTERNAL: could not get connection')) {
+            await deleteConnection(connectionId)
+          }
+        }
+      }),
+    )
+  } catch (e) {}
+}
+
+socket.on('disconnect', async (ctx) => {
+  await deleteConnection(ctx.req.connectionId)
+})
+
+socket.on('message', async (ctx) => {
+  // broadcast message to all clients (including the sender)
+  await broadcast(ctx.req.data)
 })
 
 socket2.on('connect', async (ctx) => {
@@ -294,39 +342,6 @@ socket2.on('connect', async (ctx) => {
 
 socket2.on('message', (ctx) => {
   console.log(`Message: ${ctx.req.data}`)
-})
-
-socket.on('disconnect', async (ctx) => {
-  await connections.delete(ctx.req.connectionId)
-})
-
-// const broadcast = async (data: string | Uint8Array) => {
-//   try {
-//     const connectionStream = connections.query().stream()
-
-//     const streamEnd = new Promise<any>((res) => {
-//       connectionStream.on('end', res)
-//     })
-
-//     connectionStream.on('data', async ({ content }) => {
-//       // Send message to a connection
-//       try {
-//         // will replace data with a strinified version of query if it exists (for tests)
-//         await socket.send(content.connectionId, data)
-//       } catch (e) {
-//         if (e.message.startsWith('13 INTERNAL: could not get connection')) {
-//           await connections.doc(content.connectionId).delete()
-//         }
-//       }
-//     })
-
-//     await streamEnd
-//   } catch (e) {}
-// }
-
-socket.on('message', async (ctx) => {
-  // broadcast message to all clients (including the sender)
-  //await broadcast(ctx.req.data)
 })
 
 socket3.on('connect', (ctx) => {

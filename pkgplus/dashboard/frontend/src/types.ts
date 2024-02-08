@@ -45,13 +45,14 @@ export interface History {
   topics: EventHistoryItem[]
 }
 
+export type WebsocketEvent = 'connect' | 'disconnect' | 'message'
+
 export interface WebSocket extends BaseResource {
-  events: ('connect' | 'disconnect' | 'message')[]
+  targets: Record<WebsocketEvent, string>
 }
 
-export interface WebSocket {
+export interface WebSocketInfoData {
   connectionCount: number
-  targets: Map<string, string>
   messages: {
     data: string
     time: string
@@ -60,7 +61,7 @@ export interface WebSocket {
 }
 
 export interface WebSocketsInfo {
-  [socket: string]: WebSocket
+  [socket: string]: WebSocketInfoData
 }
 
 export type Bucket = BaseResource

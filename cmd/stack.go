@@ -321,7 +321,7 @@ nitric stack down -s aws -y`,
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
 		stackSelection := stackFlag
 
-		if CI || !tui.IsTerminal() {
+		if isNonInteractive() {
 			if len(stackFiles) > 1 && stackSelection == "" {
 				tui.CheckErr(fmt.Errorf("multiple stacks found in project, please specify one with -s"))
 			}

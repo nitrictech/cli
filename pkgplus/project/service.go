@@ -280,7 +280,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	randomPort, _ := netx.TakePort(1)
 	hostProxyPort := fmt.Sprint(randomPort[0])
 	env := []string{
-		"NITRIC_ENVIRONMENT=run",
+		fmt.Sprintf("NITRIC_ENVIRONMENT=%s", runtimeOptions.nitricEnvironment),
 		// FIXME: Ensure environment variable consistency in all SDKs, then remove duplicates here.
 		fmt.Sprintf("SERVICE_ADDRESS=%s", fmt.Sprintf("%s:%s", runtimeOptions.nitricHost, runtimeOptions.nitricPort)),
 		fmt.Sprintf("NITRIC_SERVICE_PORT=%s", runtimeOptions.nitricPort),

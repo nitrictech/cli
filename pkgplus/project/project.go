@@ -23,6 +23,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/project/runtime"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
@@ -101,9 +102,11 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	resourcespb.RegisterResourcesServer(grpcServer, serviceRequirements)
 	apispb.RegisterApiServer(grpcServer, serviceRequirements.ApiServer)
 	schedulespb.RegisterSchedulesServer(grpcServer, serviceRequirements)
-	topicspb.RegisterTopicsServer(grpcServer, serviceRequirements)
+	// topicspb.RegisterTopicsServer(grpcServer, serviceRequirements)
+	topicspb.RegisterSubscriberServer(grpcServer, serviceRequirements)
 	websocketspb.RegisterWebsocketHandlerServer(grpcServer, serviceRequirements)
 	storagepb.RegisterStorageListenerServer(grpcServer, serviceRequirements)
+	httppb.RegisterHttpServer(grpcServer, serviceRequirements)
 
 	listener, err := net.Listen("tcp", ":")
 	if err != nil {
@@ -133,7 +136,7 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 		return nil, fmt.Errorf("unable to split host and port for local Nitric collection server: %v", err)
 	}
 
-	err = service.RunContainer(stopChannel, updatesChannel, WithNitricPort(port))
+	err = service.RunContainer(stopChannel, updatesChannel, WithNitricPort(port), WithNitricEnvironment("build"))
 	if err != nil {
 		return nil, err
 	}

@@ -72,7 +72,7 @@ var runCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		// non-interactive environment
-		if CI || !tui.IsTerminal() {
+		if isNonInteractive() {
 			go func() {
 				sigChan := make(chan os.Signal, 1)
 				signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)

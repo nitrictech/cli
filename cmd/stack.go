@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/afero"
@@ -25,6 +26,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/nitrictech/cli/pkgplus/collector"
+	"github.com/nitrictech/cli/pkgplus/pflagx"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/stack"
 	"github.com/nitrictech/cli/pkgplus/provider"
@@ -41,6 +43,7 @@ import (
 )
 
 var (
+	stackFlag     string // stack flag value
 	confirmDown   bool
 	forceStack    bool
 	forceNewStack bool
@@ -131,34 +134,43 @@ var stackUpdateCmd = &cobra.Command{
 		}
 
 		// Step 0. Get the stack file, or prompt if more than 1.
-		stackSelection := ""
-		if len(stackFiles) > 1 {
-			stackList := make([]list.ListItem, len(stackFiles))
+		stackSelection := stackFlag
 
-			for i, stackFile := range stackFiles {
-				stackName, err := stack.GetStackNameFromFileName(stackFile)
-				tui.CheckErr(err)
-				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
-				tui.CheckErr(err)
-				stackList[i] = stack_select.StackListItem{
-					Name:     stackConfig.Name,
-					Provider: stackConfig.Provider,
+		if isNonInteractive() {
+			if len(stackFiles) > 1 && stackSelection == "" {
+				tui.CheckErr(fmt.Errorf("multiple stacks found in project, please specify one with -s"))
+			}
+		}
+
+		if stackSelection == "" {
+			if len(stackFiles) > 1 {
+				stackList := make([]list.ListItem, len(stackFiles))
+
+				for i, stackFile := range stackFiles {
+					stackName, err := stack.GetStackNameFromFileName(stackFile)
+					tui.CheckErr(err)
+					stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
+					tui.CheckErr(err)
+					stackList[i] = stack_select.StackListItem{
+						Name:     stackConfig.Name,
+						Provider: stackConfig.Provider,
+					}
 				}
-			}
 
-			promptModel := stack_select.New(stack_select.Args{
-				StackList: stackList,
-			})
+				promptModel := stack_select.New(stack_select.Args{
+					StackList: stackList,
+				})
 
-			selection, err := teax.NewProgram(promptModel).Run()
-			tui.CheckErr(err)
-			stackSelection = selection.(stack_select.Model).Choice()
-			if stackSelection == "" {
-				return
+				selection, err := teax.NewProgram(promptModel).Run()
+				tui.CheckErr(err)
+				stackSelection = selection.(stack_select.Model).Choice()
+				if stackSelection == "" {
+					return
+				}
+			} else {
+				stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
+				tui.CheckErr(err)
 			}
-		} else {
-			stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
-			tui.CheckErr(err)
 		}
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
@@ -178,10 +190,24 @@ var stackUpdateCmd = &cobra.Command{
 		buildUpdates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := teax.NewProgram(build.NewModel(buildUpdates))
-		// blocks but quits once the above updates channel is closed by the build process
-		_, err = prog.Run()
-		tui.CheckErr(err)
+		if isNonInteractive() {
+			fmt.Println("building project services")
+			for _, service := range proj.GetServices() {
+				fmt.Printf("service matched '%s', auto-naming this service '%s'\n", service.GetFilePath(), service.Name)
+			}
+
+			// non-interactive environment
+			for update := range buildUpdates {
+				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+				}
+			}
+		} else {
+			prog := teax.NewProgram(build.NewModel(buildUpdates))
+			// blocks but quits once the above updates channel is closed by the build process
+			_, err = prog.Run()
+			tui.CheckErr(err)
+		}
 
 		// Step 2. Start the collectors and containers (respectively in pairs)
 		// Step 3. Merge requirements from collectors into a specification
@@ -220,11 +246,53 @@ var stackUpdateCmd = &cobra.Command{
 		})
 
 		// Step 5b. Communicate with server to share progress of ...
+		if isNonInteractive() {
+			fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
+			go func() {
+				for update := range errorChan {
+					fmt.Printf("Error: %s\n", update)
+				}
+			}()
 
-		stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+			go func() {
+				for outMessage := range providerStdout {
+					fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
+				}
+			}()
 
-		_, err = teax.NewProgram(stackUp).Run()
-		tui.CheckErr(err)
+			// non-interactive environment
+			for update := range eventChan {
+				switch content := update.Content.(type) {
+				case *deploymentspb.DeploymentUpEvent_Update:
+					updateResType := ""
+					updateResName := ""
+					if content.Update.Id != nil {
+						updateResType = content.Update.Id.Type.String()
+						updateResName = content.Update.Id.Name
+					}
+
+					if updateResType == "" {
+						updateResType = "Stack"
+					}
+					if updateResName == "" {
+						updateResName = stackConfig.Name
+					}
+					if content.Update.SubResource != "" {
+						updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
+					}
+
+					fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
+				case *deploymentspb.DeploymentUpEvent_Result:
+					fmt.Printf("\nResult: %s\n", content.Result.Details)
+				}
+			}
+		} else {
+			// interactive environment
+			// Step 5c. Start the stack up view
+			stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+			_, err = teax.NewProgram(stackUp).Run()
+			tui.CheckErr(err)
+		}
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -251,34 +319,43 @@ nitric stack down -s aws -y`,
 		}
 
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
-		stackSelection := ""
-		if len(stackFiles) > 1 {
-			stackList := make([]list.ListItem, len(stackFiles))
+		stackSelection := stackFlag
 
-			for i, stackFile := range stackFiles {
-				stackName, err := stack.GetStackNameFromFileName(stackFile)
-				tui.CheckErr(err)
-				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
-				tui.CheckErr(err)
-				stackList[i] = stack_select.StackListItem{
-					Name:     stackConfig.Name,
-					Provider: stackConfig.Provider,
+		if isNonInteractive() {
+			if len(stackFiles) > 1 && stackSelection == "" {
+				tui.CheckErr(fmt.Errorf("multiple stacks found in project, please specify one with -s"))
+			}
+		}
+
+		if stackSelection == "" {
+			if len(stackFiles) > 1 {
+				stackList := make([]list.ListItem, len(stackFiles))
+
+				for i, stackFile := range stackFiles {
+					stackName, err := stack.GetStackNameFromFileName(stackFile)
+					tui.CheckErr(err)
+					stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
+					tui.CheckErr(err)
+					stackList[i] = stack_select.StackListItem{
+						Name:     stackConfig.Name,
+						Provider: stackConfig.Provider,
+					}
 				}
-			}
 
-			promptModel := stack_select.New(stack_select.Args{
-				StackList: stackList,
-			})
+				promptModel := stack_select.New(stack_select.Args{
+					StackList: stackList,
+				})
 
-			selection, err := teax.NewProgram(promptModel).Run()
-			tui.CheckErr(err)
-			stackSelection = selection.(stack_select.Model).Choice()
-			if stackSelection == "" {
-				return
+				selection, err := teax.NewProgram(promptModel).Run()
+				tui.CheckErr(err)
+				stackSelection = selection.(stack_select.Model).Choice()
+				if stackSelection == "" {
+					return
+				}
+			} else {
+				stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
+				tui.CheckErr(err)
 			}
-		} else {
-			stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
-			tui.CheckErr(err)
 		}
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
@@ -324,10 +401,52 @@ nitric stack down -s aws -y`,
 			Interactive: true,
 		})
 
-		stackDown := stack_down.New(stackConfig.Provider, stackConfig.Name, eventChannel, providerStdout, errorChan)
+		if isNonInteractive() {
+			fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
+			go func() {
+				for update := range errorChan {
+					fmt.Printf("Error: %s\n", update)
+				}
+			}()
 
-		_, err = teax.NewProgram(stackDown).Run()
-		tui.CheckErr(err)
+			go func() {
+				for outMessage := range providerStdout {
+					fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
+				}
+			}()
+
+			// non-interactive environment
+			for update := range eventChannel {
+				switch content := update.Content.(type) {
+				case *deploymentspb.DeploymentDownEvent_Update:
+					updateResType := ""
+					updateResName := ""
+					if content.Update.Id != nil {
+						updateResType = content.Update.Id.Type.String()
+						updateResName = content.Update.Id.Name
+					}
+
+					if updateResType == "" {
+						updateResType = "Stack"
+					}
+					if updateResName == "" {
+						updateResName = stackConfig.Name
+					}
+					if content.Update.SubResource != "" {
+						updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
+					}
+
+					fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
+				case *deploymentspb.DeploymentDownEvent_Result:
+					fmt.Println("\nStack down complete")
+				}
+			}
+		} else {
+			stackDown := stack_down.New(stackConfig.Provider, stackConfig.Name, eventChannel, providerStdout, errorChan)
+
+			_, err = teax.NewProgram(stackDown).Run()
+			tui.CheckErr(err)
+		}
 	},
 	Args: cobra.ExactArgs(0),
 }
@@ -380,6 +499,21 @@ var stackListCmd = &cobra.Command{
 	},
 }
 
+func AddOptions(cmd *cobra.Command, providerOnly bool) error {
+	fs := afero.NewOsFs()
+
+	stacks, err := stack.GetAllStackNames(fs)
+	if err != nil {
+		return fmt.Errorf("failed to get stacks available for this project. %w", err)
+	}
+
+	cmd.Flags().VarP(pflagx.NewStringEnumVar(&stackFlag, stacks, ""), "stack", "s", "specify a stack file, -s your_stack")
+
+	return cmd.RegisterFlagCompletionFunc("stack", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return stacks, cobra.ShellCompDirectiveDefault
+	})
+}
+
 func init() {
 	stackCmd.AddCommand(newStackCmd)
 	newStackCmd.Flags().BoolVarP(&forceNewStack, "force", "f", false, "force stack creation.")
@@ -387,9 +521,11 @@ func init() {
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackUpdateCmd, tui.Pulumi, tui.Docker))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
+	tui.CheckErr(AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd, tui.Pulumi))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
+	tui.CheckErr(AddOptions(stackDeleteCmd, false))
 
 	stackCmd.AddCommand(stackListCmd)
 

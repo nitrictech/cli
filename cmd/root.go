@@ -196,3 +196,8 @@ func cmdUsage(prefix []string, c *cobra.Command, commonOnly bool) []string {
 
 	return cmdH
 }
+
+// isNonInteractive returns true if the CLI is running in a non-interactive environment
+func isNonInteractive() bool {
+	return CI || !tui.IsTerminal()
+}

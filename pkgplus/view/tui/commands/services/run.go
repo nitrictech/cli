@@ -96,8 +96,13 @@ func tail(text string, take int) string {
 
 func (m Model) View() string {
 	heightStyle := lipgloss.NewStyle().MaxHeight(m.windowSize.Height - 4)
-	lv := view.New(view.WithStyle(heightStyle))
-	rv := view.New(view.WithStyle(lipgloss.NewStyle().BorderForeground(tui.Colors.Gray).Border(lipgloss.NormalBorder(), false, false, false, true).PaddingLeft(1).MarginLeft(1)))
+	availableWidth := m.windowSize.Width - 10 // 5 for borders and padding, 5 for safe output when the program exits.
+	leftWidth := availableWidth / 3
+	rightWidth := availableWidth - leftWidth
+
+	// TODO: lipgloss width wrapping breaks with long text using dashes.
+	lv := view.New(view.WithStyle(heightStyle.Copy().Width(leftWidth)))
+	rv := view.New(view.WithStyle(lipgloss.NewStyle().Width(rightWidth)))
 
 	if len(m.serviceStatus) == 0 {
 		lv.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
@@ -123,7 +128,8 @@ func (m Model) View() string {
 			statusColor = tui.Colors.Red
 		}
 		rv.Add("%s: ", update.Filepath).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
-		rv.Add(strings.TrimSpace(update.Message)).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+		// we'll inject our own newline, so remove the duplicate suffix. Retain any other newlines intended by the user
+		rv.Add(strings.TrimSuffix(update.Message, "\n")).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
 		if i < len(m.serviceRunUpdates)-1 {
 			rv.Break()
 		}
@@ -133,7 +139,10 @@ func (m Model) View() string {
 
 	lv.Addln("Press 'q' to quit")
 
-	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), tail(rv.Render(), m.windowSize.Height-4))
+	rightRaw := rv.Render()
+	rightBorder := lipgloss.NewStyle().BorderForeground(tui.Colors.Gray).Border(lipgloss.NormalBorder(), false, false, false, true).PaddingLeft(1).MarginLeft(1)
+
+	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), rightBorder.Render(tail(rightRaw, m.windowSize.Height-4)))
 
 	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide)
 }

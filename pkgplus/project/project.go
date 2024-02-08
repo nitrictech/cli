@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
@@ -21,7 +20,6 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/project/runtime"
-	"github.com/nitrictech/cli/pkgplus/view/tui"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
@@ -195,12 +193,7 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 				return err
 			}
 
-			bold := lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple)
-
-			fmt.Printf(svc.start, bold.Render(svc.GetFilePath()))
-			fmt.Println()
-
-			return svc.Run(stopChannels[idx], updates, svc.start, map[string]string{
+			return svc.Run(stopChannels[idx], updates, map[string]string{
 				"NITRIC_ENVIRONMENT": "run",
 				"SERVICE_ADDRESS":    "localhost:" + strconv.Itoa(port),
 				// TODO: add .env variables.
@@ -303,7 +296,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 				filepath:     f,
 				buildContext: *buildContext,
 				Type:         service.Type,
-				start:        service.Start,
+				startCmd:     service.Start,
 			}
 
 			if service.Type == "" {

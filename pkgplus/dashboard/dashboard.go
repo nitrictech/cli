@@ -68,8 +68,6 @@ type ApiSpec struct {
 type WebsocketSpec struct {
 	*BaseResourceSpec
 
-	Events []string `json:"events,omitempty"`
-
 	Targets map[string]string `json:"targets,omitempty"`
 }
 type ScheduleSpec struct {
@@ -379,13 +377,10 @@ func (d *Dashboard) updateWebsockets(state websockets.State) {
 				switch eventType {
 				case websocketspb.WebsocketEventType_Connect:
 					spec.Targets["connect"] = target
-					spec.Events = append(spec.Events, "connect")
 				case websocketspb.WebsocketEventType_Disconnect:
 					spec.Targets["disconnect"] = target
-					spec.Events = append(spec.Events, "disconnect")
 				case websocketspb.WebsocketEventType_Message:
 					spec.Targets["message"] = target
-					spec.Events = append(spec.Events, "message")
 				}
 			}
 		}

@@ -18,9 +18,9 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -136,7 +136,7 @@ var stackUpdateCmd = &cobra.Command{
 		// Step 0. Get the stack file, or prompt if more than 1.
 		stackSelection := stackFlag
 
-		if CI || !tui.IsTerminal() {
+		if isNonInteractive() {
 			if len(stackFiles) > 1 && stackSelection == "" {
 				tui.CheckErr(fmt.Errorf("multiple stacks found in project, please specify one with -s"))
 			}
@@ -190,10 +190,24 @@ var stackUpdateCmd = &cobra.Command{
 		buildUpdates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := teax.NewProgram(build.NewModel(buildUpdates))
-		// blocks but quits once the above updates channel is closed by the build process
-		_, err = prog.Run()
-		tui.CheckErr(err)
+		if isNonInteractive() {
+			fmt.Println("building project services")
+			for _, service := range proj.GetServices() {
+				fmt.Printf("service matched '%s', auto-naming this service '%s'\n", service.GetFilePath(), service.Name)
+			}
+
+			// non-interactive environment
+			for update := range buildUpdates {
+				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+				}
+			}
+		} else {
+			prog := teax.NewProgram(build.NewModel(buildUpdates))
+			// blocks but quits once the above updates channel is closed by the build process
+			_, err = prog.Run()
+			tui.CheckErr(err)
+		}
 
 		// Step 2. Start the collectors and containers (respectively in pairs)
 		// Step 3. Merge requirements from collectors into a specification
@@ -232,11 +246,53 @@ var stackUpdateCmd = &cobra.Command{
 		})
 
 		// Step 5b. Communicate with server to share progress of ...
+		if isNonInteractive() {
+			fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
+			go func() {
+				for update := range errorChan {
+					fmt.Printf("Error: %s\n", update)
+				}
+			}()
 
-		stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+			go func() {
+				for outMessage := range providerStdout {
+					fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
+				}
+			}()
 
-		_, err = teax.NewProgram(stackUp).Run()
-		tui.CheckErr(err)
+			// non-interactive environment
+			for update := range eventChan {
+				switch content := update.Content.(type) {
+				case *deploymentspb.DeploymentUpEvent_Update:
+					updateResType := ""
+					updateResName := ""
+					if content.Update.Id != nil {
+						updateResType = content.Update.Id.Type.String()
+						updateResName = content.Update.Id.Name
+					}
+
+					if updateResType == "" {
+						updateResType = "Stack"
+					}
+					if updateResName == "" {
+						updateResName = stackConfig.Name
+					}
+					if content.Update.SubResource != "" {
+						updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
+					}
+
+					fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
+				case *deploymentspb.DeploymentUpEvent_Result:
+					fmt.Printf("\nResult: %s\n", content.Result.Details)
+				}
+			}
+		} else {
+			// interactive environment
+			// Step 5c. Start the stack up view
+			stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+			_, err = teax.NewProgram(stackUp).Run()
+			tui.CheckErr(err)
+		}
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -345,10 +401,52 @@ nitric stack down -s aws -y`,
 			Interactive: true,
 		})
 
-		stackDown := stack_down.New(stackConfig.Provider, stackConfig.Name, eventChannel, providerStdout, errorChan)
+		if isNonInteractive() {
+			fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
+			go func() {
+				for update := range errorChan {
+					fmt.Printf("Error: %s\n", update)
+				}
+			}()
 
-		_, err = teax.NewProgram(stackDown).Run()
-		tui.CheckErr(err)
+			go func() {
+				for outMessage := range providerStdout {
+					fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
+				}
+			}()
+
+			// non-interactive environment
+			for update := range eventChannel {
+				switch content := update.Content.(type) {
+				case *deploymentspb.DeploymentDownEvent_Update:
+					updateResType := ""
+					updateResName := ""
+					if content.Update.Id != nil {
+						updateResType = content.Update.Id.Type.String()
+						updateResName = content.Update.Id.Name
+					}
+
+					if updateResType == "" {
+						updateResType = "Stack"
+					}
+					if updateResName == "" {
+						updateResName = stackConfig.Name
+					}
+					if content.Update.SubResource != "" {
+						updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
+					}
+
+					fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
+				case *deploymentspb.DeploymentDownEvent_Result:
+					fmt.Println("\nStack down complete")
+				}
+			}
+		} else {
+			stackDown := stack_down.New(stackConfig.Provider, stackConfig.Name, eventChannel, providerStdout, errorChan)
+
+			_, err = teax.NewProgram(stackDown).Run()
+			tui.CheckErr(err)
+		}
 	},
 	Args: cobra.ExactArgs(0),
 }
@@ -404,17 +502,15 @@ var stackListCmd = &cobra.Command{
 func AddOptions(cmd *cobra.Command, providerOnly bool) error {
 	fs := afero.NewOsFs()
 
-	stacks, err := stack.GetAllStacks[map[string]any](fs)
+	stacks, err := stack.GetAllStackNames(fs)
 	if err != nil {
 		return fmt.Errorf("failed to get stacks available for this project. %w", err)
 	}
 
-	stackNames := lo.Keys[string](stacks)
-
-	cmd.Flags().VarP(pflagx.NewStringEnumVar(&stackFlag, stackNames, ""), "stack", "s", "specify a stack file, -s your_stack")
+	cmd.Flags().VarP(pflagx.NewStringEnumVar(&stackFlag, stacks, ""), "stack", "s", "specify a stack file, -s your_stack")
 
 	return cmd.RegisterFlagCompletionFunc("stack", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return stackNames, cobra.ShellCompDirectiveDefault
+		return stacks, cobra.ShellCompDirectiveDefault
 	})
 }
 

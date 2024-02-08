@@ -78,6 +78,26 @@ func GetAllStackFiles(fs afero.Fs) ([]string, error) {
 	return afero.Glob(fs, "./nitric.*.yaml")
 }
 
+// GetAllStackNames returns a list of all stack names in the current directory
+func GetAllStackNames(fs afero.Fs) ([]string, error) {
+	stackFiles, err := GetAllStackFiles(fs)
+	if err != nil {
+		return nil, err
+	}
+
+	stackNames := make([]string, len(stackFiles))
+
+	for i, stackFile := range stackFiles {
+		stackName, err := GetStackNameFromFileName(stackFile)
+		if err != nil {
+			return nil, err
+		}
+		stackNames[i] = stackName
+	}
+
+	return stackNames, nil
+}
+
 // GetAllStacks returns a map of all stack configurations in the current directory, keyed by stack name
 func GetAllStacks[T any](fs afero.Fs) (map[string]*StackConfig[T], error) {
 	stackFiles, err := GetAllStackFiles(fs)

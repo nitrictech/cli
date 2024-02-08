@@ -742,6 +742,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		notifications:    []*NotifierSpec{},
 		websockets:       []WebsocketSpec{},
 		stores:           []*KeyValueSpec{},
+		queues:           []*QueueSpec{},
 		httpProxies:      []*HttpProxySpec{},
 		policies:         map[string]PolicySpec{},
 		websocketsInfo:   map[string]*websockets.WebsocketInfo{},

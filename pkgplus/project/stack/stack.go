@@ -78,6 +78,26 @@ func GetAllStackFiles(fs afero.Fs) ([]string, error) {
 	return afero.Glob(fs, "./nitric.*.yaml")
 }
 
+// GetAllStacks returns a map of all stack configurations in the current directory, keyed by stack name
+func GetAllStacks[T any](fs afero.Fs) (map[string]*StackConfig[T], error) {
+	stackFiles, err := GetAllStackFiles(fs)
+	if err != nil {
+		return nil, err
+	}
+
+	stacks := make(map[string]*StackConfig[T], len(stackFiles))
+
+	for _, stackFile := range stackFiles {
+		stackConfig, err := configFromFile[T](fs, stackFile)
+		if err != nil {
+			return nil, err
+		}
+		stacks[stackConfig.Name] = stackConfig
+	}
+
+	return stacks, nil
+}
+
 // GetStackNameFromFileName returns the stack name from a given stack file name
 // e.g. nitric.aws.yaml -> aws
 func GetStackNameFromFileName(fileName string) (string, error) {

@@ -20,11 +20,13 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/nitrictech/cli/pkgplus/collector"
+	"github.com/nitrictech/cli/pkgplus/pflagx"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/stack"
 	"github.com/nitrictech/cli/pkgplus/provider"
@@ -41,6 +43,7 @@ import (
 )
 
 var (
+	stackFlag     string // stack flag value
 	confirmDown   bool
 	forceStack    bool
 	forceNewStack bool
@@ -131,34 +134,43 @@ var stackUpdateCmd = &cobra.Command{
 		}
 
 		// Step 0. Get the stack file, or prompt if more than 1.
-		stackSelection := ""
-		if len(stackFiles) > 1 {
-			stackList := make([]list.ListItem, len(stackFiles))
+		stackSelection := stackFlag
 
-			for i, stackFile := range stackFiles {
-				stackName, err := stack.GetStackNameFromFileName(stackFile)
-				tui.CheckErr(err)
-				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
-				tui.CheckErr(err)
-				stackList[i] = stack_select.StackListItem{
-					Name:     stackConfig.Name,
-					Provider: stackConfig.Provider,
+		if CI || !tui.IsTerminal() {
+			if len(stackFiles) > 1 && stackSelection == "" {
+				tui.CheckErr(fmt.Errorf("multiple stacks found in project, please specify one with -s"))
+			}
+		}
+
+		if stackSelection == "" {
+			if len(stackFiles) > 1 {
+				stackList := make([]list.ListItem, len(stackFiles))
+
+				for i, stackFile := range stackFiles {
+					stackName, err := stack.GetStackNameFromFileName(stackFile)
+					tui.CheckErr(err)
+					stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
+					tui.CheckErr(err)
+					stackList[i] = stack_select.StackListItem{
+						Name:     stackConfig.Name,
+						Provider: stackConfig.Provider,
+					}
 				}
-			}
 
-			promptModel := stack_select.New(stack_select.Args{
-				StackList: stackList,
-			})
+				promptModel := stack_select.New(stack_select.Args{
+					StackList: stackList,
+				})
 
-			selection, err := teax.NewProgram(promptModel).Run()
-			tui.CheckErr(err)
-			stackSelection = selection.(stack_select.Model).Choice()
-			if stackSelection == "" {
-				return
+				selection, err := teax.NewProgram(promptModel).Run()
+				tui.CheckErr(err)
+				stackSelection = selection.(stack_select.Model).Choice()
+				if stackSelection == "" {
+					return
+				}
+			} else {
+				stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
+				tui.CheckErr(err)
 			}
-		} else {
-			stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
-			tui.CheckErr(err)
 		}
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
@@ -251,34 +263,43 @@ nitric stack down -s aws -y`,
 		}
 
 		// Step 0. Get the stack file, or proomptyboi if more than 1.
-		stackSelection := ""
-		if len(stackFiles) > 1 {
-			stackList := make([]list.ListItem, len(stackFiles))
+		stackSelection := stackFlag
 
-			for i, stackFile := range stackFiles {
-				stackName, err := stack.GetStackNameFromFileName(stackFile)
-				tui.CheckErr(err)
-				stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
-				tui.CheckErr(err)
-				stackList[i] = stack_select.StackListItem{
-					Name:     stackConfig.Name,
-					Provider: stackConfig.Provider,
+		if CI || !tui.IsTerminal() {
+			if len(stackFiles) > 1 && stackSelection == "" {
+				tui.CheckErr(fmt.Errorf("multiple stacks found in project, please specify one with -s"))
+			}
+		}
+
+		if stackSelection == "" {
+			if len(stackFiles) > 1 {
+				stackList := make([]list.ListItem, len(stackFiles))
+
+				for i, stackFile := range stackFiles {
+					stackName, err := stack.GetStackNameFromFileName(stackFile)
+					tui.CheckErr(err)
+					stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
+					tui.CheckErr(err)
+					stackList[i] = stack_select.StackListItem{
+						Name:     stackConfig.Name,
+						Provider: stackConfig.Provider,
+					}
 				}
-			}
 
-			promptModel := stack_select.New(stack_select.Args{
-				StackList: stackList,
-			})
+				promptModel := stack_select.New(stack_select.Args{
+					StackList: stackList,
+				})
 
-			selection, err := teax.NewProgram(promptModel).Run()
-			tui.CheckErr(err)
-			stackSelection = selection.(stack_select.Model).Choice()
-			if stackSelection == "" {
-				return
+				selection, err := teax.NewProgram(promptModel).Run()
+				tui.CheckErr(err)
+				stackSelection = selection.(stack_select.Model).Choice()
+				if stackSelection == "" {
+					return
+				}
+			} else {
+				stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
+				tui.CheckErr(err)
 			}
-		} else {
-			stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
-			tui.CheckErr(err)
 		}
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
@@ -380,6 +401,23 @@ var stackListCmd = &cobra.Command{
 	},
 }
 
+func AddOptions(cmd *cobra.Command, providerOnly bool) error {
+	fs := afero.NewOsFs()
+
+	stacks, err := stack.GetAllStacks[map[string]any](fs)
+	if err != nil {
+		return fmt.Errorf("failed to get stacks available for this project. %w", err)
+	}
+
+	stackNames := lo.Keys[string](stacks)
+
+	cmd.Flags().VarP(pflagx.NewStringEnumVar(&stackFlag, stackNames, ""), "stack", "s", "specify a stack file, -s your_stack")
+
+	return cmd.RegisterFlagCompletionFunc("stack", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return stackNames, cobra.ShellCompDirectiveDefault
+	})
+}
+
 func init() {
 	stackCmd.AddCommand(newStackCmd)
 	newStackCmd.Flags().BoolVarP(&forceNewStack, "force", "f", false, "force stack creation.")
@@ -387,9 +425,11 @@ func init() {
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackUpdateCmd, tui.Pulumi, tui.Docker))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
+	tui.CheckErr(AddOptions(stackUpdateCmd, false))
 
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd, tui.Pulumi))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
+	tui.CheckErr(AddOptions(stackDeleteCmd, false))
 
 	stackCmd.AddCommand(stackListCmd)
 

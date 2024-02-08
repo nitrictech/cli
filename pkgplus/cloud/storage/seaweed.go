@@ -42,12 +42,18 @@ const (
 
 // Start - Start the local SeaweedFS server
 func (m *SeaweedServer) Start() error {
-	ports, err := netx.TakePort(1)
+	ports, err := netx.TakePort(6)
 	if err != nil {
 		return errors.WithMessage(err, "freeport.Take")
 	}
 
-	port := uint16(ports[0])
+	// unique ports needed for all elements of seaweedfs to allow multiple instances to run in parallel
+	masterPort := uint16(ports[0])
+	volumePort := uint16(ports[1])
+	s3Port := uint16(ports[2])
+	masterGrpcPort := uint16(ports[3])
+	volumeGrpcPort := uint16(ports[4])
+	filerPort := uint16(ports[5])
 
 	go func() {
 		// FIXME: magic number 26 is the seaweedFS server command
@@ -63,10 +69,15 @@ func (m *SeaweedServer) Start() error {
 		cmdArgs := []string{
 			"server",
 			fmt.Sprintf("-dir=%s", m.bucketsDir),
+			fmt.Sprintf("-master.port=%d", masterPort),
+			fmt.Sprintf("-master.port.grpc=%d", masterGrpcPort),
 			"-s3",
-			fmt.Sprintf("-s3.port=%d", port),
+			fmt.Sprintf("-s3.port=%d", s3Port),
 			"-volume",
 			"-volume.max=300",
+			fmt.Sprintf("-volume.port=%d", volumePort),
+			fmt.Sprintf("-volume.port.grpc=%d", volumeGrpcPort),
+			fmt.Sprintf("-filer.port=%d", filerPort),
 		}
 
 		origOsArgs := os.Args
@@ -85,7 +96,7 @@ func (m *SeaweedServer) Start() error {
 		_ = srvCmd.Run(srvCmd, otherArgs)
 	}()
 
-	m.apiPort = int(port)
+	m.apiPort = int(s3Port)
 
 	return nil
 }

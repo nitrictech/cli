@@ -19,6 +19,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/docker"
 	"github.com/nitrictech/cli/pkgplus/netx"
 	"github.com/nitrictech/cli/pkgplus/project/runtime"
+	"github.com/nitrictech/nitric/core/pkg/logger"
 )
 
 type ServiceBuildStatus string
@@ -31,7 +32,7 @@ type Service struct {
 	filepath     string
 	buildContext runtime.RuntimeBuildContext
 
-	start string
+	startCmd string
 }
 
 func (s *Service) GetFilePath() string {
@@ -193,8 +194,20 @@ func (wf writerFunc) Write(p []byte) (n int, err error) {
 }
 
 // Run - runs the service using the provided command, typically not in a container.
-func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, command string, env map[string]string) error {
-	commandParts := strings.Split(fmt.Sprintf(command, s.filepath), " ")
+func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
+	if s.startCmd == "" {
+		return fmt.Errorf("no start command provided for service %s", s.filepath)
+	}
+
+	// this could be improve with real env var substitution.
+	startCmd := strings.ReplaceAll(s.startCmd, "$SERVICE_PATH", s.filepath)
+	startCmd = strings.ReplaceAll(startCmd, "${SERVICE_PATH}", s.filepath)
+
+	if !strings.Contains(startCmd, s.filepath) {
+		logger.Warnf("Start cmd for service %s does not contain $SERVICE_PATH, check the service start configuration in nitric.yaml", s.filepath)
+	}
+
+	commandParts := strings.Split(startCmd, " ")
 	cmd := exec.Command(
 		commandParts[0],
 		commandParts[1:]...,
@@ -204,6 +217,8 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, command
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
+
+	// cmd.Env = append(cmd.Env, fmt.Sprintf("SERVICE_PATH=\"%s\"", s.filepath))
 
 	cmd.Stdout = &ServiceRunUpdateWriter{
 		updates:     updates,

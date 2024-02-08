@@ -16,7 +16,7 @@ import {
   MegaphoneIcon,
   GlobeAltIcon,
   ArrowsRightLeftIcon,
-  QueueListIcon
+  QueueListIcon,
 } from '@heroicons/react/24/outline'
 import {
   MarkerType,
@@ -242,12 +242,15 @@ export function generateVisualizerData(data: WebSocketResponse): {
   // Generate nodes from websockets
   data.websockets.forEach((ws) => {
     const wsAddress = data.websocketAddresses[ws.name]
+
+    const events = Object.keys(ws.targets)
+
     const node = createNode<WebsocketNodeData>(ws, 'websocket', {
       title: ws.name,
       resource: ws,
       icon: ChatBubbleLeftRightIcon,
-      description: `${ws.events.length} ${
-        ws.events.length === 1 ? 'Event' : 'Events'
+      description: `${events.length} ${
+        events.length === 1 ? 'Event' : 'Events'
       }`,
       address: wsAddress,
     })

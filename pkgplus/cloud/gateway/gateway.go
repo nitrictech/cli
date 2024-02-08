@@ -275,7 +275,7 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 			return
 		}
 
-		if resp.GetWebsocketEventResponse() == nil && resp.GetWebsocketEventResponse().GetConnectionResponse() != nil && resp.GetWebsocketEventResponse().GetConnectionResponse().Reject {
+		if resp.GetWebsocketEventResponse() == nil || (resp.GetWebsocketEventResponse().GetConnectionResponse() != nil && resp.GetWebsocketEventResponse().GetConnectionResponse().Reject) {
 			// close the connection
 			ctx.Error("Connection Refused", 500)
 			return

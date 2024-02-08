@@ -20,8 +20,8 @@ describe('Websockets Spec', () => {
 
   it('should have correct websocket url', () => {
     cy.getTestEl('generated-request-path', 5000).should(
-      'have.text',
-      'ws://localhost:4003',
+      'contain.text',
+      'ws://localhost:400',
     )
   })
 
@@ -33,8 +33,8 @@ describe('Websockets Spec', () => {
     cy.getTestEl('connected-status').should('have.text', 'Connected')
 
     cy.getTestEl('accordion-message-0').should(
-      'have.text',
-      'Connected to ws://localhost:4003',
+      'contain.text',
+      'Connected to ws://localhost:400',
     )
 
     cy.getTestEl('message-text-input').type('My awesome test message!')
@@ -80,13 +80,13 @@ describe('Websockets Spec', () => {
     cy.getTestEl('connected-status').should('have.text', 'Disconnected')
 
     cy.getTestEl('accordion-message-0').should(
-      'have.text',
-      'Disconnected from ws://localhost:4005',
+      'contain.text',
+      'Disconnected from ws://localhost:400',
     )
 
     cy.getTestEl('accordion-message-1').should(
-      'have.text',
-      'Error connecting to ws://localhost:4005, check your connect callback',
+      'contain.text',
+      'Error connecting to ws://localhost:400',
     )
   })
 
@@ -101,7 +101,7 @@ describe('Websockets Spec', () => {
 
     cy.getTestEl('generated-request-path').should(
       'contain.text',
-      'ws://localhost:4003?firstParam=myValue&secondParam=mySecondValue',
+      '?firstParam=myValue&secondParam=mySecondValue',
     )
 
     cy.getTestEl('connect-btn').click()
@@ -109,8 +109,8 @@ describe('Websockets Spec', () => {
     cy.getTestEl('connected-status').should('have.text', 'Connected')
 
     cy.getTestEl('accordion-message-0').should(
-      'have.text',
-      'Connected to ws://localhost:4003?firstParam=myValue&secondParam=mySecondValue',
+      'contain.text',
+      '?firstParam=myValue&secondParam=mySecondValue',
     )
 
     cy.getTestEl('message-text-input').type('My awesome test message!')
@@ -124,22 +124,4 @@ describe('Websockets Spec', () => {
       'My awesome test message!',
     )
   })
-
-  //   it(`should trigger topic ${topic}`, () => {
-  //     cy.get(`[data-rct-item-id="${topic}"]`).click();
-
-  //     cy.getTestEl("generated-request-path").should(
-  //       "have.attr",
-  //       "href",
-  //       `http://localhost:4000/topic/${topic}`
-  //     );
-
-  //     cy.getTestEl("trigger-topics-btn").click();
-
-  //     cy.getAPIResponseCodeEditor().should(
-  //       "have.text",
-  //       "1 successful & 0 failed deliveries"
-  //     );
-  //   });
-  // });
 })

@@ -16,6 +16,7 @@ import {
   MegaphoneIcon,
   GlobeAltIcon,
   ArrowsRightLeftIcon,
+  QueueListIcon
 } from '@heroicons/react/24/outline'
 import {
   MarkerType,
@@ -52,6 +53,7 @@ import {
   type HttpProxyNodeData,
 } from '@/components/visualizer/nodes/HttpProxyNode'
 import { getTopicSubscriptions } from './get-topic-subscriptions'
+import { QueueNode } from '@/components/visualizer/nodes/QueueNode'
 
 export const nodeTypes = {
   api: APINode,
@@ -62,6 +64,7 @@ export const nodeTypes = {
   service: ServiceNode,
   keyvaluestore: KeyValueNode,
   httpproxy: HttpProxyNode,
+  queue: QueueNode,
 }
 
 const createNode = <T>(
@@ -304,6 +307,16 @@ export function generateVisualizerData(data: WebSocketResponse): {
       title: store.name,
       resource: store,
       icon: CircleStackIcon,
+    })
+
+    nodes.push(node)
+  })
+
+  data.queues.forEach((queue) => {
+    const node = createNode<BucketNodeData>(queue, 'queue', {
+      title: queue.name,
+      resource: queue,
+      icon: QueueListIcon,
     })
 
     nodes.push(node)

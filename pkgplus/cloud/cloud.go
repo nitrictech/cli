@@ -11,6 +11,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/cloud/gateway"
 	"github.com/nitrictech/cli/pkgplus/cloud/http"
 	"github.com/nitrictech/cli/pkgplus/cloud/keyvalue"
+	"github.com/nitrictech/cli/pkgplus/cloud/queues"
 	"github.com/nitrictech/cli/pkgplus/cloud/resources"
 	"github.com/nitrictech/cli/pkgplus/cloud/schedules"
 	"github.com/nitrictech/cli/pkgplus/cloud/secrets"
@@ -43,6 +44,7 @@ type LocalCloud struct {
 	Storage    *storage.LocalStorageService
 	Topics     *topics.LocalTopicsAndSubscribersService
 	Websockets *websockets.LocalWebsocketService
+	Queues     *queues.LocalQueuesService
 
 	// Store all the plugins locally
 }
@@ -88,6 +90,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 		TopicsPlugin:        lc.Topics,
 		ResourcesPlugin:     lc.Resources,
 		WebsocketPlugin:     lc.Websockets,
+		QueuesPlugin:        lc.Queues,
 
 		MinWorkers: lo.ToPtr(0),
 
@@ -167,6 +170,11 @@ func New() (*LocalCloud, error) {
 		return nil, err
 	}
 
+	localQueueService, err := queues.NewLocalQueuesService()
+	if err != nil {
+		return nil, err
+	}
+
 	return &LocalCloud{
 		membranes:  make(map[string]*membrane.Membrane),
 		Apis:       localApis,
@@ -179,5 +187,6 @@ func New() (*LocalCloud, error) {
 		Gateway:    localGateway,
 		Secrets:    localSecrets,
 		KeyValue:   keyvalueService,
+		Queues:     localQueueService,
 	}, nil
 }

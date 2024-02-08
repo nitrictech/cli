@@ -155,6 +155,32 @@ func buildTopicRequirements(allServiceRequirements []*ServiceRequirements, proje
 	return resources, nil
 }
 
+// buildQueueRequirements gathers and deduplicates all queue requirements
+func buildQueueRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
+	resources := []*deploymentspb.Resource{}
+
+	for _, serviceRequirements := range allServiceRequirements {
+		for queueName := range serviceRequirements.queues {
+			res, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
+				return item.Id.Name == queueName
+			})
+
+			if !exists {
+				res = &deploymentspb.Resource{
+					Id: &resourcespb.ResourceIdentifier{
+						Name: queueName,
+						Type: resourcespb.ResourceType_Queue,
+					},
+					Config: &deploymentspb.Resource_Queue{},
+				}
+				resources = append(resources, res)
+			}
+		}
+	}
+
+	return resources, nil
+}
+
 // buildSecretRequirements gathers and deduplicates all secret requirements
 func buildSecretRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
@@ -658,6 +684,12 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 		return nil, err
 	}
 	newSpec.Resources = append(newSpec.Resources, topicResources...)
+
+	queueResources, err := buildQueueRequirements(allServiceRequirements, projectErrors)
+	if err != nil {
+		return nil, err
+	}
+	newSpec.Resources = append(newSpec.Resources, queueResources...)
 
 	secretResrources, err := buildSecretRequirements(allServiceRequirements, projectErrors)
 	if err != nil {

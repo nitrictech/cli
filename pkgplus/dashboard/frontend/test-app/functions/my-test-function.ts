@@ -345,7 +345,10 @@ socket2.on('message', (ctx) => {
 })
 
 socket3.on('connect', (ctx) => {
-  ctx.res.success = false
+  const someObj = {}
+
+  // @ts-ignore
+  someObj.does.not.exist = true
 })
 
 socket3.on('disconnect', (ctx) => {

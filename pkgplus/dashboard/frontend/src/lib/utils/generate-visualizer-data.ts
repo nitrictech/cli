@@ -16,7 +16,7 @@ import {
   MegaphoneIcon,
   GlobeAltIcon,
   ArrowsRightLeftIcon,
-  QueueListIcon
+  QueueListIcon,
 } from '@heroicons/react/24/outline'
 import {
   MarkerType,

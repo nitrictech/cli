@@ -89,7 +89,7 @@ var runCmd = &cobra.Command{
 			for {
 				select {
 				case update := <-updatesChan:
-					fmt.Printf("%s: %s", update.ServiceName, update.Message)
+					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
 				case <-stopChan:
 					fmt.Println("Shutting down services - exiting")
 				}
@@ -98,7 +98,7 @@ var runCmd = &cobra.Command{
 			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
 
 			_, _ = runView.Run()
-			
+
 			localCloud.Stop()
 		}
 

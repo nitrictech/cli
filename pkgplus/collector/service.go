@@ -54,6 +54,7 @@ type ServiceRequirements struct {
 	buckets               map[string]*resourcespb.BucketResource
 	keyValueStores        map[string]*resourcespb.KeyValueStoreResource
 	topics                map[string]*resourcespb.TopicResource
+	queues                map[string]*resourcespb.QueueResource
 
 	policies map[string]*resourcespb.PolicyResource
 	secrets  map[string]*resourcespb.SecretResource
@@ -145,6 +146,9 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 	case resourcespb.ResourceType_Topic:
 		// add a topic
 		s.topics[req.Id.GetName()] = req.GetTopic()
+	case resourcespb.ResourceType_Queue:
+		// add a queue
+		s.queues[req.Id.GetName()] = req.GetQueue()
 	}
 
 	return &resourcespb.ResourceDeclareResponse{}, nil

@@ -65,6 +65,8 @@ export interface WebSocketsInfo {
 
 export type Bucket = BaseResource
 
+export type Queue = BaseResource
+
 type ResourceType = 'bucket' | 'topic' | 'websocket' | 'collection' | 'secret'
 
 export type Notification = {
@@ -98,6 +100,7 @@ export interface WebSocketResponse {
   stores: KeyValue[]
   httpProxies: HttpProxy[]
   websockets: WebSocket[]
+  queues: Queue[]
   policies: {
     [name: string]: Policy
   }

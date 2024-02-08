@@ -171,7 +171,9 @@ func buildQueueRequirements(allServiceRequirements []*ServiceRequirements, proje
 						Name: queueName,
 						Type: resourcespb.ResourceType_Queue,
 					},
-					Config: &deploymentspb.Resource_Queue{},
+					Config: &deploymentspb.Resource_Queue{
+						Queue: &deploymentspb.Queue{},
+					},
 				}
 				resources = append(resources, res)
 			}

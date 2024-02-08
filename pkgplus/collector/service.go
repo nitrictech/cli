@@ -354,6 +354,7 @@ func NewServiceRequirements(serviceName string, serviceFile string, serviceType 
 		listeners:             make(map[string]*storagepb.RegistrationRequest),
 		apis:                  make(map[string]*resourcespb.ApiResource),
 		apiSecurityDefinition: make(map[string]map[string]*resourcespb.ApiSecurityDefinitionResource),
+		queues:                make(map[string]*resourcespb.QueueResource),
 		errors:                []error{},
 	}
 	requirements.ApiServer = &ApiCollectorServer{

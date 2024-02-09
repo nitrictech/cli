@@ -20,7 +20,7 @@ describe('Architecture Spec', () => {
     cy.visit('/architecture')
   })
 
-  it('should retrieve correct schedules', () => {
+  it('should retrieve correct arch nodes', () => {
     cy.wait(500)
 
     expectedNodes.forEach((content) => {

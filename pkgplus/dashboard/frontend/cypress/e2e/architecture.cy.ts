@@ -17,10 +17,10 @@ const expectedNodes = [
 describe('Architecture Spec', () => {
   beforeEach(() => {
     cy.viewport('macbook-16')
-    cy.visit('/visualizer')
+    cy.visit('/architecture')
   })
 
-  it('should retrieve correct schedules', () => {
+  it('should retrieve correct arch nodes', () => {
     cy.wait(500)
 
     expectedNodes.forEach((content) => {

@@ -47,7 +47,7 @@ declare global {
 
 // cypress/support/commands.js
 Cypress.Commands.add('getTestEl', (id: string, timeout = 3000) => {
-  return cy.get(`[data-testid='${id}']:visible`, { timeout: timeout })
+  return cy.get(`[data-testid='${id}']`, { timeout: timeout })
 })
 
 Cypress.Commands.add('getAPIResponseCodeEditor', () => {

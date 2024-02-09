@@ -362,15 +362,15 @@ const AppLayout: React.FC<Props> = ({
                 {data.projectName} <span className="text-gray-300">/</span>{' '}
                 <Button
                   className={cn(
-                    '/visualizer' === routePath && 'bg-accent',
+                    '/architecture' === routePath && 'bg-accent',
                     'font-semibold',
                   )}
                   variant="outline"
                   asChild
                 >
-                  <a href="/visualizer">
+                  <a href="/architecture">
                     <MapIcon className="mr-2 h-5 w-5 text-gray-500" />{' '}
-                    Visualizer
+                    Architecture
                   </a>
                 </Button>
               </div>

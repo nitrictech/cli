@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { getEdgeParams } from '@/lib/utils/generate-visualizer-data'
+import { getEdgeParams } from '@/lib/utils/generate-architecture-data'
 import {
   type EdgeProps,
   EdgeLabelRenderer,

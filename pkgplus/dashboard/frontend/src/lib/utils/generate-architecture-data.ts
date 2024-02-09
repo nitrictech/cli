@@ -1,11 +1,11 @@
 import {
   APINode,
   type ApiNodeData,
-} from '@/components/visualizer/nodes/APINode'
+} from '@/components/architecture/nodes/APINode'
 import {
   BucketNode,
   type BucketNodeData,
-} from '@/components/visualizer/nodes/BucketNode'
+} from '@/components/architecture/nodes/BucketNode'
 import type { BaseResource, Policy, WebSocketResponse } from '@/types'
 import {
   ChatBubbleLeftRightIcon,
@@ -28,32 +28,32 @@ import {
 import {
   TopicNode,
   type TopicNodeData,
-} from '@/components/visualizer/nodes/TopicNode'
+} from '@/components/architecture/nodes/TopicNode'
 import {
   WebsocketNode,
   type WebsocketNodeData,
-} from '@/components/visualizer/nodes/WebsocketNode'
+} from '@/components/architecture/nodes/WebsocketNode'
 import {
   KeyValueNode,
   type KeyValueNodeData,
-} from '@/components/visualizer/nodes/KeyValueNode'
+} from '@/components/architecture/nodes/KeyValueNode'
 import {
   ScheduleNode,
   type ScheduleNodeData,
-} from '@/components/visualizer/nodes/ScheduleNode'
+} from '@/components/architecture/nodes/ScheduleNode'
 import {
   ServiceNode,
   type ServiceNodeData,
-} from '@/components/visualizer/nodes/ServiceNode'
+} from '@/components/architecture/nodes/ServiceNode'
 
 import { OpenAPIV3 } from 'openapi-types'
 import { getBucketNotifications } from './get-bucket-notifications'
 import {
   HttpProxyNode,
   type HttpProxyNodeData,
-} from '@/components/visualizer/nodes/HttpProxyNode'
+} from '@/components/architecture/nodes/HttpProxyNode'
 import { getTopicSubscriptions } from './get-topic-subscriptions'
-import { QueueNode } from '@/components/visualizer/nodes/QueueNode'
+import { QueueNode } from '@/components/architecture/nodes/QueueNode'
 
 export const nodeTypes = {
   api: APINode,
@@ -187,7 +187,7 @@ function verbFromNitricAction(action: string) {
   return action
 }
 
-export function generateVisualizerData(data: WebSocketResponse): {
+export function generateArchitectureData(data: WebSocketResponse): {
   nodes: Node[]
   edges: Edge[]
 } {

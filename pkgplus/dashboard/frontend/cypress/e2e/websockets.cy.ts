@@ -28,7 +28,7 @@ describe('Websockets Spec', () => {
   it('should go to send messages tab, connect to socket and send a message', () => {
     cy.getTestEl('send-messages-tab-trigger', 5000).click()
 
-    cy.getTestEl('connect-btn').click()
+    cy.get('[data-testid="connect-btn"]:visible').click()
 
     cy.getTestEl('connected-status').should('have.text', 'Connected')
 
@@ -57,7 +57,7 @@ describe('Websockets Spec', () => {
   it('should update connections number', () => {
     cy.getTestEl('send-messages-tab-trigger', 5000).click()
 
-    cy.getTestEl('connect-btn').click()
+    cy.get('[data-testid="connect-btn"]:visible').click()
 
     cy.getTestEl('monitor-tab-trigger', 5000).click()
 
@@ -75,7 +75,7 @@ describe('Websockets Spec', () => {
 
     cy.getTestEl('send-messages-tab-trigger', 5000).click()
 
-    cy.getTestEl('connect-btn').click()
+    cy.get('[data-testid="connect-btn"]:visible').click()
 
     cy.getTestEl('connected-status').should('have.text', 'Disconnected')
 
@@ -104,7 +104,7 @@ describe('Websockets Spec', () => {
       '?firstParam=myValue&secondParam=mySecondValue',
     )
 
-    cy.getTestEl('connect-btn').click()
+    cy.get('[data-testid="connect-btn"]:visible').click()
 
     cy.getTestEl('connected-status').should('have.text', 'Connected')
 

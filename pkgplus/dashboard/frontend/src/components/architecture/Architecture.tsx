@@ -25,9 +25,9 @@ import { useCallback, useEffect } from 'react'
 import { useWebSocket } from '@/lib/hooks/use-web-socket'
 import ExportButton from './ExportButton'
 import {
-  generateVisualizerData,
+  generateArchitectureData,
   nodeTypes,
-} from '@/lib/utils/generate-visualizer-data'
+} from '@/lib/utils/generate-architecture-data'
 import NitricEdge from './NitricEdge'
 
 const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
@@ -109,7 +109,7 @@ function ReactFlowLayout() {
   useEffect(() => {
     if (!data) return
 
-    const { nodes, edges } = generateVisualizerData(data)
+    const { nodes, edges } = generateArchitectureData(data)
 
     const layouted = getLayoutedElements(nodes, edges, 'LB')
 
@@ -123,10 +123,10 @@ function ReactFlowLayout() {
 
   return (
     <AppLayout
-      title="Visualizer"
+      title="Architecture"
       hideTitle
       mainClassName="py-0 px-0 sm:px-0 lg:px-0 lg:py-0"
-      routePath={'/visualizer'}
+      routePath={'/architecture'}
     >
       <div className="h-full overflow-hidden">
         <div className="h-[calc(100vh-58px)] w-full overflow-x-hidden">
@@ -157,7 +157,7 @@ function ReactFlowLayout() {
   )
 }
 
-export default function Visualizer() {
+export default function Architecture() {
   return (
     <ReactFlowProvider>
       <ReactFlowLayout />

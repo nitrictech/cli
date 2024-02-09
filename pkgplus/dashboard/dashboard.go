@@ -759,7 +759,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 
 	dash.debouncedUpdate = debouncedUpdate
 
-	// subscribe to resource, used for visualizer and buckets
+	// subscribe to resource, used for architecture and buckets
 	localCloud.Resources.SubscribeToState(dash.updateResources)
 
 	localCloud.Apis.SubscribeToState(dash.updateApis)

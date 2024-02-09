@@ -10,7 +10,7 @@ import { Button } from '../ui/button'
 import { useCallback, type PropsWithChildren } from 'react'
 import { applyNodeChanges, useNodes, useNodeId, useReactFlow } from 'reactflow'
 import type { NodeBaseData } from './nodes/NodeBase'
-import type { nodeTypes } from '@/lib/utils/generate-visualizer-data'
+import type { nodeTypes } from '@/lib/utils/generate-architecture-data'
 export interface DetailsDrawerProps extends PropsWithChildren {
   title: string
   description?: string
@@ -94,7 +94,7 @@ export const DetailsDrawer = ({
               )}
             </div>
           </DrawerHeader>
-          <div className="space-y-2 p-4">
+          <div className="space-y-2 py-4">
             {children}
             {address && (
               <div className="flex flex-col">
@@ -131,7 +131,7 @@ export const DetailsDrawer = ({
               </div>
             ) : null}
           </div>
-          <DrawerFooter>
+          <DrawerFooter className="px-0">
             {footerChildren}
             {testHref && (
               <Button asChild>

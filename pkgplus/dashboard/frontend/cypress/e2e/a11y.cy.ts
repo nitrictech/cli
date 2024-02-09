@@ -5,7 +5,7 @@ describe('a11y test suite', () => {
     '/storage',
     '/topics',
     '/not-found',
-    '/visualizer',
+    '/architecture',
   ]
 
   pages.forEach((page) => {

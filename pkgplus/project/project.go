@@ -250,10 +250,12 @@ func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) 
 func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) (*Project, error) {
 	services := []Service{}
 
-	for _, service := range projectConfig.Services {
-		files, err := afero.Glob(fs, service.Match)
+	matches := map[string]string{}
+
+	for _, serviceSpec := range projectConfig.Services {
+		files, err := afero.Glob(fs, serviceSpec.Match)
 		if err != nil {
-			return nil, fmt.Errorf("unable to match service files for pattern %s: %v", service.Match, err)
+			return nil, fmt.Errorf("unable to match service files for pattern %s: %v", serviceSpec.Match, err)
 		}
 
 		for _, f := range files {
@@ -262,11 +264,11 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 			serviceName := projectConfig.pathToNormalizedServiceName(relativeServiceEntrypointPath)
 
 			var buildContext *runtime.RuntimeBuildContext = nil
-			if service.Runtime != "" {
+			if serviceSpec.Runtime != "" {
 				// We have a custom runtime
-				customRuntime, ok := projectConfig.Runtimes[service.Runtime]
+				customRuntime, ok := projectConfig.Runtimes[serviceSpec.Runtime]
 				if !ok {
-					return nil, fmt.Errorf("unable to find runtime %s", service.Runtime)
+					return nil, fmt.Errorf("unable to find runtime %s", serviceSpec.Runtime)
 				}
 
 				buildContext, err = runtime.NewBuildContext(
@@ -294,16 +296,22 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 				}
 			}
 
+			if matches[f] != "" {
+				return nil, fmt.Errorf("service file %s matched by multiple patterns: %s and %s, services must only be matched by a single pattern", f, matches[f], serviceSpec.Match)
+			}
+
+			matches[f] = serviceSpec.Match
+
 			newService := Service{
 				Name:         serviceName,
 				filepath:     f,
 				buildContext: *buildContext,
-				Type:         service.Type,
-				startCmd:     service.Start,
+				Type:         serviceSpec.Type,
+				startCmd:     serviceSpec.Start,
 			}
 
-			if service.Type == "" {
-				service.Type = "default"
+			if serviceSpec.Type == "" {
+				serviceSpec.Type = "default"
 			}
 
 			services = append(services, newService)

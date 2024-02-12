@@ -398,12 +398,37 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 				Status:      ServiceRunStatus_Error,
 			}
 			return err
-		case <-okChan:
-			updates <- ServiceRunUpdate{
-				ServiceName: s.Name,
-				Message:     "Service successfully exited",
-				Status:      ServiceRunStatus_Done,
+		case okBody := <-okChan:
+			if okBody.StatusCode != 0 {
+				logOptions := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "20"}
+				logReader, err := dockerClient.ContainerLogs(context.Background(), containerId, logOptions)
+
+				if err != nil {
+					return err
+				}
+
+				logs, err := io.ReadAll(logReader)
+				if err != nil {
+					return err
+				}
+
+				err = fmt.Errorf("service %s exited with non 0 status\n %s", s.Name, string(logs))
+
+				updates <- ServiceRunUpdate{
+					ServiceName: s.Name,
+					// TODO: Extract the error logs for the container here...
+					Err:    err,
+					Status: ServiceRunStatus_Error,
+				}
+				return err
+			} else {
+				updates <- ServiceRunUpdate{
+					ServiceName: s.Name,
+					Message:     "Service successfully exited",
+					Status:      ServiceRunStatus_Done,
+				}
 			}
+
 			return nil
 		case <-stop:
 			if err := dockerClient.ContainerStop(context.Background(), containerId, nil); err != nil {

@@ -13,7 +13,7 @@ export const BucketNode: ComponentType<NodeProps<BucketNodeData>> = (props) => {
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Details - ${data.title}`,
+        title: `Bucket - ${data.title}`,
         description: data.description,
         icon: data.icon,
         nodeType: 'bucket',

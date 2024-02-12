@@ -22,6 +22,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -114,7 +115,7 @@ var startCmd = &cobra.Command{
 			}
 		} else {
 			// interactive environment
-			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
+			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()), tea.WithMouseAllMotion())
 
 			_, err = runView.Run()
 			tui.CheckErr(err)

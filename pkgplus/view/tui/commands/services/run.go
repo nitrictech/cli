@@ -24,6 +24,7 @@ type Model struct {
 	localServicesModel tea.Model
 
 	windowSize tea.WindowSizeMsg
+	viewOffset int
 
 	serviceStatus     map[string]project.ServiceRunUpdate
 	serviceRunUpdates []project.ServiceRunUpdate
@@ -40,6 +41,12 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if msg.Type == tea.MouseWheelUp {
+			m.viewOffset++
+		} else if msg.Type == tea.MouseWheelDown {
+			m.viewOffset = max(0, m.viewOffset-1)
+		}
 	case tea.WindowSizeMsg:
 		m.windowSize = msg
 	case tea.KeyMsg:
@@ -49,6 +56,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.stopChan <- true
 			}()
 			return m, teax.Quit
+		case "up":
+			m.viewOffset++
+		case "down":
+			m.viewOffset = max(0, m.viewOffset-1)
 		}
 	case reactive.ChanMsg[project.ServiceRunUpdate]:
 		// we know we have a service update
@@ -79,7 +90,10 @@ var serviceColors = []lipgloss.CompleteColor{
 	tui.Colors.Green,
 }
 
-func tail(text string, take int) string {
+func tail(text string, take int, offset int) string {
+	if offset < 0 {
+		offset = 0
+	}
 	if take < 1 {
 		return text
 	}
@@ -89,9 +103,22 @@ func tail(text string, take int) string {
 		return ""
 	}
 
-	start := lo.Max([]int{0, len(lines) - take})
+	totalLines := len(lines)
 
-	return strings.Join(lines[start:], "\n")
+	if offset > totalLines {
+		offset = totalLines
+	}
+
+	start := lo.Max([]int{0, totalLines - take}) - offset
+	if start < 0 {
+		start = 0
+	}
+	end := lo.Min([]int{totalLines, start + take})
+	if end > totalLines {
+		end = totalLines
+	}
+
+	return strings.Join(lines[start:end], "\n")
 }
 
 func (m Model) View() string {
@@ -142,7 +169,7 @@ func (m Model) View() string {
 	rightRaw := rv.Render()
 	rightBorder := lipgloss.NewStyle().BorderForeground(tui.Colors.Gray).Border(lipgloss.NormalBorder(), false, false, false, true).PaddingLeft(1).MarginLeft(1)
 
-	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), rightBorder.Render(tail(rightRaw, m.windowSize.Height-4)))
+	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), rightBorder.Render(tail(rightRaw, m.windowSize.Height-4, m.viewOffset)))
 
 	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide)
 }
@@ -156,5 +183,6 @@ func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUp
 		updateChan:         updateChannel,
 		serviceStatus:      make(map[string]project.ServiceRunUpdate),
 		serviceRunUpdates:  []project.ServiceRunUpdate{},
+		viewOffset:         0,
 	}
 }

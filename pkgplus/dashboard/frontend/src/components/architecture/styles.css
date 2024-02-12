@@ -110,3 +110,10 @@
   --nitric-node-to: #4338ca; /* Indigo 700 */
   --nitric-node-icon-color: #4f46e5; /* Indigo 600 */
 }
+
+.react-flow__node-queue {
+  --nitric-node-from: #65a30d; /* Lime 600 */
+  --nitric-node-via: #a3e635; /* Lime 400 */
+  --nitric-node-to: #4d7c0f; /* Lime 700 */
+  --nitric-node-icon-color: #65a30d; /* Lime 600 */
+}

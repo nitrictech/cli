@@ -15,7 +15,7 @@ export const KeyValueNode: ComponentType<NodeProps<KeyValueNodeData>> = (
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Details - ${data.title}`,
+        title: `KeyValue - ${data.title}`,
         description: data.description,
         icon: data.icon,
         nodeType: 'keyvaluestore',

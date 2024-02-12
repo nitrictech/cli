@@ -15,7 +15,7 @@ export const WebsocketNode: ComponentType<NodeProps<WebsocketNodeData>> = (
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Websocket - ${data.title}`,
+        title: `WebSocket - ${data.title}`,
         description: data.description,
         icon: data.icon,
         nodeType: 'websocket',

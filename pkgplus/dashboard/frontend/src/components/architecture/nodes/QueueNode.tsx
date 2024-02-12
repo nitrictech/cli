@@ -13,7 +13,7 @@ export const QueueNode: ComponentType<NodeProps<QueueNodeData>> = (props) => {
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Details - ${data.title}`,
+        title: `Queue - ${data.title}`,
         description: data.description,
         icon: data.icon,
         nodeType: 'queue',

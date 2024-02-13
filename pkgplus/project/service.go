@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
+	"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -248,7 +249,11 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 
 	go func(cmd *exec.Cmd) {
 		<-stop
-		_ = cmd.Process.Kill()
+		err := cmd.Process.Signal(syscall.SIGTERM)
+
+		if err != nil {
+			_ = cmd.Process.Kill()
+		}
 	}(cmd)
 
 	err := <-errChan

@@ -18,11 +18,13 @@ import (
 )
 
 type Model struct {
-	serviceBuildUpdates map[string]project.ServiceBuildUpdate
+	serviceBuildUpdates map[string][]project.ServiceBuildUpdate
 
 	serviceBuildUpdatesChannel chan project.ServiceBuildUpdate
 
 	spinner spinner.Model
+
+	Err error
 }
 
 var _ tea.Model = (*Model)(nil)
@@ -47,7 +49,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, teax.Quit
 		}
 
-		m.serviceBuildUpdates[msg.Value.ServiceName] = msg.Value
+		if m.serviceBuildUpdates[msg.Value.ServiceName] == nil {
+			m.serviceBuildUpdates[msg.Value.ServiceName] = make([]project.ServiceBuildUpdate, 0)
+		}
+
+		m.serviceBuildUpdates[msg.Value.ServiceName] = append(m.serviceBuildUpdates[msg.Value.ServiceName], msg.Value)
+
+		if msg.Value.Err != nil {
+			m.Err = msg.Value.Err
+			return m, teax.Quit
+		}
 
 		// resubscribe to the messages originating channel
 		return m, reactive.AwaitChannel(msg.Source)
@@ -62,14 +73,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) AllDone() bool {
-	for _, service := range m.serviceBuildUpdates {
-		if service.Status == project.ServiceBuildStatus_Complete {
-			continue
+	for _, serviceUpdates := range m.serviceBuildUpdates {
+		for _, update := range serviceUpdates {
+			if update.Status == project.ServiceBuildStatus_Complete {
+				continue
+			}
+			if update.Status == project.ServiceBuildStatus_Error {
+				continue
+			}
+			return false
 		}
-		if service.Status == project.ServiceBuildStatus_Error {
-			continue
-		}
-		return false
 	}
 
 	return true
@@ -77,8 +90,8 @@ func (m *Model) AllDone() bool {
 
 func (m Model) View() string {
 	v := view.New()
-	v.Break()
 	v.Add(fragments.Tag("build"))
+
 	v.Add("  Building services")
 	if !m.AllDone() {
 		v.Add(m.spinner.View())
@@ -99,21 +112,37 @@ func (m Model) View() string {
 	for _, serviceName := range serviceNames {
 		service := m.serviceBuildUpdates[serviceName]
 
+		if len(service) == 0 {
+			continue
+		}
+
+		latestUpdate := service[len(service)-1]
+
 		statusColor := tui.Colors.Gray
-		if service.Status == project.ServiceBuildStatus_Complete {
+		if latestUpdate.Status == project.ServiceBuildStatus_Complete {
 			statusColor = tui.Colors.Green
-		} else if service.Status == project.ServiceBuildStatus_InProgress {
+		} else if latestUpdate.Status == project.ServiceBuildStatus_InProgress {
 			statusColor = tui.Colors.Blue
-		} else if service.Status == project.ServiceBuildStatus_Error {
+		} else if latestUpdate.Status == project.ServiceBuildStatus_Error {
 			statusColor = tui.Colors.Red
 		}
 
-		messageLines := strings.Split(strings.TrimSpace(service.Message), "\n")
-
 		serviceUpdates.Add("%s ", serviceName)
-		serviceUpdates.Addln(strings.ToLower(string(service.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
-		if len(messageLines) > 0 && service.Status != project.ServiceBuildStatus_Complete {
-			serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+		serviceUpdates.Addln(strings.ToLower(string(latestUpdate.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+
+		if m.Err != nil {
+			for _, update := range service {
+				messageLines := strings.Split(strings.TrimSpace(update.Message), "\n")
+				if len(messageLines) > 0 && update.Status != project.ServiceBuildStatus_Complete {
+					serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+				}
+			}
+		} else {
+			messageLines := strings.Split(strings.TrimSpace(latestUpdate.Message), "\n")
+			serviceUpdates.Addln(strings.ToLower(string(latestUpdate.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+			if len(messageLines) > 0 && latestUpdate.Status != project.ServiceBuildStatus_Complete {
+				serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+			}
 		}
 	}
 	v.Add(serviceUpdates.Render())
@@ -125,6 +154,6 @@ func NewModel(serviceBuildUpdates chan project.ServiceBuildUpdate) Model {
 	return Model{
 		spinner:                    spinner.New(spinner.WithSpinner(spinner.Ellipsis)),
 		serviceBuildUpdatesChannel: serviceBuildUpdates,
-		serviceBuildUpdates:        make(map[string]project.ServiceBuildUpdate),
+		serviceBuildUpdates:        make(map[string][]project.ServiceBuildUpdate),
 	}
 }

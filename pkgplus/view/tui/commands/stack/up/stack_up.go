@@ -125,7 +125,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			existingChild.Status = content.Update.Status
 			existingChild.Message = content.Update.Message
 		case *deploymentspb.DeploymentUpEvent_Result:
-			m.resultOutput = content.Result.Details
+			m.resultOutput = content.Result.GetSimple()
 		default:
 			// discard for now
 		}

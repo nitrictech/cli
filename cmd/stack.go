@@ -158,6 +158,7 @@ var stackUpdateCmd = &cobra.Command{
 				}
 
 				promptModel := stack_select.New(stack_select.Args{
+					Prompt:    "Which stack would you like to update?",
 					StackList: stackList,
 				})
 
@@ -343,6 +344,7 @@ nitric stack down -s aws -y`,
 				}
 
 				promptModel := stack_select.New(stack_select.Args{
+					Prompt:    "Which stack would you like to delete?",
 					StackList: stackList,
 				})
 

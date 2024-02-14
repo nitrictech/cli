@@ -1,10 +1,10 @@
 package resources
 
 import (
-	"fmt"
 	"slices"
 	"sync"
 
+	"github.com/nitrictech/nitric/core/pkg/logger"
 	"github.com/samber/lo"
 )
 
@@ -35,7 +35,8 @@ func (r *ResourceRegistrar[R]) Register(name string, requestingService string, r
 	_, exists := r.resources[name]
 	if exists {
 		if r.isAlreadyRegistered(name, requestingService) {
-			return fmt.Errorf("resource %s registered multiple times for service %s", name, requestingService)
+			logger.Debugf("resource %s registered multiple times for service %s", name, requestingService)
+			return nil
 		}
 
 		// already registered, by another service, add this service to the list

@@ -158,6 +158,7 @@ var stackUpdateCmd = &cobra.Command{
 				}
 
 				promptModel := stack_select.New(stack_select.Args{
+					Prompt:    "Which stack would you like to update?",
 					StackList: stackList,
 				})
 
@@ -205,8 +206,11 @@ var stackUpdateCmd = &cobra.Command{
 		} else {
 			prog := teax.NewProgram(build.NewModel(buildUpdates))
 			// blocks but quits once the above updates channel is closed by the build process
-			_, err = prog.Run()
+			buildModel, err := prog.Run()
 			tui.CheckErr(err)
+			if buildModel.(build.Model).Err != nil {
+				tui.CheckErr(fmt.Errorf("error building services"))
+			}
 		}
 
 		// Step 2. Start the collectors and containers (respectively in pairs)
@@ -343,6 +347,7 @@ nitric stack down -s aws -y`,
 				}
 
 				promptModel := stack_select.New(stack_select.Args{
+					Prompt:    "Which stack would you like to delete?",
 					StackList: stackList,
 				})
 

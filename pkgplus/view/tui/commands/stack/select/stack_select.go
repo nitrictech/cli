@@ -62,6 +62,7 @@ func (m Model) Choice() string {
 }
 
 type Args struct {
+	Prompt    string
 	StackList []list.ListItem
 }
 
@@ -81,10 +82,15 @@ func (s StackListItem) GetItemDescription() string {
 var _ list.ListItem = StackListItem{}
 
 func New(args Args) Model {
+	prompt := args.Prompt
+	if prompt == "" {
+		prompt = "Select a stack"
+	}
+
 	listModel := listprompt.NewListPrompt(listprompt.ListPromptArgs{
 		Items:  args.StackList,
 		Tag:    "stack",
-		Prompt: "Which stack would you like to update?",
+		Prompt: prompt,
 	})
 
 	return Model{

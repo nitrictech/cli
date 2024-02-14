@@ -151,12 +151,12 @@ const maxOutputLines = 5
 
 var (
 	terminalBorderStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(tui.Colors.Purple)
-	errorStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	errorStyle          = lipgloss.NewStyle().Foreground(tui.Colors.Red)
 )
 
 func (m Model) View() string {
 	// print the stack?
-	v := view.New()
+	v := view.New(view.WithStyle(lipgloss.NewStyle().Width(m.windowSize.Width)))
 	v.Break()
 
 	v.Add(fragments.Tag("down"))

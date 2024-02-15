@@ -139,10 +139,6 @@ func (d *downloader) readTemplatesConfig() ([]TemplateInfo, error) {
 	return repo.Templates, nil
 }
 
-// func officialStackName(name string) string {
-// 	return "official/" + name
-// }
-
 func (d *downloader) repository() error {
 	src := rawGitHubURL + "/" + filepath.Join(templatesRepo, "main/cli-templates.yaml")
 

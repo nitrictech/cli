@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"maps"
 	"slices"
 	"sync"
 
@@ -67,7 +68,7 @@ func (r *ResourceRegistrar[R]) GetAll() map[ResourceName]*ResourceRegister[R] {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
-	return r.resources
+	return maps.Clone(r.resources)
 }
 
 func (r *ResourceRegistrar[R]) GetRequestingServices(name string) []string {

@@ -22,7 +22,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -96,7 +95,7 @@ var runCmd = &cobra.Command{
 				}
 			}
 		} else {
-			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""), tea.WithMouseAllMotion())
+			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
 
 			_, _ = runView.Run()
 

@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/asaskevich/EventBus"
@@ -79,6 +80,8 @@ type LocalGatewayService struct {
 	topicsPlugin     *topics.LocalTopicsAndSubscribersService
 	schedulesPlugin  *schedules.LocalSchedulesService
 	serviceListener  net.Listener
+
+	lock sync.RWMutex
 	gateway.UnimplementedGatewayPlugin
 	stop chan bool
 
@@ -98,6 +101,9 @@ func (s *LocalGatewayService) GetTriggerAddress() string {
 }
 
 func (s *LocalGatewayService) GetApiAddresses() map[string]string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	addresses := make(map[string]string)
 
 	if len(s.apiServers) > 0 && len(s.apis) == len(s.apiServers) {
@@ -110,6 +116,9 @@ func (s *LocalGatewayService) GetApiAddresses() map[string]string {
 }
 
 func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	addresses := make(map[string]string)
 
 	if len(s.httpServers) > 0 && len(s.httpWorkers) == len(s.httpServers) {
@@ -122,6 +131,9 @@ func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
 }
 
 func (s *LocalGatewayService) GetWebsocketAddresses() map[string]string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	addresses := make(map[string]string)
 
 	for socket, srv := range s.socketServer {
@@ -414,6 +426,9 @@ func (s *LocalGatewayService) handleSchedulesTrigger(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *LocalGatewayService) refreshApis(apiState apis.State) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	s.apis = make([]string, 0)
 
 	uniqApis := lo.Reduce(lo.Keys(apiState), func(agg []string, apiName string, idx int) []string {
@@ -433,6 +448,9 @@ func (s *LocalGatewayService) refreshApis(apiState apis.State) {
 }
 
 func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	s.httpWorkers = make([]string, 0)
 	var uniqHttpWorkers []string
 
@@ -453,6 +471,9 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 }
 
 func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	s.websocketWorkers = make([]string, 0)
 
 	websockets := lo.Reduce(lo.Keys(state), func(agg []string, socketName string, idx int) []string {

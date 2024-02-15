@@ -38,6 +38,7 @@ const (
 type TemplateInfo struct {
 	Name string `yaml:"name"`
 	Label string `yaml:"label"`
+	Desc  string `yaml:"desc"`
 	Path string `yaml:"path"`
 }
 
@@ -173,6 +174,7 @@ func (d *downloader) repository() error {
 		d.repo = append(d.repo, TemplateInfo{
 			Name: template.Name,
 			Label: template.Label,
+			Desc:  template.Desc,
 			Path: filepath.Clean(template.Path),
 		})
 	}

@@ -240,7 +240,7 @@ func (m *TemplateItem) GetItemValue() string {
 }
 
 func (m *TemplateItem) GetItemDescription() string {
-	return ""
+	return m.Description
 }
 
 func New(fs afero.Fs, args Args) (Model, error) {
@@ -269,7 +269,7 @@ func New(fs afero.Fs, args Args) (Model, error) {
 	templateItems := []list.ListItem{}
 
 	for _, template := range templates {
-		templateItems = append(templateItems, &TemplateItem{Value: template.Label})
+		templateItems = append(templateItems, &TemplateItem{Value: template.Label, Description: template.Desc})
 	}
 
 	templatePrompt := listprompt.NewListPrompt(listprompt.ListPromptArgs{

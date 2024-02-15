@@ -29,6 +29,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/grpcx"
 
 	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
+	"github.com/nitrictech/nitric/core/pkg/logger"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/topics"
 )
@@ -69,7 +70,8 @@ func (s *LocalTopicsAndSubscribersService) publishState() {
 }
 
 func (s *LocalTopicsAndSubscribersService) SubscribeToState(subscription func(State)) {
-	s.bus.Subscribe(localTopicsTopic, subscription)
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = s.bus.Subscribe(localTopicsTopic, subscription)
 }
 
 func (s *LocalTopicsAndSubscribersService) publishAction(action ActionState) {
@@ -77,7 +79,8 @@ func (s *LocalTopicsAndSubscribersService) publishAction(action ActionState) {
 }
 
 func (s *LocalTopicsAndSubscribersService) SubscribeToAction(subscription func(ActionState)) {
-	s.bus.Subscribe(localTopicsDeliveryTopic, subscription)
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = s.bus.Subscribe(localTopicsDeliveryTopic, subscription)
 }
 
 func (s *LocalTopicsAndSubscribersService) GetSubscribers() map[string]map[string]int {
@@ -140,12 +143,15 @@ func (s *LocalTopicsAndSubscribersService) Subscribe(stream topicspb.Subscriber_
 		return fmt.Errorf("topic name must be specified")
 	}
 
-	stream.Send(&topicspb.ServerMessage{
+	err = stream.Send(&topicspb.ServerMessage{
 		Id: firstRequest.Id,
 		Content: &topicspb.ServerMessage_RegistrationResponse{
 			RegistrationResponse: &topicspb.RegistrationResponse{},
 		},
 	})
+	if err != nil {
+		return err
+	}
 
 	// Keep track of our local topic subscriptions
 	s.registerSubscriber(serviceName, firstRequest.GetRegistrationRequest())
@@ -192,11 +198,14 @@ func (s *LocalTopicsAndSubscribersService) Publish(ctx context.Context, req *top
 
 	if req.Delay != nil {
 		// TODO: Implement a signal from the front end that allows for the early release of delayed events (by their ID)
-		// FIXME: We want the event to appear straight away in the history table (maybe as a new event type that counts down)
+		// TODO: We want the event to appear straight away in the history table (maybe as a new event type that counts down)
 		go func(evt *topicspb.TopicPublishRequest) {
 			// Wait to deliver the events
 			time.Sleep(req.Delay.AsDuration())
-			s.deliverEvent(ctx, evt)
+			err := s.deliverEvent(ctx, evt)
+			if err != nil {
+				logger.Errorf("could not publish event: %s", err.Error())
+			}
 		}(req)
 	} else {
 		err := s.deliverEvent(ctx, req)

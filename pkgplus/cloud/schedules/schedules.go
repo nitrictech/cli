@@ -12,6 +12,7 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/nitrictech/cli/pkgplus/grpcx"
+	"github.com/nitrictech/nitric/core/pkg/logger"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/schedules"
 )
@@ -51,7 +52,8 @@ func (l *LocalSchedulesService) publishState() {
 }
 
 func (l *LocalSchedulesService) SubscribeToState(fn func(State)) {
-	l.bus.Subscribe(localSchedulesTopic, fn)
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = l.bus.Subscribe(localSchedulesTopic, fn)
 }
 
 func (l *LocalSchedulesService) publishAction(action ActionState) {
@@ -59,7 +61,8 @@ func (l *LocalSchedulesService) publishAction(action ActionState) {
 }
 
 func (l *LocalSchedulesService) SubscribeToAction(subscription func(ActionState)) {
-	l.bus.Subscribe(localSchedulesActionTopic, subscription)
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = l.bus.Subscribe(localSchedulesActionTopic, subscription)
 }
 
 var _ schedulespb.SchedulesServer = (*LocalSchedulesService)(nil)
@@ -110,13 +113,17 @@ func (l *LocalSchedulesService) HandleRequest(request *schedulespb.ServerMessage
 
 func (l *LocalSchedulesService) createCronSchedule(scheduleName, expression string) (cron.EntryID, error) {
 	return l.cron.AddFunc(expression, func() {
-		l.HandleRequest(&schedulespb.ServerMessage{
+		_, err := l.HandleRequest(&schedulespb.ServerMessage{
 			Content: &schedulespb.ServerMessage_IntervalRequest{
 				IntervalRequest: &schedulespb.IntervalRequest{
 					ScheduleName: scheduleName,
 				},
 			},
 		})
+
+		if err != nil {
+			logger.Errorf("Error handling schedule: %s", err.Error())
+		}
 	})
 }
 

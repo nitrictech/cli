@@ -31,12 +31,14 @@ import (
 
 const (
 	rawGitHubURL        = "https://raw.githubusercontent.com"
-	templatesRepo       = "nitrictech/templates"
-	templatesRepoGitURL = "github.com/nitrictech/templates.git"
+	templatesRepo       = "nitrictech/examples"
+	templatesRepoGitURL = "github.com/nitrictech/examples.git"
 )
 
 type TemplateInfo struct {
 	Name string `yaml:"name"`
+	Label string `yaml:"label"`
+	Desc  string `yaml:"desc"`
 	Path string `yaml:"path"`
 }
 
@@ -45,8 +47,9 @@ type repository struct {
 }
 
 type Downloader interface {
-	Names() ([]string, error)
+	Templates() ([]TemplateInfo, error)
 	Get(name string) *TemplateInfo
+	GetByLabel(label string) *TemplateInfo
 	DownloadDirectoryContents(name string, destDir string, force bool) error
 }
 
@@ -60,7 +63,7 @@ var _ Downloader = &downloader{}
 
 func NewDownloader() Downloader {
 	return &downloader{
-		configPath: filepath.Join(paths.NitricTemplatesDir(), "repositories.yml"),
+		configPath: filepath.Join(paths.NitricTemplatesDir(), "cli-templates.yaml"),
 		newGetter:  NewGetter,
 	}
 }
@@ -80,19 +83,13 @@ func (d *downloader) lazyLoadTemplates() error {
 	return nil
 }
 
-func (d *downloader) Names() ([]string, error) {
-	names := []string{}
-
+func (d *downloader) Templates() ([]TemplateInfo, error) {
 	err := d.lazyLoadTemplates()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, ti := range d.repo {
-		names = append(names, ti.Name)
-	}
-
-	return names, nil
+	return d.repo, nil
 }
 
 func (d *downloader) Get(name string) *TemplateInfo {
@@ -103,6 +100,21 @@ func (d *downloader) Get(name string) *TemplateInfo {
 
 	for _, ti := range d.repo {
 		if ti.Name == name {
+			return &ti
+		}
+	}
+
+	return nil
+}
+
+func (d *downloader) GetByLabel(label string) *TemplateInfo {
+	err := d.lazyLoadTemplates()
+	if err != nil {
+		return nil
+	}
+
+	for _, ti := range d.repo {
+		if ti.Label == label {
 			return &ti
 		}
 	}
@@ -128,12 +140,8 @@ func (d *downloader) readTemplatesConfig() ([]TemplateInfo, error) {
 	return repo.Templates, nil
 }
 
-func officialStackName(name string) string {
-	return "official/" + name
-}
-
 func (d *downloader) repository() error {
-	src := rawGitHubURL + "/" + filepath.Join(templatesRepo, "main/repository.yaml")
+	src := rawGitHubURL + "/" + filepath.Join(templatesRepo, "main/cli-templates.yaml")
 
 	client := d.newGetter(&getter.Client{
 		Ctx: context.Background(),
@@ -164,7 +172,9 @@ func (d *downloader) repository() error {
 
 	for _, template := range list {
 		d.repo = append(d.repo, TemplateInfo{
-			Name: officialStackName(template.Name),
+			Name: template.Name,
+			Label: template.Label,
+			Desc:  template.Desc,
 			Path: filepath.Clean(template.Path),
 		})
 	}
@@ -189,7 +199,7 @@ func (d *downloader) DownloadDirectoryContents(name string, destDir string, forc
 		Dst: destDir,
 		Dir: true,
 		// the repository with a subdirectory I would like to clone only
-		Src:  templatesRepoGitURL + "//" + template.Path,
+		Src:  templatesRepoGitURL + "//" + strings.ReplaceAll(template.Path, "\\", "/"),
 		Mode: getter.ClientModeDir,
 		// define the type of detectors go getter should use, in this case only github is needed
 		Detectors: []getter.Detector{

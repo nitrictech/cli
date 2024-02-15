@@ -60,6 +60,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		})
 		tui.CheckErr(err)
 
+		// TODO add --force
 		if _, err := teax.NewProgram(projectModel, tea.WithANSICompressor()).Run(); err != nil {
 			return err
 		}

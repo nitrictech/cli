@@ -19,6 +19,7 @@ import (
 
 type Model struct {
 	serviceBuildUpdates map[string][]project.ServiceBuildUpdate
+	windowSize          tea.WindowSizeMsg
 
 	serviceBuildUpdatesChannel chan project.ServiceBuildUpdate
 
@@ -43,6 +44,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, teax.Quit
 		}
+	case tea.WindowSizeMsg:
+		m.windowSize = msg
 	case reactive.ChanMsg[project.ServiceBuildUpdate]:
 		// channel closed, the build is complete.
 		if !msg.Ok {
@@ -89,7 +92,8 @@ func (m *Model) AllDone() bool {
 }
 
 func (m Model) View() string {
-	v := view.New()
+	// setting the max width prevents unexpected newlines when the text is wrapped automatically by the terminal.
+	v := view.New(view.WithStyle(lipgloss.NewStyle().Width(m.windowSize.Width)))
 	v.Add(fragments.Tag("build"))
 
 	v.Add("  Building services")

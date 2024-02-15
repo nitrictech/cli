@@ -35,7 +35,8 @@ func (l *LocalHttpProxy) publishState() {
 }
 
 func (l *LocalHttpProxy) SubscribeToState(fn func(State)) {
-	l.bus.Subscribe(localHttpProxyTopic, fn)
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = l.bus.Subscribe(localHttpProxyTopic, fn)
 }
 
 var _ httppb.HttpServer = (*LocalHttpProxy)(nil)

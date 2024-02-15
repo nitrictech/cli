@@ -45,7 +45,8 @@ func (l *LocalApiGatewayService) publishState() {
 var _ apispb.ApiServer = (*LocalApiGatewayService)(nil)
 
 func (l *LocalApiGatewayService) SubscribeToState(subscriberFunction func(State)) {
-	l.bus.Subscribe(localApiGatewayTopic, subscriberFunction)
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = l.bus.Subscribe(localApiGatewayTopic, subscriberFunction)
 }
 
 func (l *LocalApiGatewayService) PublishActionState(state ApiRequestState) {
@@ -53,7 +54,8 @@ func (l *LocalApiGatewayService) PublishActionState(state ApiRequestState) {
 }
 
 func (l *LocalApiGatewayService) SubscribeToAction(subscription func(ApiRequestState)) {
-	l.bus.Subscribe(localApiRequestTopic, subscription)
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = l.bus.Subscribe(localApiRequestTopic, subscription)
 }
 
 // GetState - Returns a copy of internal state

@@ -62,6 +62,8 @@ type Model struct {
 	status         NewProjectStatus
 	nonInteractive bool
 
+	downloader templates.Downloader
+
 	fs afero.Fs
 
 	err error
@@ -74,7 +76,9 @@ func (m Model) ProjectName() string {
 
 // TemplateName returns the project template name selected by the user
 func (m Model) TemplateName() string {
-	return m.templatePrompt.Choice()
+	template := m.downloader.GetByLabel(m.templatePrompt.Choice())
+
+	return template.Name
 }
 
 // Init initializes the model, used by Bubbletea
@@ -257,22 +261,22 @@ func New(fs afero.Fs, args Args) (Model, error) {
 	namePrompt.Focus()
 
 	downloadr := templates.NewDownloader()
-	templateNames, err := downloadr.Names()
+	templates, err := downloadr.Templates()
 	if err != nil {
 		return Model{}, err
 	}
 
 	templateItems := []list.ListItem{}
 
-	for _, name := range templateNames {
-		templateItems = append(templateItems, &TemplateItem{Value: name})
+	for _, template := range templates {
+		templateItems = append(templateItems, &TemplateItem{Value: template.Label})
 	}
 
 	templatePrompt := listprompt.NewListPrompt(listprompt.ListPromptArgs{
 		Prompt:            "Which template should we start with?",
 		Tag:               "tmpl",
 		Items:             templateItems,
-		MaxDisplayedItems: len(templateNames),
+		MaxDisplayedItems: len(templates),
 	})
 
 	s := spinner.New()
@@ -291,13 +295,14 @@ func New(fs afero.Fs, args Args) (Model, error) {
 	}
 
 	if args.TemplateName != "" {
-		if downloadr.Get(args.TemplateName) == nil {
+		template := downloadr.Get(args.TemplateName)
+		if template == nil {
 			return Model{
 				err: fmt.Errorf("template \"%s\" could not be found", args.TemplateName),
 			}, nil
 		}
 
-		templatePrompt.SetChoice(args.TemplateName)
+		templatePrompt.SetChoice(template.Label)
 	}
 
 	isNonInteractive := false
@@ -320,6 +325,7 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		spinner:        s,
 		err:            nil,
 		fs:             fs,
+		downloader:     downloadr,
 	}, nil
 }
 
@@ -340,7 +346,6 @@ func (m Model) createProject(fs afero.Fs) tea.Cmd {
 
 		projDir := path.Join(cd, m.ProjectName())
 
-		// TODO: determine new templates
 		downloadr := templates.NewDownloader()
 		if err = downloadr.DownloadDirectoryContents(m.TemplateName(), projDir, false); err != nil {
 			return projectCreateResultMsg{

@@ -17,6 +17,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 
+	goruntime "runtime"
+
 	"github.com/nitrictech/cli/pkgplus/cloud"
 	"github.com/nitrictech/cli/pkgplus/collector"
 	"github.com/nitrictech/cli/pkgplus/project/runtime"
@@ -52,6 +54,8 @@ func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 		return nil, fmt.Errorf("no services found in project, nothing to build. This may indicate misconfigured `match` patterns in your nitric.yaml file")
 	}
 
+	maxConcurrentBuilds := make(chan struct{}, min(goruntime.NumCPU(), goruntime.GOMAXPROCS(0)))
+
 	waitGroup := sync.WaitGroup{}
 
 	for _, service := range p.services {
@@ -63,6 +67,10 @@ func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 		}
 
 		go func(svc Service, writer io.Writer) {
+			// Acquire a token by filling the maxConcurrentBuilds channel
+			// this will block once the buffer is full
+			maxConcurrentBuilds <- struct{}{}
+
 			// Start goroutine
 			if err := svc.BuildImage(fs, writer); err != nil {
 				updatesChan <- ServiceBuildUpdate{
@@ -79,12 +87,20 @@ func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 				}
 			}
 
+			// release our lock
+			<-maxConcurrentBuilds
+
 			waitGroup.Done()
 		}(service, serviceBuildUpdateWriter)
 	}
 
 	go func() {
 		waitGroup.Wait()
+		// Drain the semaphore to make sure all goroutines have finished
+		for i := 0; i < cap(maxConcurrentBuilds); i++ {
+			maxConcurrentBuilds <- struct{}{}
+		}
+
 		close(updatesChan)
 	}()
 

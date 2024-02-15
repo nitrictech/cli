@@ -13,7 +13,6 @@ import (
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/local"
 	"github.com/nitrictech/cli/pkgplus/view/tui/components/view"
-	"github.com/nitrictech/cli/pkgplus/view/tui/fragments"
 	"github.com/nitrictech/cli/pkgplus/view/tui/reactive"
 	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
 )
@@ -138,8 +137,6 @@ func (m Model) View() string {
 		lv.Addln(" services registered with local nitric server")
 	}
 
-	rv.Addln(fragments.Tag("logs"))
-
 	svcColors := map[string]lipgloss.CompleteColor{}
 	serviceNames := lo.Keys(m.serviceStatus)
 
@@ -169,7 +166,11 @@ func (m Model) View() string {
 	rightRaw := rv.Render()
 	rightBorder := lipgloss.NewStyle().BorderForeground(tui.Colors.Gray).Border(lipgloss.NormalBorder(), false, false, false, true).PaddingLeft(1).MarginLeft(1)
 
-	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), rightBorder.Render(tail(rightRaw, m.windowSize.Height-4, m.viewOffset)))
+	finalRightView := view.New(view.WithStyle(rightBorder))
+	finalRightView.Addln("use ↑/↓ to navigate logs")
+	finalRightView.Add(tail(rightRaw, m.windowSize.Height-5, m.viewOffset))
+
+	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), finalRightView.Render())
 
 	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide)
 }

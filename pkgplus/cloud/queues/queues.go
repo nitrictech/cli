@@ -90,7 +90,7 @@ func (l *LocalQueuesService) Dequeue(ctx context.Context, req *queuespb.QueueDeq
 	}
 
 	resp := &queuespb.QueueDequeueResponse{
-		Messages: []*queuespb.ReceivedMessage{},
+		Messages: []*queuespb.DequeuedMessage{},
 	}
 
 	// remove the leased tasks from the queue
@@ -105,7 +105,7 @@ func (l *LocalQueuesService) Dequeue(ctx context.Context, req *queuespb.QueueDeq
 			Expiry: time.Now().Add(defaultVisibilityTimeout),
 		}
 
-		resp.Messages = append(resp.Messages, &queuespb.ReceivedMessage{
+		resp.Messages = append(resp.Messages, &queuespb.DequeuedMessage{
 			LeaseId: queueItem.lease.Id,
 			Message: queueItem.message,
 		})

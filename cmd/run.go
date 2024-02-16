@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkgplus/cloud"
+	docker "github.com/nitrictech/cli/pkgplus/docker"
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
@@ -42,6 +43,9 @@ var runCmd = &cobra.Command{
 	Example:     `nitric run`,
 	Annotations: map[string]string{"commonCommand": "yes"},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		err := docker.VerifyDockerIsAvailable()
+		tui.CheckErr(err)
+
 		fs := afero.NewOsFs()
 
 		proj, err := project.FromFile(fs, "")

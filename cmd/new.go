@@ -57,6 +57,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		projectModel, err := project.New(afero.NewOsFs(), project.Args{
 			ProjectName:  projectName,
 			TemplateName: templateName,
+			Force:        force,
 		})
 		tui.CheckErr(err)
 

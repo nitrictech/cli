@@ -61,6 +61,7 @@ type Model struct {
 	spinner        spinner.Model
 	status         NewProjectStatus
 	nonInteractive bool
+	force          bool
 
 	downloader templates.Downloader
 
@@ -111,6 +112,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.status = Error
 			m.err = msg.err
+
+			return m, teax.Quit
 		}
 
 		return m, nil
@@ -228,6 +231,7 @@ func (m Model) View() string {
 type Args struct {
 	ProjectName  string
 	TemplateName string
+	Force        bool
 }
 
 type TemplateItem struct {
@@ -326,6 +330,7 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		err:            nil,
 		fs:             fs,
 		downloader:     downloadr,
+		force:          args.Force,
 	}, nil
 }
 
@@ -347,7 +352,7 @@ func (m Model) createProject(fs afero.Fs) tea.Cmd {
 		projDir := path.Join(cd, m.ProjectName())
 
 		downloadr := templates.NewDownloader()
-		if err = downloadr.DownloadDirectoryContents(m.TemplateName(), projDir, false); err != nil {
+		if err = downloadr.DownloadDirectoryContents(m.TemplateName(), projDir, m.force); err != nil {
 			return projectCreateResultMsg{
 				err: err,
 			}

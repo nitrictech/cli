@@ -44,21 +44,22 @@ type Docker struct {
 	// logger ContainerLogger
 }
 
-// FIXME: Find a better way to detect this
-func verifyDockerIsAvailable() error {
-	// check if docker is on path
-	cmd := exec.Command("docker", "--version")
-
-	err := cmd.Run()
+func VerifyDockerIsAvailable() error {
+	// Create a new Docker client
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating Docker client: %w", err)
 	}
 
-	// check if the daemon is running
-	cmd = exec.Command("docker", "ps")
+	// Ensure the client is closed when the function exits
+	defer func() {
+		if closeErr := cli.Close(); closeErr != nil {
+			panic(closeErr)
+		}
+	}()
 
-	err = cmd.Run()
-	if err != nil {
+	// Perform a Docker operation to verify availability
+	if _, pingErr := cli.Ping(context.Background()); pingErr != nil {
 		return fmt.Errorf("Docker daemon is not running, please start the docker daemon and try again")
 	}
 
@@ -66,7 +67,7 @@ func verifyDockerIsAvailable() error {
 }
 
 func New() (*Docker, error) {
-	if err := verifyDockerIsAvailable(); err != nil {
+	if err := VerifyDockerIsAvailable(); err != nil {
 		return nil, err
 	}
 

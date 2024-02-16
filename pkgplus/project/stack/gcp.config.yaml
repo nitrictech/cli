@@ -5,7 +5,7 @@ provider: nitric/gcp@1.0.0
 
 # The target GCP region to deploy to
 # See available regions:
-# https://cloud.google.com/run/locations
+# https://cloud.google.com/run/docs/locations
 region: 
 
 # # ID of the google cloud project to deploy into

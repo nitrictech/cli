@@ -165,11 +165,7 @@ func (s *LocalTopicsAndSubscribersService) deliverEvent(ctx context.Context, req
 		Content: &topicspb.ServerMessage_MessageRequest{
 			MessageRequest: &topicspb.MessageRequest{
 				TopicName: req.TopicName,
-				Message: &topicspb.Message{
-					Content: &topicspb.Message_StructPayload{
-						StructPayload: req.Message.GetStructPayload(),
-					},
-				},
+				Message:   req.Message,
 			},
 		},
 	}

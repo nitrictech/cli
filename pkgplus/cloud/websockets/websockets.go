@@ -194,7 +194,7 @@ func (r *LocalWebsocketService) RegisterConnection(socket string, connectionId s
 	return nil
 }
 
-func (r *LocalWebsocketService) Details(ctx context.Context, req *nitricws.WebsocketDetailsRequest) (*nitricws.WebsocketDetailsResponse, error) {
+func (r *LocalWebsocketService) SocketDetails(ctx context.Context, req *nitricws.WebsocketDetailsRequest) (*nitricws.WebsocketDetailsResponse, error) {
 	gatewayUri, ok := r.servers[req.SocketName]
 	if !ok {
 		return nil, fmt.Errorf("websocket %s does not exist", req.SocketName)
@@ -205,7 +205,7 @@ func (r *LocalWebsocketService) Details(ctx context.Context, req *nitricws.Webso
 	}, nil
 }
 
-func (r *LocalWebsocketService) Send(ctx context.Context, req *nitricws.WebsocketSendRequest) (*nitricws.WebsocketSendResponse, error) {
+func (r *LocalWebsocketService) SendMessage(ctx context.Context, req *nitricws.WebsocketSendRequest) (*nitricws.WebsocketSendResponse, error) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
@@ -240,7 +240,7 @@ func (r *LocalWebsocketService) Send(ctx context.Context, req *nitricws.Websocke
 	return &nitricws.WebsocketSendResponse{}, nil
 }
 
-func (r *LocalWebsocketService) Close(ctx context.Context, req *nitricws.WebsocketCloseRequest) (*nitricws.WebsocketCloseResponse, error) {
+func (r *LocalWebsocketService) CloseConnection(ctx context.Context, req *nitricws.WebsocketCloseConnectionRequest) (*nitricws.WebsocketCloseConnectionResponse, error) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -266,7 +266,7 @@ func (r *LocalWebsocketService) Close(ctx context.Context, req *nitricws.Websock
 		},
 	})
 
-	return &nitricws.WebsocketCloseResponse{}, nil
+	return &nitricws.WebsocketCloseConnectionResponse{}, nil
 }
 
 func NewLocalWebsocketService() (*LocalWebsocketService, error) {

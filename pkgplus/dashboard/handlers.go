@@ -64,6 +64,25 @@ func (d *Dashboard) handleStorage() func(http.ResponseWriter, *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		switch action {
+		case "read-file":
+			fileKey := r.URL.Query().Get("fileKey")
+			if fileKey == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				handleResponseWriter(w, []byte(`{"error": "fileKey is required for delete-file action"}`))
+
+				return
+			}
+
+			resp, err := d.storageService.Read(ctx, &storagepb.StorageReadRequest{
+				BucketName: bucketName,
+				Key:        fileKey,
+			})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			handleResponseWriter(w, resp.Body)
 		case "list-files":
 			fileList, err := d.storageService.ListBlobs(ctx, &storagepb.StorageListBlobsRequest{
 				BucketName: bucketName,

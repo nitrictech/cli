@@ -19,6 +19,7 @@ import './file-browser-styles.css'
 import FileUpload from './FileUpload'
 import { Loading } from '../shared'
 import { downloadFiles } from './download-files'
+import { STORAGE_API } from '@/lib/constants'
 
 interface Props {
   bucket: string
@@ -187,7 +188,9 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
 
           await downloadFiles(
             filesToDownload.map((file) => ({
-              url: `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`,
+              url: `${STORAGE_API}?action=read-file&bucket=${bucket}&fileKey=${encodeURI(
+                file.id,
+              )}`,
               name: file.id,
             })),
           )
@@ -259,7 +262,9 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
               onFileAction={handleFileAction}
               thumbnailGenerator={(file) =>
                 !file.isDir
-                  ? `${data?.storageAddress}/${bucket}${getFilePath(file.id)}`
+                  ? `${STORAGE_API}?action=read-file&bucket=${bucket}&fileKey=${encodeURI(
+                    file.id,
+                  )}`
                   : null
               }
             >

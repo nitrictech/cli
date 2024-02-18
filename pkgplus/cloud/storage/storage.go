@@ -50,6 +50,8 @@ type LocalStorageService struct {
 	// server          *SeaweedServer
 	// storageEndpoint string
 
+	storagepb.UnimplementedStorageServer
+
 	bus EventBus.Bus
 }
 
@@ -64,9 +66,9 @@ func (s *LocalStorageService) SubscribeToState(fn func(State)) {
 	s.bus.Subscribe(localStorageTopic, fn)
 }
 
-func (s *LocalStorageService) GetStorageEndpoint() string {
-	return s.storageEndpoint
-}
+// func (s *LocalStorageService) GetStorageEndpoint() string {
+// 	return s.storageEndpoint
+// }
 
 func (r *LocalStorageService) registerListener(serviceName string, registrationRequest *storagepb.RegistrationRequest) {
 	r.listenersLock.Lock()
@@ -120,9 +122,9 @@ func (r *LocalStorageService) HandleRequest(req *storagepb.ServerMessage) (*stor
 	return nil, fmt.Errorf("UNIMPLEMENTED in run storage service")
 }
 
-func (r *LocalStorageService) StopSeaweed() error {
-	return r.server.Stop()
-}
+// func (r *LocalStorageService) StopSeaweed() error {
+// 	return r.server.Stop()
+// }
 
 func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServer) error {
 	serviceName, err := grpcx.GetServiceNameFromStream(stream)

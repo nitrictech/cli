@@ -278,12 +278,14 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 	}
 	blobs := []*storagepb.Blob{}
 
-	err = filepath.Walk(env.LOCAL_BUCKETS_DIR.String(), func(path string, info os.FileInfo, err error) error {
+	localBucket := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName)
+
+	err = filepath.Walk(localBucket, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() {
-			relPath, err := filepath.Rel(env.LOCAL_BUCKETS_DIR.String(), path)
+			relPath, err := filepath.Rel(localBucket, path)
 			if err != nil {
 				return err
 			}

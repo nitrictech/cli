@@ -671,10 +671,10 @@ func (d *Dashboard) sendStackUpdate() error {
 		WebsocketAddresses:  d.gatewayService.GetWebsocketAddresses(),
 		HttpWorkerAddresses: d.gatewayService.GetHttpWorkerAddresses(),
 		TriggerAddress:      d.gatewayService.GetTriggerAddress(),
-		StorageAddress:      d.storageService.GetStorageEndpoint(),
-		CurrentVersion:      currentVersion,
-		LatestVersion:       latestVersion,
-		Connected:           d.isConnected(),
+		// StorageAddress:      d.storageService.GetStorageEndpoint(),
+		CurrentVersion: currentVersion,
+		LatestVersion:  latestVersion,
+		Connected:      d.isConnected(),
 	}
 
 	// Encode the response as JSON

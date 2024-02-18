@@ -19,11 +19,16 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/asaskevich/EventBus"
+	"github.com/gorilla/mux"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -45,6 +50,9 @@ type State = map[BucketName]map[serviceName]int
 type LocalStorageService struct {
 	listenersLock sync.RWMutex
 	listeners     State
+
+	storageListener net.Listener
+	storageServer   http.Server
 
 	bus EventBus.Bus
 }
@@ -296,8 +304,22 @@ func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.Sto
 	// }
 
 	// return r.StorageServer.PreSignUrl(ctx, req)
+	var address string = ""
 
-	return nil, status.Error(codes.Unimplemented, "TODO")
+	switch req.Operation {
+	case storagepb.StoragePreSignUrlRequest_WRITE:
+		address = fmt.Sprintf("http://localhost:%d/write/%s/%s", r.storageListener.Addr().(*net.TCPAddr).Port, req.BucketName, url.PathEscape(req.Key))
+	case storagepb.StoragePreSignUrlRequest_READ:
+		address = fmt.Sprintf("http://localhost:%d/read/%s/%s", r.storageListener.Addr().(*net.TCPAddr).Port, req.BucketName, url.PathEscape(req.Key))
+	}
+
+	if address == "" {
+		status.Error(codes.Internal, "error generating presigned url")
+	}
+
+	return &storagepb.StoragePreSignUrlResponse{
+		Url: address,
+	}, nil
 }
 
 type StorageOptions struct {
@@ -306,8 +328,64 @@ type StorageOptions struct {
 }
 
 func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
-	return &LocalStorageService{
+	var err error
+	storageService := &LocalStorageService{
 		listeners: map[string]map[string]int{},
 		bus:       EventBus.New(),
-	}, nil
+	}
+
+	storageService.storageListener, err = net.Listen("tcp", ":0")
+	if err != nil {
+		return nil, err
+	}
+
+	router := mux.NewRouter()
+
+	router.HandleFunc("/read/{bucket}/{file}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		bucket := vars["bucket"]
+		file := vars["file"]
+
+		resp, err := storageService.Read(context.Background(), &storagepb.StorageReadRequest{
+			BucketName: bucket,
+			Key:        file,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		w.Write(resp.Body)
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	router.HandleFunc("/write/{bucket}/{file}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		bucket := vars["bucket"]
+		file := vars["file"]
+
+		content, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		_, err = storageService.Write(context.Background(), &storagepb.StorageWriteRequest{
+			BucketName: bucket,
+			Key:        file,
+			Body:       content,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Write([]byte("success"))
+		w.WriteHeader(http.StatusOK)
+	})
+
+	go http.Serve(storageService.storageListener, router)
+
+	return storageService, nil
 }

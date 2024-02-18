@@ -20,10 +20,10 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkgplus/project"
-	"github.com/nitrictech/cli/pkgplus/view/tui"
-	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
-	"github.com/nitrictech/cli/pkgplus/view/tui/teax"
+	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/view/tui"
+	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
+	"github.com/nitrictech/cli/pkg/view/tui/teax"
 )
 
 var buildCmd = &cobra.Command{

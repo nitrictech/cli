@@ -30,7 +30,7 @@ jobs:
           node-version: current
 
       - name: Lint Dashboard
-        working-directory: cli/pkgplus/dashboard/frontend
+        working-directory: cli/pkg/dashboard/frontend
         run: |
           yarn install
           yarn format:check
@@ -49,7 +49,7 @@ jobs:
 
       - name: Run nitric start with test-app in the background
         run: |
-          cd ${{ github.workspace }}/cli/pkgplus/dashboard/frontend/test-app
+          cd ${{ github.workspace }}/cli/pkg/dashboard/frontend/test-app
           yarn install
           nitric start &
 
@@ -58,17 +58,17 @@ jobs:
         with:
           install: false
           wait-on: "http://localhost:49152"
-          working-directory: cli/pkgplus/dashboard/frontend
+          working-directory: cli/pkg/dashboard/frontend
           browser: chrome
 
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: cypress-screenshots
-          path: cli/pkgplus/dashboard/frontend/cypress/screenshots
+          path: cli/pkg/dashboard/frontend/cypress/screenshots
 
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: cypress-videos
-          path: cli/pkgplus/dashboard/frontend/cypress/videos
+          path: cli/pkg/dashboard/frontend/cypress/videos

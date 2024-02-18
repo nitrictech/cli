@@ -263,8 +263,8 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
               thumbnailGenerator={(file) =>
                 !file.isDir
                   ? `${STORAGE_API}?action=read-file&bucket=${bucket}&fileKey=${encodeURI(
-                    file.id,
-                  )}`
+                      file.id,
+                    )}`
                   : null
               }
             >

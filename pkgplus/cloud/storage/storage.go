@@ -18,25 +18,18 @@ package storage
 
 import (
 	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
-	"net/http"
-	"strings"
+	"os"
+	"path/filepath"
 	"sync"
-	"syscall"
-	"time"
 
 	"github.com/asaskevich/EventBus"
-	"github.com/avast/retry-go"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
+	"github.com/nitrictech/cli/pkgplus/cloud/env"
 	"github.com/nitrictech/cli/pkgplus/eventbus"
 	"github.com/nitrictech/cli/pkgplus/grpcx"
-	s3_service "github.com/nitrictech/nitric/cloud/aws/runtime/storage"
 
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
@@ -50,12 +43,12 @@ type State = map[BucketName]map[serviceName]int
 
 // LocalStorageService - A local implementation of the storage and listeners services, bypasses the gateway to forward storage change events directly to listeners.
 type LocalStorageService struct {
-	client *s3.Client
-	storagepb.StorageServer
-	listenersLock   sync.RWMutex
-	listeners       State
-	server          *SeaweedServer
-	storageEndpoint string
+	// client *s3.Client
+	// storagepb.StorageServer
+	listenersLock sync.RWMutex
+	listeners     State
+	// server          *SeaweedServer
+	// storageEndpoint string
 
 	bus EventBus.Bus
 }
@@ -181,26 +174,28 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 }
 
 func (r *LocalStorageService) ensureBucketExists(ctx context.Context, bucket string) error {
-	err := retry.Do(func() error {
-		_, err := r.client.HeadBucket(ctx, &s3.HeadBucketInput{
-			Bucket: aws.String(bucket),
-		})
+	// err := retry.Do(func() error {
+	// 	_, err := r.client.HeadBucket(ctx, &s3.HeadBucketInput{
+	// 		Bucket: aws.String(bucket),
+	// 	})
 
-		return err
-	}, retry.Delay(time.Second), retry.RetryIf(func(err error) bool {
-		// wait for the service to become available
-		return errors.Is(err, syscall.ECONNREFUSED)
-	}))
-	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") {
-			_, err = r.client.CreateBucket(ctx, &s3.CreateBucketInput{
-				Bucket:           aws.String(bucket),
-				GrantFullControl: aws.String("*"),
-			})
-		}
-	}
+	// 	return err
+	// }, retry.Delay(time.Second), retry.RetryIf(func(err error) bool {
+	// 	// wait for the service to become available
+	// 	return errors.Is(err, syscall.ECONNREFUSED)
+	// }))
+	// if err != nil {
+	// 	if strings.Contains(err.Error(), "NotFound") {
+	// 		_, err = r.client.CreateBucket(ctx, &s3.CreateBucketInput{
+	// 			Bucket:           aws.String(bucket),
+	// 			GrantFullControl: aws.String("*"),
+	// 		})
+	// 	}
+	// }
 
-	return err
+	return os.MkdirAll(filepath.Join(env.LOCAL_BUCKETS_DIR.String(), bucket), os.ModePerm)
+
+	// return err
 }
 
 func (r *LocalStorageService) triggerBucketNotifications(ctx context.Context, bucket string, key string, eventType storagepb.BlobEventType) {
@@ -226,7 +221,16 @@ func (r *LocalStorageService) Read(ctx context.Context, req *storagepb.StorageRe
 		return nil, err
 	}
 
-	return r.StorageServer.Read(ctx, req)
+	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
+
+	contents, err := os.ReadFile(fileRef)
+	if err != nil {
+		return nil, err
+	}
+
+	return &storagepb.StorageReadResponse{
+		Body: contents,
+	}, nil
 }
 
 func (r *LocalStorageService) Write(ctx context.Context, req *storagepb.StorageWriteRequest) (*storagepb.StorageWriteResponse, error) {
@@ -235,14 +239,16 @@ func (r *LocalStorageService) Write(ctx context.Context, req *storagepb.StorageW
 		return nil, err
 	}
 
-	resp, err := r.StorageServer.Write(ctx, req)
+	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
+
+	err = os.WriteFile(fileRef, req.Body, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
 
 	go r.triggerBucketNotifications(ctx, req.BucketName, req.Key, storagepb.BlobEventType_Created)
 
-	return resp, nil
+	return &storagepb.StorageWriteResponse{}, nil
 }
 
 func (r *LocalStorageService) Delete(ctx context.Context, req *storagepb.StorageDeleteRequest) (*storagepb.StorageDeleteResponse, error) {
@@ -251,14 +257,16 @@ func (r *LocalStorageService) Delete(ctx context.Context, req *storagepb.Storage
 		return nil, err
 	}
 
-	resp, err := r.StorageServer.Delete(ctx, req)
+	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
+
+	err = os.Remove(fileRef)
 	if err != nil {
 		return nil, err
 	}
 
 	go r.triggerBucketNotifications(ctx, req.BucketName, req.Key, storagepb.BlobEventType_Deleted)
 
-	return resp, nil
+	return &storagepb.StorageDeleteResponse{}, nil
 }
 
 func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.StorageListBlobsRequest) (*storagepb.StorageListBlobsResponse, error) {
@@ -266,17 +274,41 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 	if err != nil {
 		return nil, err
 	}
+	blobs := []*storagepb.Blob{}
 
-	return r.StorageServer.ListBlobs(ctx, req)
-}
-
-func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.StoragePreSignUrlRequest) (*storagepb.StoragePreSignUrlResponse, error) {
-	err := r.ensureBucketExists(ctx, req.BucketName)
+	err = filepath.Walk(env.LOCAL_BUCKETS_DIR.String(), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			relPath, err := filepath.Rel(env.LOCAL_BUCKETS_DIR.String(), path)
+			if err != nil {
+				return err
+			}
+			blobs = append(blobs, &storagepb.Blob{
+				Key: relPath,
+			})
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return r.StorageServer.PreSignUrl(ctx, req)
+	return &storagepb.StorageListBlobsResponse{
+		Blobs: blobs,
+	}, nil
+}
+
+func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.StoragePreSignUrlRequest) (*storagepb.StoragePreSignUrlResponse, error) {
+	// err := r.ensureBucketExists(ctx, req.BucketName)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// return r.StorageServer.PreSignUrl(ctx, req)
+
+	return nil, status.Error(codes.Unimplemented, "TODO")
 }
 
 func nameSelector(nitricName string) (*string, error) {
@@ -290,53 +322,53 @@ type StorageOptions struct {
 
 func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 	// Start the local S3 compatible server (Seaweed)
-	seaweedServer, err := NewSeaweed()
-	if err != nil {
-		return nil, err
-	}
+	// seaweedServer, err := NewSeaweed()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	err = seaweedServer.Start()
-	if err != nil {
-		return nil, err
-	}
+	// err = seaweedServer.Start()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	storageEndpoint := fmt.Sprintf("http://localhost:%d", seaweedServer.GetApiPort())
+	// storageEndpoint := fmt.Sprintf("http://localhost:%d", seaweedServer.GetApiPort())
 
-	// Connect the S3 client to the local seaweed service
-	cfg, sessionError := config.LoadDefaultConfig(context.TODO(),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(opts.AccessKey, opts.SecretKey, "")),
-		config.WithRegion("us-east-1"),
-		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{URL: storageEndpoint}, nil
-		})),
-		config.WithRetryMaxAttempts(5),
-	)
-	if sessionError != nil {
-		return nil, fmt.Errorf("error creating new AWS session %w", sessionError)
-	}
+	// // Connect the S3 client to the local seaweed service
+	// cfg, sessionError := config.LoadDefaultConfig(context.TODO(),
+	// 	config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(opts.AccessKey, opts.SecretKey, "")),
+	// 	config.WithRegion("us-east-1"),
+	// 	config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+	// 		return aws.Endpoint{URL: storageEndpoint}, nil
+	// 	})),
+	// 	config.WithRetryMaxAttempts(5),
+	// )
+	// if sessionError != nil {
+	// 	return nil, fmt.Errorf("error creating new AWS session %w", sessionError)
+	// }
 
-	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true
-		o.HTTPClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		}
-	})
+	// s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+	// 	o.UsePathStyle = true
+	// 	o.HTTPClient = &http.Client{
+	// 		Transport: &http.Transport{
+	// 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	// 		},
+	// 	}
+	// })
 
-	s3PSClient := s3.NewPresignClient(s3Client)
+	// s3PSClient := s3.NewPresignClient(s3Client)
 
-	s3Service, err := s3_service.NewWithClient(nil, s3Client, s3PSClient, s3_service.WithSelector(nameSelector))
-	if err != nil {
-		return nil, err
-	}
+	// s3Service, err := s3_service.NewWithClient(nil, s3Client, s3PSClient, s3_service.WithSelector(nameSelector))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return &LocalStorageService{
-		StorageServer:   s3Service,
-		client:          s3Client,
-		server:          seaweedServer,
-		storageEndpoint: storageEndpoint,
-		listeners:       map[string]map[string]int{},
-		bus:             EventBus.New(),
+		// StorageServer:   s3Service,
+		// client:          s3Client,
+		// server:          seaweedServer,
+		// storageEndpoint: storageEndpoint,
+		listeners: map[string]map[string]int{},
+		bus:       EventBus.New(),
 	}, nil
 }

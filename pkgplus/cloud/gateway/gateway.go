@@ -91,6 +91,16 @@ type LocalGatewayService struct {
 
 var _ gateway.GatewayService = &LocalGatewayService{}
 
+const gatewayNotFound = "gateway_not_found"
+
+func (s *LocalGatewayService) publishState(ctx *fasthttp.RequestCtx) {
+	s.bus.Publish(gatewayNotFound, ctx)
+}
+func (s *LocalGatewayService) SubscribeToNotFound(subscriberFunction func(ctx *fasthttp.RequestCtx)) {
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = s.bus.Subscribe(gatewayNotFound, subscriberFunction)
+}
+
 // GetTriggerAddress - Returns the base address built-in nitric services, like schedules and topics, will be exposed on.
 func (s *LocalGatewayService) GetTriggerAddress() string {
 	if s.serviceListener != nil {
@@ -641,6 +651,9 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 	// Publish to a topic
 	r.POST(topicPath, s.handleTopicRequest)
 	r.POST(schedulePath, s.handleSchedulesTrigger)
+
+	// logic to redirect not found routes to dashboard
+	r.NotFound = s.publishState
 
 	s.serviceServer = &fasthttp.Server{
 		ReadTimeout:     time.Second * 1,

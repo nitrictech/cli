@@ -33,6 +33,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
 	"github.com/samber/lo"
+	"github.com/valyala/fasthttp"
 
 	"github.com/nitrictech/cli/pkgplus/browser"
 	"github.com/nitrictech/cli/pkgplus/cloud"
@@ -774,6 +775,15 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	localCloud.Topics.SubscribeToAction(dash.handleTopicsHistory)
 	localCloud.Schedules.SubscribeToAction(dash.handleSchedulesHistory)
 	localCloud.Websockets.SubscribeToAction(dash.handleWebsocketEvents)
+
+	// handle not found
+	localCloud.Gateway.SubscribeToNotFound(func(ctx *fasthttp.RequestCtx) {
+		if string(ctx.Path()) == "/" {
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v", dash.port), fasthttp.StatusFound)
+		} else {
+			ctx.Redirect(fmt.Sprintf("http://localhost:%v/not-found", dash.port), fasthttp.StatusFound)
+		}
+	})
 
 	return dash, nil
 }

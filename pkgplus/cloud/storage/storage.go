@@ -298,12 +298,11 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 }
 
 func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.StoragePreSignUrlRequest) (*storagepb.StoragePreSignUrlResponse, error) {
-	// err := r.ensureBucketExists(ctx, req.BucketName)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err := r.ensureBucketExists(ctx, req.BucketName)
+	if err != nil {
+		return nil, err
+	}
 
-	// return r.StorageServer.PreSignUrl(ctx, req)
 	var address string = ""
 
 	switch req.Operation {
@@ -355,9 +354,9 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 			return
 		}
 
-		w.Write(resp.Body)
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
+		w.Write(resp.Body)
 	})
 
 	router.HandleFunc("/write/{bucket}/{file}", func(w http.ResponseWriter, r *http.Request) {
@@ -381,8 +380,8 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 			return
 		}
 
-		w.Write([]byte("success"))
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("success"))
 	})
 
 	go http.Serve(storageService.storageListener, router)

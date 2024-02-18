@@ -297,7 +297,7 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 			// generate a new connection ID for this client
 			defer func() {
 				// close within the websocket plugin will also call ws.Close
-				_, err = s.websocketPlugin.Close(ctx, &websocketspb.WebsocketCloseRequest{
+				_, err = s.websocketPlugin.CloseConnection(ctx, &websocketspb.WebsocketCloseConnectionRequest{
 					ConnectionId: connectionId,
 					SocketName:   socketName,
 				})
@@ -391,8 +391,8 @@ func (s *LocalGatewayService) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 
 	_, err = s.topicsPlugin.Publish(ctx, &topicspb.TopicPublishRequest{
 		TopicName: topicName,
-		Message: &topicspb.Message{
-			Content: &topicspb.Message_StructPayload{
+		Message: &topicspb.TopicMessage{
+			Content: &topicspb.TopicMessage_StructPayload{
 				StructPayload: structPayload,
 			},
 		},

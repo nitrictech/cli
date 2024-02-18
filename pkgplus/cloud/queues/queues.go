@@ -22,8 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"github.com/google/uuid"
 	queuespb "github.com/nitrictech/nitric/core/pkg/proto/queues/v1"
 	"github.com/samber/lo"
@@ -42,8 +40,8 @@ type Lease struct {
 }
 
 type QueueItem struct {
-	lease *Lease
-	task  *structpb.Struct
+	lease   *Lease
+	message *queuespb.QueueMessage
 }
 
 type LocalQueuesService struct {
@@ -64,23 +62,23 @@ func (l *LocalQueuesService) ensureQueue(queueName string) {
 }
 
 // Send messages to a queue
-func (l *LocalQueuesService) Send(ctx context.Context, req *queuespb.QueueSendRequestBatch) (*queuespb.QueueSendResponse, error) {
+func (l *LocalQueuesService) Enqueue(ctx context.Context, req *queuespb.QueueEnqueueRequest) (*queuespb.QueueEnqueueResponse, error) {
 	l.queueLock.Lock()
 	defer l.queueLock.Unlock()
 	l.ensureQueue(req.QueueName)
 
 	// queue the payloads
-	l.queues[req.QueueName] = append(l.queues[req.QueueName], lo.Map(req.Requests, func(task *queuespb.QueueSendRequest, idx int) *QueueItem {
+	l.queues[req.QueueName] = append(l.queues[req.QueueName], lo.Map(req.Messages, func(task *queuespb.QueueMessage, idx int) *QueueItem {
 		return &QueueItem{
-			task: task.Payload,
+			message: task,
 		}
 	})...)
 
-	return &queuespb.QueueSendResponse{}, nil
+	return &queuespb.QueueEnqueueResponse{}, nil
 }
 
 // Receive message(s) from a queue
-func (l *LocalQueuesService) Receive(ctx context.Context, req *queuespb.QueueReceiveRequest) (*queuespb.QueueReceiveResponse, error) {
+func (l *LocalQueuesService) Dequeue(ctx context.Context, req *queuespb.QueueDequeueRequest) (*queuespb.QueueDequeueResponse, error) {
 	l.queueLock.Lock()
 	defer l.queueLock.Unlock()
 	l.ensureQueue(req.QueueName)
@@ -91,8 +89,8 @@ func (l *LocalQueuesService) Receive(ctx context.Context, req *queuespb.QueueRec
 		return nil, fmt.Errorf("invalid depth: %d cannot be greater than 10", req.Depth)
 	}
 
-	resp := &queuespb.QueueReceiveResponse{
-		Tasks: []*queuespb.ReceivedTask{},
+	resp := &queuespb.QueueDequeueResponse{
+		Messages: []*queuespb.DequeuedMessage{},
 	}
 
 	// remove the leased tasks from the queue
@@ -107,12 +105,12 @@ func (l *LocalQueuesService) Receive(ctx context.Context, req *queuespb.QueueRec
 			Expiry: time.Now().Add(defaultVisibilityTimeout),
 		}
 
-		resp.Tasks = append(resp.Tasks, &queuespb.ReceivedTask{
+		resp.Messages = append(resp.Messages, &queuespb.DequeuedMessage{
 			LeaseId: queueItem.lease.Id,
-			Payload: queueItem.task,
+			Message: queueItem.message,
 		})
 
-		if len(resp.Tasks) >= int(req.Depth) {
+		if len(resp.Messages) >= int(req.Depth) {
 			break
 		}
 	}

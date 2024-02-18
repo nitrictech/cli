@@ -30,6 +30,7 @@ import (
 	"github.com/nitrictech/cli/pkgplus/project"
 	"github.com/nitrictech/cli/pkgplus/project/stack"
 	"github.com/nitrictech/cli/pkgplus/provider"
+	"github.com/nitrictech/cli/pkgplus/provider/pulumi"
 	"github.com/nitrictech/cli/pkgplus/view/tui"
 	"github.com/nitrictech/cli/pkgplus/view/tui/commands/build"
 	stack_down "github.com/nitrictech/cli/pkgplus/view/tui/commands/stack/down"
@@ -176,6 +177,10 @@ var stackUpdateCmd = &cobra.Command{
 
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
 		tui.CheckErr(err)
+
+		if !isNonInteractive() {
+			_ = pulumi.EnsurePulumiPassphrase(fs)
+		}
 
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
@@ -366,6 +371,10 @@ nitric stack down -s aws -y`,
 		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
 		tui.CheckErr(err)
 
+		if !isNonInteractive() {
+			_ = pulumi.EnsurePulumiPassphrase(fs)
+		}
+
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
 
@@ -520,20 +529,25 @@ func AddOptions(cmd *cobra.Command, providerOnly bool) error {
 }
 
 func init() {
+	// New Stack
 	stackCmd.AddCommand(newStackCmd)
 	newStackCmd.Flags().BoolVarP(&forceNewStack, "force", "f", false, "force stack creation.")
 
+	// Update Stack (Up)
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackUpdateCmd, tui.Pulumi, tui.Docker))
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
 	tui.CheckErr(AddOptions(stackUpdateCmd, false))
 
+	// Delete Stack (Down)
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd, tui.Pulumi))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
 	tui.CheckErr(AddOptions(stackDeleteCmd, false))
 
+	// List Stacks
 	stackCmd.AddCommand(stackListCmd)
 
+	// Add Stack Commands
 	rootCmd.AddCommand(stackCmd)
 
 	addAlias("stack update", "up", true)

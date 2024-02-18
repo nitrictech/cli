@@ -96,10 +96,6 @@ func NitricLocalPassphrasePath() string {
 	return filepath.Join(NitricHomeDir(), ".local-stack-pass")
 }
 
-func NitricPreferencesPath() string {
-	return filepath.Join(NitricHomeDir(), ".user-preferences.json")
-}
-
 // NitricLogDir returns the directory to find log files.
 func NitricLogDir(stackPath string) string {
 	return filepath.Join(stackPath, ".nitric")
@@ -161,18 +157,4 @@ func GoPath() (string, error) {
 	}
 
 	return goPath, nil
-}
-
-func DirWritable(path string) bool {
-	f, err := os.Create(filepath.Join(path, "test.txt"))
-	if err != nil {
-		return false
-	}
-
-	defer func() {
-		f.Close()
-		os.Remove(f.Name())
-	}()
-
-	return true
 }

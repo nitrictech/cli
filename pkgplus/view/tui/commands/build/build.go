@@ -143,7 +143,6 @@ func (m Model) View() string {
 			}
 		} else {
 			messageLines := strings.Split(strings.TrimSpace(latestUpdate.Message), "\n")
-			serviceUpdates.Addln(strings.ToLower(string(latestUpdate.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
 			if len(messageLines) > 0 && latestUpdate.Status != project.ServiceBuildStatus_Complete {
 				serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 			}

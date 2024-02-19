@@ -487,6 +487,7 @@ func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 
 	s.websocketWorkers = append(s.websocketWorkers, websockets...)
 
+	// TODO move thread-safe lists/maps to own type so no deadlocks are possible
 	s.lock.Unlock()
 
 	s.createWebsocketServers()

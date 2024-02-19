@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkgplus/version"
+	"github.com/nitrictech/cli/pkg/version"
 )
 
 var versionCmd = &cobra.Command{

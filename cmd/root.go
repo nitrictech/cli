@@ -25,9 +25,9 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkgplus/paths"
-	"github.com/nitrictech/cli/pkgplus/update"
-	"github.com/nitrictech/cli/pkgplus/view/tui"
+	"github.com/nitrictech/cli/pkg/paths"
+	"github.com/nitrictech/cli/pkg/update"
+	"github.com/nitrictech/cli/pkg/view/tui"
 )
 
 const usageTemplate = `Nitric - The fastest way to build serverless apps

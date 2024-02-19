@@ -32,13 +32,13 @@ build-cli:
 
 .PHONY: build-dashboard
 build-dashboard: 
-	yarn --cwd ./pkgplus/dashboard/frontend install
-	yarn --cwd ./pkgplus/dashboard/frontend build
+	yarn --cwd ./pkg/dashboard/frontend install
+	yarn --cwd ./pkg/dashboard/frontend build
 
 .PHONY: generate
 generate: build-dashboard
 	# @go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
-	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkgplus/project/templates GetterClient > mocks/mock_utils/mock_getter.go
+	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/project/templates GetterClient > mocks/mock_utils/mock_getter.go
 	@go run ./hack/readmegen/ README.md
 
 .PHONY: fmt

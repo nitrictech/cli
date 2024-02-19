@@ -252,7 +252,6 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 	go func(cmd *exec.Cmd) {
 		<-stop
 		err := cmd.Process.Signal(syscall.SIGTERM)
-
 		if err != nil {
 			_ = cmd.Process.Kill()
 		}
@@ -409,7 +408,6 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			if okBody.StatusCode != 0 {
 				logOptions := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "20"}
 				logReader, err := dockerClient.ContainerLogs(context.Background(), containerId, logOptions)
-
 				if err != nil {
 					return err
 				}

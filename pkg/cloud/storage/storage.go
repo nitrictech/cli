@@ -288,7 +288,7 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 				return err
 			}
 			blobs = append(blobs, &storagepb.Blob{
-				Key: relPath,
+				Key: filepath.ToSlash(relPath),
 			})
 		}
 		return nil

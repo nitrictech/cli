@@ -11,6 +11,7 @@ const expectedNodes = [
   'test-bucket',
   'subscribe-tests',
   'subscribe-tests-2',
+  '4001:8000',
   'functions/my-test-function.ts',
 ]
 

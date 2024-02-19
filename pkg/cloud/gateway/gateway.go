@@ -361,7 +361,6 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 				return
 			}
 		})
-
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
 				pterm.Error.Println(err)
@@ -472,7 +471,6 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 
 func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 	s.lock.Lock()
-	defer s.lock.Unlock()
 
 	s.websocketWorkers = make([]string, 0)
 
@@ -488,6 +486,8 @@ func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 	sort.Strings(websockets)
 
 	s.websocketWorkers = append(s.websocketWorkers, websockets...)
+
+	s.lock.Unlock()
 
 	s.createWebsocketServers()
 }

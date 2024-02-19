@@ -235,6 +235,12 @@ func (r *LocalStorageService) Write(ctx context.Context, req *storagepb.StorageW
 
 	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
 
+	// Ensure the directory structure exists
+	err = os.MkdirAll(filepath.Dir(fileRef), os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
 	err = os.WriteFile(fileRef, req.Body, os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -282,7 +288,7 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 				return err
 			}
 			blobs = append(blobs, &storagepb.Blob{
-				Key: relPath,
+				Key: filepath.ToSlash(relPath),
 			})
 		}
 		return nil

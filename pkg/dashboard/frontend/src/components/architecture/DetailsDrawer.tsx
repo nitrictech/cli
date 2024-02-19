@@ -124,7 +124,7 @@ export const DetailsDrawer = ({
                       className="hover:underline"
                       onClick={() => selectServiceNode(s)}
                     >
-                      {s.replace(/\\/g, '/')}
+                      {s}
                     </button>
                   ))}
                 </div>

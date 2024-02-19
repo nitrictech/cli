@@ -453,7 +453,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
       id: service.name,
       position: { x: 0, y: 0 },
       data: {
-        title: `${service.name.replace(/\\/g, '/')}`,
+        title: service.name,
         description: '',
         resource: {
           filePath: service.filePath,

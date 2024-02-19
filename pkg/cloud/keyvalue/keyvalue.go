@@ -35,15 +35,13 @@ import (
 	keyvaluepb "github.com/nitrictech/nitric/core/pkg/proto/keyvalue/v1"
 )
 
-const DEV_SUB_DIR_COLL = "./collections/"
+const DEV_SUB_DIR_COLL = "./kv/"
 const (
 	skipTokenName    = "skip"
 	idName           = "Id"
 	partitionKeyName = "PartitionKey"
 	sortKeyName      = "SortKey"
 )
-
-const subcollectionDelimiter = "+"
 
 type BoltDocService struct {
 	dbDir string
@@ -77,7 +75,7 @@ func (d BoltDoc) String() string {
 func (s *BoltDocService) Get(ctx context.Context, req *keyvaluepb.KeyValueGetRequest) (*keyvaluepb.KeyValueGetResponse, error) {
 	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Get")
 
-	db, err := s.getLocalCollectionDB(req.Ref)
+	db, err := s.getLocalKVDB(req.Ref)
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -117,7 +115,7 @@ func (s *BoltDocService) Get(ctx context.Context, req *keyvaluepb.KeyValueGetReq
 func (s *BoltDocService) Set(ctx context.Context, req *keyvaluepb.KeyValueSetRequest) (*keyvaluepb.KeyValueSetResponse, error) {
 	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Set")
 
-	db, err := s.getLocalCollectionDB(req.Ref)
+	db, err := s.getLocalKVDB(req.Ref)
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -147,7 +145,7 @@ func (s *BoltDocService) Delete(ctx context.Context, req *keyvaluepb.KeyValueDel
 
 	key := req.Ref
 
-	db, err := s.getLocalCollectionDB(key)
+	db, err := s.getLocalKVDB(key)
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -189,7 +187,7 @@ func NewBoltService() (*BoltDocService, error) {
 	return &BoltDocService{dbDir: dbDir}, nil
 }
 
-func (s *BoltDocService) getLocalCollectionDB(coll *keyvaluepb.ValueRef) (*storm.DB, error) {
+func (s *BoltDocService) getLocalKVDB(coll *keyvaluepb.ValueRef) (*storm.DB, error) {
 	dbPath := filepath.Join(s.dbDir, strings.ToLower(coll.Store)+".db")
 
 	options := storm.BoltOptions(0o600, &bbolt.Options{Timeout: 1 * time.Second})

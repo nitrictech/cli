@@ -53,8 +53,8 @@ var (
 
 var stackCmd = &cobra.Command{
 	Use:   "stack",
-	Short: "Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)",
-	Long: `Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic).
+	Short: "Manage stacks (the deployed app containing multiple resources e.g. services, buckets and topics)",
+	Long: `Manage stacks (the deployed app containing multiple resources e.g. services, buckets and topics).
 
 A stack is a named update target, and a single project may have many of them.`,
 	Example: `nitric stack up

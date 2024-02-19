@@ -531,20 +531,20 @@ func policyResourceName(policy *resourcespb.PolicyResource) (string, error) {
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-// buildCollectionsRequirements gathers and deduplicates all collection requirements
-func buildCollectionsRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
+// buildKeyValueRequirements gathers and deduplicates all key/value requirements
+func buildKeyValueRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
-		for collectionName := range serviceRequirements.keyValueStores {
+		for kvStoreName := range serviceRequirements.keyValueStores {
 			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
-				return item.Id.Name == collectionName
+				return item.Id.Name == kvStoreName
 			})
 
 			if !exists {
 				resources = append(resources, &deploymentspb.Resource{
 					Id: &resourcespb.ResourceIdentifier{
-						Name: collectionName,
+						Name: kvStoreName,
 						Type: resourcespb.ResourceType_KeyValueStore,
 					},
 					Config: &deploymentspb.Resource_KeyValueStore{},
@@ -723,11 +723,11 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 	}
 	newSpec.Resources = append(newSpec.Resources, apiResources...)
 
-	collectionResources, err := buildCollectionsRequirements(allServiceRequirements, projectErrors)
+	keyValueResources, err := buildKeyValueRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
-	newSpec.Resources = append(newSpec.Resources, collectionResources...)
+	newSpec.Resources = append(newSpec.Resources, keyValueResources...)
 
 	policyResources, err := buildPolicyRequirements(allServiceRequirements, projectErrors)
 	if err != nil {

@@ -9,12 +9,12 @@ import (
 // Base directory used for all temporary files, such as logs, etc.
 var NITRIC_TMP = "./.nitric"
 
-// Base directory for temporary files used for local development, e.g. files in buckets, collections, etc.
+// Base directory for temporary files used for local development, e.g. files in buckets, key/value stores, etc.
 var NITRIC_LOCAL_RUN_DIR = env.GetEnv("NITRIC_LOCAL_RUN_DIR", filepath.Join(NITRIC_TMP, "./run/"))
 
 // Local run temporary files sub-directories
 var (
-	LOCAL_DB_DIR           = env.GetEnv("LOCAL_DB_DIR", filepath.Join(NITRIC_LOCAL_RUN_DIR.String(), "./collections/"))
+	LOCAL_DB_DIR           = env.GetEnv("LOCAL_DB_DIR", filepath.Join(NITRIC_LOCAL_RUN_DIR.String(), "./kv/"))
 	LOCAL_BUCKETS_DIR      = env.GetEnv("LOCAL_BUCKETS_DIR", filepath.Join(NITRIC_LOCAL_RUN_DIR.String(), "./buckets/"))
 	LOCAL_SEAWEED_LOGS_DIR = env.GetEnv("LOCAL_SEAWEED_LOGS_DIR", filepath.Join(NITRIC_LOCAL_RUN_DIR.String(), "./logs/"))
 	LOCAL_SECRETS_DIR      = env.GetEnv("LOCAL_SECRETS_DIR", filepath.Join(NITRIC_LOCAL_RUN_DIR.String(), "./secrets/"))

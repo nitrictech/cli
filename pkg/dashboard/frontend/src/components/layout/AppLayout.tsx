@@ -139,7 +139,7 @@ const AppLayout: React.FC<Props> = ({
       icon: MegaphoneIcon,
       count: data?.topics?.length,
     },
-    // { name: "Collections", href: "#", icon: FolderIcon, current: false },
+    // { name: "Key Value Stores", href: "#", icon: FolderIcon, current: false },
     // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
   ]
 

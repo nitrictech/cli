@@ -5,8 +5,9 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/nitrictech/nitric/core/pkg/logger"
 	"github.com/samber/lo"
+
+	"github.com/nitrictech/nitric/core/pkg/logger"
 )
 
 type ResourceRegister[R any] struct {

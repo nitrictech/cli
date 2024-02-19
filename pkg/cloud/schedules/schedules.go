@@ -120,7 +120,6 @@ func (l *LocalSchedulesService) createCronSchedule(scheduleName, expression stri
 				},
 			},
 		})
-
 		if err != nil {
 			logger.Errorf("Error handling schedule: %s", err.Error())
 		}

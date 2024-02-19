@@ -91,7 +91,6 @@ func (s *BoltDocService) Get(ctx context.Context, req *keyvaluepb.KeyValueGetReq
 	doc := createDoc(req.Ref)
 
 	err = db.One(idName, doc.Id, &doc)
-
 	if err != nil {
 		if errors.Is(err, storm.ErrNotFound) {
 			return nil, newErr(

@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/afero"
+
 	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/nitric/core/pkg/logger"
-	"github.com/spf13/afero"
 )
 
 const passphraseBytes = 32

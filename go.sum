@@ -605,8 +605,6 @@ github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f h1:awate
 github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f/go.mod h1:jqImBS1Tsk12vV2Gk7yP9+jajhpG+cHXrg7UhVxFruQ=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20231206014944-68e146f4f69a h1:BgsbgSm3iaObiUqGYCdX5mtavHqNJ/3FDxgYeBG+hpw=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20231206014944-68e146f4f69a/go.mod h1:+X62o2IvXWO1jw3758kdy+JWDCd5f1hCgqdPa4/Gtbo=
-github.com/nitrictech/nitric/core v0.0.0-20240214053735-b24e3b9b846d h1:/c0wa9VFNMlJUWA2rH2Lz9/TBVU4AUEt1mZ+ixwuJU4=
-github.com/nitrictech/nitric/core v0.0.0-20240214053735-b24e3b9b846d/go.mod h1:GMQNqu3YMn3LU1puO55YkyX198rDtOfcD3ltYspT/g4=
 github.com/nitrictech/nitric/core v0.0.0-20240216024540-a81d88f7dce6 h1:g/xXgi4OtCvODYanPFfXBrz8SMzEBpoVscFOf+hD/Fg=
 github.com/nitrictech/nitric/core v0.0.0-20240216024540-a81d88f7dce6/go.mod h1:8AtaAfgn+gHscV92FQVEBR9/aktMV95xNMQY+LxlV50=
 github.com/nunnatsa/ginkgolinter v0.15.2 h1:N2ORxUxPU56R9gsfLIlVVvCv/V/VVou5qVI1oBKBNHg=
@@ -658,8 +656,7 @@ github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910/go.mod h1:
 github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/prometheus/client_model v0.2.0/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
-github.com/prometheus/client_model v0.3.0 h1:UBgGFHqYdG/TPFD1B1ogZywDqEkwp3fBMvqdiQ7Xew4=
-github.com/prometheus/client_model v0.3.0/go.mod h1:LDGWKZIo7rky3hgvBe+caln+Dr3dPggB5dvjtD7w9+w=
+github.com/prometheus/client_model v0.4.0 h1:5lQXD3cAg1OXBf4Wq03gTrXHeaV0TQvGfUooCfx1yqY=
 github.com/prometheus/client_model v0.4.0/go.mod h1:oMQmHW1/JoDwqLtg57MGgP/Fb1CJEYF2imWWhWtMkYU=
 github.com/prometheus/common v0.4.1/go.mod h1:TNfzLD0ON7rHzMJeJkieUDPYmFC7Snx/y86RQel1bk4=
 github.com/prometheus/common v0.10.0/go.mod h1:Tlit/dnDKsSWFlCLTWaA1cyBgKHSMdTB80sz/V91rCo=

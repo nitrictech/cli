@@ -23,8 +23,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	queuespb "github.com/nitrictech/nitric/core/pkg/proto/queues/v1"
 	"github.com/samber/lo"
+
+	queuespb "github.com/nitrictech/nitric/core/pkg/proto/queues/v1"
 )
 
 type (

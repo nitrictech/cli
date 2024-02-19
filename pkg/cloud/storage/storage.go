@@ -212,7 +212,6 @@ func (r *LocalStorageService) Exists(ctx context.Context, req *storagepb.Storage
 	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
 
 	_, err := os.Stat(fileRef)
-
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &storagepb.StorageExistsResponse{

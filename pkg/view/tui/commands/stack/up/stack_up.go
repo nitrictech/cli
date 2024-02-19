@@ -49,6 +49,7 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.windowSize = msg
@@ -88,6 +89,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			parent := m.stack
+
 			if content.Update.SubResource != "" {
 				nitricResource, found := lo.Find(m.stack.Children, func(r *stack.Resource) bool {
 					return r.Name == fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name)
@@ -196,6 +198,7 @@ func (m Model) View() string {
 
 		for i, line := range m.providerStdout[max(0, len(m.providerStdout)-maxOutputLines):] {
 			providerTerm.Add(line).WithStyle(lipgloss.NewStyle().Width(min(m.windowSize.Width, 100)))
+
 			if i < len(m.providerStdout)-1 {
 				providerTerm.Break()
 			}

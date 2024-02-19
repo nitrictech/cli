@@ -15,6 +15,7 @@ concurrency:
 env:
   GOPROXY: https://proxy.golang.org
   FATHOM_SITE: FAKE1234
+  NITRIC_HTTP_PROXY_PORT: 8000
 
 jobs:
   nitric-dashboard:

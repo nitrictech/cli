@@ -6,7 +6,7 @@ import {
   BucketNode,
   type BucketNodeData,
 } from '@/components/architecture/nodes/BucketNode'
-import type { BaseResource, Policy, WebSocketResponse } from '@/types'
+import type { BaseResource, WebSocketResponse } from '@/types'
 import {
   ChatBubbleLeftRightIcon,
   ArchiveBoxIcon,
@@ -33,10 +33,7 @@ import {
   WebsocketNode,
   type WebsocketNodeData,
 } from '@/components/architecture/nodes/WebsocketNode'
-import {
-  KeyValueNode,
-  type KeyValueNodeData,
-} from '@/components/architecture/nodes/KeyValueNode'
+import { KeyValueNode } from '@/components/architecture/nodes/KeyValueNode'
 import {
   ScheduleNode,
   type ScheduleNodeData,
@@ -54,6 +51,7 @@ import {
 } from '@/components/architecture/nodes/HttpProxyNode'
 import { getTopicSubscriptions } from './get-topic-subscriptions'
 import { QueueNode } from '@/components/architecture/nodes/QueueNode'
+import { unique } from 'radash'
 
 export const nodeTypes = {
   api: APINode,
@@ -243,7 +241,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
   data.websockets.forEach((ws) => {
     const wsAddress = data.websocketAddresses[ws.name]
 
-    const events = Object.keys(ws.targets)
+    const events = Object.keys(ws.targets || {})
 
     const node = createNode<WebsocketNodeData>(ws, 'websocket', {
       title: ws.name,
@@ -255,10 +253,18 @@ export function generateArchitectureData(data: WebSocketResponse): {
       address: wsAddress,
     })
 
+    const uniqueTargets = unique(
+      events.map((trigger) => ({
+        target: ws.targets[trigger],
+        trigger,
+      })),
+      (t) => t.target,
+    )
+
     edges.push(
-      ...Object.entries(ws.targets).map(([eventType, target]) => {
+      ...uniqueTargets.map(({ target }) => {
         return {
-          id: `e-${ws.name}-${target}-${eventType}`,
+          id: `e-${ws.name}-${target}`,
           source: node.id,
           target,
           animated: true,
@@ -269,7 +275,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
             type: MarkerType.ArrowClosed,
             orient: 'auto-start-reverse',
           },
-          label: eventType,
+          label: 'Triggers',
         }
       }),
     )
@@ -431,21 +437,33 @@ export function generateArchitectureData(data: WebSocketResponse): {
   })
 
   edges.push(
-    ...Object.entries(data.policies).map(([_, policy]) => {
-      return {
-        id: `e-${policy.name}`,
-        source: policy.principals[0].name,
-        target: `${policy.resources[0].type}-${policy.resources[0].name}`,
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-        },
-        markerStart: {
-          type: MarkerType.ArrowClosed,
-          orient: 'auto-start-reverse',
-        },
-        label: policy.actions.map(verbFromNitricAction).join(', '),
-      } as Edge
-    }),
+    ...Object.entries(data.policies)
+      .filter(([_, policy]) => {
+        // drop websocket policy edge if trigger edge exists
+        return !(
+          policy.resources[0].type === 'websocket' &&
+          edges.some(
+            (e) =>
+              e.id ===
+              `e-${policy.resources[0].name}-${policy.principals[0].name}`,
+          )
+        )
+      })
+      .map(([_, policy]) => {
+        return {
+          id: `e-${policy.name}`,
+          source: policy.principals[0].name,
+          target: `${policy.resources[0].type}-${policy.resources[0].name}`,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+          markerStart: {
+            type: MarkerType.ArrowClosed,
+            orient: 'auto-start-reverse',
+          },
+          label: policy.actions.map(verbFromNitricAction).join(', '),
+        } as Edge
+      }),
   )
 
   data.services.forEach((service) => {

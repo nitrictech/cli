@@ -22,6 +22,18 @@ export const WebsocketNode: ComponentType<NodeProps<WebsocketNodeData>> = (
         testHref: `/websockets`, // TODO add url param to switch to resource
         address: `ws://${data.address}`,
         services: data.resource.requestingServices,
+        children: (
+          <>
+            {data.resource.targets ? (
+              <>
+                <div className="flex flex-col">
+                  <span className="font-bold">Events:</span>
+                  <span>{Object.keys(data.resource.targets).join(', ')}</span>
+                </div>
+              </>
+            ) : null}
+          </>
+        ),
       }}
     />
   )

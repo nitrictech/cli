@@ -23,7 +23,9 @@ const providerIdRegex = `\w+\/\w+` + semverRegex
 
 func providerIdSeparators(r rune) bool {
 	const versionSeparator = '@'
+
 	const orgSeparator = '/'
+
 	return r == versionSeparator || r == orgSeparator
 }
 
@@ -73,7 +75,11 @@ func NewProvider(providerId string) (*Provider, error) {
 		return nil, err
 	}
 
-	if provider.organization == "nitric" {
+	if provider.organization == nitricOrg {
+		// v0 providers are not supported, still permit the 'development' version 0.0.1
+		if strings.HasPrefix(provider.version, "0.") && provider.version != "0.0.1" {
+			return nil, fmt.Errorf("nitric providers prior to version 1.0.0 are not supported by this version of the CLI.")
+		}
 	}
 
 	return provider, nil

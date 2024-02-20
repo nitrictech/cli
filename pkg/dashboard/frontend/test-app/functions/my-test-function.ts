@@ -1,4 +1,5 @@
 import { api, bucket, kv, http, schedule, topic, websocket } from '@nitric/sdk'
+import express from 'express'
 
 const firstApi = api('first-api')
 const secondApi = api('second-api')
@@ -358,3 +359,13 @@ socket3.on('disconnect', (ctx) => {
 socket3.on('message', (ctx) => {
   ctx.res.success = false
 })
+
+const app = express()
+
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hello from express',
+  })
+})
+
+http(app)

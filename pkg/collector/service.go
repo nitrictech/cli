@@ -118,7 +118,7 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 		// Add a bucket
 		s.buckets[req.Id.GetName()] = req.GetBucket()
 	case resourcespb.ResourceType_KeyValueStore:
-		// Add a collection
+		// Add a key/value store
 		s.keyValueStores[req.Id.GetName()] = req.GetKeyValueStore()
 	case resourcespb.ResourceType_Api:
 		// Add an api

@@ -68,7 +68,7 @@ export type Bucket = BaseResource
 
 export type Queue = BaseResource
 
-type ResourceType = 'bucket' | 'topic' | 'websocket' | 'collection' | 'secret'
+type ResourceType = 'bucket' | 'topic' | 'websocket' | 'kv' | 'secret' | 'queue'
 
 export type Notification = {
   bucket: string

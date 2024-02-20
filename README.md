@@ -58,7 +58,7 @@ Documentation for all available commands:
 - nitric build : Build a Nitric project
 - nitric new [projectName] [templateName] : Create a new project
 - nitric run : Run your project locally for development and testing
-- nitric stack : Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)
+- nitric stack : Manage stacks (the deployed app containing multiple resources e.g. services, buckets and topics)
 - nitric stack down [-s stack] : Undeploy a previously deployed stack, deleting resources
   (alias: nitric down)
 - nitric stack list : List all stacks in the project

@@ -32,7 +32,7 @@ import NitricEdge from './NitricEdge'
 
 const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
 
-const nodeWidth = 150
+const nodeWidth = 200
 const nodeHeight = 150
 
 const getLayoutedElements = (

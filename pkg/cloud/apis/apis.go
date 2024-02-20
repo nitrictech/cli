@@ -18,7 +18,6 @@ package apis
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 	"sync"
 
@@ -50,6 +49,22 @@ type LocalApiGatewayService struct {
 	bus EventBus.Bus
 }
 
+func deepCopyApiMap(originalMap map[ApiName]map[ServiceName][]*apispb.RegistrationRequest) map[ApiName]map[ServiceName][]*apispb.RegistrationRequest {
+	copiedMap := make(map[ApiName]map[ServiceName][]*apispb.RegistrationRequest)
+
+	for apiName, serviceMap := range originalMap {
+		copiedMap[apiName] = make(map[ServiceName][]*apispb.RegistrationRequest)
+
+		for serviceName, requests := range serviceMap {
+			copiedRequests := make([]*apispb.RegistrationRequest, len(requests))
+			copy(copiedRequests, requests)
+			copiedMap[apiName][serviceName] = copiedRequests
+		}
+	}
+
+	return copiedMap
+}
+
 const localApiGatewayTopic = "local_api_gateway"
 
 const localApiRequestTopic = "local_api_gateway_request"
@@ -79,7 +94,7 @@ func (l *LocalApiGatewayService) GetState() State {
 	l.apiRegLock.RLock()
 	defer l.apiRegLock.RUnlock()
 
-	return maps.Clone(l.state)
+	return deepCopyApiMap(l.state)
 }
 
 func (l *LocalApiGatewayService) registerApiWorker(serviceName string, registrationRequest *apispb.RegistrationRequest) {

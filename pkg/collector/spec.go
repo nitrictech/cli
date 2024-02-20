@@ -795,7 +795,9 @@ func ApiToOpenApiSpec(apiRegistrationRequests map[string][]*apispb.RegistrationR
 		allApis := map[string]*resourcespb.ApiResource{}
 
 		for _, registrationRequest := range registrationRequests {
-			allApis[registrationRequest.Api] = &resourcespb.ApiResource{}
+			if registrationRequest != nil {
+				allApis[registrationRequest.Api] = &resourcespb.ApiResource{}
+			}
 		}
 
 		for _, registrationRequest := range registrationRequests {

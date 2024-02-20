@@ -305,6 +305,14 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 				case *resourcespb.ApiSecurityDefinitionResource_Oidc:
 					issuerUrl := securityScheme.GetOidc().GetIssuer()
 
+					if issuerUrl == "" {
+						projectErrors.Add(fmt.Errorf("service %s attempted to register an OIDC security scheme with an empty issuer", serviceRequirements.serviceName))
+					}
+
+					if len(securityScheme.GetOidc().GetAudiences()) == 0 {
+						projectErrors.Add(fmt.Errorf("service %s attempted to register an OIDC security scheme with no audiences", serviceRequirements.serviceName))
+					}
+
 					oidSec := openapi3.NewOIDCSecurityScheme(issuerUrl)
 					oidSec.Extensions = map[string]interface{}{
 						"x-nitric-audiences": securityScheme.GetOidc().GetAudiences(),
@@ -321,9 +329,31 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 
 			// apply top level security rules
 			for schemeName, scopes := range apiResource.Security {
-				api.Security.With(openapi3.SecurityRequirement{
-					schemeName: scopes.Scopes,
+				existing, exists := lo.Find(api.Security, func(item openapi3.SecurityRequirement) bool {
+					_, ok := item[schemeName]
+
+					return ok
 				})
+
+				if !exists {
+					if scopes.Scopes == nil {
+						scopes.Scopes = []string{}
+					}
+
+					api.Security.With(openapi3.SecurityRequirement{
+						schemeName: scopes.Scopes,
+					})
+				} else {
+					if len(scopes.Scopes) != len(existing[schemeName]) {
+						projectErrors.Add(fmt.Errorf("service %s attempted to register conflicting security scopes for API '%s' and security scheme '%s'", serviceRequirements.serviceName, apiName, schemeName))
+					}
+
+					for _, scope := range scopes.Scopes {
+						if !lo.Contains(existing[schemeName], scope) {
+							projectErrors.Add(fmt.Errorf("service %s attempted to register conflicting security scopes for API '%s' and security scheme '%s'", serviceRequirements.serviceName, apiName, schemeName))
+						}
+					}
+				}
 			}
 
 			// apply route level security rules
@@ -372,6 +402,10 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 
 							if !route.GetOptions().SecurityDisabled {
 								for key, scopes := range route.GetOptions().GetSecurity() {
+									if scopes.Scopes == nil {
+										scopes.Scopes = []string{}
+									}
+
 									sr.With(openapi3.SecurityRequirement{
 										key: scopes.Scopes,
 									})
@@ -392,7 +426,7 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 	}
 
 	for apiName, api := range apis {
-		openApiJsonDoc, err := api.MarshalJSON()
+		openApiJsonDoc, err := json.Marshal(api)
 		if err != nil {
 			return nil, err
 		}

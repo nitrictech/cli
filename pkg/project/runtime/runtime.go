@@ -57,11 +57,14 @@ var csharpDockerfile string
 var csharpIgnores = append([]string{"obj/", "bin/"}, commonIgnore...)
 
 func csharpBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
+	// Convert the service name to the name of the binary produced. i.e. services/hello.csproj -> hello
+	handler := strings.ReplaceAll(filepath.Base(entrypointFilePath), ".csproj", "")
+
 	return &RuntimeBuildContext{
 		DockerfileContents: csharpDockerfile,
 		BaseDirectory:      ".", // use the nitric project directory
 		BuildArguments: map[string]string{
-			"HANDLER": filepath.ToSlash(entrypointFilePath),
+			"HANDLER": handler,
 		},
 		IgnoreFileContents: strings.Join(append(additionalIgnores, csharpIgnores...), "\n"),
 	}, nil
@@ -151,7 +154,7 @@ func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs
 	ext := filepath.Ext(entrypointFilePath)
 
 	switch ext {
-	case ".cs":
+	case ".cs", ".csproj":
 		return csharpBuildContext(entrypointFilePath, additionalIgnores)
 	case ".go":
 		return golangBuildContext(entrypointFilePath, additionalIgnores)

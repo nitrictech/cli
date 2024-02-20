@@ -25,10 +25,10 @@ jobs:
         with:
           go-version: 1.22
 
-      - uses: goreleaser/goreleaser-action@v3
+      - uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
-          version: 1.22
+          version: latest
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.NITRIC_BOT_TOKEN }}

@@ -512,6 +512,7 @@ func (s *LocalGatewayService) createApiServers() error {
 			ReadTimeout:     time.Second * 1,
 			IdleTimeout:     time.Second * 1,
 			CloseOnShutdown: true,
+			ReadBufferSize:  8192,
 			Handler:         s.handleApiHttpRequest(len(s.apiServers)),
 		}
 		// Expand servers to account for apis
@@ -598,6 +599,7 @@ func (s *LocalGatewayService) createHttpServers() error {
 			ReadTimeout:     time.Second * 1,
 			IdleTimeout:     time.Second * 1,
 			CloseOnShutdown: true,
+			ReadBufferSize:  8192,
 			Handler:         s.handleHttpProxyRequest(len(s.httpServers)),
 		}
 		// Expand servers to account for apis
@@ -659,6 +661,7 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 		ReadTimeout:     time.Second * 1,
 		IdleTimeout:     time.Second * 1,
 		CloseOnShutdown: true,
+		ReadBufferSize:  8192,
 		Handler:         r.Handler,
 	}
 

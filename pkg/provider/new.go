@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package provider
 
 import (
@@ -23,7 +39,9 @@ const providerIdRegex = `\w+\/\w+` + semverRegex
 
 func providerIdSeparators(r rune) bool {
 	const versionSeparator = '@'
+
 	const orgSeparator = '/'
+
 	return r == versionSeparator || r == orgSeparator
 }
 
@@ -48,12 +66,6 @@ func providerFromId(providerId string) (*Provider, error) {
 
 const nitricOrg = "nitric"
 
-const (
-	nitricAwsProvider   = "aws"
-	nitricGcpProvider   = "gcp"
-	nitricAzureProvider = "azure"
-)
-
 func providerFilePath(prov *Provider) string {
 	provDir := paths.NitricProviderDir()
 	os := runtime.GOOS
@@ -73,7 +85,11 @@ func NewProvider(providerId string) (*Provider, error) {
 		return nil, err
 	}
 
-	if provider.organization == "nitric" {
+	if provider.organization == nitricOrg {
+		// v0 providers are not supported, still permit the 'development' version 0.0.1
+		if strings.HasPrefix(provider.version, "0.") && provider.version != "0.0.1" {
+			return nil, fmt.Errorf("nitric providers prior to version 1.0.0 are not supported by this version of the CLI.")
+		}
 	}
 
 	return provider, nil

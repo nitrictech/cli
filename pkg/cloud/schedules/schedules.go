@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package schedules
 
 import (
@@ -89,6 +105,7 @@ func (l *LocalSchedulesService) registerSchedule(serviceName string, registratio
 	}
 
 	l.publishState()
+
 	return nil
 }
 
@@ -143,11 +160,16 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 		return fmt.Errorf("first request must be a registration request")
 	}
 
-	l.registerSchedule(serviceName, firstRequest.GetRegistrationRequest())
+	err = l.registerSchedule(serviceName, firstRequest.GetRegistrationRequest())
+	if err != nil {
+		return fmt.Errorf("error registering schedule: %s", err.Error())
+	}
+
 	defer l.unregisterSchedule(serviceName, firstRequest.GetRegistrationRequest())
 
 	scheduleName := firstRequest.GetRegistrationRequest().ScheduleName
 	cronExpression := ""
+
 	switch t := firstRequest.GetRegistrationRequest().Cadence.(type) {
 	case *schedulespb.RegistrationRequest_Cron:
 		cronExpression = t.Cron.Expression

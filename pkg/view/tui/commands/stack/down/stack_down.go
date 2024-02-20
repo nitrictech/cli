@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package stack_down
 
 import (
@@ -49,6 +65,7 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.windowSize = msg
@@ -68,7 +85,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, reactive.AwaitChannel(msg.Source)
 	case reactive.ChanMsg[*deploymentspb.DeploymentDownEvent]:
-
 		// the source channel is close
 		if !msg.Ok {
 			m.done = true
@@ -77,7 +93,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch content := msg.Value.Content.(type) {
 		case *deploymentspb.DeploymentDownEvent_Update:
-
 			if content.Update == nil || content.Update.Id == nil {
 				break
 			}
@@ -88,6 +103,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			parent := m.stack
+
 			if content.Update.SubResource != "" {
 				nitricResource, found := lo.Find(m.stack.Children, func(r *stack.Resource) bool {
 					return r.Name == fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name)
@@ -144,6 +160,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
 	}
+
 	return m, cmd
 }
 
@@ -161,11 +178,13 @@ func (m Model) View() string {
 
 	v.Add(fragments.Tag("down"))
 	v.Add("  tearing down with %s", m.provider)
+
 	if m.done {
 		v.Break()
 	} else {
 		v.Addln(m.spinner.View())
 	}
+
 	v.Break()
 
 	statusTree := fragments.NewStatusNode("stack", "")
@@ -175,6 +194,7 @@ func (m Model) View() string {
 
 		for _, grandchild := range child.Children {
 			resourceTime := lo.Ternary(grandchild.FinishTime.IsZero(), time.Since(grandchild.StartTime).Round(time.Second), grandchild.FinishTime.Sub(grandchild.StartTime))
+
 			statusColor := tui.Colors.Blue
 			if grandchild.Status == deploymentspb.ResourceDeploymentStatus_FAILED {
 				statusColor = tui.Colors.Red
@@ -205,6 +225,7 @@ func (m Model) View() string {
 
 		for i, line := range m.providerStdout[max(0, len(m.providerStdout)-maxOutputLines):] {
 			providerTerm.Add(line).WithStyle(lipgloss.NewStyle().Width(min(m.windowSize.Width, 100)))
+
 			if i < len(m.providerStdout)-1 {
 				providerTerm.Break()
 			}

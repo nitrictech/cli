@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package services
 
 import (
@@ -54,6 +70,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			func() {
 				m.stopChan <- true
 			}()
+
 			return m, teax.Quit
 		case "up":
 			m.viewOffset++
@@ -93,6 +110,7 @@ func tail(text string, take int, offset int) string {
 	if offset < 0 {
 		offset = 0
 	}
+
 	if take < 1 {
 		return text
 	}
@@ -112,6 +130,7 @@ func tail(text string, take int, offset int) string {
 	if start < 0 {
 		start = 0
 	}
+
 	end := lo.Min([]int{totalLines, start + take})
 	if end > totalLines {
 		end = totalLines
@@ -151,9 +170,12 @@ func (m Model) View() string {
 		if update.Status == project.ServiceRunStatus(project.ServiceBuildStatus_Error) {
 			statusColor = tui.Colors.Red
 		}
+
 		rv.Add("%s: ", update.Filepath).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
+
 		// we'll inject our own newline, so remove the duplicate suffix. Retain any other newlines intended by the user
 		rv.Add(strings.TrimSuffix(update.Message, "\n")).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+
 		if i < len(m.serviceRunUpdates)-1 {
 			rv.Break()
 		}

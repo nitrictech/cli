@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package build
 
 import (
@@ -81,9 +97,11 @@ func (m *Model) AllDone() bool {
 			if update.Status == project.ServiceBuildStatus_Complete {
 				continue
 			}
+
 			if update.Status == project.ServiceBuildStatus_Error {
 				continue
 			}
+
 			return false
 		}
 	}
@@ -97,9 +115,11 @@ func (m Model) View() string {
 	v.Add(fragments.Tag("build"))
 
 	v.Add("  Building services")
+
 	if !m.AllDone() {
 		v.Add(m.spinner.View())
 	}
+
 	v.Break()
 
 	gap := strings.Builder{}
@@ -113,6 +133,7 @@ func (m Model) View() string {
 
 	serviceUpdates := view.New(view.WithStyle(lipgloss.NewStyle().MarginLeft(fragments.TagWidth() + 2)))
 	serviceUpdates.Break()
+
 	for _, serviceName := range serviceNames {
 		service := m.serviceBuildUpdates[serviceName]
 
@@ -148,6 +169,7 @@ func (m Model) View() string {
 			}
 		}
 	}
+
 	v.Add(serviceUpdates.Render())
 
 	return v.Render()

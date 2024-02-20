@@ -54,6 +54,7 @@ func (p *DeploymentClient) dialConnection() (*grpc.ClientConn, error) {
 func (p *DeploymentClient) Up(deploymentRequest *deploy.DeploymentUpRequest) (<-chan *deploy.DeploymentUpEvent, <-chan error) {
 	eventChan := make(chan *deploy.DeploymentUpEvent)
 	errorChan := make(chan error)
+
 	go func() {
 		defer close(eventChan)
 
@@ -82,6 +83,7 @@ func (p *DeploymentClient) Up(deploymentRequest *deploy.DeploymentUpRequest) (<-
 						errorChan <- err
 					}
 				}
+
 				break
 			}
 
@@ -120,6 +122,7 @@ func (p *DeploymentClient) Down(deploymentRequest *deploy.DeploymentDownRequest)
 				if !errors.Is(err, io.EOF) {
 					errorChan <- err
 				}
+
 				break
 			}
 

@@ -89,7 +89,7 @@ type WebsocketAction[Event EventItem] struct {
 }
 
 func (r *LocalWebsocketService) SubscribeToState(subscription func(map[string]map[string][]nitricws.WebsocketEventType)) {
-	r.bus.Subscribe(localWebsocketTopic, subscription)
+	_ = r.bus.Subscribe(localWebsocketTopic, subscription)
 }
 
 func (r *LocalWebsocketService) GetState() State {
@@ -111,7 +111,7 @@ func (r *LocalWebsocketService) publishAction(action WebsocketAction[EventItem])
 }
 
 func (r *LocalWebsocketService) SubscribeToAction(subscription func(WebsocketAction[EventItem])) {
-	r.bus.Subscribe(localWebsocketActionTopic, subscription)
+	_ = r.bus.Subscribe(localWebsocketActionTopic, subscription)
 }
 
 func (r *LocalWebsocketService) registerWebsocketWorker(serviceName string, registration *nitricws.RegistrationRequest) {

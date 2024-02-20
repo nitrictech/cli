@@ -25,13 +25,12 @@ import (
 	"github.com/hashicorp/go-getter"
 	"gopkg.in/yaml.v2"
 
-	"github.com/nitrictech/cli/mocks/mock_utils"
-	"github.com/nitrictech/cli/pkg/project/templates"
+	mock_templates "github.com/nitrictech/cli/mocks/mock_utils"
 )
 
 func TestRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mgetter := mock_utils.NewMockGetterClient(ctrl)
+	mgetter := mock_templates.NewMockGetterClient(ctrl)
 
 	fh, err := os.CreateTemp("", "repository.*")
 	if err != nil {
@@ -56,6 +55,7 @@ func TestRepository(t *testing.T) {
 				},
 			},
 		}
+
 		if err := encoder.Encode(&repo); err != nil {
 			t.Error(err)
 		}
@@ -65,7 +65,7 @@ func TestRepository(t *testing.T) {
 
 	d := &downloader{
 		configPath: configPath,
-		newGetter: func(c *getter.Client) templates.GetterClient {
+		newGetter: func(c *getter.Client) GetterClient {
 			return mgetter
 		},
 	}
@@ -78,11 +78,11 @@ func TestRepository(t *testing.T) {
 
 	wantRepo := []TemplateInfo{
 		{
-			Name: "official/Java Stack (Multi Module)",
+			Name: "Java Stack (Multi Module)",
 			Path: "java-stack-multi",
 		},
 		{
-			Name: "official/Go Stack",
+			Name: "Go Stack",
 			Path: "go-stack",
 		},
 	}

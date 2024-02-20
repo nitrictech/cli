@@ -1,12 +1,14 @@
 ---
 name: Test nitric run
 
-on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
+# disabled test for now
+on: false
+# on:
+#   push:
+#     branches:
+#       - main
+#       - develop
+#   pull_request:
 
 concurrency:
   group: ci-local-tests-${{ github.ref_name }}

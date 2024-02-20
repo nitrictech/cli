@@ -265,6 +265,7 @@ func New(fs afero.Fs, args Args) (Model, error) {
 	namePrompt.Focus()
 
 	downloadr := templates.NewDownloader()
+
 	templates, err := downloadr.Templates()
 	if err != nil {
 		return Model{}, err

@@ -339,6 +339,7 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 					if scopes.Scopes == nil {
 						scopes.Scopes = []string{}
 					}
+
 					api.Security.With(openapi3.SecurityRequirement{
 						schemeName: scopes.Scopes,
 					})
@@ -404,6 +405,7 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 									if scopes.Scopes == nil {
 										scopes.Scopes = []string{}
 									}
+
 									sr.With(openapi3.SecurityRequirement{
 										key: scopes.Scopes,
 									})

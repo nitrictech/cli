@@ -4,15 +4,13 @@ FROM node:alpine
 ARG HANDLER
 ENV HANDLER=${HANDLER}
 
+# Python and make are required by certain native package build processes in NPM packages.
+RUN --mount=type=cache,sharing=locked,target=/etc/apk/cache \
+    apk --update-cache add git g++ make py3-pip
+
 RUN apk update && \
     apk add --no-cache ca-certificates && \
     update-ca-certificates
-
-# Python and make are required by certain native package build processes in NPM packages.
-ENV PYTHONUNBUFFERED=1
-RUN apk add --update --no-cache python3 make g++ && ln -sf python3 /usr/bin/python
-RUN python3 -m ensurepip
-RUN pip3 install --no-cache --upgrade pip setuptools
 
 COPY . .
 
@@ -26,4 +24,4 @@ RUN \
   # TODO: remove when custom dockerfile support is available
   test -d ./prisma && npx prisma generate || echo "";
 
-ENTRYPOINT node $HANDLER
+ENTRYPOINT node --import ./$HANDLER

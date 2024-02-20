@@ -15,8 +15,7 @@ COPY package.json *.lock *-lock.json ./
 
 RUN yarn import || echo ""
 
-RUN --mount=type=cache,sharing=locked,target=/tmp/.yarn_cache \
-    set -ex && \
+RUN set -ex && \
     yarn install --production --prefer-offline --frozen-lockfile --cache-folder /tmp/.yarn_cache
 
 RUN test -f tsconfig.json || echo "{\"compilerOptions\":{\"esModuleInterop\":true,\"target\":\"es2015\",\"moduleResolution\":\"node\"}}" > tsconfig.json

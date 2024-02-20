@@ -58,7 +58,7 @@ func EnsurePulumiPassphrase(fs afero.Fs) error {
 
 func GetOrGeneratePassphraseFile(fs afero.Fs, isNonInteractive bool) (string, error) {
 	path := paths.NitricLocalPassphrasePath()
-	if _, err := afero.Exists(fs, path); err != nil {
+	if exists, err := afero.Exists(fs, path); err == nil && exists {
 		logger.Debugf("using existing passphrase file: %s", path)
 		return path, nil
 	}

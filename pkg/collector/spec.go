@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package collector
 
 import (
@@ -335,6 +351,7 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 						})
 
 						projectErrors.Add(fmt.Errorf("service %s attempted to register duplicate route %s: %s for API '%s' which is already defined in service %s", serviceRequirements.serviceFile, method, route.Path, apiName, existingService.serviceFile))
+
 						continue
 					}
 
@@ -352,6 +369,7 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 							sr = &openapi3.SecurityRequirements{}
 						} else if len(route.GetOptions().Security) > 0 {
 							sr = &openapi3.SecurityRequirements{}
+
 							if !route.GetOptions().SecurityDisabled {
 								for key, scopes := range route.GetOptions().GetSecurity() {
 									sr.With(openapi3.SecurityRequirement{
@@ -679,60 +697,70 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, bucketResources...)
 
 	topicResources, err := buildTopicRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, topicResources...)
 
 	queueResources, err := buildQueueRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, queueResources...)
 
 	secretResrources, err := buildSecretRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, secretResrources...)
 
 	websocketResources, err := buildWebsocketRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, websocketResources...)
 
 	scheduleResources, err := buildScheduleRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, scheduleResources...)
 
 	httpResources, err := buildHttpRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, httpResources...)
 
 	apiResources, err := buildApiRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, apiResources...)
 
 	keyValueResources, err := buildKeyValueRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, keyValueResources...)
 
 	policyResources, err := buildPolicyRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, policyResources...)
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -796,6 +824,7 @@ func ApiToOpenApiSpec(apiRegistrationRequests map[string][]*apispb.RegistrationR
 
 	// Unmarshal the OpenAPI JSON string into openapi3.T
 	var openapiDoc *openapi3.T
+
 	err = json.Unmarshal([]byte(openapiString), &openapiDoc)
 	if err != nil {
 		return nil, err

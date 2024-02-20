@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package project
 
 import (
@@ -129,9 +145,14 @@ func (s *Service) BuildImage(fs afero.Fs, logs io.Writer) error {
 	if err := afero.WriteFile(fs, tmpDockerFile.Name(), []byte(s.buildContext.DockerfileContents), os.ModePerm); err != nil {
 		return fmt.Errorf("unable to write temporary dockerfile for service %s: %w", s.Name, err)
 	}
+
 	defer func() {
 		tmpDockerFile.Close()
-		fs.Remove(tmpDockerFile.Name())
+
+		err := fs.Remove(tmpDockerFile.Name())
+		if err != nil {
+			logger.Errorf("unable to remove temporary dockerfile %s: %s", tmpDockerFile.Name(), err)
+		}
 	}()
 
 	// build the docker image
@@ -251,6 +272,7 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 
 	go func(cmd *exec.Cmd) {
 		<-stop
+
 		err := cmd.Process.Signal(syscall.SIGTERM)
 		if err != nil {
 			_ = cmd.Process.Kill()
@@ -263,6 +285,7 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 		Status:      ServiceRunStatus_Error,
 		Err:         err,
 	}
+
 	return err
 }
 
@@ -342,6 +365,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			Status:      ServiceRunStatus_Error,
 			Err:         err,
 		}
+
 		return nil
 	}
 
@@ -352,6 +376,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			Status:      ServiceRunStatus_Error,
 			Err:         err,
 		}
+
 		return nil
 	}
 
@@ -367,9 +392,10 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		Stdout: true,
 		Stderr: true,
 	}
+
 	attachResponse, err := dockerClient.ContainerAttach(context.TODO(), containerId, attachOptions)
 	if err != nil {
-		// ... handle error
+		return fmt.Errorf("error attaching to container %s: %w", s.Name, err)
 	}
 
 	// Use a separate goroutine to handle the container's output
@@ -382,6 +408,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 				Message:     string(p),
 				Status:      ServiceRunStatus_Running,
 			}
+
 			return len(p), nil
 		}), attachResponse.Reader)
 		if err != nil {
@@ -403,10 +430,12 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 				Err:         err,
 				Status:      ServiceRunStatus_Error,
 			}
+
 			return err
 		case okBody := <-okChan:
 			if okBody.StatusCode != 0 {
 				logOptions := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "20"}
+
 				logReader, err := dockerClient.ContainerLogs(context.Background(), containerId, logOptions)
 				if err != nil {
 					return err
@@ -426,6 +455,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 					Err:    err,
 					Status: ServiceRunStatus_Error,
 				}
+
 				return err
 			} else {
 				updates <- ServiceRunUpdate{
@@ -443,6 +473,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 					Status:      ServiceRunStatus_Error,
 					Err:         err,
 				}
+
 				return nil
 			}
 		}

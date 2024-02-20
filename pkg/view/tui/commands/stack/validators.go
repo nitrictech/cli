@@ -23,12 +23,9 @@ import (
 )
 
 var (
-	nameRegex         = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
-	suffixRegex       = regexp.MustCompile(`[^-]$`)
-	prefixRegex       = regexp.MustCompile(`^[^-]`)
-	emailRegex        = regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
-	azureOrgNameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]{0,48}[a-zA-Z0-9]$`)
-	gcpProjectIDRegex = regexp.MustCompile(`^[a-z][a-z0-9-]{4,28}[a-z0-9]$`)
+	nameRegex   = regexp.MustCompile(`^([a-zA-Z0-9-])*$`)
+	suffixRegex = regexp.MustCompile(`[^-]$`)
+	prefixRegex = regexp.MustCompile(`^[^-]`)
 )
 
 var ProjectNameInFlightValidators = []validation.StringValidator{

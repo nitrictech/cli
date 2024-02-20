@@ -169,6 +169,7 @@ func (s *LocalTopicsAndSubscribersService) deliverEvent(ctx context.Context, req
 			},
 		},
 	}
+
 	resp, err := s.SubscriberManager.HandleRequest(msg)
 	if err != nil {
 		return err
@@ -198,6 +199,7 @@ func (s *LocalTopicsAndSubscribersService) Publish(ctx context.Context, req *top
 		go func(evt *topicspb.TopicPublishRequest) {
 			// Wait to deliver the events
 			time.Sleep(req.Delay.AsDuration())
+
 			err := s.deliverEvent(ctx, evt)
 			if err != nil {
 				logger.Errorf("could not publish event: %s", err.Error())

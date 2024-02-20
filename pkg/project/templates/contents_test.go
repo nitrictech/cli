@@ -55,6 +55,7 @@ func TestRepository(t *testing.T) {
 				},
 			},
 		}
+
 		if err := encoder.Encode(&repo); err != nil {
 			t.Error(err)
 		}

@@ -50,6 +50,7 @@ func (f *Fragment) WithStyle(style lipgloss.Style, styles ...lipgloss.Style) *Fr
 	s = append(s, style)
 	s = append(s, styles...)
 	f.styles = s
+
 	return f
 }
 

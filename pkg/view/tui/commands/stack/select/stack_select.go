@@ -37,6 +37,7 @@ func (m Model) Init() tea.Cmd {
 // Update the model based on a message
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {

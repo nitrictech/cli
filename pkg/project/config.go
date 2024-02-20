@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package project
 
 import (
@@ -74,6 +90,7 @@ func ConfigurationFromFile(fs afero.Fs, filePath string) (*ProjectConfiguration,
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("nitric.yaml not found in %s. A nitric project is required to load configuration", absProjectDir)
 		}
+
 		return nil, err
 	}
 
@@ -83,7 +100,7 @@ func ConfigurationFromFile(fs afero.Fs, filePath string) (*ProjectConfiguration,
 
 	projectFileContents, err := afero.ReadFile(fs, filePath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read nitric.yaml: %s", err)
+		return nil, fmt.Errorf("unable to read nitric.yaml: %w", err)
 	}
 
 	// TODO: Implement v0 yaml detection and provide link to the upgrade guide
@@ -91,7 +108,7 @@ func ConfigurationFromFile(fs afero.Fs, filePath string) (*ProjectConfiguration,
 	projectConfig := &ProjectConfiguration{}
 
 	if err := yaml.Unmarshal(projectFileContents, projectConfig); err != nil {
-		return nil, fmt.Errorf("unable to parse nitric.yaml: %s", err)
+		return nil, fmt.Errorf("unable to parse nitric.yaml: %w", err)
 	}
 
 	projectConfig.Directory = filepath.Dir(filePath)

@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package fragments
 
 import (
@@ -45,12 +61,15 @@ func wrap(text string, width int, indent int) []string {
 	if indent == 0 || len(parts) <= 1 {
 		return parts
 	}
+
 	first := parts[0]
 	rest := strings.Join(parts[1:], "")
+
 	indented := strings.Split(lipgloss.NewStyle().Width(width-indent).Render(rest), "\n")
 	for i, line := range indented {
 		indented[i] = strings.Repeat(" ", indent) + line
 	}
+
 	return append([]string{first}, indented...)
 }
 
@@ -89,11 +108,14 @@ func (n StatusNode) render(omitSelf bool, width int, depth int) string {
 		nameWidth := width - statusWidth
 		nameParts := wrap(n.name, nameWidth-((depth-1)*(indent+linkWidth)), indent)
 		nameStyle := lipgloss.NewStyle().Foreground(tui.Colors.Gray)
+
 		if depth == 0 {
 			nameStyle = lipgloss.NewStyle().Foreground(tui.Colors.Blue)
 		}
+
 		for i, namePart := range nameParts {
 			v.Add(namePart).WithStyle(nameStyle)
+
 			if i == 0 {
 				v.Add(" ").WithStyle(nameStyle)
 				v.Addln(n.status).WithStyle(nameStyle.Copy().Width(statusWidth))
@@ -105,6 +127,7 @@ func (n StatusNode) render(omitSelf bool, width int, depth int) string {
 
 	for i, child := range n.children {
 		last := i == len(n.children)-1
+
 		childParts := strings.Split(strings.TrimSpace(child.render(false, width, depth+addDepth)), "\n")
 		for ic, childPart := range childParts {
 			if !omitSelf {
@@ -141,5 +164,6 @@ func NewStatusNode(name string, status string) *StatusNode {
 func (s *StatusNode) AddNode(name string, status string) *StatusNode {
 	child := NewStatusNode(name, status)
 	s.children = append(s.children, child)
+
 	return child
 }

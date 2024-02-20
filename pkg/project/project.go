@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package project
 
 import (
@@ -22,6 +38,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud"
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/project/runtime"
+	"github.com/nitrictech/nitric/core/pkg/logger"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
@@ -129,14 +146,19 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 
 	// register non-blocking
 	go func() {
-		grpcServer.Serve(listener)
+		err := grpcServer.Serve(listener)
+		if err != nil {
+			logger.Errorf("unable to start local Nitric collection server: %s", err)
+		}
 	}()
+
 	defer grpcServer.Stop()
 
 	// run the service we want to collect for targeting the grpc server
 	// TODO: load and run .env files, etc.
 	stopChannel := make(chan bool)
 	updatesChannel := make(chan ServiceRunUpdate)
+
 	go func() {
 		for range updatesChannel {
 			// TODO: Provide some updates - bubbletea nice output
@@ -147,7 +169,7 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 
 	_, port, err := net.SplitHostPort(listener.Addr().String())
 	if err != nil {
-		return nil, fmt.Errorf("unable to split host and port for local Nitric collection server: %v", err)
+		return nil, fmt.Errorf("unable to split host and port for local Nitric collection server: %w", err)
 	}
 
 	err = service.RunContainer(stopChannel, updatesChannel, WithNitricPort(port), WithNitricEnvironment("build"))
@@ -168,19 +190,25 @@ func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirement
 
 	for _, service := range p.services {
 		svc := service
+
 		wg.Add(1)
+
 		go func(s Service) {
 			defer wg.Done()
+
 			serviceRequirements, err := p.collectServiceRequirements(s)
 			if err != nil {
 				errorLock.Lock()
 				defer errorLock.Unlock()
+
 				serviceErrors = append(serviceErrors, err)
+
 				return
 			}
 
 			reqLock.Lock()
 			defer reqLock.Unlock()
+
 			allServiceRequirements = append(allServiceRequirements, serviceRequirements)
 		}(svc)
 	}
@@ -271,7 +299,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 	for _, serviceSpec := range projectConfig.Services {
 		files, err := afero.Glob(fs, serviceSpec.Match)
 		if err != nil {
-			return nil, fmt.Errorf("unable to match service files for pattern %s: %v", serviceSpec.Match, err)
+			return nil, fmt.Errorf("unable to match service files for pattern %s: %w", serviceSpec.Match, err)
 		}
 
 		for _, f := range files {
@@ -279,7 +307,8 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 
 			serviceName := projectConfig.pathToNormalizedServiceName(relativeServiceEntrypointPath)
 
-			var buildContext *runtime.RuntimeBuildContext = nil
+			var buildContext *runtime.RuntimeBuildContext
+
 			if serviceSpec.Runtime != "" {
 				// We have a custom runtime
 				customRuntime, ok := projectConfig.Runtimes[serviceSpec.Runtime]
@@ -296,7 +325,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 					fs,
 				)
 				if err != nil {
-					return nil, fmt.Errorf("unable to create build context for custom service file %s: %v", f, err)
+					return nil, fmt.Errorf("unable to create build context for custom service file %s: %w", f, err)
 				}
 			} else {
 				buildContext, err = runtime.NewBuildContext(
@@ -308,7 +337,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 					fs,
 				)
 				if err != nil {
-					return nil, fmt.Errorf("unable to create build context for service file %s: %v", f, err)
+					return nil, fmt.Errorf("unable to create build context for service file %s: %w", f, err)
 				}
 			}
 
@@ -346,7 +375,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 func FromFile(fs afero.Fs, filepath string) (*Project, error) {
 	projectConfig, err := ConfigurationFromFile(fs, filepath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load nitric.yaml, are you currently in a nitric project?: %v", err)
+		return nil, fmt.Errorf("unable to load nitric.yaml, are you currently in a nitric project?: %w", err)
 	}
 
 	return fromProjectConfiguration(projectConfig, fs)

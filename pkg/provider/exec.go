@@ -103,6 +103,7 @@ func (b *ProviderProcess) Stop() error {
 			return fmt.Errorf("failed to stop provider: %w", err)
 		}
 	}
+
 	return nil
 }
 

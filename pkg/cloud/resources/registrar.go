@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package resources
 
 import (
@@ -43,6 +59,7 @@ func (r *ResourceRegistrar[R]) Register(name string, requestingService string, r
 
 		// already registered, by another service, add this service to the list
 		r.resources[name].RequestingServices = append(r.resources[name].RequestingServices, requestingService)
+
 		return nil
 	}
 
@@ -51,6 +68,7 @@ func (r *ResourceRegistrar[R]) Register(name string, requestingService string, r
 		RequestingServices: []string{requestingService},
 		Resource:           resource,
 	}
+
 	return nil
 }
 
@@ -62,6 +80,7 @@ func (r *ResourceRegistrar[R]) Get(resourceName string) *R {
 	if !ok {
 		return nil
 	}
+
 	return registration.Resource
 }
 
@@ -80,6 +99,7 @@ func (r *ResourceRegistrar[R]) GetRequestingServices(name string) []string {
 	if !ok {
 		return []string{}
 	}
+
 	return registration.RequestingServices
 }
 

@@ -129,8 +129,6 @@ var stackUpdateCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		if len(stackFiles) == 0 {
-			// no stack files found
-			// print error with suggestion for user to run stack new
 			tui.CheckErr(fmt.Errorf("no stacks found in project, to create a new one run `nitric stack new`"))
 		}
 
@@ -325,12 +323,10 @@ nitric stack down -s aws -y`,
 		tui.CheckErr(err)
 
 		if len(stackFiles) == 0 {
-			// no stack files found
-			// print error with suggestion for user to run stack new
 			tui.CheckErr(fmt.Errorf("no stacks found in project root, to create a new one run `nitric stack new`"))
 		}
 
-		// Step 0. Get the stack file, or proomptyboi if more than 1.
+		// Step 0. Get the stack file, or prompt if more than 1.
 		stackSelection := stackFlag
 
 		if isNonInteractive() {
@@ -380,9 +376,6 @@ nitric stack down -s aws -y`,
 
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
-
-		// make provider from the provider name
-		// providerName := stackConfig.Provider
 
 		// Step 0a. Locate/Download provider where applicable.
 		prov, err := provider.NewProvider(stackConfig.Provider)

@@ -17,7 +17,6 @@
 package runtime
 
 import (
-	"bytes"
 	"os"
 	"testing"
 
@@ -64,7 +63,6 @@ func TestGenerate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fwriter := &bytes.Buffer{}
 
 			rt, err := NewBuildContext(tt.handler, "", map[string]string{}, []string{}, nil)
 			if err != nil {
@@ -72,7 +70,7 @@ func TestGenerate(t *testing.T) {
 			}
 
 			if !cmp.Equal(rt.DockerfileContents, tt.wantFwriter) {
-				t.Error(cmp.Diff(tt.wantFwriter, fwriter.String()))
+				t.Error(cmp.Diff(tt.wantFwriter, rt.DockerfileContents))
 			}
 		})
 	}

@@ -82,13 +82,13 @@ func golangBuildContext(entrypointFilePath string, additionalIgnores []string) (
 	}, nil
 }
 
-//go:embed python.dockerfile
+//go:embed jvm.dockerfile
 var jvmDockerfile string
 var jvmIgnores = append([]string{"obj/", "bin/"}, commonIgnore...)
 
 func jvmBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
-		DockerfileContents: golangDockerfile,
+		DockerfileContents: jvmDockerfile,
 		BaseDirectory:      ".", // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),
@@ -103,7 +103,7 @@ var pythonIgnores = append([]string{"__pycache__/", "*.py[cod]", "*$py.class"}, 
 
 func pythonBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
-		DockerfileContents: golangDockerfile,
+		DockerfileContents: pythonDockerfile,
 		BaseDirectory:      ".", // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),

@@ -17,9 +17,11 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/operations/version"
+	"github.com/nitrictech/cli/pkg/version"
 )
 
 var versionCmd = &cobra.Command{
@@ -27,7 +29,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version number of this CLI",
 	Long:  `All software has versions. This is Nitric's`,
 	Run: func(cmd *cobra.Command, args []string) {
-		version.Run(cmd.Context())
+		fmt.Println(version.Version)
 	},
 }
 

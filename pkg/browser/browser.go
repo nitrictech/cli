@@ -14,8 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Vendored from Go stdlib at cmd/internal/browser.
-
 package browser
 
 import (

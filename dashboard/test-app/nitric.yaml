@@ -1,3 +1,0 @@
-name: test-app
-handlers:
-  - functions/*.ts

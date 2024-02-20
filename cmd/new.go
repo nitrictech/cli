@@ -20,10 +20,12 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/operations/project_new"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/view/tui"
+	"github.com/nitrictech/cli/pkg/view/tui/commands/project"
+	"github.com/nitrictech/cli/pkg/view/tui/teax"
 )
 
 var force bool
@@ -48,14 +50,19 @@ nitric new hello-world "official/TypeScript - Starter" `,
 			templateName = args[1]
 		}
 
-		if !utils.IsTerminal() && (templateName == "" || projectName == "") {
+		if !tui.IsTerminal() && (templateName == "" || projectName == "") {
 			return fmt.Errorf(`non-interactive environment detected, please provide all mandatory arguments e.g. nitric new hello-world "official/TypeScript - Starter"`)
 		}
 
-		if _, err := tea.NewProgram(project_new.New(project_new.Args{
+		projectModel, err := project.New(afero.NewOsFs(), project.Args{
 			ProjectName:  projectName,
 			TemplateName: templateName,
-		}), tea.WithANSICompressor()).Run(); err != nil {
+			Force:        force,
+		})
+		tui.CheckErr(err)
+
+		// TODO add --force
+		if _, err := teax.NewProgram(projectModel, tea.WithANSICompressor()).Run(); err != nil {
 			return err
 		}
 

@@ -21,15 +21,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
-	"github.com/nitrictech/cli/pkg/history"
-	"github.com/nitrictech/nitric/core/pkg/plugins/storage"
+	"github.com/samber/lo"
+
+	"github.com/nitrictech/cli/pkg/cloud/apis"
+	"github.com/nitrictech/cli/pkg/cloud/schedules"
+	"github.com/nitrictech/cli/pkg/cloud/topics"
+	"github.com/nitrictech/cli/pkg/cloud/websockets"
+	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
+	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
 
-func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(http.ResponseWriter, *http.Request) {
+func (d *Dashboard) handleStorage() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, DELETE, OPTIONS")
@@ -41,10 +50,10 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 		}
 
 		ctx := context.Background()
-		bucket := r.URL.Query().Get("bucket")
+		bucketName := r.URL.Query().Get("bucket")
 		action := r.URL.Query().Get("action")
 
-		if bucket == "" && action != "list-buckets" {
+		if bucketName == "" && action != "list-buckets" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Header().Set("Content-Type", "application/json")
 			handleResponseWriter(w, []byte(`{"error": "Bucket is required"}`))
@@ -55,14 +64,35 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 		w.Header().Set("Content-Type", "application/json")
 
 		switch action {
-		case "list-files":
-			fileList, err := storagePlugin.ListFiles(ctx, bucket, nil)
+		case "read-file":
+			fileKey := r.URL.Query().Get("fileKey")
+			if fileKey == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				handleResponseWriter(w, []byte(`{"error": "fileKey is required for delete-file action"}`))
+
+				return
+			}
+
+			resp, err := d.storageService.Read(ctx, &storagepb.StorageReadRequest{
+				BucketName: bucketName,
+				Key:        fileKey,
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			jsonResponse, err := json.Marshal(fileList)
+			handleResponseWriter(w, resp.Body)
+		case "list-files":
+			fileList, err := d.storageService.ListBlobs(ctx, &storagepb.StorageListBlobsRequest{
+				BucketName: bucketName,
+			})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			jsonResponse, err := json.Marshal(fileList.GetBlobs())
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -86,7 +116,11 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 				return
 			}
 
-			err = storagePlugin.Write(ctx, bucket, fileKey, contents)
+			_, err = d.storageService.Write(ctx, &storagepb.StorageWriteRequest{
+				BucketName: bucketName,
+				Key:        fileKey,
+				Body:       contents,
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -102,7 +136,10 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 				return
 			}
 
-			err := storagePlugin.Delete(ctx, bucket, fileKey)
+			_, err := d.storageService.Delete(ctx, &storagepb.StorageDeleteRequest{
+				BucketName: bucketName,
+				Key:        fileKey,
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -115,7 +152,7 @@ func (d *Dashboard) handleStorage(storagePlugin storage.StorageService) func(htt
 	}
 }
 
-func (d *Dashboard) handleCallProxy() func(http.ResponseWriter, *http.Request) {
+func (d *Dashboard) createCallProxyHttpHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set CORs headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -181,7 +218,7 @@ func (d *Dashboard) handleCallProxy() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func (d *Dashboard) handleHistory() func(http.ResponseWriter, *http.Request) {
+func (d *Dashboard) createHistoryHttpHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "DELETE, OPTIONS")
@@ -195,7 +232,7 @@ func (d *Dashboard) handleHistory() func(http.ResponseWriter, *http.Request) {
 		if r.Method == "DELETE" {
 			historyType := r.URL.Query().Get("type")
 
-			err := d.project.History.DeleteHistoryRecord(history.RecordType(historyType))
+			err := d.DeleteHistoryRecord(RecordType(historyType))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -240,7 +277,7 @@ func (d *Dashboard) handleWebsocketMessagesClear() func(http.ResponseWriter, *ht
 			return
 		}
 
-		d.websocketsInfo[socketName].Messages = []WebsocketMessage{}
+		d.websocketsInfo[socketName].Messages = []websockets.WebsocketMessage{}
 
 		w.WriteHeader(http.StatusOK)
 
@@ -249,5 +286,91 @@ func (d *Dashboard) handleWebsocketMessagesClear() func(http.ResponseWriter, *ht
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func (d *Dashboard) handleApiHistory(state apis.ApiRequestState) {
+	var queryParams []Param
+
+	state.ReqCtx.QueryArgs().VisitAll(func(key []byte, val []byte) {
+		queryParams = append(queryParams, Param{
+			Key:   string(key),
+			Value: string(val),
+		})
+	})
+
+	err := d.writeHistoryRecord(&HistoryEvent[any]{
+		Time:       time.Now().UnixMilli(),
+		RecordType: API,
+		Event: ApiHistoryItem{
+			Api: d.gatewayService.GetApiAddresses()[state.Api],
+			Request: &RequestHistory{
+				Method:      string(state.ReqCtx.Request.Header.Method()),
+				Path:        string(state.ReqCtx.URI().PathOriginal()),
+				QueryParams: queryParams,
+				Headers:     base_http.HttpHeadersToMap(&state.ReqCtx.Request.Header),
+				Body:        state.ReqCtx.Request.Body(),
+				PathParams:  []Param{},
+			},
+			Response: &ResponseHistory{
+				Headers: lo.MapEntries(state.HttpResp.Headers, func(k string, v *apispb.HeaderValue) (string, []string) {
+					return k, v.Value
+				}),
+				Time:   time.Since(state.ReqCtx.ConnTime()).Milliseconds(),
+				Status: state.HttpResp.GetStatus(),
+				Data:   state.HttpResp.GetBody(),
+				Size:   len(state.HttpResp.GetBody()),
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (d *Dashboard) handleWebsocketEvents(action websockets.WebsocketAction[websockets.EventItem]) {
+	if d.websocketsInfo[action.Name] == nil {
+		d.websocketsInfo[action.Name] = &websockets.WebsocketInfo{}
+	}
+
+	switch e := action.Event.(type) {
+	case websockets.WebsocketInfo:
+		d.websocketsInfo[action.Name].ConnectionCount = e.ConnectionCount
+	case websockets.WebsocketMessage:
+		d.websocketsInfo[action.Name].Messages = append([]websockets.WebsocketMessage{e}, d.websocketsInfo[action.Name].Messages...)
+	}
+
+	err := d.sendWebsocketsUpdate()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (d *Dashboard) handleTopicsHistory(action topics.ActionState) {
+	err := d.writeHistoryRecord(&HistoryEvent[any]{
+		Time:       time.Now().UnixMilli(),
+		RecordType: TOPIC,
+		Event: TopicHistoryItem{
+			Name:    action.TopicName,
+			Payload: action.Payload,
+			Success: action.Success,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (d *Dashboard) handleSchedulesHistory(action schedules.ActionState) {
+	err := d.writeHistoryRecord(&HistoryEvent[any]{
+		Time:       time.Now().UnixMilli(),
+		RecordType: SCHEDULE,
+		Event: ScheduleHistoryItem{
+			Name:    action.ScheduleName,
+			Success: action.Success,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
 }

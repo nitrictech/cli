@@ -20,125 +20,98 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 
-	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
-
-	"github.com/nitrictech/cli/pkg/preview"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/spf13/afero"
+	"gopkg.in/yaml.v3"
 )
 
-type DockerConfig struct {
-	File string
+type RuntimeConfiguration struct {
+	// Template dockerfile to use as the base for the custom runtime
+	Dockerfile string
+	// Additional args to pass to the custom runtime
 	Args map[string]string
 }
 
-type HandlerConfig struct {
-	Type   string        `yaml:"type" mapstructure:"type"`
-	Match  string        `yaml:"match" mapstructure:"match"`
-	Docker *DockerConfig `yaml:"docker,omitempty" mapstructure:"docker,omitempty"`
+type ServiceConfiguration struct {
+	// This is the string version
+	Match string `yaml:"match"`
+
+	// This is the custom runtime version (is custom if not nil, we auto-detect a standard language runtime)
+	Runtime string `yaml:"runtime"`
+
+	// This allows specifying a particular service type (e.g. "Job"), this is optional and custom service types can be defined for each stack
+	Type string `yaml:"type"`
+
+	// This is a command that will be use to run these services when using nitric start
+	Start string `yaml:"start"`
 }
 
-// TODO: Determine best way to use generic mixed type constraint when deserializing
-// type Handler interface {
-// 	string | HandlerConfig
-// }
-
-type BaseConfig struct {
-	Name            string            `yaml:"name"`
-	Dir             string            `yaml:"-"`
-	Handlers        []any             `yaml:"handlers"`
-	PreviewFeatures []preview.Feature `yaml:"preview-features"`
+type ProjectConfiguration struct {
+	Name      string                          `yaml:"name"`
+	Directory string                          `yaml:"-"`
+	Services  []ServiceConfiguration          `yaml:"services"`
+	Runtimes  map[string]RuntimeConfiguration `yaml:"runtimes,omitempty"`
 }
 
-type Config struct {
-	BaseConfig       `yaml:",inline"`
-	ConcreteHandlers []*HandlerConfig `yaml:"-"`
-}
+const defaultNitricYamlPath = "./nitric.yaml"
 
-func (p *Config) ToFile() error {
-	if p.Dir == "" || p.Name == "" {
-		return errors.New("fields Dir and Name must be provided")
+func (p ProjectConfiguration) ToFile(fs afero.Fs, filepath string) error {
+	nitricYamlPath := defaultNitricYamlPath
+
+	if filepath != "" {
+		nitricYamlPath = filepath
 	}
 
-	b, err := yaml.Marshal(p)
+	projectBytes, err := yaml.Marshal(p)
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(p.Dir, "nitric.yaml"), b, 0o644)
+	if err = afero.WriteFile(fs, nitricYamlPath, projectBytes, os.ModePerm); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// configFromBaseConfig - Unwraps Generic configs (e.g. Handler) and populates missing defaults (e.g. Type)
-func configFromBaseConfig(base BaseConfig) (*Config, error) {
-	newConfig := &Config{
-		BaseConfig:       base,
-		ConcreteHandlers: make([]*HandlerConfig, 0),
+func ConfigurationFromFile(fs afero.Fs, filePath string) (*ProjectConfiguration, error) {
+	if filePath == "" {
+		filePath = defaultNitricYamlPath
 	}
 
-	if newConfig.BaseConfig.PreviewFeatures == nil {
-		newConfig.BaseConfig.PreviewFeatures = make([]string, 0)
-	}
-
-	for _, h := range base.Handlers {
-		if str, isString := h.(string); isString {
-			// if its a basic string populate with default handler config
-			newConfig.ConcreteHandlers = append(newConfig.ConcreteHandlers, &HandlerConfig{
-				Type:  "default",
-				Match: str,
-			})
-		} else if m, isMap := h.(map[any]any); isMap {
-			actualConfig := &HandlerConfig{}
-
-			err := mapstructure.Decode(m, actualConfig)
-			if err != nil {
-				return nil, err
-			}
-
-			// otherwise extract its map configuration
-			// TODO: Check and validate the map properties
-			newConfig.ConcreteHandlers = append(newConfig.ConcreteHandlers, actualConfig)
-		} else {
-			return nil, fmt.Errorf("invalid handler config provided: %+v %s", h, reflect.TypeOf(h))
-		}
-	}
-
-	return newConfig, nil
-}
-
-// ConfigFromProjectPath - loads the config nitric.yaml file from the project path, defaults to the current working directory
-func ConfigFromProjectPath(projPath string) (*Config, error) {
-	if projPath == "" {
-		wd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-
-		projPath = wd
-	}
-
-	absDir, err := filepath.Abs(projPath)
+	absProjectDir, err := filepath.Abs(filepath.Dir(filePath))
 	if err != nil {
 		return nil, err
 	}
 
-	p := BaseConfig{
-		Dir: absDir,
-	}
-
-	yamlFile, err := os.ReadFile(filepath.Join(projPath, "nitric.yaml"))
+	// Check if the path is a directory
+	info, err := fs.Stat(filePath)
 	if err != nil {
-		return nil, errors.Errorf("No nitric project found (unable to find nitric.yaml). If you haven't created a project yet, run `nitric new` to get started")
-	}
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("nitric.yaml not found in %s. A nitric project is required to load configuration", absProjectDir)
+		}
 
-	err = yaml.Unmarshal(yamlFile, &p)
-	if err != nil {
 		return nil, err
 	}
 
-	p.Name = utils.FormatProjectName(p.Name)
+	if info.IsDir() {
+		return nil, fmt.Errorf("nitric.yaml path %s is a directory", filePath)
+	}
 
-	return configFromBaseConfig(p)
+	projectFileContents, err := afero.ReadFile(fs, filePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read nitric.yaml: %w", err)
+	}
+
+	// TODO: Implement v0 yaml detection and provide link to the upgrade guide
+
+	projectConfig := &ProjectConfiguration{}
+
+	if err := yaml.Unmarshal(projectFileContents, projectConfig); err != nil {
+		return nil, fmt.Errorf("unable to parse nitric.yaml: %w", err)
+	}
+
+	projectConfig.Directory = filepath.Dir(filePath)
+
+	return projectConfig, nil
 }

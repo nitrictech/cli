@@ -15,6 +15,7 @@ concurrency:
 env:
   GOPROXY: https://proxy.golang.org
   FATHOM_SITE: FAKE1234
+  NITRIC_HTTP_PROXY_PORT: 8000
 
 jobs:
   nitric-dashboard:
@@ -30,7 +31,7 @@ jobs:
           node-version: current
 
       - name: Lint Dashboard
-        working-directory: cli/dashboard
+        working-directory: cli/pkg/dashboard/frontend
         run: |
           yarn install
           yarn format:check
@@ -39,7 +40,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.19
+          go-version: 1.21
 
       - name: Build Nitric
         run: |
@@ -49,27 +50,26 @@ jobs:
 
       - name: Run nitric start with test-app in the background
         run: |
-          cd ${{ github.workspace }}/cli/dashboard/test-app
+          cd ${{ github.workspace }}/cli/pkg/dashboard/frontend/test-app
           yarn install
-          nitric start --ci &
-          yarn dev:functions &
+          nitric start &
 
       - name: Run Tests
         uses: cypress-io/github-action@v5
         with:
           install: false
           wait-on: "http://localhost:49152"
-          working-directory: cli/dashboard
+          working-directory: cli/pkg/dashboard/frontend
           browser: chrome
 
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: cypress-screenshots
-          path: cli/dashboard/cypress/screenshots
+          path: cli/pkg/dashboard/frontend/cypress/screenshots
 
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: cypress-videos
-          path: cli/dashboard/cypress/videos
+          path: cli/pkg/dashboard/frontend/cypress/videos

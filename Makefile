@@ -24,18 +24,21 @@ export LDFLAGS="-X $(VERSION_URI).Version=${BUILD_VERSION} \
                 -X $(VERSION_URI).BuildTime=$(shell date +%Y-%m-%dT%H:%M:%S%z)"
 
 .PHONY: build
-build: generate
+build: generate build-cli
+
+.PHONY: build-cli
+build-cli:
 	$(BUILD_ENV) go build -ldflags $(LDFLAGS) -o bin/nitric$(EXECUTABLE_EXT) ./main.go
 
 .PHONY: build-dashboard
 build-dashboard: 
-	yarn --cwd ./dashboard install
-	yarn --cwd ./dashboard build
+	yarn --cwd ./pkg/dashboard/frontend install
+	yarn --cwd ./pkg/dashboard/frontend build
 
 .PHONY: generate
 generate: build-dashboard
-	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
-	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/utils GetterClient > mocks/mock_utils/mock_getter.go
+	# @go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/containerengine ContainerEngine > mocks/mock_containerengine/mock_containerengine.go
+	@go run github.com/golang/mock/mockgen github.com/nitrictech/cli/pkg/project/templates GetterClient > mocks/mock_utils/mock_getter.go
 	@go run ./hack/readmegen/ README.md
 
 .PHONY: fmt

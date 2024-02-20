@@ -1,9 +1,0 @@
-.file-explorer .chonky-activeButton,
-.MuiPopover-root .chonky-activeButton,
-.chonky-selectionSizeText {
-  @apply !text-primary;
-}
-
-[data-test-id="file-entry"] > *:first-child {
-  @apply !bg-blue-100;
-}

@@ -29,7 +29,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/cli/pkg/version"
 )
 
@@ -101,7 +101,7 @@ func cacheExpired() bool {
 }
 
 func cachePath() string {
-	return filepath.Join(utils.NitricHomeDir(), ".cached-last-version-check")
+	return filepath.Join(paths.NitricHomeDir(), ".cached-last-version-check")
 }
 
 func updateFile(latestVersion string) error {

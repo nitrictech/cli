@@ -17,17 +17,22 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pterm/pterm"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/operations/start"
-	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/cloud"
+	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/view/tui"
+	"github.com/nitrictech/cli/pkg/view/tui/commands/services"
+	"github.com/nitrictech/cli/pkg/view/tui/fragments"
+	"github.com/nitrictech/cli/pkg/view/tui/teax"
 )
 
 var startNoBrowser bool
@@ -40,25 +45,81 @@ var startCmd = &cobra.Command{
 	Annotations: map[string]string{"commonCommand": "yes"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Divert default log output to pterm debug
-		log.SetOutput(output.NewPtermWriter(pterm.Debug))
-		log.SetFlags(0)
+		// log.SetOutput(output.NewPtermWriter(pterm.Debug))
+		// log.SetFlags(0)
+		fs := afero.NewOsFs()
 
-		if !utils.IsTerminal() && !output.CI {
-			fmt.Println("")
-			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode.")
-			output.CI = true
-		}
+		proj, err := project.FromFile(fs, "")
+		tui.CheckErr(err)
 
-		if output.CI {
-			return start.RunNonInteractive(startNoBrowser)
-		}
+		fmt.Print(fragments.NitricTag())
+		fmt.Println(" start")
+		fmt.Println()
 
-		model := start.New(context.TODO(), start.ModelArgs{
-			NoBrowser: startNoBrowser,
-		})
+		// Start the local cloud service analogues
+		localCloud, err := cloud.New()
+		tui.CheckErr(err)
 
-		if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
-			return err
+		fmt.Println("local nitric server started")
+
+		// Start dashboard
+		dash, err := dashboard.New(startNoBrowser, localCloud, proj)
+		tui.CheckErr(err)
+
+		err = dash.Start()
+		tui.CheckErr(err)
+
+		bold := lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple)
+		numServices := fmt.Sprintf("%d", len(proj.GetServices()))
+
+		fmt.Print("found ")
+		fmt.Print(bold.Render(numServices))
+		fmt.Print(" services in project\n")
+
+		// Run the app code (project services)
+		stopChan := make(chan bool)
+		updatesChan := make(chan project.ServiceRunUpdate)
+
+		go func() {
+			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan)
+			if err != nil {
+				panic(err)
+			}
+		}()
+
+		tui.CheckErr(err)
+
+		// non-interactive environment
+		if isNonInteractive() {
+			go func() {
+				sigChan := make(chan os.Signal, 1)
+				signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+
+				// Wait for a signal
+				<-sigChan
+
+				// Send stop signal to stopChan
+				close(stopChan)
+
+				localCloud.Stop()
+			}()
+
+			for {
+				select {
+				case update := <-updatesChan:
+					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
+				case <-stopChan:
+					fmt.Println("Shutting down services - exiting")
+				}
+			}
+		} else {
+			// interactive environment
+			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
+
+			_, err = runView.Run()
+			tui.CheckErr(err)
+
+			localCloud.Stop()
 		}
 
 		return nil

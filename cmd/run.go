@@ -17,18 +17,21 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pterm/pterm"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/nitrictech/cli/pkg/command"
-	"github.com/nitrictech/cli/pkg/operations/local_run"
-	"github.com/nitrictech/cli/pkg/output"
-	"github.com/nitrictech/cli/pkg/utils"
+	"github.com/nitrictech/cli/pkg/cloud"
+	docker "github.com/nitrictech/cli/pkg/docker"
+	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/view/tui"
+	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
+	"github.com/nitrictech/cli/pkg/view/tui/commands/services"
+	"github.com/nitrictech/cli/pkg/view/tui/teax"
 )
 
 var runNoBrowser bool
@@ -40,24 +43,67 @@ var runCmd = &cobra.Command{
 	Example:     `nitric run`,
 	Annotations: map[string]string{"commonCommand": "yes"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Divert default log output to pterm debug
-		log.SetOutput(output.NewPtermWriter(pterm.Debug))
-		log.SetFlags(0)
+		err := docker.VerifyDockerIsAvailable()
+		tui.CheckErr(err)
 
-		if !utils.IsTerminal() && !output.CI {
-			fmt.Println("")
-			pterm.Warning.Println("non-interactive environment detected, switching to non-interactive mode")
-			output.CI = true
-		}
+		fs := afero.NewOsFs()
 
-		if output.CI {
-			return local_run.RunNonInteractive(runNoBrowser)
-		}
+		proj, err := project.FromFile(fs, "")
+		tui.CheckErr(err)
 
-		if _, err := tea.NewProgram(local_run.New(context.TODO(), local_run.ModelArgs{
-			NoBrowser: runNoBrowser,
-		}), tea.WithAltScreen()).Run(); err != nil {
-			return err
+		// Start the local cloud service analogues
+		localCloud, err := cloud.New()
+		tui.CheckErr(err)
+
+		updates, err := proj.BuildServices(fs)
+		tui.CheckErr(err)
+
+		prog := teax.NewProgram(build.NewModel(updates))
+		// blocks but quits once the above updates channel is closed by the build process
+		_, err = prog.Run()
+		tui.CheckErr(err)
+
+		// Run the app code (project services)
+		stopChan := make(chan bool)
+		updatesChan := make(chan project.ServiceRunUpdate)
+		go func() {
+			err := proj.RunServices(localCloud, stopChan, updatesChan)
+			if err != nil {
+				panic(err)
+			}
+		}()
+
+		tui.CheckErr(err)
+
+		// non-interactive environment
+		if isNonInteractive() {
+			go func() {
+				sigChan := make(chan os.Signal, 1)
+				signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+
+				// Wait for a signal
+				<-sigChan
+
+				// Send stop signal to stopChan
+				close(stopChan)
+
+				localCloud.Stop()
+			}()
+
+			for {
+				select {
+				case update := <-updatesChan:
+					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
+				case <-stopChan:
+					fmt.Println("Shutting down services - exiting")
+				}
+			}
+		} else {
+			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
+
+			_, _ = runView.Run()
+
+			localCloud.Stop()
 		}
 
 		return nil
@@ -73,5 +119,5 @@ func init() {
 		false,
 		"disable browser opening for local dashboard, note: in CI mode the browser opening feature is disabled",
 	)
-	rootCmd.AddCommand(command.AddDependencyCheck(runCmd, command.Docker))
+	rootCmd.AddCommand(tui.AddDependencyCheck(runCmd, tui.Docker))
 }

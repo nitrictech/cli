@@ -55,13 +55,13 @@ nitric new --help
 
 Documentation for all available commands:
 
-- nitric feedback : Provide feedback on your experience with nitric
-- nitric info : Gather information about Nitric and the environment
+- nitric build : Build a Nitric project
 - nitric new [projectName] [templateName] : Create a new project
 - nitric run : Run your project locally for development and testing
-- nitric stack : Manage stacks (the deployed app containing multiple resources e.g. collection, bucket, topic)
+- nitric stack : Manage stacks (the deployed app containing multiple resources e.g. services, buckets and topics)
 - nitric stack down [-s stack] : Undeploy a previously deployed stack, deleting resources
   (alias: nitric down)
+- nitric stack list : List all stacks in the project
 - nitric stack new [stackName] [providerName] : Create a new Nitric stack
 - nitric stack update [-s stack] : Create or update a deployed stack
   (alias: nitric up)
@@ -77,6 +77,11 @@ Documentation for all available commands:
 - Find us on [Twitter](https://twitter.com/nitric_io)
 
 - Send us an [email](mailto:maintainers@nitric.io)
+
+## Get Started
+
+Check out the [Nitric docs](https://nitric.io/docs) to see how to get started using Nitric.
+lto:maintainers@nitric.io)
 
 ## Get Started
 

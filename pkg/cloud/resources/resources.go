@@ -122,7 +122,6 @@ func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
 	l.state.Queues.ClearRequestingService(serviceName)
 }
 
-// TODO: Refactor Declare and Details into their respected resources contracts (e.g. Storage/Apis/Collections etc.)
 func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService {
 	return &LocalResourcesService{
 		state: LocalResourcesState{

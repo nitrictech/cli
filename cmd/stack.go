@@ -231,7 +231,10 @@ var stackUpdateCmd = &cobra.Command{
 		// Step 4. Start the deployment provider server
 		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout), provider.WithStderr(providerStdout))
 		tui.CheckErr(err)
-		defer providerProcess.Stop()
+		defer func() {
+			err := providerProcess.Stop()
+			tui.CheckErr(err)
+		}()
 
 		// Step 5a. Send specification to provider for deployment
 		deploymentClient := provider.NewDeploymentClient(providerProcess.Address, true)
@@ -393,7 +396,10 @@ nitric stack down -s aws -y`,
 		// Step 4. Start the deployment provider server
 		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout))
 		tui.CheckErr(err)
-		defer providerProcess.Stop()
+		defer func() {
+			err = providerProcess.Stop()
+			tui.CheckErr(err)
+		}()
 
 		// Step 5a. Send specification to provider for deployment
 		deploymentClient := provider.NewDeploymentClient(providerProcess.Address, true)

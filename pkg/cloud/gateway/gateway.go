@@ -47,6 +47,7 @@ import (
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 
 	"github.com/nitrictech/nitric/core/pkg/gateway"
+	"github.com/nitrictech/nitric/core/pkg/logger"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
@@ -376,6 +377,7 @@ func (s *LocalGatewayService) handleTopicRequest(ctx *fasthttp.RequestCtx) {
 
 	// Get the incoming data as JSON
 	payload := map[string]interface{}{}
+
 	err := json.Unmarshal(ctx.Request.Body(), &payload)
 	if err != nil {
 		ctx.Error(fmt.Sprintf("Error parsing JSON: %v", err), 400)
@@ -443,7 +445,10 @@ func (s *LocalGatewayService) refreshApis(apiState apis.State) {
 
 	s.apis = append(s.apis, uniqApis...)
 
-	s.createApiServers()
+	err := s.createApiServers()
+	if err != nil {
+		logger.Errorf("Error creating api servers: %s", err.Error())
+	}
 }
 
 func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
@@ -451,6 +456,7 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 	defer s.lock.Unlock()
 
 	s.httpWorkers = make([]string, 0)
+
 	var uniqHttpWorkers []string
 
 	uniqHttpWorkers = lo.Reduce(lo.Keys(state), func(agg []string, host string, idx int) []string {
@@ -466,7 +472,10 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 
 	s.httpWorkers = append(s.httpWorkers, uniqHttpWorkers...)
 
-	s.createHttpServers()
+	err := s.createHttpServers()
+	if err != nil {
+		logger.Errorf("Error creating http servers: %s", err.Error())
+	}
 }
 
 func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
@@ -490,7 +499,10 @@ func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 	// TODO move thread-safe lists/maps to own type so no deadlocks are possible
 	s.lock.Unlock()
 
-	s.createWebsocketServers()
+	err := s.createWebsocketServers()
+	if err != nil {
+		logger.Errorf("Error creating websocket servers: %s", err.Error())
+	}
 }
 
 func (s *LocalGatewayService) createApiServers() error {
@@ -659,6 +671,7 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 		apiPlugin.SubscribeToState(func(state apis.State) {
 			s.refreshApis(state)
 		})
+
 		s.apisPlugin = apiPlugin
 	}
 
@@ -693,6 +706,7 @@ func (s *LocalGatewayService) Stop() error {
 		// this will allow Start to exit
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 		defer cancel()
+
 		_ = s.srv.ShutdownWithContext(ctx)
 	}
 

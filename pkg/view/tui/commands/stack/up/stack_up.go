@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package stack_up
 
 import (
@@ -69,7 +85,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, reactive.AwaitChannel(msg.Source)
 	case reactive.ChanMsg[*deploymentspb.DeploymentUpEvent]:
-
 		// the source channel is closed
 		if !msg.Ok {
 			m.done = true
@@ -78,7 +93,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch content := msg.Value.Content.(type) {
 		case *deploymentspb.DeploymentUpEvent_Update:
-
 			if content.Update == nil || content.Update.Id == nil {
 				break
 			}
@@ -128,17 +142,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			existingChild.Message = content.Update.Message
 		case *deploymentspb.DeploymentUpEvent_Result:
 			m.resultOutput = content.Result.GetText()
-		default:
-			// discard for now
 		}
 
 		return m, reactive.AwaitChannel(msg.Source)
 	case reactive.ChanMsg[error]:
 		m.errs = append(m.errs, msg.Value)
+
 		return m, nil
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
 	}
+
 	return m, cmd
 }
 
@@ -154,11 +168,13 @@ func (m Model) View() string {
 	v.Break()
 	v.Add(fragments.Tag("up"))
 	v.Add("  Deploying with %s", m.provider)
+
 	if m.done {
 		v.Break()
 	} else {
 		v.Addln(m.spinner.View())
 	}
+
 	v.Break()
 
 	statusTree := fragments.NewStatusNode("stack", "")
@@ -168,6 +184,7 @@ func (m Model) View() string {
 
 		for _, grandchild := range child.Children {
 			resourceTime := lo.Ternary(grandchild.FinishTime.IsZero(), time.Since(grandchild.StartTime).Round(time.Second), grandchild.FinishTime.Sub(grandchild.StartTime))
+
 			statusColor := tui.Colors.Blue
 			if grandchild.Status == deploymentspb.ResourceDeploymentStatus_FAILED {
 				statusColor = tui.Colors.Red

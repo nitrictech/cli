@@ -77,7 +77,6 @@ func (m *ListPrompt) SetChoice(choice string) {
 }
 
 var (
-	tagStyle    = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
 	promptStyle = lipgloss.NewStyle().MarginLeft(2)
 	inputStyle  = lipgloss.NewStyle().MarginLeft(8)
 	textStyle   = lipgloss.NewStyle().Foreground(tui.Colors.Gray).MarginLeft(10)

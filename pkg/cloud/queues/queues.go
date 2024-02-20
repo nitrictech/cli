@@ -135,6 +135,7 @@ func (l *LocalQueuesService) Complete(ctx context.Context, req *queuespb.QueueCo
 				l.queues[req.QueueName] = append(l.queues[req.QueueName][:i], l.queues[req.QueueName][i+1:]...)
 				return &queuespb.QueueCompleteResponse{}, nil
 			}
+
 			return nil, fmt.Errorf("LeaseId: %s expired at %s, current time %s", req.LeaseId, queueItem.lease.Expiry, completeTime)
 		}
 	}

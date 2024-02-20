@@ -355,6 +355,7 @@ type stackCreateResultMsg struct {
 func (m Model) createStack() tea.Cmd {
 	return func() tea.Msg {
 		filePath, err := stack.NewStackFile(m.fs, m.provider, m.StackName(), "")
+
 		return stackCreateResultMsg{
 			err:      err,
 			filePath: filePath,

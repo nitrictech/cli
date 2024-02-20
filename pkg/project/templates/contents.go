@@ -24,9 +24,10 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-getter"
-	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+
+	"github.com/nitrictech/cli/pkg/paths"
 )
 
 const (

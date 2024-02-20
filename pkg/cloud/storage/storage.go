@@ -36,6 +36,7 @@ import (
 	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkg/grpcx"
 
+	"github.com/nitrictech/nitric/core/pkg/logger"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
 
@@ -52,7 +53,6 @@ type LocalStorageService struct {
 	listeners     State
 
 	storageListener net.Listener
-	storageServer   http.Server
 
 	bus EventBus.Bus
 }
@@ -65,7 +65,7 @@ var (
 const localStorageTopic = "local_storage"
 
 func (s *LocalStorageService) SubscribeToState(fn func(State)) {
-	s.bus.Subscribe(localStorageTopic, fn)
+	_ = s.bus.Subscribe(localStorageTopic, fn)
 }
 
 func (r *LocalStorageService) registerListener(serviceName string, registrationRequest *storagepb.RegistrationRequest) {
@@ -90,6 +90,7 @@ func (r *LocalStorageService) WorkerCount() int {
 	defer r.listenersLock.RUnlock()
 
 	workerCount := 0
+
 	for _, services := range r.listeners {
 		for _, val := range services {
 			workerCount += val
@@ -136,12 +137,15 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 		return fmt.Errorf("expected registration request on first request")
 	}
 
-	stream.Send(&storagepb.ServerMessage{
+	err = stream.Send(&storagepb.ServerMessage{
 		Id: firstRequest.Id,
 		Content: &storagepb.ServerMessage_RegistrationResponse{
 			RegistrationResponse: &storagepb.RegistrationResponse{},
 		},
 	})
+	if err != nil {
+		return err
+	}
 
 	bucketName := firstRequest.GetRegistrationRequest().GetBucketName()
 	listenEvtType := firstRequest.GetRegistrationRequest().GetBlobEventType().String()
@@ -151,21 +155,22 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 	r.registerListener(serviceName, firstRequest.GetRegistrationRequest())
 	defer r.unregisterListener(serviceName, firstRequest.GetRegistrationRequest())
 
-	eventbus.StorageBus().SubscribeAsync(listenTopicName, func(req *storagepb.ServerMessage) {
+	err = eventbus.StorageBus().SubscribeAsync(listenTopicName, func(req *storagepb.ServerMessage) {
 		err := stream.Send(req)
 		if err != nil {
 			fmt.Println("problem sending the event")
 		}
 	}, false)
+	if err != nil {
+		return fmt.Errorf("error subscribing to topic: %s", err.Error())
+	}
 
 	// block here...
 	for {
 		_, err := stream.Recv()
 		if err != nil {
 			return err
-		}
-
-		// responses are not logged since the buckets can be viewed to review the state
+		} // responses are not logged since the buckets can be viewed to review the state
 	}
 }
 
@@ -274,6 +279,7 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 	if err != nil {
 		return nil, err
 	}
+
 	blobs := []*storagepb.Blob{}
 
 	localBucket := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName)
@@ -282,15 +288,18 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 		if err != nil {
 			return err
 		}
+
 		if !info.IsDir() {
 			relPath, err := filepath.Rel(localBucket, path)
 			if err != nil {
 				return err
 			}
+
 			blobs = append(blobs, &storagepb.Blob{
 				Key: filepath.ToSlash(relPath),
 			})
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -318,7 +327,7 @@ func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.Sto
 	}
 
 	if address == "" {
-		status.Error(codes.Internal, "error generating presigned url")
+		return nil, status.Error(codes.Internal, "error generating presigned url, unknown operation")
 	}
 
 	return &storagepb.StoragePreSignUrlResponse{
@@ -333,6 +342,7 @@ type StorageOptions struct {
 
 func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 	var err error
+
 	storageService := &LocalStorageService{
 		listeners: map[string]map[string]int{},
 		bus:       EventBus.New(),
@@ -361,7 +371,12 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
-		w.Write(resp.Body)
+
+		_, err = w.Write(resp.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	})
 
 	router.HandleFunc("/write/{bucket}/{file}", func(w http.ResponseWriter, r *http.Request) {
@@ -386,10 +401,20 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success"))
+
+		_, err = w.Write([]byte("success"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	})
 
-	go http.Serve(storageService.storageListener, router)
+	go func() {
+		err := http.Serve(storageService.storageListener, router)
+		if err != nil {
+			logger.Errorf("Error serving storage listener: %s", err.Error())
+		}
+	}()
 
 	return storageService, nil
 }

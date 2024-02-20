@@ -57,5 +57,6 @@ func (s *PeekableStreamServer[ServerMessage, ClientMessage]) Recv() (ClientMessa
 func (s *PeekableStreamServer[ServerMessage, ClientMessage]) Peek() (ClientMessage, error) {
 	popped, err := s.GrpcBidiStreamServer.Recv()
 	s.buffer = append(s.buffer, lo.T2(popped, err))
+
 	return popped, err
 }

@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package runtime
 
 import (
@@ -82,13 +98,13 @@ func golangBuildContext(entrypointFilePath string, additionalIgnores []string) (
 	}, nil
 }
 
-//go:embed python.dockerfile
+//go:embed jvm.dockerfile
 var jvmDockerfile string
 var jvmIgnores = append([]string{"obj/", "bin/"}, commonIgnore...)
 
 func jvmBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
-		DockerfileContents: golangDockerfile,
+		DockerfileContents: jvmDockerfile,
 		BaseDirectory:      ".", // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),
@@ -103,7 +119,7 @@ var pythonIgnores = append([]string{"__pycache__/", "*.py[cod]", "*$py.class"}, 
 
 func pythonBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
-		DockerfileContents: golangDockerfile,
+		DockerfileContents: pythonDockerfile,
 		BaseDirectory:      ".", // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),

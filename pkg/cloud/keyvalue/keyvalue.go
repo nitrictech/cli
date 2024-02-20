@@ -106,6 +106,13 @@ func (s *BoltDocService) Get(ctx context.Context, req *keyvaluepb.KeyValueGetReq
 	}
 
 	sdkDoc, err := toSdkDoc(req.Ref, doc)
+	if err != nil {
+		return nil, newErr(
+			codes.Internal,
+			"toSdkDoc error",
+			err,
+		)
+	}
 
 	return &keyvaluepb.KeyValueGetResponse{
 		Value: sdkDoc,

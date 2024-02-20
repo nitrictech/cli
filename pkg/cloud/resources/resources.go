@@ -55,7 +55,7 @@ type LocalResourcesOptions struct {
 const localResourcesTopic = "local_resources"
 
 func (s *LocalResourcesService) SubscribeToState(fn func(lrs LocalResourcesState)) {
-	s.bus.Subscribe(localResourcesTopic, fn)
+	_ = s.bus.Subscribe(localResourcesTopic, fn)
 }
 
 // policyResourceName generates a unique name for a policy resource by hashing the policy document
@@ -103,6 +103,7 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 	case resourcespb.ResourceType_Queue:
 		err = l.state.Queues.Register(req.Id.Name, serviceName, req.GetQueue())
 	}
+
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 # https://github.com/dotnet/runtime/issues/94909
 ENV DOTNET_EnableWriteXorExecute=0
@@ -14,7 +14,7 @@ COPY . ./
 RUN dotnet publish -c Release -o out --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=true
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/runtime-deps:7.0
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0
 
 ARG HANDLER
 

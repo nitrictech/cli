@@ -11,7 +11,7 @@ WORKDIR /app
 COPY . ./
 
 # Build and publish a release
-RUN dotnet publish -c Release -o out --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=true
+RUN dotnet publish -c Release -o out --self-contained -p:PublishSingleFile=true
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0

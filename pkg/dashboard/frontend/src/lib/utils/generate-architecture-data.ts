@@ -173,6 +173,8 @@ const actionVerbs = [
   'Manage',
   'Read',
   'Write',
+  'Enqueue',
+  'Dequeue',
 ]
 
 function verbFromNitricAction(action: string) {

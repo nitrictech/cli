@@ -6,7 +6,7 @@ import {
   BucketNode,
   type BucketNodeData,
 } from '@/components/architecture/nodes/BucketNode'
-import type { BaseResource, WebSocketResponse } from '@/types'
+import type { BaseResource, WebSocketResponse, WebsocketEvent } from '@/types'
 import {
   ChatBubbleLeftRightIcon,
   ArchiveBoxIcon,
@@ -257,7 +257,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
 
     const uniqueTargets = unique(
       events.map((trigger) => ({
-        target: ws.targets[trigger],
+        target: ws.targets[trigger as WebsocketEvent],
         trigger,
       })),
       (t) => t.target,

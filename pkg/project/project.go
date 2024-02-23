@@ -133,7 +133,7 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	resourcespb.RegisterResourcesServer(grpcServer, serviceRequirements)
 	apispb.RegisterApiServer(grpcServer, serviceRequirements.ApiServer)
 	schedulespb.RegisterSchedulesServer(grpcServer, serviceRequirements)
-	// topicspb.RegisterTopicsServer(grpcServer, serviceRequirements)
+	topicspb.RegisterTopicsServer(grpcServer, serviceRequirements)
 	topicspb.RegisterSubscriberServer(grpcServer, serviceRequirements)
 	websocketspb.RegisterWebsocketHandlerServer(grpcServer, serviceRequirements)
 	storagepb.RegisterStorageListenerServer(grpcServer, serviceRequirements)

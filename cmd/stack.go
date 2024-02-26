@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -223,8 +224,12 @@ var stackUpdateCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		envVariables, err := env.ReadLocalEnv()
-		if err != nil {
-			fmt.Printf("Error reading local environment file: %s\n", err)
+		if err != nil && os.IsNotExist(err) {
+			if !os.IsNotExist(err) {
+				tui.CheckErr(err)
+			}
+			// If it doesn't exist set blank
+			envVariables = map[string]string{}
 		}
 
 		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements)

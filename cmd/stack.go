@@ -26,6 +26,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/nitrictech/cli/pkg/collector"
+	"github.com/nitrictech/cli/pkg/env"
 	"github.com/nitrictech/cli/pkg/pflagx"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/project/stack"
@@ -221,7 +222,12 @@ var stackUpdateCmd = &cobra.Command{
 		serviceRequirements, err := proj.CollectServicesRequirements()
 		tui.CheckErr(err)
 
-		spec, err := collector.ServiceRequirementsToSpec(proj.Name, map[string]string{}, serviceRequirements)
+		envVariables, err := env.ReadLocalEnv()
+		if err != nil {
+			fmt.Printf("Error reading local environment file: %s\n", err)
+		}
+
+		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements)
 		tui.CheckErr(err)
 
 		providerStdout := make(chan string)

@@ -333,9 +333,6 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	}
 
 	env = append(env, os.Environ()...)
-	for k, v := range env {
-		cmd.Env = append(cmd.Env, k+"="+v)
-	}
 
 	for k, v := range runtimeOptions.envVars {
 		env = append(env, k+"="+v)

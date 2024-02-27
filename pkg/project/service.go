@@ -332,6 +332,8 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		fmt.Sprintf("NITRIC_HTTP_PROXY_PORT=%d", randomPort[0]),
 	}
 
+	env = append(env, os.Environ()...)
+
 	for k, v := range runtimeOptions.envVars {
 		env = append(env, k+"="+v)
 	}

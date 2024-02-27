@@ -27,6 +27,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/cloud"
 	docker "github.com/nitrictech/cli/pkg/docker"
+	"github.com/nitrictech/cli/pkg/env"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
@@ -50,6 +51,11 @@ var runCmd = &cobra.Command{
 
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
+
+		err = env.LoadLocalEnv()
+		if err != nil && !os.IsNotExist(err) {
+			tui.CheckErr(err)
+		}
 
 		// Start the local cloud service analogues
 		localCloud, err := cloud.New()

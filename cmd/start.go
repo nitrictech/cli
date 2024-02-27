@@ -28,6 +28,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/cloud"
 	"github.com/nitrictech/cli/pkg/dashboard"
+	"github.com/nitrictech/cli/pkg/env"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/services"
@@ -55,6 +56,11 @@ var startCmd = &cobra.Command{
 		fmt.Print(fragments.NitricTag())
 		fmt.Println(" start")
 		fmt.Println()
+
+		err = env.LoadLocalEnv()
+		if err != nil && !os.IsNotExist(err) {
+			tui.CheckErr(err)
+		}
 
 		// Start the local cloud service analogues
 		localCloud, err := cloud.New()

@@ -17,3 +17,7 @@ func ReadLocalEnv() (map[string]string, error) {
 
 	return godotenv.Parse(file)
 }
+
+func LoadLocalEnv() error {
+	return godotenv.Load(defaultEnv)
+}

@@ -1,7 +1,8 @@
+
 # The provider to use and it's published version
 # See releases:
 # https://github.com/nitrictech/nitric/tags
-provider: nitric/gcp@1.0.0
+provider: nitric/gcp@1.0.5
 
 # The target GCP region to deploy to
 # See available regions:

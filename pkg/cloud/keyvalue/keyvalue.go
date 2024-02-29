@@ -224,6 +224,11 @@ func (s *BoltDocService) ScanKeys(req *kvstorepb.KvStoreScanKeysRequest, stream 
 	var docs []BoltDoc
 	err = db.Select(q.Re(idName, prefixPattern)).Find(&docs)
 	if err != nil {
+		// not found isn't an error, just close the stream and return no results
+		if errors.Is(err, storm.ErrNotFound) {
+			return nil
+		}
+
 		return newErr(
 			codes.Internal,
 			"failed query key/value store",

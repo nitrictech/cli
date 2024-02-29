@@ -222,6 +222,7 @@ func (s *BoltDocService) ScanKeys(req *kvstorepb.KvStoreScanKeysRequest, stream 
 	prefixPattern := "^" + regexp.QuoteMeta(req.GetPrefix())
 
 	var docs []BoltDoc
+
 	err = db.Select(q.Re(idName, prefixPattern)).Find(&docs)
 	if err != nil {
 		// not found isn't an error, just close the stream and return no results

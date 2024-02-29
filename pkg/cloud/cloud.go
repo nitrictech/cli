@@ -22,6 +22,7 @@ import (
 
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
 	"github.com/nitrictech/cli/pkg/cloud/gateway"
@@ -141,6 +142,9 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 			grpc.UnaryInterceptor(interceptor),
 			grpc.StreamInterceptor(streamInterceptor),
 		)
+
+		// Enable reflection on the gRPC server for local testing
+		reflection.Register(srv)
 
 		err := nitricMembraneServer.Start(membrane.WithGrpcServer(srv))
 		if err != nil {

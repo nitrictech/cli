@@ -332,7 +332,16 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		fmt.Sprintf("NITRIC_HTTP_PROXY_PORT=%d", randomPort[0]),
 	}
 
-	env = append(env, os.Environ()...)
+	osEnv := os.Environ()
+
+	// filter out env vars that can conflict with the container
+	bannedVars := []string{"TEMP", "TMP", "PATH", "HOME"}
+
+	osEnv = lo.Filter(osEnv, func(item string, index int) bool {
+		return !lo.Contains(bannedVars, strings.Split(item, "=")[0])
+	})
+
+	env = append(env, osEnv...)
 
 	for k, v := range runtimeOptions.envVars {
 		env = append(env, k+"="+v)

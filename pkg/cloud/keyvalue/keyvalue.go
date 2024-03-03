@@ -22,17 +22,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/asdine/storm"
+	"github.com/asdine/storm/q"
 	"go.etcd.io/bbolt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/nitrictech/cli/pkg/cloud/env"
 	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
-	keyvaluepb "github.com/nitrictech/nitric/core/pkg/proto/keyvalue/v1"
+	kvstorepb "github.com/nitrictech/nitric/core/pkg/proto/kvstore/v1"
 )
 
 const DEV_SUB_DIR_COLL = "./kv/"
@@ -47,7 +49,7 @@ type BoltDocService struct {
 	dbDir string
 }
 
-var _ keyvaluepb.KeyValueServer = (*BoltDocService)(nil)
+var _ kvstorepb.KvStoreServer = (*BoltDocService)(nil)
 
 // GetEndRangeValue - Get end range value to implement "startsWith" expression operator using where clause.
 // For example with sdk.Expression("pk", "startsWith", "Customer#") this translates to:
@@ -72,10 +74,10 @@ func (d BoltDoc) String() string {
 	return fmt.Sprintf("BoltDoc{Id: %v PartitionKey: %v SortKey: %v Value: %v}\n", d.Id, d.PartitionKey, d.SortKey, d.Value)
 }
 
-func (s *BoltDocService) Get(ctx context.Context, req *keyvaluepb.KeyValueGetRequest) (*keyvaluepb.KeyValueGetResponse, error) {
+func (s *BoltDocService) GetValue(ctx context.Context, req *kvstorepb.KvStoreGetValueRequest) (*kvstorepb.KvStoreGetValueResponse, error) {
 	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Get")
 
-	db, err := s.getLocalKVDB(req.Ref)
+	db, err := s.getLocalKVDB(req.Ref.Store)
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -114,15 +116,15 @@ func (s *BoltDocService) Get(ctx context.Context, req *keyvaluepb.KeyValueGetReq
 		)
 	}
 
-	return &keyvaluepb.KeyValueGetResponse{
+	return &kvstorepb.KvStoreGetValueResponse{
 		Value: sdkDoc,
 	}, nil
 }
 
-func (s *BoltDocService) Set(ctx context.Context, req *keyvaluepb.KeyValueSetRequest) (*keyvaluepb.KeyValueSetResponse, error) {
+func (s *BoltDocService) SetValue(ctx context.Context, req *kvstorepb.KvStoreSetValueRequest) (*kvstorepb.KvStoreSetValueResponse, error) {
 	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Set")
 
-	db, err := s.getLocalKVDB(req.Ref)
+	db, err := s.getLocalKVDB(req.Ref.Store)
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -144,15 +146,15 @@ func (s *BoltDocService) Set(ctx context.Context, req *keyvaluepb.KeyValueSetReq
 		)
 	}
 
-	return &keyvaluepb.KeyValueSetResponse{}, nil
+	return &kvstorepb.KvStoreSetValueResponse{}, nil
 }
 
-func (s *BoltDocService) Delete(ctx context.Context, req *keyvaluepb.KeyValueDeleteRequest) (*keyvaluepb.KeyValueDeleteResponse, error) {
+func (s *BoltDocService) DeleteKey(ctx context.Context, req *kvstorepb.KvStoreDeleteKeyRequest) (*kvstorepb.KvStoreDeleteKeyResponse, error) {
 	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Delete")
 
 	key := req.Ref
 
-	db, err := s.getLocalKVDB(key)
+	db, err := s.getLocalKVDB(key.Store)
 	if err != nil {
 		return nil, newErr(
 			codes.FailedPrecondition,
@@ -174,7 +176,7 @@ func (s *BoltDocService) Delete(ctx context.Context, req *keyvaluepb.KeyValueDel
 		)
 	}
 
-	return &keyvaluepb.KeyValueDeleteResponse{}, nil
+	return &kvstorepb.KvStoreDeleteKeyResponse{}, nil
 }
 
 // New - Create a new dev KV plugin
@@ -194,8 +196,64 @@ func NewBoltService() (*BoltDocService, error) {
 	return &BoltDocService{dbDir: dbDir}, nil
 }
 
-func (s *BoltDocService) getLocalKVDB(coll *keyvaluepb.ValueRef) (*storm.DB, error) {
-	dbPath := filepath.Join(s.dbDir, strings.ToLower(coll.Store)+".db")
+func (s *BoltDocService) ScanKeys(req *kvstorepb.KvStoreScanKeysRequest, stream kvstorepb.KvStore_ScanKeysServer) error {
+	newErr := grpc_errors.ErrorsWithScope("BoltDocService.Keys")
+	storeName := req.GetStore().GetName()
+
+	if storeName == "" {
+		return newErr(
+			codes.InvalidArgument,
+			"store name is required",
+			nil,
+		)
+	}
+
+	db, err := s.getLocalKVDB(storeName)
+	if err != nil {
+		return newErr(
+			codes.Internal,
+			"failed to retrieve key/value store",
+			err,
+		)
+	}
+
+	defer db.Close()
+
+	prefixPattern := "^" + regexp.QuoteMeta(req.GetPrefix())
+
+	var docs []BoltDoc
+
+	err = db.Select(q.Re(idName, prefixPattern)).Find(&docs)
+	if err != nil {
+		// not found isn't an error, just close the stream and return no results
+		if errors.Is(err, storm.ErrNotFound) {
+			return nil
+		}
+
+		return newErr(
+			codes.Internal,
+			"failed query key/value store",
+			err,
+		)
+	}
+
+	for _, doc := range docs {
+		if err := stream.Send(&kvstorepb.KvStoreScanKeysResponse{
+			Key: doc.Id,
+		}); err != nil {
+			return newErr(
+				codes.Internal,
+				"failed to send response",
+				err,
+			)
+		}
+	}
+
+	return nil
+}
+
+func (s *BoltDocService) getLocalKVDB(storeName string) (*storm.DB, error) {
+	dbPath := filepath.Join(s.dbDir, strings.ToLower(storeName)+".db")
 
 	options := storm.BoltOptions(0o600, &bbolt.Options{Timeout: 1 * time.Second})
 
@@ -207,7 +265,7 @@ func (s *BoltDocService) getLocalKVDB(coll *keyvaluepb.ValueRef) (*storm.DB, err
 	return db, nil
 }
 
-func createDoc(key *keyvaluepb.ValueRef) BoltDoc {
+func createDoc(key *kvstorepb.ValueRef) BoltDoc {
 	return BoltDoc{
 		Id:           key.Key,
 		PartitionKey: key.Key,
@@ -215,14 +273,14 @@ func createDoc(key *keyvaluepb.ValueRef) BoltDoc {
 	}
 }
 
-func toSdkDoc(ref *keyvaluepb.ValueRef, doc BoltDoc) (*keyvaluepb.Value, error) {
+func toSdkDoc(ref *kvstorepb.ValueRef, doc BoltDoc) (*kvstorepb.Value, error) {
 	content, err := structpb.NewStruct(doc.Value)
 	if err != nil {
 		// FIXME: Handle error...
 		return nil, err
 	}
 
-	return &keyvaluepb.Value{
+	return &kvstorepb.Value{
 		Ref:     ref,
 		Content: content,
 	}, nil

@@ -6,7 +6,7 @@ ENV HANDLER=${HANDLER}
 ENV PYTHONUNBUFFERED=TRUE
 
 RUN apt-get update -y && \
-    apt-get install -y ca-certificates && \
+    apt-get install -y ca-certificates git && \
     update-ca-certificates
 
 RUN pip install --upgrade pip pipenv
@@ -21,4 +21,4 @@ RUN (stat Pipfile.lock && pipenv requirements > requirements.txt) || echo "No Pi
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-ENTRYPOINT python $HANDLER
+ENTRYPOINT python -u $HANDLER

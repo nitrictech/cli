@@ -15,7 +15,8 @@ RUN dart compile exe ./${HANDLER} -o bin/main
 
 # Build a minimal serving image from AOT-compiled `/server` and required system
 # libraries and configuration files stored in `/runtime/` from the build stage.
-FROM scratch
+FROM alpine
+
 COPY --from=build /runtime/ /
 COPY --from=build /app/bin/main /app/bin/
 

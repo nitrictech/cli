@@ -6,7 +6,7 @@ import {
   BucketNode,
   type BucketNodeData,
 } from '@/components/architecture/nodes/BucketNode'
-import type { BaseResource, WebSocketResponse } from '@/types'
+import type { BaseResource, WebSocketResponse, WebsocketEvent } from '@/types'
 import {
   ChatBubbleLeftRightIcon,
   ArchiveBoxIcon,
@@ -257,7 +257,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
 
     const uniqueTargets = unique(
       events.map((trigger) => ({
-        target: ws.targets[trigger],
+        target: ws.targets[trigger as WebsocketEvent],
         trigger,
       })),
       (t) => t.target,
@@ -404,7 +404,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
             orient: 'auto-start-reverse',
           },
           label: 'Triggers',
-        }
+        } as Edge
       }),
     )
   })
@@ -439,33 +439,21 @@ export function generateArchitectureData(data: WebSocketResponse): {
   })
 
   edges.push(
-    ...Object.entries(data.policies)
-      .filter(([_, policy]) => {
-        // drop websocket policy edge if trigger edge exists
-        return !(
-          policy.resources[0].type === 'websocket' &&
-          edges.some(
-            (e) =>
-              e.id ===
-              `e-${policy.resources[0].name}-${policy.principals[0].name}`,
-          )
-        )
-      })
-      .map(([_, policy]) => {
-        return {
-          id: `e-${policy.name}`,
-          source: policy.principals[0].name,
-          target: `${policy.resources[0].type}-${policy.resources[0].name}`,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-          },
-          markerStart: {
-            type: MarkerType.ArrowClosed,
-            orient: 'auto-start-reverse',
-          },
-          label: policy.actions.map(verbFromNitricAction).join(', '),
-        } as Edge
-      }),
+    ...Object.entries(data.policies).map(([_, policy]) => {
+      return {
+        id: `e-${policy.name}`,
+        source: policy.principals[0].name,
+        target: `${policy.resources[0].type}-${policy.resources[0].name}`,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: policy.actions.map(verbFromNitricAction).join(', '),
+      } as Edge
+    }),
   )
 
   data.services.forEach((service) => {

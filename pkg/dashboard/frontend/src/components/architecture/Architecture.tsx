@@ -117,7 +117,15 @@ function ReactFlowLayout() {
     setEdges([...layouted.edges])
 
     window.requestAnimationFrame(() => {
-      fitView()
+      setTimeout(
+        () =>
+          fitView({
+            minZoom: 1,
+            maxZoom: 1.5,
+            duration: 500, // animation duration of repositioning the arch diagram
+          }),
+        100, // ensure the diagram is 100% ready before re-fitting
+      )
     })
   }, [data])
 
@@ -142,6 +150,10 @@ function ReactFlowLayout() {
             }}
             onConnect={onConnect}
             fitView
+            fitViewOptions={{
+              maxZoom: 1.5,
+              minZoom: 1,
+            }}
           >
             <MiniMap pannable zoomable className="!bg-blue-300" />
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />

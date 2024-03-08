@@ -6,6 +6,9 @@ import {
   BaseEdge,
   getBezierPath,
   useNodes,
+  useStore,
+  type ReactFlowState,
+  Position,
 } from 'reactflow'
 
 export default function NitricEdge({
@@ -29,6 +32,16 @@ export default function NitricEdge({
   const xEqual = sourceX === targetX
   const yEqual = sourceY === targetY
 
+  const isBiDirectionEdge = useStore((s: ReactFlowState) => {
+    const edgeExists = s.edges.some(
+      (e) =>
+        (e.source === target && e.target === source) ||
+        (e.target === source && e.source === target),
+    )
+
+    return edgeExists
+  })
+
   const sourceNode = allNodes.find((n) => n.id === source)
   const targetNode = allNodes.find((n) => n.id === target)
 
@@ -37,10 +50,13 @@ export default function NitricEdge({
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: edgeParams.sx,
     sourceY: edgeParams.sy,
-    sourcePosition: edgeParams.sourcePos,
+    sourcePosition: isBiDirectionEdge
+      ? edgeParams.targetPos
+      : edgeParams.sourcePos,
     targetX: edgeParams.tx,
     targetY: edgeParams.ty,
     targetPosition: edgeParams.targetPos,
+    curvature: isBiDirectionEdge ? -0.05 : undefined,
   })
 
   return (
@@ -50,7 +66,7 @@ export default function NitricEdge({
         <EdgeLabelRenderer>
           <div
             className={cn(
-              'nodrag absolute rounded-sm border bg-white p-1.5 text-[10px] font-semibold tracking-normal transition-all',
+              'nodrag absolute rounded-sm border bg-white p-1 text-[9px] font-semibold tracking-normal transition-all',
               selected ? 'border-primary' : 'border-gray-500',
             )}
             style={{

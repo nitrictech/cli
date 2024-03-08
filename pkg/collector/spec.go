@@ -319,7 +319,7 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 					}
 					oidSec.Name = schemeName
 
-					api.Components.SecuritySchemes[securityScheme.GetApiName()] = &openapi3.SecuritySchemeRef{
+					api.Components.SecuritySchemes[schemeName] = &openapi3.SecuritySchemeRef{
 						Value: oidSec,
 					}
 				default:

@@ -157,6 +157,21 @@ func typescriptBuildContext(entrypointFilePath string, additionalIgnores []strin
 	}, nil
 }
 
+//go:embed dart.dockerfile
+var dartDockerfile string
+var dartIgnores = append([]string{}, commonIgnore...)
+
+func dartBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
+	return &RuntimeBuildContext{
+		DockerfileContents: dartDockerfile,
+		BaseDirectory:      ".", // use the nitric project directory
+		BuildArguments: map[string]string{
+			"HANDLER": filepath.ToSlash(entrypointFilePath),
+		},
+		IgnoreFileContents: strings.Join(append(additionalIgnores, dartIgnores...), "\n"),
+	}, nil
+}
+
 // NewBuildContext - Creates a new runtime build context.
 // if a dockerfile path is provided a custom runtime is assumed, otherwise the entrypoint file is used for automatic detection of language runtime.
 func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
@@ -179,6 +194,8 @@ func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs
 		return javascriptBuildContext(entrypointFilePath, additionalIgnores)
 	case ".ts":
 		return typescriptBuildContext(entrypointFilePath, additionalIgnores)
+	case ".dart":
+		return dartBuildContext(entrypointFilePath, additionalIgnores)
 	default:
 		return nil, fmt.Errorf("nitric does not support files with extension %s by default", ext)
 	}

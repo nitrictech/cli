@@ -26,11 +26,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/cli/pkg/version"
+	"github.com/nitrictech/cli/pkg/view/tui"
 )
 
 func FetchLatestVersion() string {
@@ -85,9 +85,9 @@ func PrintOutdatedWarning() {
 
 	if currentVersion < latestVersion {
 		msg := fmt.Sprintf(`A new version of Nitric is available. To upgrade from version '%s' to '%s'`, currentVersion, latestVersion)
-		msg += ", visit https://nitric.io/docs/installation for instructions and release notes.\n"
+		msg += ", visit https://nitric.io/docs/installation for instructions and release notes."
 
-		pterm.Warning.Printf(msg)
+		tui.Warning.Println(msg)
 	}
 }
 

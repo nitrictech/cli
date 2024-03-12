@@ -32,7 +32,6 @@ import (
 	"github.com/fasthttp/router"
 	"github.com/fasthttp/websocket"
 	"github.com/google/uuid"
-	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -43,6 +42,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/netx"
+	"github.com/nitrictech/cli/pkg/view/tui"
 
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 
@@ -303,14 +303,14 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 					SocketName:   socketName,
 				})
 				if err != nil {
-					pterm.Error.Println(err)
+					tui.Error.Println(err.Error())
 					return
 				}
 			}()
 
 			err = s.websocketPlugin.RegisterConnection(socketName, connectionId, ws)
 			if err != nil {
-				pterm.Error.Println(err)
+				tui.Error.Println(err.Error())
 				return
 			}
 
@@ -341,7 +341,7 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 					},
 				})
 				if err != nil {
-					pterm.Error.Println(err)
+					tui.Error.Println(err.Error())
 					return
 				}
 			}
@@ -358,13 +358,13 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 				},
 			})
 			if err != nil {
-				pterm.Error.Println(err)
+				tui.Error.Println(err.Error())
 				return
 			}
 		})
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
-				pterm.Error.Println(err)
+				tui.Error.Println(err.Error())
 			}
 
 			return

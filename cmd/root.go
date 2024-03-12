@@ -22,7 +22,6 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/paths"
@@ -59,10 +58,6 @@ var rootCmd = &cobra.Command{
 		// 	pterm.Info.Debugger = true
 		// }
 
-		if CI {
-			pterm.DisableStyling()
-		}
-
 		// Ensure the Nitric Home Directory Exists
 		if _, err := os.Stat(paths.NitricHomeDir()); os.IsNotExist(err) {
 			err := os.MkdirAll(paths.NitricHomeDir(), 0o700) // Create the Nitric Home Directory if it's missing
@@ -85,7 +80,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	defer func() {
 		if err := recover(); err != nil {
-			pterm.Error.Printfln(
+			_, _ = tui.Error.Printfln(
 				"An unexpected error occurred:\n %s\n If you'd like to raise an issue in github https://github.com/nitrictech/cli/issues please include the above stack trace in the description",
 				string(debug.Stack()),
 			)

@@ -7,6 +7,9 @@ WORKDIR /app
 COPY pubspec.* ./
 RUN dart pub get
 
+# Ensure the ./bin folder exists
+RUN mkdir -p ./bin
+
 # Copy app source code and AOT compile it.
 COPY . .
 # Ensure packages are still up-to-date if anything has changed

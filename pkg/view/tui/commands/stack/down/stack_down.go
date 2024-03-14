@@ -23,7 +23,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 
 	tui "github.com/nitrictech/cli/pkg/view/tui"
@@ -150,7 +149,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			existingChild.Message = content.Update.Message
 		default:
 			// discard for now
-			pterm.Error.Println("unknown update type")
+			tui.Error.Println("unknown update type")
 		}
 
 		return m, reactive.AwaitChannel(msg.Source)

@@ -22,7 +22,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/pterm/pterm"
+
+	"github.com/nitrictech/nitric/core/pkg/logger"
 )
 
 // TakePort is just a wrapper around freeport.TakePort() that changes the
@@ -45,7 +46,7 @@ func TakePort(n int) ([]int, error) {
 	in := bufio.NewScanner(r)
 
 	for in.Scan() {
-		pterm.Debug.Println(strings.TrimPrefix(in.Text(), "[INFO] "))
+		logger.Debug(strings.TrimPrefix(in.Text(), "[INFO] "))
 	}
 
 	return ports, err

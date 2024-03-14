@@ -43,12 +43,12 @@ type TagPrinter struct {
 	Prefix string
 }
 
-func (t *TagPrinter) Println(message string) (n int, err error) {
-	return fmt.Println(t.Prefix + " " + message)
+func (t *TagPrinter) Println(message string) {
+	fmt.Println(t.Prefix, message)
 }
 
-func (t *TagPrinter) Printfln(message string, a ...interface{}) (n int, err error) {
-	return fmt.Printf(t.Prefix+" "+message+"\n", a...)
+func (t *TagPrinter) Printfln(message string, a ...interface{}) {
+	fmt.Println(t.Prefix, fmt.Sprintf(message, a...))
 }
 
 func addPrefix(text string, foreground lipgloss.CompleteColor, background lipgloss.CompleteColor) string {

@@ -80,7 +80,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	defer func() {
 		if err := recover(); err != nil {
-			_, _ = tui.Error.Printfln(
+			tui.Error.Printfln(
 				"An unexpected error occurred:\n %s\n If you'd like to raise an issue in github https://github.com/nitrictech/cli/issues please include the above stack trace in the description",
 				string(debug.Stack()),
 			)

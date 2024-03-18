@@ -57,6 +57,11 @@ func customBuildContext(entrypointFilePath string, dockerfilePath string, buildA
 
 	// Get the ignore file contents
 
+	// ensure build args exists
+	if buildArgs == nil {
+		buildArgs = map[string]string{}
+	}
+
 	// Append handler to build args
 	buildArgs["HANDLER"] = filepath.ToSlash(entrypointFilePath)
 

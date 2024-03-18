@@ -70,7 +70,7 @@ func getDockerIgnores(dockerIgnorePath string, fs afero.Fs) ([]string, error) {
 		return lines, nil
 	}
 
-	return nil, nil
+	return []string{}, nil
 }
 
 func customBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {

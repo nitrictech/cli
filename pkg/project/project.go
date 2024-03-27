@@ -309,6 +309,10 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 
 			var buildContext *runtime.RuntimeBuildContext
 
+			otherEntryPointFiles := lo.Filter(files, func(file string, index int) bool {
+				return file != f
+			})
+
 			if serviceSpec.Runtime != "" {
 				// We have a custom runtime
 				customRuntime, ok := projectConfig.Runtimes[serviceSpec.Runtime]
@@ -320,8 +324,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 					relativeServiceEntrypointPath,
 					customRuntime.Dockerfile,
 					customRuntime.Args,
-					// TODO: Get other entrypoint files as ignores
-					[]string{},
+					otherEntryPointFiles,
 					fs,
 				)
 				if err != nil {
@@ -332,8 +335,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 					relativeServiceEntrypointPath,
 					"",
 					map[string]string{},
-					// TODO: Get other entrypoint files as ignores
-					[]string{},
+					otherEntryPointFiles,
 					fs,
 				)
 				if err != nil {

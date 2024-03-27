@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/spf13/afero"
 )
 
 func TestGenerate(t *testing.T) {
@@ -29,6 +30,8 @@ func TestGenerate(t *testing.T) {
 	pythonFile, _ := os.ReadFile("python.dockerfile")
 	jsFile, _ := os.ReadFile("javascript.dockerfile")
 	jvmFile, _ := os.ReadFile("jvm.dockerfile")
+
+	fs := afero.NewOsFs()
 
 	tests := []struct {
 		name        string
@@ -63,7 +66,7 @@ func TestGenerate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rt, err := NewBuildContext(tt.handler, "", map[string]string{}, []string{}, nil)
+			rt, err := NewBuildContext(tt.handler, "", map[string]string{}, []string{}, fs)
 			if err != nil {
 				t.Error(err)
 			}

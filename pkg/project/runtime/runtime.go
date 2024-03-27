@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 )
 
@@ -47,6 +48,31 @@ const (
 
 var commonIgnore = []string{".nitric/", "!.nitric/*.yaml", ".git/", ".idea/", ".vscode/", ".github/", "*.dockerfile", "*.dockerignore"}
 
+func getDockerIgnores(dockerIgnorePath string, fs afero.Fs) ([]string, error) {
+	// Check if the file exists
+	exists, err := afero.Exists(fs, dockerIgnorePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		// Read the file
+		content, err := afero.ReadFile(fs, dockerIgnorePath)
+		if err != nil {
+			return nil, err
+		}
+
+		// Split the content into lines
+		lines := lo.Filter[string](strings.Split(string(content), "\n"), func(line string, index int) bool {
+			return strings.TrimSpace(line) != ""
+		})
+
+		return lines, nil
+	}
+
+	return []string{}, nil
+}
+
 func customBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
 	// Get the dockerfile contents
 	// dockerfilePath
@@ -55,7 +81,10 @@ func customBuildContext(entrypointFilePath string, dockerfilePath string, buildA
 		return nil, err
 	}
 
-	// Get the ignore file contents
+	// ensure build args exists
+	if buildArgs == nil {
+		buildArgs = map[string]string{}
+	}
 
 	// Append handler to build args
 	buildArgs["HANDLER"] = filepath.ToSlash(entrypointFilePath)
@@ -179,10 +208,26 @@ func dartBuildContext(entrypointFilePath string, additionalIgnores []string) (*R
 // if a dockerfile path is provided a custom runtime is assumed, otherwise the entrypoint file is used for automatic detection of language runtime.
 func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
 	if dockerfilePath != "" {
+		dockerIgnorePath := fmt.Sprintf("%s.dockerignore", dockerfilePath)
+
+		dockerIgnores, err := getDockerIgnores(dockerIgnorePath, fs)
+		if err != nil {
+			return nil, err
+		}
+
+		additionalIgnores = append(additionalIgnores, dockerIgnores...)
+
 		return customBuildContext(entrypointFilePath, dockerfilePath, buildArgs, additionalIgnores, fs)
 	}
 
 	ext := filepath.Ext(entrypointFilePath)
+
+	dockerIgnores, err := getDockerIgnores(".dockerignore", fs)
+	if err != nil {
+		return nil, err
+	}
+
+	additionalIgnores = append(additionalIgnores, dockerIgnores...)
 
 	switch ext {
 	case ".csproj":

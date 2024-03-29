@@ -10,6 +10,19 @@ const APIResponseContent: React.FC<Props> = ({ response }) => {
   let contentType = response.headers!['content-type']
   contentType = Array.isArray(contentType) ? contentType[0] : contentType
 
+  // Default to text response
+  if (!contentType) {
+    return (
+      <CodeEditor
+        id="api-response"
+        enableCopy
+        contentType={contentType}
+        value={response.data}
+        readOnly
+      />
+    )
+  }
+
   if (contentType.startsWith('image/')) {
     return (
       <img

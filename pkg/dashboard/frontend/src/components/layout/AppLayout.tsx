@@ -1,10 +1,4 @@
-import {
-  Fragment,
-  type PropsWithChildren,
-  type ReactNode,
-  useState,
-} from 'react'
-import { Dialog, Popover, Transition } from '@headlessui/react'
+import type { PropsWithChildren, ReactNode } from 'react'
 import {
   DocumentDuplicateIcon,
   Bars3Icon,
@@ -12,7 +6,6 @@ import {
   XMarkIcon,
   ClockIcon,
   ArchiveBoxIcon,
-  CircleStackIcon,
   MegaphoneIcon,
   QuestionMarkCircleIcon,
   PaperAirplaneIcon,
@@ -33,6 +26,8 @@ import { Button } from '../ui/button'
 import { ExclamationCircleIcon } from '@heroicons/react/20/solid'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { Spinner } from '../shared'
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
+import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet'
 
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
@@ -103,7 +98,6 @@ const AppLayout: React.FC<Props> = ({
   routePath = '/',
 }) => {
   const { data, state } = useWebSocket()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // remove trailing slash
   routePath = routePath !== '/' ? routePath.replace(/\/$/, '') : routePath
@@ -149,140 +143,6 @@ const AppLayout: React.FC<Props> = ({
     <>
       <TooltipProvider>
         <Toaster position="top-right" />
-        <Transition.Root show={sidebarOpen} as={Fragment}>
-          <Dialog
-            as="div"
-            className="relative z-50 lg:hidden"
-            onClose={setSidebarOpen}
-          >
-            <Transition.Child
-              as={Fragment}
-              enter="transition-opacity ease-linear duration-300"
-              enterFrom="opacity-0"
-              enterTo="opacity-100"
-              leave="transition-opacity ease-linear duration-300"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            >
-              <div className="fixed inset-0 bg-white/80" />
-            </Transition.Child>
-
-            <div className="fixed inset-0 flex">
-              <Transition.Child
-                as={Fragment}
-                enter="transition ease-in-out duration-300 transform"
-                enterFrom="-translate-x-full"
-                enterTo="translate-x-0"
-                leave="transition ease-in-out duration-300 transform"
-                leaveFrom="translate-x-0"
-                leaveTo="-translate-x-full"
-              >
-                <Dialog.Panel className="relative mr-16 flex w-full max-w-xs flex-1">
-                  <Transition.Child
-                    as={Fragment}
-                    enter="ease-in-out duration-300"
-                    enterFrom="opacity-0"
-                    enterTo="opacity-100"
-                    leave="ease-in-out duration-300"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                  >
-                    <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
-                      <button
-                        type="button"
-                        className="-m-2.5 p-2.5"
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        <span className="sr-only">Close sidebar</span>
-                        <XMarkIcon
-                          className="h-6 w-6 text-white"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </div>
-                  </Transition.Child>
-                  {/* Sidebar component, swap this element with another sidebar if you like */}
-                  <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-2">
-                    <div className="flex h-16 shrink-0 items-center">
-                      <img
-                        className="h-8 w-auto"
-                        src="/nitric-no-text.svg"
-                        alt="Nitric Logo"
-                      />
-                    </div>
-                    <nav className="flex flex-1 flex-col">
-                      <ul className="flex flex-1 flex-col gap-y-7">
-                        <li>
-                          <ul className="-mx-2 space-y-1">
-                            {navigation.map((item) => (
-                              <li key={item.name}>
-                                <a
-                                  href={item.href}
-                                  className={cn(
-                                    item.href === routePath
-                                      ? 'bg-gray-50 text-primary'
-                                      : 'text-gray-700 hover:bg-gray-50 hover:text-primary',
-                                    'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
-                                  )}
-                                >
-                                  <item.icon
-                                    className={cn(
-                                      item.href === routePath
-                                        ? 'text-primary'
-                                        : 'text-gray-400 group-hover:text-primary',
-                                      'h-6 w-6 shrink-0',
-                                    )}
-                                    aria-hidden="true"
-                                  />
-                                  <span>{item.name}</span>
-                                  {item.count ? (
-                                    <span
-                                      data-testid={`${item.name}-count`}
-                                      className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-xs ring-2 ring-gray-100"
-                                    >
-                                      {item.count}
-                                    </span>
-                                  ) : null}
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                        <li>
-                          <div className="text-xs font-semibold leading-6 text-gray-400">
-                            Resources & Feedback
-                          </div>
-                          <ul className="-mx-2 mt-2 space-y-1">
-                            {[...resourceLinks, ...communityLinks].map(
-                              (link) => (
-                                <li key={link.name}>
-                                  <a
-                                    href={link.href}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className={cn(
-                                      'items-center text-gray-700 hover:bg-gray-50 hover:text-primary',
-                                      'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
-                                    )}
-                                  >
-                                    <span className="truncate">
-                                      {link.name}
-                                    </span>
-                                    <link.icon className="h-4 w-4" />
-                                  </a>
-                                </li>
-                              ),
-                            )}
-                          </ul>
-                        </li>
-                      </ul>
-                    </nav>
-                  </div>
-                </Dialog.Panel>
-              </Transition.Child>
-            </div>
-          </Dialog>
-        </Transition.Root>
 
         <div className="hidden border-r lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-20 lg:overflow-y-auto lg:bg-white lg:pb-4">
           <div className="flex h-16 shrink-0 items-center justify-center">
@@ -344,14 +204,91 @@ const AppLayout: React.FC<Props> = ({
 
         <main className="lg:pl-20">
           <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 sm:gap-x-6 sm:px-6 lg:px-8">
-            <button
-              type="button"
-              className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <span className="sr-only">Open sidebar</span>
-              <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-            </button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button size="icon" variant="ghost" className="lg:hidden">
+                  <span className="sr-only">Open sidebar</span>
+                  <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="sm:max-w-xs">
+                <div className="flex grow flex-col gap-y-5 bg-white">
+                  <div className="flex h-16 shrink-0 items-center gap-2">
+                    <img
+                      className="h-8 w-auto"
+                      src="/nitric-no-text.svg"
+                      alt="Nitric Logo"
+                    />
+                    <span className="max-w-96 truncate font-semibold">
+                      {data?.projectName}
+                    </span>
+                  </div>
+                  <nav className="flex flex-1 flex-col">
+                    <ul className="flex flex-1 flex-col gap-y-7">
+                      <li>
+                        <ul className="-mx-2 space-y-1">
+                          {navigation.map((item) => (
+                            <li key={item.name}>
+                              <a
+                                href={item.href}
+                                className={cn(
+                                  item.href === routePath
+                                    ? 'bg-gray-50 text-primary'
+                                    : 'text-gray-700 hover:bg-gray-50 hover:text-primary',
+                                  'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
+                                )}
+                              >
+                                <item.icon
+                                  className={cn(
+                                    item.href === routePath
+                                      ? 'text-primary'
+                                      : 'text-gray-400 group-hover:text-primary',
+                                    'h-6 w-6 shrink-0',
+                                  )}
+                                  aria-hidden="true"
+                                />
+                                <span>{item.name}</span>
+                                {item.count ? (
+                                  <span
+                                    data-testid={`${item.name}-count`}
+                                    className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-xs ring-2 ring-gray-100"
+                                  >
+                                    {item.count}
+                                  </span>
+                                ) : null}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                      <li>
+                        <div className="text-xs font-semibold leading-6 text-gray-400">
+                          Resources & Feedback
+                        </div>
+                        <ul className="-mx-2 mt-2 space-y-1">
+                          {[...resourceLinks, ...communityLinks].map((link) => (
+                            <li key={link.name}>
+                              <a
+                                href={link.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={cn(
+                                  'items-center text-gray-700 hover:bg-gray-50 hover:text-primary',
+                                  'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
+                                )}
+                              >
+                                <span className="truncate">{link.name}</span>
+                                <link.icon className="h-4 w-4" />
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              </SheetContent>
+            </Sheet>
             {/* Separator */}
             <div
               className="h-6 w-px bg-gray-900/10 lg:hidden"
@@ -359,7 +296,10 @@ const AppLayout: React.FC<Props> = ({
             />
             {data?.projectName && (
               <div className="flex items-center gap-6 font-semibold leading-6 text-gray-900 md:text-lg">
-                {data.projectName} <span className="text-gray-300">/</span>{' '}
+                <span className="hidden max-w-[300px] truncate lg:block">
+                  {data.projectName}
+                </span>{' '}
+                <span className="hidden text-gray-300 lg:block">/</span>{' '}
                 <Button
                   className={cn(
                     '/architecture' === routePath && 'bg-accent',
@@ -380,202 +320,166 @@ const AppLayout: React.FC<Props> = ({
               <div className="ml-auto flex items-center gap-x-4 lg:gap-x-6">
                 {data?.currentVersion &&
                 data?.latestVersion &&
-                data?.currentVersion < data?.latestVersion ? (
-                  <Popover className="relative">
-                    {({ open }) => (
-                      <>
-                        <Popover.Button
-                          as={Button}
-                          variant={'destructive'}
-                          className={cn(
-                            open && 'text-opacity-90',
-                            'bg-orange-500 font-semibold hover:bg-orange-600',
-                          )}
-                        >
-                          <span>Update Available</span>
-                          <ExclamationCircleIcon
-                            className={cn(
-                              'ml-2 h-5 w-5 transition duration-150 ease-in-out group-hover:text-opacity-80',
-                              open && 'text-opacity-70',
-                            )}
-                            aria-hidden="true"
-                          />
-                        </Popover.Button>
-                        <Transition
-                          as={Fragment}
-                          enter="transition ease-out duration-200"
-                          enterFrom="opacity-0 translate-y-1"
-                          enterTo="opacity-100 translate-y-0"
-                          leave="transition ease-in duration-150"
-                          leaveFrom="opacity-100 translate-y-0"
-                          leaveTo="opacity-0 translate-y-1"
-                        >
-                          <Popover.Panel className="absolute left-1/2 z-10 mt-3 w-screen max-w-sm -translate-x-1/2 transform px-4 sm:px-0 lg:max-w-3xl">
-                            <div className="w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
-                              <div className="p-4">
-                                <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-gray-500">
-                                  A new version of Nitric is available
-                                </h3>
-                                <div className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50">
-                                  <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
-                                    <DocumentDuplicateIcon
-                                      className="h-6 w-6 text-gray-600 group-hover:text-primary"
-                                      aria-hidden="true"
-                                    />
-                                  </div>
-                                  <div>
-                                    <a
-                                      href={
-                                        'https://nitric.io/docs/installation'
-                                      }
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="font-semibold text-gray-900"
-                                    >
-                                      Upgrade from version &apos;
-                                      {data.currentVersion}&apos; to &apos;
-                                      {data.latestVersion}&apos;
-                                      <span className="absolute inset-0" />
-                                    </a>
-                                    <p className="mt-1 text-gray-600">
-                                      To upgrade, visit the installation docs
-                                      for instructions and release notes
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
+                data.currentVersion < data.latestVersion ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        className={
+                          'bg-orange-500 font-semibold transition-colors hover:bg-orange-600 data-[state="open"]:bg-orange-600'
+                        }
+                      >
+                        <span className="hidden lg:block">
+                          Update Available
+                        </span>
+                        <span className="lg:hidden">Update</span>
+                        <ExclamationCircleIcon
+                          className={
+                            'ml-2 h-5 w-5 transition duration-150 ease-in-out group-hover:text-opacity-80'
+                          }
+                          aria-hidden="true"
+                        />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white p-0 text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
+                      <div className="p-4">
+                        <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-gray-500">
+                          A new version of Nitric is available
+                        </h3>
+                        <div className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50">
+                          <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
+                            <DocumentDuplicateIcon
+                              className="h-6 w-6 text-gray-600 group-hover:text-primary"
+                              aria-hidden="true"
+                            />
+                          </div>
+                          <div>
+                            <a
+                              href={'https://nitric.io/docs/installation'}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-semibold text-gray-900"
+                            >
+                              Upgrade from version &apos;
+                              {data.currentVersion}&apos; to &apos;
+                              {data.latestVersion}&apos;
+                              <span className="absolute inset-0" />
+                            </a>
+                            <p className="mt-1 text-gray-600">
+                              To upgrade, visit the installation docs for
+                              instructions and release notes
+                            </p>
+                          </div>
+                        </div>
+                      </div>
 
-                              <div className="bg-gray-50">
-                                <div className="flex flex-col justify-between">
-                                  <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-gray-500">
-                                    Reach out to the community
-                                  </h3>
-                                  <div className="grid grid-cols-2 divide-x divide-gray-900/5">
-                                    {communityLinks.map((item) => (
-                                      <a
-                                        key={item.name}
-                                        href={item.href}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
-                                      >
-                                        <item.icon
-                                          className="h-5 w-5 flex-none text-gray-400"
-                                          aria-hidden="true"
-                                        />
-                                        {item.name}
-                                      </a>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </Popover.Panel>
-                        </Transition>
-                      </>
-                    )}
+                      <div className="bg-gray-50">
+                        <div className="flex flex-col justify-between">
+                          <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-gray-500">
+                            Reach out to the community
+                          </h3>
+                          <div className="grid grid-cols-2 divide-x divide-gray-900/5">
+                            {communityLinks.map((item) => (
+                              <a
+                                key={item.name}
+                                href={item.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
+                              >
+                                <item.icon
+                                  className="h-5 w-5 flex-none text-gray-400"
+                                  aria-hidden="true"
+                                />
+                                {item.name}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </PopoverContent>
                   </Popover>
                 ) : null}
-                <span className="hidden font-semibold md:block">
+                <span className="hidden font-semibold lg:block">
                   Local Dashboard
                 </span>
-                <Popover className="relative">
-                  {({ open }) => (
-                    <>
-                      <Popover.Button
-                        as={Button}
-                        variant={'outline'}
-                        className={cn(
-                          open && 'text-opacity-90',
-                          'font-semibold',
-                        )}
-                      >
+                <div className="relative">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="group font-semibold">
                         <QuestionMarkCircleIcon
-                          className={cn(
-                            'mr-2 h-5 w-5 text-gray-500 transition duration-150 ease-in-out group-hover:text-opacity-80',
-                            open && 'text-opacity-70',
-                          )}
+                          className={
+                            'mr-2 h-5 w-5 text-gray-500 transition duration-150 ease-in-out group-hover:text-opacity-80 group-data-[state="open"]:text-opacity-90'
+                          }
                           aria-hidden="true"
                         />
                         <span>Help</span>
-                      </Popover.Button>
-                      <Transition
-                        as={Fragment}
-                        enter="transition ease-out duration-200"
-                        enterFrom="opacity-0 translate-y-1"
-                        enterTo="opacity-100 translate-y-0"
-                        leave="transition ease-in duration-150"
-                        leaveFrom="opacity-100 translate-y-0"
-                        leaveTo="opacity-0 translate-y-1"
-                      >
-                        <Popover.Panel className="absolute left-1/2 z-10 mt-3 w-screen max-w-sm -translate-x-1/2 transform px-4 sm:px-0 lg:max-w-3xl">
-                          <div className="w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
-                            <div className="p-4">
-                              <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-gray-500">
-                                Need help with your project?
-                              </h3>
-                              {resourceLinks.map((item) => (
-                                <div
-                                  key={item.name}
-                                  className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50"
-                                >
-                                  <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
-                                    <item.icon
-                                      className="h-6 w-6 text-gray-600 group-hover:text-primary"
-                                      aria-hidden="true"
-                                    />
-                                  </div>
-                                  <div>
-                                    <a
-                                      href={item.href}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="font-semibold text-gray-900"
-                                    >
-                                      {item.name}
-                                      <span className="absolute inset-0" />
-                                    </a>
-                                    <p className="mt-1 text-gray-600">
-                                      {item.description}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="mr-2 w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white p-0 text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
+                      <div className="p-4">
+                        <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-gray-500">
+                          Need help with your project?
+                        </h3>
+                        {resourceLinks.map((item) => (
+                          <div
+                            key={item.name}
+                            className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50"
+                          >
+                            <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
+                              <item.icon
+                                className="h-6 w-6 text-gray-600 group-hover:text-primary"
+                                aria-hidden="true"
+                              />
                             </div>
-
-                            <div className="bg-gray-50">
-                              <div className="flex flex-col justify-between">
-                                <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-gray-500">
-                                  Reach out to the community
-                                </h3>
-                                <div className="grid grid-cols-2 divide-x divide-gray-900/5">
-                                  {communityLinks.map((item) => (
-                                    <a
-                                      key={item.name}
-                                      href={item.href}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
-                                    >
-                                      <item.icon
-                                        className="h-5 w-5 flex-none text-gray-400"
-                                        aria-hidden="true"
-                                      />
-                                      {item.name}
-                                    </a>
-                                  ))}
-                                </div>
-                                <p className="ml-auto w-full truncate border-t px-4 py-2 text-center text-gray-400">
-                                  CLI Version: v{data?.currentVersion}
-                                </p>
-                              </div>
+                            <div>
+                              <a
+                                href={item.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-semibold text-gray-900"
+                              >
+                                {item.name}
+                                <span className="absolute inset-0" />
+                              </a>
+                              <p className="mt-1 text-gray-600">
+                                {item.description}
+                              </p>
                             </div>
                           </div>
-                        </Popover.Panel>
-                      </Transition>
-                    </>
-                  )}
-                </Popover>
+                        ))}
+                      </div>
+
+                      <div className="bg-gray-50">
+                        <div className="flex flex-col justify-between">
+                          <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-gray-500">
+                            Reach out to the community
+                          </h3>
+                          <div className="grid grid-cols-2 divide-x divide-gray-900/5">
+                            {communityLinks.map((item) => (
+                              <a
+                                key={item.name}
+                                href={item.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
+                              >
+                                <item.icon
+                                  className="h-5 w-5 flex-none text-gray-400"
+                                  aria-hidden="true"
+                                />
+                                {item.name}
+                              </a>
+                            ))}
+                          </div>
+                          <p className="ml-auto w-full truncate border-t px-4 py-2 text-center text-gray-400">
+                            CLI Version: v{data?.currentVersion}
+                          </p>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
           </div>

@@ -22,7 +22,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
@@ -319,11 +318,13 @@ func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.Sto
 
 	var address string = ""
 
+	// XXX: Do not URL encode keys (path needs to be preserved)
+	// TODO: May need to re-write slashes to a non-escapable character format
 	switch req.Operation {
 	case storagepb.StoragePreSignUrlRequest_WRITE:
-		address = fmt.Sprintf("http://localhost:%d/write/%s/%s", r.storageListener.Addr().(*net.TCPAddr).Port, req.BucketName, url.PathEscape(req.Key))
+		address = fmt.Sprintf("http://localhost:%d/write/%s/%s", r.storageListener.Addr().(*net.TCPAddr).Port, req.BucketName, req.Key)
 	case storagepb.StoragePreSignUrlRequest_READ:
-		address = fmt.Sprintf("http://localhost:%d/read/%s/%s", r.storageListener.Addr().(*net.TCPAddr).Port, req.BucketName, url.PathEscape(req.Key))
+		address = fmt.Sprintf("http://localhost:%d/read/%s/%s", r.storageListener.Addr().(*net.TCPAddr).Port, req.BucketName, req.Key)
 	}
 
 	if address == "" {
@@ -340,6 +341,21 @@ type StorageOptions struct {
 	SecretKey string
 }
 
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS, PUT")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 	var err error
 
@@ -354,8 +370,9 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 	}
 
 	router := mux.NewRouter()
+	router.Use(corsMiddleware)
 
-	router.HandleFunc("/read/{bucket}/{file}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/read/{bucket}/{file:.*}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		bucket := vars["bucket"]
 		file := vars["file"]
@@ -379,7 +396,7 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 		}
 	})
 
-	router.HandleFunc("/write/{bucket}/{file}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/write/{bucket}/{file:.*}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		bucket := vars["bucket"]
 		file := vars["file"]

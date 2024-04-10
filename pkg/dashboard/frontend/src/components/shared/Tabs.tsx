@@ -1,4 +1,11 @@
 import { cn } from '@/lib/utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
 
 interface Tab {
   name: string
@@ -17,23 +24,21 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round, pill }) => {
   return (
     <div>
       <div className="sm:hidden">
-        <label htmlFor="tabs" className="sr-only">
-          Select a tab
-        </label>
-        {/* Use an "onChange" listener to redirect the user to the selected tab URL. */}
-        <select
-          id="tabs"
-          name="tabs"
-          className="block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-          defaultValue={tabs[index].name}
-          onChange={(e) => setIndex(parseInt(e.target.value))}
+        <Select
+          value={index.toString()}
+          onValueChange={(value) => setIndex(parseInt(value))}
         >
-          {tabs.map((tab, idx) => (
-            <option key={tab.name} value={idx}>
-              {tab.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a tab" />
+          </SelectTrigger>
+          <SelectContent>
+            {tabs.map((tab, idx) => (
+              <SelectItem key={tab.name} value={idx.toString()}>
+                {tab.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="hidden sm:block">
         <nav

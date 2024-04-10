@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react'
 
-import { Loading, Select } from '../shared'
+import { Loading } from '../shared'
 import { useWebSocket } from '../../lib/hooks/use-web-socket'
 import AppLayout from '../layout/AppLayout'
 import StorageTreeView from './StorageTreeView'
 import FileBrowser from './FileBrowser'
 import type { Bucket } from '@/types'
 import BreadCrumbs from '../layout/BreadCrumbs'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
 
 const LOCAL_STORAGE_KEY = 'nitric-local-dash-storage-history'
 
@@ -75,18 +83,24 @@ const StorageExplorer = () => {
 
               <div className="lg:hidden">
                 <Select
-                  className="w-full"
-                  id="bucket-select"
-                  items={buckets || []}
-                  label="Select Bucket"
-                  selected={selectedBucket}
-                  setSelected={setSelectedBucket}
-                  display={(v) => (
-                    <div className="flex items-center gap-4 p-0.5 text-lg">
-                      {v.name}
-                    </div>
-                  )}
-                />
+                  value={selectedBucket.name}
+                  onValueChange={(name) => {
+                    setSelectedBucket(buckets.find((b) => b.name === name))
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Bucket" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {buckets.map((bucket) => (
+                        <SelectItem key={bucket.name} value={bucket.name}>
+                          {bucket.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="bg-white shadow sm:rounded-lg">
                 <div className="flex flex-col gap-4 px-4 py-5 sm:p-6">

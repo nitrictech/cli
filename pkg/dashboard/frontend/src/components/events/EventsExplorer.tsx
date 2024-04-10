@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useWebSocket } from '../../lib/hooks/use-web-socket'
 import type { APIResponse, EventHistoryItem, Schedule, Topic } from '@/types'
-import { Badge, Select, Spinner, Tabs, Loading } from '../shared'
+import { Badge, Spinner, Tabs, Loading } from '../shared'
 import APIResponseContent from '../apis/APIResponseContent'
 import {
   fieldRowArrToHeaders,
@@ -24,6 +24,14 @@ import { capitalize } from 'radash'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import BreadCrumbs from '../layout/BreadCrumbs'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
 
 interface Props {
   workerType: 'schedules' | 'topics'
@@ -182,18 +190,28 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                 </div>
                 {data![workerType] && (
                   <Select
-                    className="w-full"
-                    id={`${workerType}-select`}
-                    items={data![workerType]}
-                    label={capitalize(workerType)}
-                    selected={selectedWorker}
-                    setSelected={setSelectedWorker}
-                    display={(w: Worker) => (
-                      <div className="flex items-center gap-4 p-0.5 text-lg">
-                        {w.name}
-                      </div>
-                    )}
-                  />
+                    value={selectedWorker.name}
+                    onValueChange={(name) => {
+                      setSelectedWorker(
+                        data![workerType].find((b) => b.name === name),
+                      )
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue
+                        placeholder={`Select ${capitalize(workerType)}`}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {data![workerType].map((worker) => (
+                          <SelectItem key={worker.name} value={worker.name}>
+                            {worker.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
               <div className="flex items-center gap-4">

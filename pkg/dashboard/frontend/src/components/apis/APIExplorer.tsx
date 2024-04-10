@@ -6,7 +6,6 @@ import type {
   LocalStorageHistoryItem,
 } from '../../types'
 import {
-  Select,
   Badge,
   Spinner,
   Tabs,
@@ -43,6 +42,15 @@ import { APIMethodBadge } from './APIMethodBadge'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import BreadCrumbs from '../layout/BreadCrumbs'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
 
 const getTabCount = (rows: FieldRow[]) => {
   if (!rows) return 0
@@ -391,26 +399,34 @@ const APIExplorer = () => {
                   />
                 </div>
                 <div className="lg:hidden">
-                  <Select<Endpoint>
-                    items={paths}
-                    label="Endpoint"
-                    id="endpoint-select"
-                    className="w-full"
-                    selected={selectedApiEndpoint}
-                    setSelected={setSelectedApiEndpoint}
-                    display={(v) => (
-                      <div className="grid grid-cols-12 items-center gap-4 p-0.5 text-lg">
-                        <APIMethodBadge
-                          method={v.method}
-                          className="col-span-3 w-20 px-1 !text-lg md:col-span-2"
-                        />
-                        <div className="col-span-9 flex gap-4 md:col-span-10">
-                          <span>{v?.api}</span>
-                          <span>{v?.path}</span>
-                        </div>
-                      </div>
-                    )}
-                  />
+                  <Select
+                    value={selectedApiEndpoint.id}
+                    onValueChange={(id) => {
+                      setSelectedApiEndpoint(paths.find((p) => p.id === id))
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Endpoint" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {paths.map((path) => (
+                          <SelectItem key={path.id} value={path.id}>
+                            <div className="grid grid-cols-12 items-center gap-4 p-0.5 text-lg">
+                              <APIMethodBadge
+                                method={path.method}
+                                className="col-span-3 w-20 px-1.5 !text-lg md:col-span-2"
+                              />
+                              <div className="col-span-9 flex gap-4 md:col-span-10">
+                                <span>{path?.api}</span>
+                                <span>{path?.path}</span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -472,7 +488,7 @@ const APIExplorer = () => {
                 </div>
               </div>
 
-              <div className="bg-white shadow sm:rounded-lg">
+              <div className="rounded-lg bg-white shadow">
                 <Tabs
                   tabs={tabs}
                   index={currentTabIndex}
@@ -581,7 +597,7 @@ const APIExplorer = () => {
                   </div>
                 </div>
               </div>
-              <div className="bg-white shadow sm:rounded-lg">
+              <div className="rounded-lg bg-white shadow">
                 <div className="px-4 py-5 sm:p-6">
                   <div className="sm:flex sm:items-start sm:justify-between">
                     <div className="relative w-full">

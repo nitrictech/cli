@@ -155,7 +155,9 @@ func (d *downloader) repository() error {
 
 		// provide the getter needed to download the files
 		Getters: map[string]getter.Getter{
-			"https": &getter.HttpGetter{},
+			"https": &getter.HttpGetter{
+				DoNotCheckHeadFirst: true,
+			},
 		},
 	})
 

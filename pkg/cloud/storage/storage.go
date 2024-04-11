@@ -52,8 +52,10 @@ type (
 type State = map[BucketName]map[serviceName]int
 
 // Generate a signing secret for presigned URL tokens at runtime
-var signingSecret *string = nil
-var signingSecretLock sync.Mutex
+var (
+	signingSecret     *string = nil
+	signingSecretLock sync.Mutex
+)
 
 func getSigningSecret() ([]byte, error) {
 	signingSecretLock.Lock()
@@ -61,6 +63,7 @@ func getSigningSecret() ([]byte, error) {
 
 	if signingSecret == nil {
 		key := make([]byte, 32) // Generate a 256-bit key
+
 		_, err := rand.Read(key)
 		if err != nil {
 			return nil, err
@@ -346,7 +349,6 @@ func tokenFromRequest(req *storagepb.StoragePreSignUrlRequest) *jwt.Token {
 			"op":     req.Operation.String(),
 		},
 	})
-
 }
 
 func requestFromToken(token string) (*storagepb.StoragePreSignUrlRequest, error) {
@@ -383,6 +385,7 @@ func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.Sto
 	var address string = ""
 
 	token := tokenFromRequest(req)
+
 	secret, err := getSigningSecret()
 	if err != nil {
 		return nil, status.Error(codes.Internal, "error generating presigned url, could not get signing secret")

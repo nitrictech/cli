@@ -337,7 +337,7 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 	}, nil
 }
 
-func tokenFromRequset(req *storagepb.StoragePreSignUrlRequest) *jwt.Token {
+func tokenFromRequest(req *storagepb.StoragePreSignUrlRequest) *jwt.Token {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"exp": time.Now().Add(req.Expiry.AsDuration()).Unix(),
 		"request": map[string]string{
@@ -372,7 +372,6 @@ func requestFromToken(token string) (*storagepb.StoragePreSignUrlRequest, error)
 		Key:        requestMap["key"].(string),
 		Operation:  storagepb.StoragePreSignUrlRequest_Operation(storagepb.StoragePreSignUrlRequest_Operation_value[requestMap["op"].(string)]),
 	}, nil
-
 }
 
 func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.StoragePreSignUrlRequest) (*storagepb.StoragePreSignUrlResponse, error) {
@@ -383,7 +382,7 @@ func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.Sto
 
 	var address string = ""
 
-	token := tokenFromRequset(req)
+	token := tokenFromRequest(req)
 	secret, err := getSigningSecret()
 	if err != nil {
 		return nil, status.Error(codes.Internal, "error generating presigned url, could not get signing secret")

@@ -18,6 +18,8 @@ package storage
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
@@ -25,11 +27,14 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	jwt "github.com/golang-jwt/jwt/v5"
 
 	"github.com/nitrictech/cli/pkg/cloud/env"
 	"github.com/nitrictech/cli/pkg/eventbus"
@@ -45,6 +50,28 @@ type (
 )
 
 type State = map[BucketName]map[serviceName]int
+
+// Generate a signing secret for presigned URL tokens at runtime
+var signingSecret *string = nil
+var signingSecretLock sync.Mutex
+
+func getSigningSecret() ([]byte, error) {
+	signingSecretLock.Lock()
+	defer signingSecretLock.Unlock()
+
+	if signingSecret == nil {
+		key := make([]byte, 32) // Generate a 256-bit key
+		_, err := rand.Read(key)
+		if err != nil {
+			return nil, err
+		}
+
+		secret := base64.StdEncoding.EncodeToString(key)
+		signingSecret = &secret
+	}
+
+	return []byte(*signingSecret), nil
+}
 
 // LocalStorageService - A local implementation of the storage and listeners services, bypasses the gateway to forward storage change events directly to listeners.
 type LocalStorageService struct {
@@ -310,6 +337,44 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 	}, nil
 }
 
+func tokenFromRequset(req *storagepb.StoragePreSignUrlRequest) *jwt.Token {
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"exp": time.Now().Add(req.Expiry.AsDuration()).Unix(),
+		"request": map[string]string{
+			"bucket": req.BucketName,
+			"key":    req.Key,
+			"op":     req.Operation.String(),
+		},
+	})
+
+}
+
+func requestFromToken(token string) (*storagepb.StoragePreSignUrlRequest, error) {
+	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		return getSigningSecret()
+	}, jwt.WithExpirationRequired())
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("could not convert claims to map")
+	}
+
+	requestMap, ok := claims["request"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("could not convert request to map")
+	}
+
+	return &storagepb.StoragePreSignUrlRequest{
+		BucketName: requestMap["bucket"].(string),
+		Key:        requestMap["key"].(string),
+		Operation:  storagepb.StoragePreSignUrlRequest_Operation(storagepb.StoragePreSignUrlRequest_Operation_value[requestMap["op"].(string)]),
+	}, nil
+
+}
+
 func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.StoragePreSignUrlRequest) (*storagepb.StoragePreSignUrlResponse, error) {
 	err := r.ensureBucketExists(ctx, req.BucketName)
 	if err != nil {
@@ -318,13 +383,24 @@ func (r *LocalStorageService) PreSignUrl(ctx context.Context, req *storagepb.Sto
 
 	var address string = ""
 
+	token := tokenFromRequset(req)
+	secret, err := getSigningSecret()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "error generating presigned url, could not get signing secret")
+	}
+
+	tokenString, err := token.SignedString(secret)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error generating presigned url, could not sign token: %v", err))
+	}
+
 	// XXX: Do not URL encode keys (path needs to be preserved)
 	// TODO: May need to re-write slashes to a non-escapable character format
 	switch req.Operation {
 	case storagepb.StoragePreSignUrlRequest_WRITE:
-		address = fmt.Sprintf("http://localhost:%d/write/%s/%s", r.storageListener.Addr().(*net.TCPAddr).Port, req.BucketName, req.Key)
+		address = fmt.Sprintf("http://localhost:%d/write/%s", r.storageListener.Addr().(*net.TCPAddr).Port, tokenString)
 	case storagepb.StoragePreSignUrlRequest_READ:
-		address = fmt.Sprintf("http://localhost:%d/read/%s/%s", r.storageListener.Addr().(*net.TCPAddr).Port, req.BucketName, req.Key)
+		address = fmt.Sprintf("http://localhost:%d/read/%s", r.storageListener.Addr().(*net.TCPAddr).Port, tokenString)
 	}
 
 	if address == "" {
@@ -372,14 +448,29 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 	router := mux.NewRouter()
 	router.Use(corsMiddleware)
 
-	router.HandleFunc("/read/{bucket}/{file:.*}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/read/{token}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "invalid method", http.StatusBadRequest)
+			return
+		}
+
 		vars := mux.Vars(r)
-		bucket := vars["bucket"]
-		file := vars["file"]
+		token := vars["token"]
+
+		req, err := requestFromToken(token)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if req.Operation != storagepb.StoragePreSignUrlRequest_READ {
+			http.Error(w, "invalid operation", http.StatusBadRequest)
+			return
+		}
 
 		resp, err := storageService.Read(context.Background(), &storagepb.StorageReadRequest{
-			BucketName: bucket,
-			Key:        file,
+			BucketName: req.BucketName,
+			Key:        req.Key,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -396,10 +487,25 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 		}
 	})
 
-	router.HandleFunc("/write/{bucket}/{file:.*}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/write/{token}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "invalid method", http.StatusBadRequest)
+			return
+		}
+
 		vars := mux.Vars(r)
-		bucket := vars["bucket"]
-		file := vars["file"]
+		token := vars["token"]
+
+		req, err := requestFromToken(token)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if req.Operation != storagepb.StoragePreSignUrlRequest_WRITE {
+			http.Error(w, "invalid operation", http.StatusBadRequest)
+			return
+		}
 
 		content, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -408,8 +514,8 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 		}
 
 		_, err = storageService.Write(context.Background(), &storagepb.StorageWriteRequest{
-			BucketName: bucket,
-			Key:        file,
+			BucketName: req.BucketName,
+			Key:        req.Key,
 			Body:       content,
 		})
 		if err != nil {

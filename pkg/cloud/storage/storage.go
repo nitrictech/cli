@@ -163,7 +163,6 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 	fun := func(req *storagepb.ServerMessage) {
 		if strings.HasPrefix(req.GetBlobEventRequest().GetBlobEvent().Key, firstRequest.GetRegistrationRequest().KeyPrefixFilter) {
 			err := stream.Send(req)
-
 			if err != nil {
 				fmt.Println("problem sending the event")
 			}
@@ -174,7 +173,10 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 	if err != nil {
 		return fmt.Errorf("error subscribing to topic: %s", err.Error())
 	}
-	defer eventbus.StorageBus().Unsubscribe(listenTopicName, fun)
+
+	defer func() {
+		_ = eventbus.StorageBus().Unsubscribe(listenTopicName, fun)
+	}()
 
 	// block here...
 	for {

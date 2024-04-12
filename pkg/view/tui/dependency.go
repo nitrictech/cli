@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -39,7 +40,7 @@ type Dependency struct {
 
 var Pulumi = &Dependency{
 	name:    "Pulumi",
-	command: "pulumi",
+	command: "pulumi version",
 	assist: func() error {
 		var resp bool
 		_ = survey.AskOne(&survey.Confirm{
@@ -77,9 +78,17 @@ var Pulumi = &Dependency{
 
 var Docker = &Dependency{
 	name:    "Docker",
-	command: "docker",
+	command: "docker version",
 	assist: func() error {
 		return fmt.Errorf("docker is required to run this command. For installation instructions see: https://docs.docker.com/engine/install/")
+	},
+}
+
+var DockerBuildx = &Dependency{
+	name:    "Docker Buildx",
+	command: "docker buildx version",
+	assist: func() error {
+		return fmt.Errorf("docker buildx is required to run this command. For installation instructions see: https://github.com/docker/buildx")
 	},
 }
 
@@ -102,9 +111,12 @@ func checkDependencies(deps ...*Dependency) error {
 	missing := make([]*Dependency, 0)
 
 	for _, p := range deps {
-		// check if the command exists on path
-		if _, err := exec.LookPath(p.command); err != nil {
-			// We don't have the dependency add it to our missing dependency
+		cmdParts := strings.Split(p.command, " ")
+		cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
+
+		err := cmd.Run()
+
+		if err != nil {
 			missing = append(missing, p)
 		}
 	}

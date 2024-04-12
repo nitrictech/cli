@@ -494,6 +494,7 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 		}
 
 		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(req.Key))
 		w.WriteHeader(http.StatusOK)
 
 		_, err = w.Write(resp.Body)

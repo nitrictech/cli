@@ -115,7 +115,6 @@ func checkDependencies(deps ...*Dependency) error {
 		cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
 
 		err := cmd.Run()
-
 		if err != nil {
 			missing = append(missing, p)
 		}

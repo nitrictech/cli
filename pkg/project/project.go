@@ -241,6 +241,7 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 			}
 
 			return svc.Run(stopChannels[idx], updates, map[string]string{
+				"PYTHONUNBUFFERED":   "TRUE", // ensure all print statements print immediately for python
 				"NITRIC_ENVIRONMENT": "run",
 				"SERVICE_ADDRESS":    "localhost:" + strconv.Itoa(port),
 				// TODO: add .env variables.

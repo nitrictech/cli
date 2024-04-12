@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/asaskevich/EventBus"
@@ -136,6 +137,11 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 		return fmt.Errorf("expected registration request on first request")
 	}
 
+	// Added for compatibility, will be deprecated and removed in a future release
+	if firstRequest.GetRegistrationRequest().KeyPrefixFilter == "*" {
+		firstRequest.GetRegistrationRequest().KeyPrefixFilter = ""
+	}
+
 	err = stream.Send(&storagepb.ServerMessage{
 		Id: firstRequest.Id,
 		Content: &storagepb.ServerMessage_RegistrationResponse{
@@ -154,15 +160,23 @@ func (r *LocalStorageService) Listen(stream storagepb.StorageListener_ListenServ
 	r.registerListener(serviceName, firstRequest.GetRegistrationRequest())
 	defer r.unregisterListener(serviceName, firstRequest.GetRegistrationRequest())
 
-	err = eventbus.StorageBus().SubscribeAsync(listenTopicName, func(req *storagepb.ServerMessage) {
-		err := stream.Send(req)
-		if err != nil {
-			fmt.Println("problem sending the event")
+	fun := func(req *storagepb.ServerMessage) {
+		if strings.HasPrefix(req.GetBlobEventRequest().GetBlobEvent().Key, firstRequest.GetRegistrationRequest().KeyPrefixFilter) {
+			err := stream.Send(req)
+			if err != nil {
+				fmt.Println("problem sending the event")
+			}
 		}
-	}, false)
+	}
+
+	err = eventbus.StorageBus().SubscribeAsync(listenTopicName, fun, false)
 	if err != nil {
 		return fmt.Errorf("error subscribing to topic: %s", err.Error())
 	}
+
+	defer func() {
+		_ = eventbus.StorageBus().Unsubscribe(listenTopicName, fun)
+	}()
 
 	// block here...
 	for {

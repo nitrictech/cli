@@ -34,6 +34,7 @@ import (
 	"github.com/nitrictech/cli/pkg/view/tui/commands/services"
 	"github.com/nitrictech/cli/pkg/view/tui/fragments"
 	"github.com/nitrictech/cli/pkg/view/tui/teax"
+	"github.com/nitrictech/nitric/core/pkg/logger"
 )
 
 var startNoBrowser bool
@@ -89,7 +90,8 @@ var startCmd = &cobra.Command{
 		go func() {
 			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan)
 			if err != nil {
-				panic(err)
+				// typically these are just exit statuses
+				logger.Debugf("Services exited with: %s", err.Error())
 			}
 		}()
 

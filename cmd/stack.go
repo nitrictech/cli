@@ -223,7 +223,13 @@ var stackUpdateCmd = &cobra.Command{
 		serviceRequirements, err := proj.CollectServicesRequirements()
 		tui.CheckErr(err)
 
-		envVariables, err := env.ReadLocalEnv()
+		additionalEnvFiles := []string{}
+
+		if envFile != "" {
+			additionalEnvFiles = append(additionalEnvFiles, envFile)
+		}
+
+		envVariables, err := env.ReadLocalEnv(additionalEnvFiles...)
 		if err != nil && os.IsNotExist(err) {
 			if !os.IsNotExist(err) {
 				tui.CheckErr(err)

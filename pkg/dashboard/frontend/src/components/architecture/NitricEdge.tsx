@@ -8,7 +8,6 @@ import {
   useNodes,
   useStore,
   type ReactFlowState,
-  Position,
 } from 'reactflow'
 
 export default function NitricEdge({

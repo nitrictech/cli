@@ -24,8 +24,8 @@ import (
 
 var defaultEnv = ".env"
 
-func ReadLocalEnv() (map[string]string, error) {
-	file, err := os.OpenFile(defaultEnv, os.O_RDONLY|os.O_CREATE, 0o666)
+func ReadEnv(filePath string) (map[string]string, error) {
+	file, err := os.OpenFile(filePath, os.O_RDONLY|os.O_CREATE, 0o666)
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +33,31 @@ func ReadLocalEnv() (map[string]string, error) {
 	return godotenv.Parse(file)
 }
 
-func LoadLocalEnv() error {
-	return godotenv.Load(defaultEnv)
+func ReadLocalEnv(additionalFilePaths ...string) (map[string]string, error) {
+	envVariables, err := ReadEnv(defaultEnv)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	if envVariables == nil {
+		envVariables = map[string]string{}
+	}
+
+	for _, filePath := range additionalFilePaths {
+		additionalEnvVariables, err := ReadEnv(filePath)
+		if err != nil {
+			return nil, err
+		}
+
+		for key, value := range additionalEnvVariables {
+			envVariables[key] = value
+		}
+	}
+
+	return envVariables, nil
+}
+
+func LoadLocalEnv(additionalFilePaths ...string) error {
+	paths := append(additionalFilePaths, defaultEnv)
+	return godotenv.Load(paths...)
 }

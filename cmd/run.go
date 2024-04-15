@@ -52,7 +52,13 @@ var runCmd = &cobra.Command{
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
 
-		err = env.LoadLocalEnv()
+		additionalEnvFiles := []string{}
+
+		if envFile != "" {
+			additionalEnvFiles = append(additionalEnvFiles, envFile)
+		}
+
+		err = env.LoadLocalEnv(additionalEnvFiles...)
 		if err != nil && !os.IsNotExist(err) {
 			tui.CheckErr(err)
 		}

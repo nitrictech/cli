@@ -58,7 +58,13 @@ var startCmd = &cobra.Command{
 		fmt.Println(" start")
 		fmt.Println()
 
-		err = env.LoadLocalEnv()
+		additionalEnvFiles := []string{}
+
+		if envFile != "" {
+			additionalEnvFiles = append(additionalEnvFiles, envFile)
+		}
+
+		err = env.LoadLocalEnv(additionalEnvFiles...)
 		if err != nil && !os.IsNotExist(err) {
 			tui.CheckErr(err)
 		}
@@ -136,6 +142,7 @@ var startCmd = &cobra.Command{
 }
 
 func init() {
+	startCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	startCmd.PersistentFlags().BoolVar(
 		&startNoBrowser,
 		"no-browser",

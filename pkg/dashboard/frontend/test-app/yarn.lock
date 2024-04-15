@@ -52,10 +52,10 @@
   dependencies:
     google-protobuf "^3.14.0"
 
-"@nitric/sdk@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@nitric/sdk/-/sdk-1.0.0.tgz#cd375e1ba373759e26ab42ba211c68878b33e72c"
-  integrity sha512-aMXRve43SvnZtaNGFFe/1MiBhhXbSYwVqh6+JWHY+fBXfSxuGadhb9HbQq8OkZn69xNrhpijigxzG77CBRYl5A==
+"@nitric/sdk@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@nitric/sdk/-/sdk-1.1.2.tgz#60ca7cbb445607b5c34f79c5e776309716a004ad"
+  integrity sha512-oz6DMOjxjMwrSOQrclt4+MTv83UHJJ44g7NmoblmdYHB60Qcl6G76VdSMM9ychNPgjSseBM2judsuaj6FRJlEA==
   dependencies:
     "@grpc/grpc-js" "1.10.0"
     "@nitric/grpc-error-status" "^0.0.2"

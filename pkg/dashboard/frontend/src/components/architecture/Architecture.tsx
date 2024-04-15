@@ -193,6 +193,7 @@ function ReactFlowLayout() {
                   <div className="flex items-center gap-x-2">
                     <Switch
                       id="horizontal-mode"
+                      aria-label="Toggle Horizontal Mode"
                       checked={horizonal}
                       onCheckedChange={setHorizonal}
                     />

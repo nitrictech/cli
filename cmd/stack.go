@@ -186,10 +186,10 @@ var stackUpdateCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		// Step 0a. Locate/Download provider where applicable.
-		prov, err := provider.NewProvider(stackConfig.Provider)
+		prov, err := provider.NewProvider(stackConfig.Provider, fs)
 		tui.CheckErr(err)
 
-		providerFilePath, err := provider.EnsureProviderExists(fs, prov)
+		err = prov.Install()
 		tui.CheckErr(err)
 
 		// Build the Project's Services (Containers)
@@ -244,15 +244,19 @@ var stackUpdateCmd = &cobra.Command{
 		providerStdout := make(chan string)
 
 		// Step 4. Start the deployment provider server
-		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout), provider.WithStderr(providerStdout))
+		providerAddress, err := prov.Start(&provider.StartOptions{
+			Env:    envVariables,
+			StdOut: providerStdout,
+			StdErr: providerStdout,
+		})
 		tui.CheckErr(err)
 		defer func() {
-			err := providerProcess.Stop()
+			err := prov.Stop()
 			tui.CheckErr(err)
 		}()
 
 		// Step 5a. Send specification to provider for deployment
-		deploymentClient := provider.NewDeploymentClient(providerProcess.Address, true)
+		deploymentClient := provider.NewDeploymentClient(providerAddress, true)
 
 		attributes := map[string]interface{}{}
 
@@ -395,24 +399,29 @@ nitric stack down -s aws -y`,
 		tui.CheckErr(err)
 
 		// Step 0a. Locate/Download provider where applicable.
-		prov, err := provider.NewProvider(stackConfig.Provider)
+		prov, err := provider.NewProvider(stackConfig.Provider, fs)
 		tui.CheckErr(err)
 
-		providerFilePath, err := provider.EnsureProviderExists(fs, prov)
+		err = prov.Install()
 		tui.CheckErr(err)
 
 		providerStdout := make(chan string)
 
 		// Step 4. Start the deployment provider server
-		providerProcess, err := provider.StartProviderExecutable(fs, providerFilePath, provider.WithStdout(providerStdout))
+		providerAddress, err := prov.Start(&provider.StartOptions{
+			Env:    map[string]string{},
+			StdOut: providerStdout,
+			StdErr: providerStdout,
+		})
 		tui.CheckErr(err)
+
 		defer func() {
-			err = providerProcess.Stop()
+			err = prov.Stop()
 			tui.CheckErr(err)
 		}()
 
 		// Step 5a. Send specification to provider for deployment
-		deploymentClient := provider.NewDeploymentClient(providerProcess.Address, true)
+		deploymentClient := provider.NewDeploymentClient(providerAddress, true)
 
 		attributes := map[string]interface{}{}
 

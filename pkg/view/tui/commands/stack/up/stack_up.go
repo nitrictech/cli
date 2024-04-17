@@ -42,6 +42,7 @@ type Model struct {
 	errorChan          <-chan error
 	providerStdoutChan <-chan string
 	providerStdout     []string
+	providerMessages   []string
 	errs               []error
 	resultOutput       string
 
@@ -92,6 +93,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch content := msg.Value.Content.(type) {
+		case *deploymentspb.DeploymentUpEvent_Message:
+			m.providerMessages = append(m.providerMessages, content.Message)
 		case *deploymentspb.DeploymentUpEvent_Update:
 			if content.Update == nil || content.Update.Id == nil {
 				break
@@ -164,6 +167,11 @@ var (
 )
 
 func (m Model) View() string {
+	margin := fragments.TagWidth() + 2
+	if m.windowSize.Width < 60 {
+		margin = 0
+	}
+
 	v := view.New(view.WithStyle(lipgloss.NewStyle().Width(m.windowSize.Width)))
 	v.Break()
 	v.Add(fragments.Tag("up"))
@@ -176,6 +184,13 @@ func (m Model) View() string {
 	}
 
 	v.Break()
+
+	if len(m.providerMessages) > 0 {
+		for _, message := range m.providerMessages {
+			v.Addln(message).WithStyle(lipgloss.NewStyle().MarginLeft(margin))
+		}
+		v.Break()
+	}
 
 	// Not all providers report a stack tree, so we only render it if there are children
 	if len(m.stack.Children) > 1 {
@@ -198,11 +213,6 @@ func (m Model) View() string {
 				statusText := fmt.Sprintf("%s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second))
 				currentNode.AddNode(grandchild.Name, lipgloss.NewStyle().Foreground(statusColor).Render(statusText))
 			}
-		}
-
-		margin := 10
-		if m.windowSize.Width < 60 {
-			margin = 0
 		}
 
 		// when the final output is rendered the available output width is 5 characters narrower than the window size.

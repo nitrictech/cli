@@ -21,9 +21,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
+
+	"github.com/nitrictech/cli/pkg/preview"
 )
 
 type RuntimeConfiguration struct {

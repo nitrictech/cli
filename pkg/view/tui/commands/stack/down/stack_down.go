@@ -198,6 +198,7 @@ func (m Model) View() string {
 		for _, message := range m.providerMessages {
 			v.Addln(message).WithStyle(lipgloss.NewStyle().MarginLeft(margin))
 		}
+
 		v.Break()
 	}
 

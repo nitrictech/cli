@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package provider
 
 import (
@@ -10,6 +26,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+
 	"github.com/nitrictech/cli/pkg/docker"
 )
 
@@ -36,22 +53,26 @@ func (pi *ProviderImage) Install() error {
 	}
 
 	fmt.Printf("provider image %s not found locally, pulling\n", pi.imageName)
+
 	err = d.ImagePull(pi.imageName, types.ImagePullOptions{})
 	if err != nil {
 		return fmt.Errorf("error pulling image: %w", err)
 	}
+
 	return nil
 }
 
 func (pi *ProviderImage) Start(options *StartOptions) (string, error) {
 	// Start a new container
 	fmt.Printf("Starting container: %s\n", pi.imageName)
+
 	client, err := docker.New()
 	if err != nil {
 		return "", err
 	}
 
 	fmt.Printf("Creating container: %s\n", pi.imageName)
+
 	env := []string{}
 	for k, v := range options.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
@@ -100,6 +121,7 @@ func (pi *ProviderImage) Start(options *StartOptions) (string, error) {
 	}
 
 	fmt.Printf("Starting container: %s\n", pi.containerId)
+
 	err = client.ContainerStart(context.Background(), pi.containerId, types.ContainerStartOptions{})
 	if err != nil {
 		return "", err
@@ -114,13 +136,17 @@ func (pi *ProviderImage) Start(options *StartOptions) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	go func() {
 		defer stdOutAtt.Close()
 
-		io.Copy(writerFunc(func(p []byte) (n int, err error) {
+		_, err := io.Copy(writerFunc(func(p []byte) (n int, err error) {
 			options.StdOut <- string(p)
 			return len(p), nil
 		}), stdOutAtt.Reader)
+		if err != nil {
+			options.StdErr <- fmt.Sprintf("error reading container stdout: %s", err)
+		}
 	}()
 
 	return fmt.Sprintf("127.0.0.1:%s", providerPort), nil
@@ -156,6 +182,7 @@ func (pi *ProviderImage) Uninstall() error {
 
 	// Remove the image
 	_, err = client.ImageRemove(context.Background(), pi.imageName, types.ImageRemoveOptions{})
+
 	return err
 }
 

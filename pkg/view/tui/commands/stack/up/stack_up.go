@@ -189,12 +189,12 @@ func (m Model) View() string {
 		for _, message := range m.providerMessages {
 			v.Addln(message).WithStyle(lipgloss.NewStyle().MarginLeft(margin))
 		}
+
 		v.Break()
 	}
 
 	// Not all providers report a stack tree, so we only render it if there are children
 	if len(m.stack.Children) > 1 {
-
 		statusTree := fragments.NewStatusNode("stack", "")
 
 		for _, child := range m.stack.Children {

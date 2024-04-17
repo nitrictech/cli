@@ -37,6 +37,7 @@ import (
 
 	"github.com/nitrictech/cli/pkg/cloud"
 	"github.com/nitrictech/cli/pkg/collector"
+	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
@@ -55,6 +56,7 @@ const tempBuildDir = "./.nitric/build"
 type Project struct {
 	Name      string
 	Directory string
+	Preview   []preview.Feature
 
 	services []Service
 }
@@ -369,6 +371,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 	return &Project{
 		Name:      projectConfig.Name,
 		Directory: projectConfig.Directory,
+		Preview:   projectConfig.Preview,
 		services:  services,
 	}, nil
 }

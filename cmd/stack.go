@@ -186,7 +186,7 @@ var stackUpdateCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		// Step 0a. Locate/Download provider where applicable.
-		prov, err := provider.NewProvider(stackConfig.Provider, fs)
+		prov, err := provider.NewProvider(stackConfig.Provider, proj, fs)
 		tui.CheckErr(err)
 
 		err = prov.Install()
@@ -399,7 +399,7 @@ nitric stack down -s aws -y`,
 		tui.CheckErr(err)
 
 		// Step 0a. Locate/Download provider where applicable.
-		prov, err := provider.NewProvider(stackConfig.Provider, fs)
+		prov, err := provider.NewProvider(stackConfig.Provider, proj, fs)
 		tui.CheckErr(err)
 
 		err = prov.Install()

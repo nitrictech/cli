@@ -294,6 +294,8 @@ var stackUpdateCmd = &cobra.Command{
 			// non-interactive environment
 			for update := range eventChan {
 				switch content := update.Content.(type) {
+				case *deploymentspb.DeploymentUpEvent_Message:
+					fmt.Printf("%s\n", content.Message)
 				case *deploymentspb.DeploymentUpEvent_Update:
 					updateResType := ""
 					updateResName := ""
@@ -457,6 +459,8 @@ nitric stack down -s aws -y`,
 			// non-interactive environment
 			for update := range eventChannel {
 				switch content := update.Content.(type) {
+				case *deploymentspb.DeploymentDownEvent_Message:
+					fmt.Printf("%s\n", content.Message)
 				case *deploymentspb.DeploymentDownEvent_Update:
 					updateResType := ""
 					updateResName := ""

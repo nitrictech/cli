@@ -63,15 +63,10 @@ func (pi *ProviderImage) Install() error {
 }
 
 func (pi *ProviderImage) Start(options *StartOptions) (string, error) {
-	// Start a new container
-	fmt.Printf("Starting container: %s\n", pi.imageName)
-
 	client, err := docker.New()
 	if err != nil {
 		return "", err
 	}
-
-	fmt.Printf("Creating container: %s\n", pi.imageName)
 
 	env := []string{}
 	for k, v := range options.Env {
@@ -111,16 +106,12 @@ func (pi *ProviderImage) Start(options *StartOptions) (string, error) {
 		},
 	}
 
-	fmt.Printf("Creating container: %s\n", pi.imageName)
-
 	if pi.containerId == "" {
 		pi.containerId, err = client.ContainerCreate(containerConfig, hostConfig, nil, "")
 		if err != nil {
 			return "", err
 		}
 	}
-
-	fmt.Printf("Starting container: %s\n", pi.containerId)
 
 	err = client.ContainerStart(context.Background(), pi.containerId, types.ContainerStartOptions{})
 	if err != nil {

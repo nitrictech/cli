@@ -155,6 +155,7 @@ func getMessageChunks(columnWidth int, update project.ServiceRunUpdate) []string
 		endPoint := firstLineWidth
 
 		section := 0
+
 		for endPoint < len(message) {
 			messageChunks = append(messageChunks, message[startPoint:endPoint])
 
@@ -164,6 +165,7 @@ func getMessageChunks(columnWidth int, update project.ServiceRunUpdate) []string
 			if section > 1 {
 				startPoint = (columnWidth * section) - fileLength
 			}
+
 			endPoint = (columnWidth * (section + 1)) - fileLength
 		}
 

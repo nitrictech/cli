@@ -19,7 +19,5 @@ package preview
 type Feature = string
 
 const (
-	Feature_Dockerfile Feature = "dockerfile"
-	Feature_Websockets Feature = "websockets"
-	Feature_Http       Feature = "http"
+	Feature_DockerProviders Feature = "docker-providers"
 )

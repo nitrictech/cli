@@ -23,6 +23,8 @@ import (
 
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
+
+	"github.com/nitrictech/cli/pkg/preview"
 )
 
 type RuntimeConfiguration struct {
@@ -51,6 +53,7 @@ type ProjectConfiguration struct {
 	Directory string                          `yaml:"-"`
 	Services  []ServiceConfiguration          `yaml:"services"`
 	Runtimes  map[string]RuntimeConfiguration `yaml:"runtimes,omitempty"`
+	Preview   []preview.Feature               `yaml:"preview,omitempty"`
 }
 
 const defaultNitricYamlPath = "./nitric.yaml"

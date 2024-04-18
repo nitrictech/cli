@@ -42,6 +42,7 @@ type Model struct {
 	errorChan          <-chan error
 	providerStdoutChan <-chan string
 	providerStdout     []string
+	providerMessages   []string
 	errs               []error
 
 	done bool
@@ -91,6 +92,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch content := msg.Value.Content.(type) {
+		case *deploymentspb.DeploymentDownEvent_Message:
+			m.providerMessages = append(m.providerMessages, content.Message)
 		case *deploymentspb.DeploymentDownEvent_Update:
 			if content.Update == nil || content.Update.Id == nil {
 				break
@@ -171,6 +174,11 @@ var (
 )
 
 func (m Model) View() string {
+	margin := fragments.TagWidth() + 2
+	if m.windowSize.Width < 60 {
+		margin = 0
+	}
+
 	// print the stack?
 	v := view.New(view.WithStyle(lipgloss.NewStyle().Width(m.windowSize.Width)))
 	v.Break()
@@ -186,35 +194,41 @@ func (m Model) View() string {
 
 	v.Break()
 
-	statusTree := fragments.NewStatusNode("stack", "")
-
-	for _, child := range m.stack.Children {
-		currentNode := statusTree.AddNode(child.Name, "")
-
-		for _, grandchild := range child.Children {
-			resourceTime := lo.Ternary(grandchild.FinishTime.IsZero(), time.Since(grandchild.StartTime).Round(time.Second), grandchild.FinishTime.Sub(grandchild.StartTime))
-
-			statusColor := tui.Colors.Blue
-			if grandchild.Status == deploymentspb.ResourceDeploymentStatus_FAILED {
-				statusColor = tui.Colors.Red
-			} else if grandchild.Status == deploymentspb.ResourceDeploymentStatus_SUCCESS || grandchild.Action == deploymentspb.ResourceDeploymentAction_SAME {
-				statusColor = tui.Colors.Green
-			}
-
-			statusText := fmt.Sprintf("%s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second))
-			currentNode.AddNode(grandchild.Name, lipgloss.NewStyle().Foreground(statusColor).Render(statusText))
+	if len(m.providerMessages) > 0 {
+		for _, message := range m.providerMessages {
+			v.Addln(message).WithStyle(lipgloss.NewStyle().MarginLeft(margin))
 		}
+
+		v.Break()
 	}
 
-	margin := 10
-	if m.windowSize.Width < 60 {
-		margin = 0
+	// Not all providers report a stack tree, so we only render it if there are children
+	if len(m.stack.Children) > 1 {
+		statusTree := fragments.NewStatusNode("stack", "")
+
+		for _, child := range m.stack.Children {
+			currentNode := statusTree.AddNode(child.Name, "")
+
+			for _, grandchild := range child.Children {
+				resourceTime := lo.Ternary(grandchild.FinishTime.IsZero(), time.Since(grandchild.StartTime).Round(time.Second), grandchild.FinishTime.Sub(grandchild.StartTime))
+
+				statusColor := tui.Colors.Blue
+				if grandchild.Status == deploymentspb.ResourceDeploymentStatus_FAILED {
+					statusColor = tui.Colors.Red
+				} else if grandchild.Status == deploymentspb.ResourceDeploymentStatus_SUCCESS || grandchild.Action == deploymentspb.ResourceDeploymentAction_SAME {
+					statusColor = tui.Colors.Green
+				}
+
+				statusText := fmt.Sprintf("%s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second))
+				currentNode.AddNode(grandchild.Name, lipgloss.NewStyle().Foreground(statusColor).Render(statusText))
+			}
+		}
+
+		// when the final output is rendered the available output width is 5 characters narrower than the window size.
+		lastRunFix := 5
+
+		v.Addln(statusTree.Render(m.windowSize.Width - margin - lastRunFix)).WithStyle(lipgloss.NewStyle().MarginLeft(margin))
 	}
-
-	// when the final output is rendered the available output width is 5 characters narrower than the window size.
-	lastRunFix := 5
-
-	v.Addln(statusTree.Render(m.windowSize.Width - margin - lastRunFix)).WithStyle(lipgloss.NewStyle().MarginLeft(margin))
 
 	// Provider Stdout and Stderr rendering
 	if len(m.providerStdout) > 0 {

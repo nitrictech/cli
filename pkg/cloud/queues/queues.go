@@ -24,7 +24,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"google.golang.org/grpc/codes"
 
+	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
 	queuespb "github.com/nitrictech/nitric/core/pkg/proto/queues/v1"
 )
 
@@ -80,14 +82,24 @@ func (l *LocalQueuesService) Enqueue(ctx context.Context, req *queuespb.QueueEnq
 
 // Receive message(s) from a queue
 func (l *LocalQueuesService) Dequeue(ctx context.Context, req *queuespb.QueueDequeueRequest) (*queuespb.QueueDequeueResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("DevQueuesService.Dequeue")
+
 	l.queueLock.Lock()
 	defer l.queueLock.Unlock()
 	l.ensureQueue(req.QueueName)
 
 	if req.Depth < 1 {
-		return nil, fmt.Errorf("invalid depth: %d cannot be less than one", req.Depth)
+		return nil, newErr(
+			codes.InvalidArgument,
+			fmt.Sprintf("invalid depth: %d cannot be less than one", req.Depth),
+			nil,
+		)
 	} else if req.Depth > 10 {
-		return nil, fmt.Errorf("invalid depth: %d cannot be greater than 10", req.Depth)
+		return nil, newErr(
+			codes.InvalidArgument,
+			fmt.Sprintf("invalid depth: %d cannot be less than one", req.Depth),
+			nil,
+		)
 	}
 
 	resp := &queuespb.QueueDequeueResponse{
@@ -121,6 +133,8 @@ func (l *LocalQueuesService) Dequeue(ctx context.Context, req *queuespb.QueueDeq
 
 // Complete an item previously popped from a queue
 func (l *LocalQueuesService) Complete(ctx context.Context, req *queuespb.QueueCompleteRequest) (*queuespb.QueueCompleteResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("DevQueuesService.Complete")
+
 	l.queueLock.Lock()
 	defer l.queueLock.Unlock()
 	l.ensureQueue(req.QueueName)
@@ -136,11 +150,19 @@ func (l *LocalQueuesService) Complete(ctx context.Context, req *queuespb.QueueCo
 				return &queuespb.QueueCompleteResponse{}, nil
 			}
 
-			return nil, fmt.Errorf("LeaseId: %s expired at %s, current time %s", req.LeaseId, queueItem.lease.Expiry, completeTime)
+			return nil, newErr(
+				codes.FailedPrecondition,
+				fmt.Sprintf("LeaseId: %s expired at %s, current time %s", req.LeaseId, queueItem.lease.Expiry, completeTime),
+				nil,
+			)
 		}
 	}
 
-	return nil, fmt.Errorf("LeaseId: %s not found", req.LeaseId)
+	return nil, newErr(
+		codes.InvalidArgument,
+		fmt.Sprintf("LeaseId: %s not found", req.LeaseId),
+		nil,
+	)
 }
 
 // Create new Dev EventService

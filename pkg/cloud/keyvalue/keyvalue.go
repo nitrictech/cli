@@ -169,6 +169,14 @@ func (s *BoltDocService) DeleteKey(ctx context.Context, req *kvstorepb.KvStoreDe
 
 	err = db.DeleteStruct(&doc)
 	if err != nil {
+		if errors.Is(err, storm.ErrNotFound) {
+			return nil, newErr(
+				codes.NotFound,
+				"document not found",
+				err,
+			)
+		}
+
 		return nil, newErr(
 			codes.Internal,
 			"Deletion error",
@@ -211,7 +219,7 @@ func (s *BoltDocService) ScanKeys(req *kvstorepb.KvStoreScanKeysRequest, stream 
 	db, err := s.getLocalKVDB(storeName)
 	if err != nil {
 		return newErr(
-			codes.Internal,
+			codes.FailedPrecondition,
 			"failed to retrieve key/value store",
 			err,
 		)

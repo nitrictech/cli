@@ -131,5 +131,5 @@ func init() {
 		false,
 		"disable browser opening for local dashboard, note: in CI mode the browser opening feature is disabled",
 	)
-	rootCmd.AddCommand(tui.AddDependencyCheck(runCmd, tui.Docker))
+	rootCmd.AddCommand(tui.AddDependencyCheck(runCmd, tui.Docker, tui.DockerBuildx))
 }

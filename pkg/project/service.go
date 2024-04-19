@@ -264,6 +264,13 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 		err := cmd.Start()
 		if err != nil {
 			errChan <- err
+		} else {
+			updates <- ServiceRunUpdate{
+				ServiceName: s.Name,
+				Filepath:    s.filepath,
+				Status:      ServiceRunStatus_Running,
+				Message:     "started",
+			}
 		}
 
 		err = cmd.Wait()

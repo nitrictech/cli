@@ -19,6 +19,7 @@ package apis
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/asaskevich/EventBus"
@@ -97,8 +98,12 @@ func (l *LocalApiGatewayService) GetState() State {
 	return deepCopyApiMap(l.state)
 }
 
-func (l *LocalApiGatewayService) registerApiWorker(serviceName string, registrationRequest *apispb.RegistrationRequest) {
+func (l *LocalApiGatewayService) registerApiWorker(serviceName string, registrationRequest *apispb.RegistrationRequest) error {
 	l.apiRegLock.Lock()
+
+	if !strings.HasPrefix(registrationRequest.Path, "/") {
+		return fmt.Errorf("service %s attempted to register path '%s' which is missing a leading slash", registrationRequest.Api, registrationRequest.Path)
+	}
 
 	if l.state[registrationRequest.Api] == nil {
 		l.state[registrationRequest.Api] = make(map[string][]*apispb.RegistrationRequest)
@@ -109,6 +114,8 @@ func (l *LocalApiGatewayService) registerApiWorker(serviceName string, registrat
 	l.apiRegLock.Unlock()
 
 	l.publishState()
+
+	return nil
 }
 
 func (l *LocalApiGatewayService) unregisterApiWorker(serviceName string, registrationRequest *apispb.RegistrationRequest) {
@@ -149,7 +156,11 @@ func (l *LocalApiGatewayService) Serve(stream apispb.Api_ServeServer) error {
 	}
 
 	// register the api
-	l.registerApiWorker(serviceName, firstRequest.GetRegistrationRequest())
+	err = l.registerApiWorker(serviceName, firstRequest.GetRegistrationRequest())
+	if err != nil {
+		return err
+	}
+
 	defer l.unregisterApiWorker(serviceName, firstRequest.GetRegistrationRequest())
 
 	return l.RouteWorkerManager.Serve(peekableStream)

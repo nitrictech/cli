@@ -358,6 +358,10 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 
 			// apply route level security rules
 			for _, route := range serviceRequirements.routes[apiName] {
+				if !strings.HasPrefix(route.Path, "/") {
+					projectErrors.Add(fmt.Errorf("service %s attempted to register path '%s' which is missing a leading slash", serviceRequirements.serviceName, route.Path))
+				}
+
 				normalizedPath, params := openAPIPathAndParams(route.Path)
 				pathItem := api.Paths.Find(normalizedPath)
 

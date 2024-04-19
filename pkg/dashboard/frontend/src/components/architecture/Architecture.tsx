@@ -21,7 +21,7 @@ import 'reactflow/dist/style.css'
 import './styles.css'
 
 import AppLayout from '../layout/AppLayout'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useWebSocket } from '@/lib/hooks/use-web-socket'
 import ExportButton from './ExportButton'
 import {
@@ -29,6 +29,8 @@ import {
   nodeTypes,
 } from '@/lib/utils/generate-architecture-data'
 import NitricEdge from './NitricEdge'
+import { Switch } from '../ui/switch'
+import { Label } from '../ui/label'
 
 const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
 
@@ -45,7 +47,10 @@ const getLayoutedElements = (
 
   edges.forEach((edge) => g.setEdge(edge.source, edge.target))
   nodes.forEach((node) =>
-    g.setNode(node.id, { width: nodeWidth, height: nodeHeight }),
+    g.setNode(node.id, {
+      width: isHorizontal ? nodeWidth * 1.25 : nodeWidth,
+      height: nodeHeight,
+    }),
   )
 
   Dagre.layout(g)
@@ -72,7 +77,30 @@ const edgeTypes = {
   nitric: NitricEdge,
 }
 
+const LOCAL_STORAGE_KEY = 'nitric-local-dash-arch-options'
+
+interface ArchOptions {
+  horizonal: boolean
+}
+
+const defaultOptions: ArchOptions = { horizonal: false }
+
+const getOptions = (): ArchOptions => {
+  try {
+    const key = localStorage.getItem(LOCAL_STORAGE_KEY)
+
+    return key ? JSON.parse(key) : defaultOptions
+  } catch (e) {
+    return defaultOptions
+  }
+}
+
+const setOptions = (options: ArchOptions) => {
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(options))
+}
+
 function ReactFlowLayout() {
+  const [horizonal, setHorizonal] = useState(getOptions().horizonal)
   const { fitView } = useReactFlow()
   const { data } = useWebSocket()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
@@ -111,10 +139,12 @@ function ReactFlowLayout() {
 
     const { nodes, edges } = generateArchitectureData(data)
 
-    const layouted = getLayoutedElements(nodes, edges, 'LB')
+    const layouted = getLayoutedElements(nodes, edges, horizonal ? 'LR' : 'TB')
 
     setNodes([...layouted.nodes])
     setEdges([...layouted.edges])
+
+    setOptions({ horizonal })
 
     window.requestAnimationFrame(() => {
       setTimeout(
@@ -127,7 +157,7 @@ function ReactFlowLayout() {
         100, // ensure the diagram is 100% ready before re-fitting
       )
     })
-  }, [data])
+  }, [data, horizonal])
 
   return (
     <AppLayout
@@ -159,7 +189,18 @@ function ReactFlowLayout() {
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
             {data?.projectName && (
               <Panel position="top-right">
-                <ExportButton projectName={data.projectName} />
+                <div className="flex items-center gap-x-6">
+                  <div className="flex items-center gap-x-2">
+                    <Switch
+                      id="horizontal-mode"
+                      aria-label="Toggle Horizontal Mode"
+                      checked={horizonal}
+                      onCheckedChange={setHorizonal}
+                    />
+                    <Label htmlFor="horizontal-mode">Horizontal</Label>
+                  </div>
+                  <ExportButton projectName={data.projectName} />
+                </div>
               </Panel>
             )}
           </ReactFlow>

@@ -4,7 +4,7 @@ import express from 'express'
 const firstApi = api('first-api')
 const secondApi = api('second-api')
 
-const myBucket = bucket('test-bucket').for('reading', 'writing', 'deleting')
+const myBucket = bucket('test-bucket').allow('read', 'write', 'delete')
 
 myBucket.on('delete', '*', (ctx) => {
   console.log(ctx)
@@ -16,17 +16,17 @@ const socket2 = websocket('socket-2')
 
 const socket3 = websocket('socket-3')
 
-const connections = kv<Record<string, any>>('connections').for(
-  'getting',
-  'setting',
-  'deleting',
+const connections = kv<Record<string, any>>('connections').allow(
+  'get',
+  'set',
+  'delete',
 )
 interface Doc {
   firstCount: number
   secondCount: number
 }
 
-const col = kv<Doc>('test-collection').for('getting', 'setting', 'deleting')
+const col = kv<Doc>('test-collection').allow('get', 'set', 'delete')
 
 firstApi.get('/schedule-count', async (ctx) => {
   try {

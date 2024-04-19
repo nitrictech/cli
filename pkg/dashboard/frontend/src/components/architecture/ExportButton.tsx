@@ -1,9 +1,4 @@
-import {
-  Panel,
-  useReactFlow,
-  getRectOfNodes,
-  getTransformForBounds,
-} from 'reactflow'
+import { useReactFlow, getRectOfNodes, getTransformForBounds } from 'reactflow'
 import { toPng } from 'html-to-image'
 import { Button } from '../ui/button'
 import toast from 'react-hot-toast'
@@ -68,11 +63,7 @@ function ShareButton({ projectName }: { projectName: string }) {
     }
   }
 
-  return (
-    <Panel position="top-right">
-      <Button onClick={onClick}>Export</Button>
-    </Panel>
-  )
+  return <Button onClick={onClick}>Export</Button>
 }
 
 export default ShareButton

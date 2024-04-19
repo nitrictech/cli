@@ -171,7 +171,7 @@ func (m Model) View() string {
 			statusColor = tui.Colors.Red
 		}
 
-		rv.Add("%s: ", update.Filepath).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
+		rv.Add("%s: ", update.Label).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
 
 		// we'll inject our own newline, so remove the duplicate suffix. Retain any other newlines intended by the user
 		rv.Add(strings.TrimSuffix(update.Message, "\n")).WithStyle(lipgloss.NewStyle().Foreground(statusColor))

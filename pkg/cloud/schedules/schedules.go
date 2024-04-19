@@ -96,7 +96,7 @@ func (l *LocalSchedulesService) registerSchedule(serviceName string, registratio
 
 	if l.schedules[registrationRequest.ScheduleName] != nil {
 		existing := l.schedules[registrationRequest.ScheduleName]
-		return fmt.Errorf("service %s has already registered a schedule named %s", existing.ServiceName, existing.Schedule.ScheduleName)
+		return fmt.Errorf("failed to register schedule for %s, service %s has already registered a schedule named %s", serviceName, existing.ServiceName, existing.Schedule.ScheduleName)
 	}
 
 	l.schedules[registrationRequest.ScheduleName] = &ScheduledService{

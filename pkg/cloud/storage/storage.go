@@ -41,6 +41,7 @@ import (
 	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkg/grpcx"
 
+	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
@@ -239,16 +240,34 @@ func (r *LocalStorageService) triggerBucketNotifications(ctx context.Context, bu
 
 // TODO: If we move declare here, we can stop attempting to lazily create buckets in the storage service
 func (r *LocalStorageService) Read(ctx context.Context, req *storagepb.StorageReadRequest) (*storagepb.StorageReadResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("DevStorageService.Read")
+
 	err := r.ensureBucketExists(ctx, req.BucketName)
 	if err != nil {
-		return nil, err
+		return nil, newErr(
+			codes.FailedPrecondition,
+			"failed to get bucket",
+			err,
+		)
 	}
 
 	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
 
 	contents, err := os.ReadFile(fileRef)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			return nil, newErr(
+				codes.NotFound,
+				"file not found",
+				err,
+			)
+		}
+
+		return nil, newErr(
+			codes.Internal,
+			"failed to read file",
+			err,
+		)
 	}
 
 	return &storagepb.StorageReadResponse{
@@ -257,6 +276,8 @@ func (r *LocalStorageService) Read(ctx context.Context, req *storagepb.StorageRe
 }
 
 func (r *LocalStorageService) Exists(ctx context.Context, req *storagepb.StorageExistsRequest) (*storagepb.StorageExistsResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("DevStorageService.Exists")
+
 	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
 
 	_, err := os.Stat(fileRef)
@@ -267,7 +288,11 @@ func (r *LocalStorageService) Exists(ctx context.Context, req *storagepb.Storage
 			}, nil
 		}
 
-		return nil, err
+		return nil, newErr(
+			codes.Internal,
+			"failed to check file exists",
+			err,
+		)
 	}
 
 	return &storagepb.StorageExistsResponse{
@@ -276,9 +301,15 @@ func (r *LocalStorageService) Exists(ctx context.Context, req *storagepb.Storage
 }
 
 func (r *LocalStorageService) Write(ctx context.Context, req *storagepb.StorageWriteRequest) (*storagepb.StorageWriteResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("DevStorageService.Write")
+
 	err := r.ensureBucketExists(ctx, req.BucketName)
 	if err != nil {
-		return nil, err
+		return nil, newErr(
+			codes.FailedPrecondition,
+			"failed to get bucket",
+			err,
+		)
 	}
 
 	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
@@ -286,12 +317,20 @@ func (r *LocalStorageService) Write(ctx context.Context, req *storagepb.StorageW
 	// Ensure the directory structure exists
 	err = os.MkdirAll(filepath.Dir(fileRef), os.ModePerm)
 	if err != nil {
-		return nil, err
+		return nil, newErr(
+			codes.Internal,
+			"could not create bucket",
+			err,
+		)
 	}
 
 	err = os.WriteFile(fileRef, req.Body, os.ModePerm)
 	if err != nil {
-		return nil, err
+		return nil, newErr(
+			codes.Internal,
+			"could not write to file",
+			err,
+		)
 	}
 
 	go r.triggerBucketNotifications(ctx, req.BucketName, req.Key, storagepb.BlobEventType_Created)
@@ -300,16 +339,26 @@ func (r *LocalStorageService) Write(ctx context.Context, req *storagepb.StorageW
 }
 
 func (r *LocalStorageService) Delete(ctx context.Context, req *storagepb.StorageDeleteRequest) (*storagepb.StorageDeleteResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("DevStorageService.Delete")
+
 	err := r.ensureBucketExists(ctx, req.BucketName)
 	if err != nil {
-		return nil, err
+		return nil, newErr(
+			codes.FailedPrecondition,
+			"failed to get bucket",
+			err,
+		)
 	}
 
 	fileRef := filepath.Join(env.LOCAL_BUCKETS_DIR.String(), req.BucketName, req.Key)
 
 	err = os.Remove(fileRef)
 	if err != nil {
-		return nil, err
+		return nil, newErr(
+			codes.NotFound,
+			"could not delete file",
+			err,
+		)
 	}
 
 	go r.triggerBucketNotifications(ctx, req.BucketName, req.Key, storagepb.BlobEventType_Deleted)
@@ -318,9 +367,15 @@ func (r *LocalStorageService) Delete(ctx context.Context, req *storagepb.Storage
 }
 
 func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.StorageListBlobsRequest) (*storagepb.StorageListBlobsResponse, error) {
+	newErr := grpc_errors.ErrorsWithScope("DevStorageService.ListBlobs")
+
 	err := r.ensureBucketExists(ctx, req.BucketName)
 	if err != nil {
-		return nil, err
+		return nil, newErr(
+			codes.FailedPrecondition,
+			"failed to get bucket",
+			err,
+		)
 	}
 
 	blobs := []*storagepb.Blob{}
@@ -346,7 +401,11 @@ func (r *LocalStorageService) ListBlobs(ctx context.Context, req *storagepb.Stor
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, newErr(
+			codes.Internal,
+			"could not list blobs",
+			err,
+		)
 	}
 
 	return &storagepb.StorageListBlobsResponse{

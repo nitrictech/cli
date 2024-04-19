@@ -825,7 +825,7 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 	return newSpec, projectErrors.Error()
 }
 
-func ApiToOpenApiSpec(apiRegistrationRequests map[string][]*apispb.RegistrationRequest, projectErrors *ProjectErrors) (*openapi3.T, error) {
+func ApiToOpenApiSpec(apiRegistrationRequests map[string][]*apispb.RegistrationRequest, apiSecurityDefinitions map[string]map[string]*resourcespb.ApiSecurityDefinitionResource, projectErrors *ProjectErrors) (*openapi3.T, error) {
 	allServiceRequirements := []*ServiceRequirements{}
 
 	for serviceName, registrationRequests := range apiRegistrationRequests {
@@ -843,9 +843,10 @@ func ApiToOpenApiSpec(apiRegistrationRequests map[string][]*apispb.RegistrationR
 		}
 
 		allServiceRequirements = append(allServiceRequirements, &ServiceRequirements{
-			serviceName: serviceName,
-			apis:        allApis,
-			routes:      apiRouteMap,
+			serviceName:           serviceName,
+			apis:                  allApis,
+			routes:                apiRouteMap,
+			apiSecurityDefinition: apiSecurityDefinitions,
 		})
 	}
 

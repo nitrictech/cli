@@ -32,12 +32,13 @@ import (
 type ResourceName = string
 
 type LocalResourcesState struct {
-	Buckets        *ResourceRegistrar[resourcespb.BucketResource]
-	KeyValueStores *ResourceRegistrar[resourcespb.KeyValueStoreResource]
-	Policies       *ResourceRegistrar[resourcespb.PolicyResource]
-	Secrets        *ResourceRegistrar[resourcespb.SecretResource]
-	Topics         *ResourceRegistrar[resourcespb.TopicResource]
-	Queues         *ResourceRegistrar[resourcespb.QueueResource]
+	Buckets                *ResourceRegistrar[resourcespb.BucketResource]
+	KeyValueStores         *ResourceRegistrar[resourcespb.KeyValueStoreResource]
+	Policies               *ResourceRegistrar[resourcespb.PolicyResource]
+	Secrets                *ResourceRegistrar[resourcespb.SecretResource]
+	Topics                 *ResourceRegistrar[resourcespb.TopicResource]
+	Queues                 *ResourceRegistrar[resourcespb.QueueResource]
+	ApiSecurityDefinitions *ResourceRegistrar[resourcespb.ApiSecurityDefinitionResource]
 }
 
 type LocalResourcesService struct {
@@ -102,6 +103,8 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 		err = l.state.Topics.Register(req.Id.Name, serviceName, req.GetTopic())
 	case resourcespb.ResourceType_Queue:
 		err = l.state.Queues.Register(req.Id.Name, serviceName, req.GetQueue())
+	case resourcespb.ResourceType_ApiSecurityDefinition:
+		err = l.state.ApiSecurityDefinitions.Register(req.Id.Name, serviceName, req.GetApiSecurityDefinition())
 	}
 
 	if err != nil {
@@ -121,17 +124,19 @@ func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
 	l.state.Secrets.ClearRequestingService(serviceName)
 	l.state.Topics.ClearRequestingService(serviceName)
 	l.state.Queues.ClearRequestingService(serviceName)
+	l.state.ApiSecurityDefinitions.ClearRequestingService(serviceName)
 }
 
 func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService {
 	return &LocalResourcesService{
 		state: LocalResourcesState{
-			Buckets:        NewResourceRegistrar[resourcespb.BucketResource](),
-			KeyValueStores: NewResourceRegistrar[resourcespb.KeyValueStoreResource](),
-			Policies:       NewResourceRegistrar[resourcespb.PolicyResource](),
-			Secrets:        NewResourceRegistrar[resourcespb.SecretResource](),
-			Topics:         NewResourceRegistrar[resourcespb.TopicResource](),
-			Queues:         NewResourceRegistrar[resourcespb.QueueResource](),
+			Buckets:                NewResourceRegistrar[resourcespb.BucketResource](),
+			KeyValueStores:         NewResourceRegistrar[resourcespb.KeyValueStoreResource](),
+			Policies:               NewResourceRegistrar[resourcespb.PolicyResource](),
+			Secrets:                NewResourceRegistrar[resourcespb.SecretResource](),
+			Topics:                 NewResourceRegistrar[resourcespb.TopicResource](),
+			Queues:                 NewResourceRegistrar[resourcespb.QueueResource](),
+			ApiSecurityDefinitions: NewResourceRegistrar[resourcespb.ApiSecurityDefinitionResource](),
 		},
 		gateway: opts.Gateway,
 		bus:     EventBus.New(),

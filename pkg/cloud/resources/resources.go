@@ -38,6 +38,7 @@ type LocalResourcesState struct {
 	Secrets                *ResourceRegistrar[resourcespb.SecretResource]
 	Topics                 *ResourceRegistrar[resourcespb.TopicResource]
 	Queues                 *ResourceRegistrar[resourcespb.QueueResource]
+	SqlDatabases           *ResourceRegister[resourcespb.SqlDatabaseResource]
 	ApiSecurityDefinitions *ResourceRegistrar[resourcespb.ApiSecurityDefinitionResource]
 }
 
@@ -105,6 +106,8 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 		err = l.state.Queues.Register(req.Id.Name, serviceName, req.GetQueue())
 	case resourcespb.ResourceType_ApiSecurityDefinition:
 		err = l.state.ApiSecurityDefinitions.Register(req.Id.Name, serviceName, req.GetApiSecurityDefinition())
+	case resourcespb.ResourceType_SqlDatabase:
+		err = l.state.SqlDatabases.Register(req.Id.Name, serviceName, req.GetSqlDatabase())
 	}
 
 	if err != nil {

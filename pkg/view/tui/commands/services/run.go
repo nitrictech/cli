@@ -29,6 +29,7 @@ import (
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/local"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
+	"github.com/nitrictech/cli/pkg/view/tui/fragments"
 	"github.com/nitrictech/cli/pkg/view/tui/reactive"
 	"github.com/nitrictech/cli/pkg/view/tui/teax"
 )
@@ -221,18 +222,15 @@ func (m Model) View() string {
 
 	lv.Addln(m.localServicesModel.View())
 
-	lv.Addln("Press 'q' to quit")
-
 	rightRaw := rv.Render()
 	rightBorder := lipgloss.NewStyle().BorderForeground(tui.Colors.Gray).Border(lipgloss.NormalBorder(), false, false, false, true).PaddingLeft(1).MarginLeft(1)
 
 	finalRightView := view.New(view.WithStyle(rightBorder))
-	finalRightView.Addln("use ↑/↓ to navigate logs")
 	finalRightView.Add(tail(rightRaw, m.windowSize.Height-5, m.viewOffset))
 
 	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), finalRightView.Render())
 
-	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide)
+	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide) + "\n " + fragments.Hotkey("q", "quit") + " " + fragments.Hotkey("↑/↓", "navigate logs")
 }
 
 func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUpdate, localCloud *cloud.LocalCloud, dashboardUrl string) Model {

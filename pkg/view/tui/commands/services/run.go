@@ -139,6 +139,42 @@ func tail(text string, take int, offset int) string {
 	return strings.Join(lines[start:end], "\n")
 }
 
+func getMessageChunks(columnWidth int, update project.ServiceRunUpdate) []string {
+	messageLines := strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n")
+	messageChunks := []string{}
+
+	fileLength := len(update.Filepath) + 2
+
+	firstLineWidth := columnWidth - fileLength
+	if firstLineWidth < 0 {
+		return []string{}
+	}
+
+	for _, message := range messageLines {
+		startPoint := 0
+		endPoint := firstLineWidth
+
+		section := 0
+
+		for endPoint < len(message) {
+			messageChunks = append(messageChunks, message[startPoint:endPoint])
+
+			section++
+
+			startPoint = firstLineWidth * section
+			if section > 1 {
+				startPoint = (columnWidth * section) - fileLength
+			}
+
+			endPoint = (columnWidth * (section + 1)) - fileLength
+		}
+
+		messageChunks = append(messageChunks, message[startPoint:])
+	}
+
+	return messageChunks
+}
+
 func (m Model) View() string {
 	heightStyle := lipgloss.NewStyle().MaxHeight(m.windowSize.Height - 4)
 	availableWidth := m.windowSize.Width - 10 // 5 for borders and padding, 5 for safe output when the program exits.
@@ -165,7 +201,7 @@ func (m Model) View() string {
 		svcColors[svcName] = serviceColors[idx%len(serviceColors)]
 	}
 
-	for i, update := range m.serviceRunUpdates {
+	for _, update := range m.serviceRunUpdates {
 		statusColor := tui.Colors.Gray
 		if update.Status == project.ServiceRunStatus(project.ServiceBuildStatus_Error) {
 			statusColor = tui.Colors.Red
@@ -173,10 +209,12 @@ func (m Model) View() string {
 
 		rv.Add("%s: ", update.Label).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
 
-		// we'll inject our own newline, so remove the duplicate suffix. Retain any other newlines intended by the user
-		rv.Add(strings.TrimSuffix(update.Message, "\n")).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+		// Break the message into multiple lines so the foreground colour can be maintained
 
-		if i < len(m.serviceRunUpdates)-1 {
+		messageChunks := getMessageChunks(rightWidth, update)
+		for _, chunk := range messageChunks {
+			// we'll inject our own newline, so remove the duplicate suffix. Retain any other newlines intended by the user
+			rv.Add(chunk).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
 			rv.Break()
 		}
 	}

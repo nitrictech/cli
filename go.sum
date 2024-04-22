@@ -586,6 +586,8 @@ github.com/nitrictech/nitric/core v0.0.0-20240229043057-524254dcd5b7 h1:AZRPwS88
 github.com/nitrictech/nitric/core v0.0.0-20240229043057-524254dcd5b7/go.mod h1:OfaIrPrJJjrFNOOgYbzoBGUblO2DadoXCrloAsUW0H0=
 github.com/nitrictech/nitric/core v0.0.0-20240422224812-3af6b3027ee0 h1:1E0NnbFLvs8piUzb0luu2d83ebn/DNtJ0lehMr+uB1A=
 github.com/nitrictech/nitric/core v0.0.0-20240422224812-3af6b3027ee0/go.mod h1:OfaIrPrJJjrFNOOgYbzoBGUblO2DadoXCrloAsUW0H0=
+github.com/nitrictech/nitric/core v0.0.0-20240422225559-2048599e4eb8 h1:E1cOBpj+uBKSTGKnI41zw/4L6c5DuKH/FuZMc0x53Xw=
+github.com/nitrictech/nitric/core v0.0.0-20240422225559-2048599e4eb8/go.mod h1:OfaIrPrJJjrFNOOgYbzoBGUblO2DadoXCrloAsUW0H0=
 github.com/nunnatsa/ginkgolinter v0.15.2 h1:N2ORxUxPU56R9gsfLIlVVvCv/V/VVou5qVI1oBKBNHg=
 github.com/nunnatsa/ginkgolinter v0.15.2/go.mod h1:oYxE7dt1vZI8cK2rZOs3RgTaBN2vggkqnENmoJ8kVvc=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=

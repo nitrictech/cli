@@ -129,22 +129,23 @@ type HttpProxySpec struct {
 }
 
 type Dashboard struct {
-	resourcesLock  sync.Mutex
-	project        *project.Project
-	storageService *storage.LocalStorageService
-	gatewayService *gateway.LocalGatewayService
-	apis           []ApiSpec
-	schedules      []ScheduleSpec
-	topics         []*TopicSpec
-	buckets        []*BucketSpec
-	stores         []*KeyValueSpec
-	websockets     []WebsocketSpec
-	subscriptions  []*SubscriberSpec
-	notifications  []*NotifierSpec
-	httpProxies    []*HttpProxySpec
-	queues         []*QueueSpec
-	policies       map[string]PolicySpec
-	envMap         map[string]string
+	resourcesLock          sync.Mutex
+	project                *project.Project
+	storageService         *storage.LocalStorageService
+	gatewayService         *gateway.LocalGatewayService
+	apis                   []ApiSpec
+	apiSecurityDefinitions map[string]map[string]*resourcespb.ApiSecurityDefinitionResource
+	schedules              []ScheduleSpec
+	topics                 []*TopicSpec
+	buckets                []*BucketSpec
+	stores                 []*KeyValueSpec
+	websockets             []WebsocketSpec
+	subscriptions          []*SubscriberSpec
+	notifications          []*NotifierSpec
+	httpProxies            []*HttpProxySpec
+	queues                 []*QueueSpec
+	policies               map[string]PolicySpec
+	envMap                 map[string]string
 
 	stackWebSocket   *melody.Melody
 	historyWebSocket *melody.Melody
@@ -219,6 +220,8 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.topics = []*TopicSpec{}
 	d.stores = []*KeyValueSpec{}
 	d.queues = []*QueueSpec{}
+	d.queues = []*QueueSpec{}
+	d.apiSecurityDefinitions = map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{}
 
 	d.policies = map[string]PolicySpec{}
 
@@ -318,6 +321,12 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 		}
 	}
 
+	for schemeName, apiDefinition := range lrs.ApiSecurityDefinitions.GetAll() {
+		d.apiSecurityDefinitions[apiDefinition.Resource.ApiName] = map[string]*resourcespb.ApiSecurityDefinitionResource{}
+
+		d.apiSecurityDefinitions[apiDefinition.Resource.ApiName][schemeName] = apiDefinition.Resource
+	}
+
 	d.refresh()
 }
 
@@ -336,7 +345,7 @@ func (d *Dashboard) updateApis(state apis.State) {
 			},
 		}
 
-		spec, _ := collector.ApiToOpenApiSpec(rr, &collector.ProjectErrors{})
+		spec, _ := collector.ApiToOpenApiSpec(rr, d.apiSecurityDefinitions, &collector.ProjectErrors{})
 
 		if spec != nil {
 			// set title to api name
@@ -727,26 +736,27 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	wsWebSocket := melody.New()
 
 	dash := &Dashboard{
-		project:          project,
-		storageService:   localCloud.Storage,
-		gatewayService:   localCloud.Gateway,
-		apis:             []ApiSpec{},
-		envMap:           map[string]string{},
-		stackWebSocket:   stackWebSocket,
-		historyWebSocket: historyWebSocket,
-		wsWebSocket:      wsWebSocket,
-		buckets:          []*BucketSpec{},
-		schedules:        []ScheduleSpec{},
-		topics:           []*TopicSpec{},
-		subscriptions:    []*SubscriberSpec{},
-		notifications:    []*NotifierSpec{},
-		websockets:       []WebsocketSpec{},
-		stores:           []*KeyValueSpec{},
-		queues:           []*QueueSpec{},
-		httpProxies:      []*HttpProxySpec{},
-		policies:         map[string]PolicySpec{},
-		websocketsInfo:   map[string]*websockets.WebsocketInfo{},
-		noBrowser:        noBrowser,
+		project:                project,
+		storageService:         localCloud.Storage,
+		gatewayService:         localCloud.Gateway,
+		apis:                   []ApiSpec{},
+		apiSecurityDefinitions: map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{},
+		envMap:                 map[string]string{},
+		stackWebSocket:         stackWebSocket,
+		historyWebSocket:       historyWebSocket,
+		wsWebSocket:            wsWebSocket,
+		buckets:                []*BucketSpec{},
+		schedules:              []ScheduleSpec{},
+		topics:                 []*TopicSpec{},
+		subscriptions:          []*SubscriberSpec{},
+		notifications:          []*NotifierSpec{},
+		websockets:             []WebsocketSpec{},
+		stores:                 []*KeyValueSpec{},
+		queues:                 []*QueueSpec{},
+		httpProxies:            []*HttpProxySpec{},
+		policies:               map[string]PolicySpec{},
+		websocketsInfo:         map[string]*websockets.WebsocketInfo{},
+		noBrowser:              noBrowser,
 	}
 
 	debouncedUpdate, _ := lo.NewDebounce(300*time.Millisecond, func() {

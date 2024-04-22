@@ -221,7 +221,10 @@ func (t *TuiModel) View() string {
 	noWorkersRegistered := !apisRegistered && !websocketsRegistered && !httpProxiesRegistered && !topicsRegistered && !schedulesRegistered
 
 	if t.dashboardUrl != "" && !noWorkersRegistered {
-		v.Addln("dashboard: %s", t.dashboardUrl).WithStyle(lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Purple).Margin(1).PaddingLeft(1).PaddingRight(1))
+		v.Break()
+		v.Add("dashboard: ").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple))
+		v.Addln(t.dashboardUrl).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Break()
 	} else {
 		v.Break()
 	}

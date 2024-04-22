@@ -143,7 +143,7 @@ func getMessageChunks(columnWidth int, update project.ServiceRunUpdate) []string
 	messageLines := strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n")
 	messageChunks := []string{}
 
-	fileLength := len(update.Filepath) + 2
+	fileLength := len(update.Label) + 2
 
 	firstLineWidth := columnWidth - fileLength
 	if firstLineWidth < 0 {

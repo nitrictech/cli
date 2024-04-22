@@ -85,7 +85,7 @@ const (
 
 type ServiceRunUpdate struct {
 	ServiceName string
-	Filepath    string
+	Label       string
 	Message     string
 	Status      ServiceRunStatus
 	Err         error
@@ -94,7 +94,7 @@ type ServiceRunUpdate struct {
 type ServiceRunUpdateWriter struct {
 	updates     chan<- ServiceRunUpdate
 	serviceName string
-	filepath    string
+	label       string
 	status      ServiceRunStatus
 }
 
@@ -105,7 +105,7 @@ func (s *ServiceRunUpdateWriter) Write(data []byte) (int, error) {
 		ServiceName: s.serviceName,
 		Message:     msg,
 		Status:      s.status,
-		Filepath:    s.filepath,
+		Label:       s.label,
 	}
 
 	return len(data), nil
@@ -247,14 +247,14 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 	cmd.Stdout = &ServiceRunUpdateWriter{
 		updates:     updates,
 		serviceName: s.Name,
-		filepath:    s.filepath,
+		label:       s.filepath,
 		status:      ServiceRunStatus_Running,
 	}
 
 	cmd.Stderr = &ServiceRunUpdateWriter{
 		updates:     updates,
 		serviceName: s.Name,
-		filepath:    s.filepath,
+		label:       s.filepath,
 		status:      ServiceRunStatus_Error,
 	}
 
@@ -264,6 +264,13 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 		err := cmd.Start()
 		if err != nil {
 			errChan <- err
+		} else {
+			updates <- ServiceRunUpdate{
+				ServiceName: s.Name,
+				Label:       "nitric",
+				Status:      ServiceRunStatus_Running,
+				Message:     fmt.Sprintf("started service %s", s.filepath),
+			}
 		}
 
 		err = cmd.Wait()

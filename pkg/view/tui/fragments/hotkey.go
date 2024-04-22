@@ -29,5 +29,6 @@ import (
 func Hotkey(key string, description string) string {
 	keyView := view.NewFragment(fmt.Sprintf("%s:", key)).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.White)).Render()
 	descriptionView := view.NewFragment(description).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray)).Render()
+
 	return fmt.Sprintf("%s %s", keyView, descriptionView)
 }

@@ -16,14 +16,14 @@ import (
 )
 
 type LocalSqlServer struct {
-	port        int
 	containerId string
 	sqlpb.UnimplementedSqlServer
 }
 
 var _ sqlpb.SqlServer = (*LocalSqlServer)(nil)
 
-func ensureDatabaseExists(databaseName string, port int) (string, error) {
+func ensureDatabaseExists(databaseName string) (string, error) {
+	port := 5432
 	// Ensure the database exists
 	// Connect to the PostgreSQL instance
 	conn, err := pgx.Connect(context.Background(), fmt.Sprintf("user=postgres password=localsecret host=localhost port=%d dbname=postgres sslmode=disable", port))
@@ -61,6 +61,13 @@ func (l *LocalSqlServer) start() error {
 		return err
 	}
 
+	err = dockerClient.ImagePull("postgres:latest", types.ImagePullOptions{
+		All: false,
+	})
+	if err != nil {
+		return err
+	}
+
 	l.containerId, err = dockerClient.ContainerCreate(&container.Config{
 		Image: "postgres",
 		Env: []string{
@@ -76,7 +83,7 @@ func (l *LocalSqlServer) start() error {
 			// TODO: Randomize port number to allow multiple starts
 			"5432/tcp": {
 				{
-					HostPort: fmt.Sprintf("%d", l.port),
+					HostPort: "5432",
 				},
 			},
 		},
@@ -111,7 +118,7 @@ func (l *LocalSqlServer) Stop() error {
 }
 
 func (l *LocalSqlServer) ConnectionString(ctx context.Context, req *sqlpb.SqlConnectionStringRequest) (*sqlpb.SqlConnectionStringResponse, error) {
-	connectionString, err := ensureDatabaseExists(req.DatabaseName, l.port)
+	connectionString, err := ensureDatabaseExists(req.DatabaseName)
 	if err != nil {
 		return nil, err
 	}
@@ -122,10 +129,8 @@ func (l *LocalSqlServer) ConnectionString(ctx context.Context, req *sqlpb.SqlCon
 	}, nil
 }
 
-func NewLocalSqlServer(port int) (*LocalSqlServer, error) {
-	localSql := &LocalSqlServer{
-		port: port,
-	}
+func NewLocalSqlServer() (*LocalSqlServer, error) {
+	localSql := &LocalSqlServer{}
 
 	err := localSql.start()
 	if err != nil {

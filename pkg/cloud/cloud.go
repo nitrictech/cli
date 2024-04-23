@@ -32,6 +32,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/resources"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
 	"github.com/nitrictech/cli/pkg/cloud/secrets"
+	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/storage"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
@@ -63,6 +64,7 @@ type LocalCloud struct {
 	Topics     *topics.LocalTopicsAndSubscribersService
 	Websockets *websockets.LocalWebsocketService
 	Queues     *queues.LocalQueuesService
+	Databases  *sql.LocalSqlServer
 
 	// Store all the plugins locally
 }
@@ -76,6 +78,11 @@ func (lc *LocalCloud) Stop() {
 	err := lc.Gateway.Stop()
 	if err != nil {
 		logger.Errorf("Error stopping gateway: %s", err.Error())
+	}
+
+	err = lc.Databases.Stop()
+	if err != nil {
+		logger.Errorf("Error stopping databases: %s", err.Error())
 	}
 }
 
@@ -101,6 +108,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 		TopicsListenerPlugin:    lc.Topics,
 		StorageListenerPlugin:   lc.Storage,
 		WebsocketListenerPlugin: lc.Websockets,
+		SqlPlugin:               lc.Databases,
 
 		// address used by nitric clients to connect to the membrane (e.g. SDKs)
 		ServiceAddress: fmt.Sprintf("0.0.0.0:%d", ports[0]),
@@ -205,6 +213,11 @@ func New() (*LocalCloud, error) {
 		return nil, err
 	}
 
+	localDatabaseService, err := sql.NewLocalSqlServer()
+	if err != nil {
+		return nil, err
+	}
+
 	return &LocalCloud{
 		membranes:  make(map[string]*membrane.Membrane),
 		Apis:       localApis,
@@ -218,5 +231,6 @@ func New() (*LocalCloud, error) {
 		Secrets:    localSecrets,
 		KeyValue:   keyvalueService,
 		Queues:     localQueueService,
+		Databases:  localDatabaseService,
 	}, nil
 }

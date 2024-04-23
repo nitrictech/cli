@@ -38,7 +38,7 @@ type LocalResourcesState struct {
 	Secrets                *ResourceRegistrar[resourcespb.SecretResource]
 	Topics                 *ResourceRegistrar[resourcespb.TopicResource]
 	Queues                 *ResourceRegistrar[resourcespb.QueueResource]
-	SqlDatabases           *ResourceRegister[resourcespb.SqlDatabaseResource]
+	SqlDatabases           *ResourceRegistrar[resourcespb.SqlDatabaseResource]
 	ApiSecurityDefinitions *ResourceRegistrar[resourcespb.ApiSecurityDefinitionResource]
 }
 

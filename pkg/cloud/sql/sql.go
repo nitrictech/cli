@@ -36,7 +36,7 @@ func ensureDatabaseExists(databaseName string) (string, error) {
 	_, err = conn.Exec(context.Background(), fmt.Sprintf("CREATE DATABASE %s", databaseName))
 	if err != nil {
 		// If the database already exists, don't treat it as an error
-		if !strings.Contains(err.Error(), "already exists") {
+		if strings.Contains(err.Error(), "already exists") {
 			log.Fatal(err)
 		} else {
 			return "", err

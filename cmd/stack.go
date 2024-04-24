@@ -245,7 +245,12 @@ var stackUpdateCmd = &cobra.Command{
 			envVariables["NITRIC_BETA_PROVIDERS"] = "true"
 		}
 
-		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements)
+		defaultImageName, ok := proj.DefaultMigrationImage(fs)
+		if !ok {
+			defaultImageName = ""
+		}
+
+		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, defaultImageName)
 		tui.CheckErr(err)
 
 		providerStdout := make(chan string)

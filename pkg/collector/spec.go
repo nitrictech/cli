@@ -133,7 +133,7 @@ func buildHttpRequirements(allServiceRequirements []*ServiceRequirements, projec
 	return resources, nil
 }
 
-func buildDatabaseRequirements(projectName string, allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
+func buildDatabaseRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors, defaultMigrationImage string) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
@@ -142,6 +142,13 @@ func buildDatabaseRequirements(projectName string, allServiceRequirements []*Ser
 				return item.Id.Name == databaseName
 			})
 
+			var migrations *deploymentspb.SqlDatabase_ImageUri = nil
+			if defaultMigrationImage != "" {
+				migrations = &deploymentspb.SqlDatabase_ImageUri{
+					ImageUri: defaultMigrationImage,
+				}
+			}
+
 			if !exists {
 				res := &deploymentspb.Resource{
 					Id: &resourcespb.ResourceIdentifier{
@@ -149,7 +156,9 @@ func buildDatabaseRequirements(projectName string, allServiceRequirements []*Ser
 						Type: resourcespb.ResourceType_SqlDatabase,
 					},
 					Config: &deploymentspb.Resource_SqlDatabase{
-						SqlDatabase: &deploymentspb.SqlDatabase{},
+						SqlDatabase: &deploymentspb.SqlDatabase{
+							Migrations: migrations,
+						},
 					},
 				}
 				resources = append(resources, res)
@@ -747,7 +756,7 @@ func checkServiceRequirementErrors(allServiceRequirements []*ServiceRequirements
 }
 
 // convert service requirements to a cloud bill of materials
-func ServiceRequirementsToSpec(projectName string, environmentVariables map[string]string, allServiceRequirements []*ServiceRequirements) (*deploymentspb.Spec, error) {
+func ServiceRequirementsToSpec(projectName string, environmentVariables map[string]string, allServiceRequirements []*ServiceRequirements, defaultMigrationImage string) (*deploymentspb.Spec, error) {
 	if err := checkServiceRequirementErrors(allServiceRequirements); err != nil {
 		return nil, err
 	}
@@ -756,6 +765,11 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 
 	newSpec := &deploymentspb.Spec{
 		Resources: []*deploymentspb.Resource{},
+	}
+
+	databaseResources, err := buildDatabaseRequirements(allServiceRequirements, projectErrors, defaultMigrationImage)
+	if err != nil {
+		return nil, err
 	}
 
 	bucketResources, err := buildBucketRequirements(allServiceRequirements, projectErrors)

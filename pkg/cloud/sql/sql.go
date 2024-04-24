@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v4"
 
 	"github.com/nitrictech/cli/pkg/docker"
+	"github.com/nitrictech/nitric/core/pkg/logger"
 	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
 )
 
@@ -37,7 +38,7 @@ func ensureDatabaseExists(databaseName string) (string, error) {
 	if err != nil {
 		// If the database already exists, don't treat it as an error
 		if strings.Contains(err.Error(), "already exists") {
-			log.Fatal(err)
+			logger.Debugf("Database %s already exists", databaseName)
 		} else {
 			return "", err
 		}

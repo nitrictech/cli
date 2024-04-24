@@ -46,7 +46,7 @@ func ensureDatabaseExists(databaseName string) (string, error) {
 	// TODO: Run migrations/seeds if necessary
 
 	// Return the connection string of the new database
-	return fmt.Sprintf("user=postgres password=localsecret host=localhost port=%d dbname=%s sslmode=disable", port, databaseName), nil
+	return fmt.Sprintf("postgresql://postgres:localsecret@localhost:%d/%s?sslmode=disable", port, databaseName), nil
 }
 
 func (l *LocalSqlServer) start() error {

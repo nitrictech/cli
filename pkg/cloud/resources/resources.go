@@ -140,6 +140,7 @@ func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService
 			Topics:                 NewResourceRegistrar[resourcespb.TopicResource](),
 			Queues:                 NewResourceRegistrar[resourcespb.QueueResource](),
 			ApiSecurityDefinitions: NewResourceRegistrar[resourcespb.ApiSecurityDefinitionResource](),
+			SqlDatabases:           NewResourceRegistrar[resourcespb.SqlDatabaseResource](),
 		},
 		gateway: opts.Gateway,
 		bus:     EventBus.New(),

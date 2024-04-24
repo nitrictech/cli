@@ -2,8 +2,10 @@ package sql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -26,7 +28,17 @@ type LocalSqlServer struct {
 
 var _ sqlpb.SqlServer = (*LocalSqlServer)(nil)
 
+func isValidDatabaseName(databaseName string) bool {
+	validRegex := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	return validRegex.MatchString(databaseName)
+}
+
 func ensureDatabaseExists(databaseName string) (string, error) {
+	// Check databaseName is valid
+	if !isValidDatabaseName(databaseName) {
+		return "", errors.New("invalid database name")
+	}
+
 	port := 5432
 	// Ensure the database exists
 	// Connect to the PostgreSQL instance

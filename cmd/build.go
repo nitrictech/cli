@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -37,10 +38,14 @@ var buildCmd = &cobra.Command{
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
 
+		update, err := proj.BuildDefaultMigrationImage(fs)
+
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := teax.NewProgram(build.NewModel(updates))
+		updateChan := lo.FanIn(5, update, updates)
+
+		prog := teax.NewProgram(build.NewModel(updateChan))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
 		tui.CheckErr(err)

@@ -133,6 +133,33 @@ func buildHttpRequirements(allServiceRequirements []*ServiceRequirements, projec
 	return resources, nil
 }
 
+func buildDatabaseRequirements(projectName string, allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
+	resources := []*deploymentspb.Resource{}
+
+	for _, serviceRequirements := range allServiceRequirements {
+		for databaseName := range serviceRequirements.sqlDatabases {
+			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
+				return item.Id.Name == databaseName
+			})
+
+			if !exists {
+				res := &deploymentspb.Resource{
+					Id: &resourcespb.ResourceIdentifier{
+						Name: databaseName,
+						Type: resourcespb.ResourceType_SqlDatabase,
+					},
+					Config: &deploymentspb.Resource_SqlDatabase{
+						SqlDatabase: &deploymentspb.SqlDatabase{},
+					},
+				}
+				resources = append(resources, res)
+			}
+		}
+	}
+
+	return resources, nil
+}
+
 // buildTopicRequirements gathers and deduplicates all topic requirements
 func buildTopicRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}

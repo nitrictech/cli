@@ -37,7 +37,7 @@ type Model struct {
 	serviceBuildUpdates map[string][]project.ServiceBuildUpdate
 	windowSize          tea.WindowSizeMsg
 
-	serviceBuildUpdatesChannel chan project.ServiceBuildUpdate
+	serviceBuildUpdatesChannel <-chan project.ServiceBuildUpdate
 
 	spinner spinner.Model
 
@@ -175,7 +175,7 @@ func (m Model) View() string {
 	return v.Render()
 }
 
-func NewModel(serviceBuildUpdates chan project.ServiceBuildUpdate) Model {
+func NewModel(serviceBuildUpdates <-chan project.ServiceBuildUpdate) Model {
 	return Model{
 		spinner:                    spinner.New(spinner.WithSpinner(spinner.Ellipsis)),
 		serviceBuildUpdatesChannel: serviceBuildUpdates,

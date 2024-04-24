@@ -165,7 +165,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	return ports[0], nil
 }
 
-func New() (*LocalCloud, error) {
+func New(projectName string) (*LocalCloud, error) {
 	localTopics, err := topics.NewLocalTopicsService()
 	if err != nil {
 		return nil, err
@@ -213,7 +213,7 @@ func New() (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localDatabaseService, err := sql.NewLocalSqlServer()
+	localDatabaseService, err := sql.NewLocalSqlServer(projectName)
 	if err != nil {
 		return nil, err
 	}

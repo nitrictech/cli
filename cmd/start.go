@@ -70,7 +70,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// Start the local cloud service analogues
-		localCloud, err := cloud.New()
+		localCloud, err := cloud.New(proj.Name)
 		tui.CheckErr(err)
 
 		fmt.Println("local nitric server started")

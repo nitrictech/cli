@@ -8,6 +8,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	"github.com/jackc/pgx/v4"
 
@@ -17,6 +19,7 @@ import (
 )
 
 type LocalSqlServer struct {
+	projectName string
 	containerId string
 	sqlpb.UnimplementedSqlServer
 }
@@ -69,17 +72,36 @@ func (l *LocalSqlServer) start() error {
 		return err
 	}
 
+	// create a persistant volume for the database
+	volume, err := dockerClient.VolumeCreate(context.Background(), volume.VolumeCreateBody{
+		Driver: "local",
+		Name:   fmt.Sprintf("%s-local-sql", l.projectName),
+	})
+	if err != nil {
+		// FIXME: Use error container type to validate here
+		if !strings.Contains(err.Error(), "name already in use") {
+			log.Fatalf("Failed to create volume: %v", err)
+		}
+	}
+
 	l.containerId, err = dockerClient.ContainerCreate(&container.Config{
 		Image: "postgres",
 		Env: []string{
 			"POSTGRES_PASSWORD=localsecret",
 			"PGDATA=/var/lib/postgresql/data/pgdata",
 		},
-		Volumes: map[string]struct{}{
-			"./.nitric/local-sql:/var/lib/postgresql/data": {},
-		},
 	}, &container.HostConfig{
 		AutoRemove: true,
+		// Binds: []string{
+		// 	fmt.Sprintf("%s:/var/lib/postgresql/data", localSqlPath),
+		// },
+		Mounts: []mount.Mount{
+			{
+				Type:   mount.TypeVolume,
+				Source: volume.Name,
+				Target: "/var/lib/postgresql/data",
+			},
+		},
 		PortBindings: map[nat.Port][]nat.PortBinding{
 			// TODO: Randomize port number to allow multiple starts
 			"5432/tcp": {
@@ -94,11 +116,6 @@ func (l *LocalSqlServer) start() error {
 	if err != nil {
 		return err
 	}
-
-	// --name some-postgres \
-	// -e POSTGRES_PASSWORD=mysecretpassword \
-	// -e PGDATA=/var/lib/postgresql/data/pgdata \
-	// -v /custom/mount:/var/lib/postgresql/data \
 
 	return dockerClient.ContainerStart(context.Background(), l.containerId, types.ContainerStartOptions{})
 }
@@ -130,8 +147,10 @@ func (l *LocalSqlServer) ConnectionString(ctx context.Context, req *sqlpb.SqlCon
 	}, nil
 }
 
-func NewLocalSqlServer() (*LocalSqlServer, error) {
-	localSql := &LocalSqlServer{}
+func NewLocalSqlServer(projectName string) (*LocalSqlServer, error) {
+	localSql := &LocalSqlServer{
+		projectName: projectName,
+	}
 
 	err := localSql.start()
 	if err != nil {

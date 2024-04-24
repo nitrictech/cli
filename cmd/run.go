@@ -64,7 +64,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Start the local cloud service analogues
-		localCloud, err := cloud.New()
+		localCloud, err := cloud.New(proj.Name)
 		tui.CheckErr(err)
 
 		updates, err := proj.BuildServices(fs)

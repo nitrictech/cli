@@ -703,14 +703,26 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 	return s.serviceServer.Serve(s.serviceListener)
 }
 
-func (s *LocalGatewayService) Stop() error {
-	for _, s := range s.apiServers {
-		// shutdown all the servers
-		// this will allow Start to exit
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
-		defer cancel()
+func shutdownServer(srv *fasthttp.Server) {
+	// Shutdown all the servers
+	// This will allow Start to exit
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	defer cancel()
 
-		_ = s.srv.ShutdownWithContext(ctx)
+	_ = srv.ShutdownWithContext(ctx)
+}
+
+func (s *LocalGatewayService) Stop() error {
+	for _, as := range s.apiServers {
+		shutdownServer(as.srv)
+	}
+
+	for _, hs := range s.httpServers {
+		shutdownServer(hs.srv)
+	}
+
+	for _, ss := range s.socketServer {
+		shutdownServer(ss.srv)
 	}
 
 	if s.serviceServer != nil {

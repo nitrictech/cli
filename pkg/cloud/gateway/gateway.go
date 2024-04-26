@@ -704,7 +704,7 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 }
 
 func shutdownServer(srv *fasthttp.Server) {
-	// Shutdown all the servers
+	// Shutdown the server
 	// This will allow Start to exit
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
@@ -713,14 +713,17 @@ func shutdownServer(srv *fasthttp.Server) {
 }
 
 func (s *LocalGatewayService) Stop() error {
+	// Shutdown all the api servers
 	for _, as := range s.apiServers {
 		shutdownServer(as.srv)
 	}
 
+	// Shutdown all the http servers
 	for _, hs := range s.httpServers {
 		shutdownServer(hs.srv)
 	}
 
+	// Shutdown all the websocket servers
 	for _, ss := range s.socketServer {
 		shutdownServer(ss.srv)
 	}

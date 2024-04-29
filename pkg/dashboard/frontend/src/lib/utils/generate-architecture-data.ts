@@ -51,6 +51,8 @@ import {
 } from '@/components/architecture/nodes/HttpProxyNode'
 import { getTopicSubscriptions } from './get-topic-subscriptions'
 import { QueueNode } from '@/components/architecture/nodes/QueueNode'
+import { SQLNode } from '@/components/architecture/nodes/SQLNode'
+import { SiPostgresql } from 'react-icons/si'
 import { unique } from 'radash'
 
 export const nodeTypes = {
@@ -61,6 +63,7 @@ export const nodeTypes = {
   websocket: WebsocketNode,
   service: ServiceNode,
   keyvaluestore: KeyValueNode,
+  sql: SQLNode,
   httpproxy: HttpProxyNode,
   queue: QueueNode,
 }
@@ -319,6 +322,33 @@ export function generateArchitectureData(data: WebSocketResponse): {
       resource: store,
       icon: CircleStackIcon,
     })
+
+    nodes.push(node)
+  })
+
+  data.sqlDatabases.forEach((sql) => {
+    const node = createNode<BucketNodeData>(sql, 'sql', {
+      title: sql.name,
+      resource: sql,
+      icon: SiPostgresql,
+    })
+
+    edges.push(
+      ...sql.requestingServices.map((target) => ({
+        id: `e-${sql.name}-${target}`,
+        source: node.id,
+        target,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: 'Connects',
+      })),
+    )
 
     nodes.push(node)
   })

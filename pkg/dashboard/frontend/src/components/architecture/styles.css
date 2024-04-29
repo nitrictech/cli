@@ -117,3 +117,10 @@
   --nitric-node-to: #4d7c0f; /* Lime 700 */
   --nitric-node-icon-color: #65a30d; /* Lime 600 */
 }
+
+.react-flow__node-sql {
+  --nitric-node-from: #075985; /* Sky 800 */
+  --nitric-node-via: #0369a1; /* Sky 700 */
+  --nitric-node-to: #1e3a8a; /* Blue 900 */
+  --nitric-node-icon-color: #075985; /* Sky 800 */
+}

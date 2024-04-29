@@ -84,7 +84,7 @@ func (l *LocalSqlServer) start() error {
 		return err
 	}
 
-	// create a persistant volume for the database
+	// create a persistent volume for the database
 	volume, err := dockerClient.VolumeCreate(context.Background(), volume.VolumeCreateBody{
 		Driver: "local",
 		Name:   fmt.Sprintf("%s-local-sql", l.projectName),
@@ -124,7 +124,6 @@ func (l *LocalSqlServer) start() error {
 		},
 		// TODO: Randomize instance name to allow multiple starts
 	}, nil, "nitric-local-sql")
-
 	if err != nil {
 		return err
 	}

@@ -771,6 +771,7 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 	if err != nil {
 		return nil, err
 	}
+	newSpec.Resources = append(newSpec.Resources, databaseResources...)
 
 	bucketResources, err := buildBucketRequirements(allServiceRequirements, projectErrors)
 	if err != nil {

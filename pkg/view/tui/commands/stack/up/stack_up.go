@@ -96,18 +96,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case *deploymentspb.DeploymentUpEvent_Message:
 			m.providerMessages = append(m.providerMessages, content.Message)
 		case *deploymentspb.DeploymentUpEvent_Update:
-			if content.Update == nil || content.Update.Id == nil {
+			if content.Update == nil {
 				break
 			}
 
 			name := content.Update.SubResource
-			if name == "" {
+			if name == "" && content.Update.Id != nil {
 				name = fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name)
 			}
 
 			parent := m.stack
 
-			if content.Update.SubResource != "" {
+			if content.Update.SubResource != "" && content.Update.Id != nil {
 				nitricResource, found := lo.Find(m.stack.Children, func(r *stack.Resource) bool {
 					return r.Name == fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name)
 				})
@@ -118,6 +118,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					// add to the default container, used for resources that are stack level, but not explicitly defined.
 					parent = m.defaultParent
 				}
+			} else if content.Update.SubResource != "" {
+				parent = m.defaultParent
 			}
 
 			existingChild, found := lo.Find(parent.Children, func(item *stack.Resource) bool {

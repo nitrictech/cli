@@ -95,23 +95,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case *deploymentspb.DeploymentDownEvent_Message:
 			m.providerMessages = append(m.providerMessages, content.Message)
 		case *deploymentspb.DeploymentDownEvent_Update:
-			if content.Update == nil || content.Update.Id == nil {
+			if content.Update == nil {
 				break
 			}
 
 			name := content.Update.SubResource
-			if name == "" {
+			if name == "" && content.Update.Id != nil {
 				name = fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name)
 			}
 
 			parent := m.stack
 
-			if content.Update.SubResource != "" {
+			if content.Update.SubResource != "" && content.Update.Id != nil {
 				nitricResource, found := lo.Find(m.stack.Children, func(r *stack.Resource) bool {
 					return r.Name == fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name)
 				})
 
-				if !found {
+				if !found && content.Update.Id != nil {
 					nitricResource = &stack.Resource{
 						Name:     fmt.Sprintf("%s::%s", content.Update.Id.Type.String(), content.Update.Id.Name),
 						Message:  "",
@@ -122,9 +122,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					// Add it from the given parent details
 					m.stack.Children = append(m.stack.Children, nitricResource)
+				} else if !found {
+					nitricResource = m.defaultParent
 				}
 
 				parent = nitricResource
+			} else if content.Update.SubResource != "" {
+				parent = m.defaultParent
 			}
 
 			existingChild, found := lo.Find(parent.Children, func(item *stack.Resource) bool {

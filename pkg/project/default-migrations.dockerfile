@@ -6,4 +6,4 @@ ENV NITRIC_DB_NAME=""
 
 COPY ./migrations /migrations
 
-CMD -source /migrations/$NITRIC_DB_NAME -database $DB_URL up
+ENTRYPOINT ["sh", "-c", "migrate -source /migrations/$NITRIC_DB_NAME -database $DB_URL up"]

@@ -31,20 +31,11 @@ type section struct {
 }
 
 var sections = map[string]*section{
-	"common": {
-		startLine: "## Common Commands",
-		genFunc:   generatedCommonCommands,
-		endLine:   "## Help with Commands",
-	},
 	"complete": {
 		startLine: "## Complete Reference",
 		genFunc:   generatedCompleteCommands,
 		endLine:   "## Get in touch",
 	},
-}
-
-func generatedCommonCommands(s *section) []string {
-	return cmd.CommonCommandsUsage()
 }
 
 func generatedCompleteCommands(s *section) []string {

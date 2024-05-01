@@ -36,13 +36,13 @@ To start with nitric, run the 'nitric new' command:
     $ nitric new
 
 This will guide you through project creation, including selecting from available templates.
-%s
+
 For further details visit our docs https://nitric.io/docs`
 
 var CI bool
 
 func usageString() string {
-	return fmt.Sprintf(usageTemplate, strings.Join(CommonCommandsUsage(), "\n"))
+	return usageTemplate
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -133,17 +133,6 @@ func addAlias(from, to string, commonCommand bool) {
 	}
 
 	rootCmd.AddCommand(alias)
-}
-
-func CommonCommandsUsage() []string {
-	cmdH := []string{
-		"",
-		"Common commands in the CLI that you’ll be using:",
-		"",
-	}
-	cmdH = append(cmdH, cmdUsage([]string{}, rootCmd, true)...)
-
-	return append(cmdH, "")
 }
 
 func AllCommandsUsage() []string {

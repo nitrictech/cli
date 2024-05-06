@@ -94,6 +94,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) AllDone() bool {
 	for _, serviceUpdates := range m.serviceBuildUpdates {
 		for _, update := range serviceUpdates {
+			if update.Status == project.ServiceBuildStatus_Skipped {
+				continue
+			}
+
 			if update.Status == project.ServiceBuildStatus_Complete {
 				continue
 			}
@@ -143,28 +147,30 @@ func (m Model) View() string {
 
 		latestUpdate := service[len(service)-1]
 
-		statusColor := tui.Colors.Gray
-		if latestUpdate.Status == project.ServiceBuildStatus_Complete {
-			statusColor = tui.Colors.Green
-		} else if latestUpdate.Status == project.ServiceBuildStatus_InProgress {
-			statusColor = tui.Colors.Blue
-		} else if latestUpdate.Status == project.ServiceBuildStatus_Error {
-			statusColor = tui.Colors.Red
-		}
+		if latestUpdate.Status != project.ServiceBuildStatus_Skipped {
+			statusColor := tui.Colors.Gray
+			if latestUpdate.Status == project.ServiceBuildStatus_Complete {
+				statusColor = tui.Colors.Green
+			} else if latestUpdate.Status == project.ServiceBuildStatus_InProgress {
+				statusColor = tui.Colors.Blue
+			} else if latestUpdate.Status == project.ServiceBuildStatus_Error {
+				statusColor = tui.Colors.Red
+			}
 
-		serviceUpdates.Add("%s ", serviceName)
-		serviceUpdates.Addln(strings.ToLower(string(latestUpdate.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+			serviceUpdates.Add("%s ", serviceName)
+			serviceUpdates.Addln(strings.ToLower(string(latestUpdate.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+		}
 
 		if m.Err != nil {
 			for _, update := range service {
 				messageLines := strings.Split(strings.TrimSpace(update.Message), "\n")
-				if len(messageLines) > 0 && update.Status != project.ServiceBuildStatus_Complete {
+				if len(messageLines) > 0 && update.Status != project.ServiceBuildStatus_Complete && latestUpdate.Status != project.ServiceBuildStatus_Skipped {
 					serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 				}
 			}
 		} else {
 			messageLines := strings.Split(strings.TrimSpace(latestUpdate.Message), "\n")
-			if len(messageLines) > 0 && latestUpdate.Status != project.ServiceBuildStatus_Complete {
+			if len(messageLines) > 0 && latestUpdate.Status != project.ServiceBuildStatus_Complete && latestUpdate.Status != project.ServiceBuildStatus_Skipped {
 				serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 			}
 		}

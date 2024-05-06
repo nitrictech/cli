@@ -251,7 +251,7 @@ func (p *Project) BuildDefaultMigrationImage(fs afero.Fs) (chan ServiceBuildUpda
 			migrateBuildChan <- ServiceBuildUpdate{
 				ServiceName: "migrations",
 				Message:     "No migrations found",
-				Status:      ServiceBuildStatus_Complete,
+				Status:      ServiceBuildStatus_Skipped,
 			}
 			close(migrateBuildChan)
 		}()

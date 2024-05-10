@@ -1,9 +1,10 @@
-ARG MIGRATIONS_PATH
 # Default migrations dockerfile
 FROM migrate/migrate
 
 ENV DB_URL=""
 ENV NITRIC_DB_NAME=""
+
+ARG MIGRATIONS_PATH
 
 COPY ${MIGRATIONS_PATH} /migrations
 

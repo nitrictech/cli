@@ -181,7 +181,9 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 				case "file":
 					// Default dockerfile build context for the given path
 					imageBuildContexts[databaseName] = &runtime.RuntimeBuildContext{
-						BuildArguments:     map[string]string{},
+						BuildArguments: map[string]string{
+							"MIGRATIONS_PATH": migrationsUrl.Path,
+						},
 						DockerfileContents: string(defaultMigrationFileContents),
 						BaseDirectory:      ".",
 					}

@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -195,14 +194,9 @@ var stackUpdateCmd = &cobra.Command{
 		err = prov.Install()
 		tui.CheckErr(err)
 
-		update, err := proj.BuildDefaultMigrationImage(fs)
-		tui.CheckErr(err)
-
 		// Build the Project's Services (Containers)
 		buildUpdates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
-
-		allUpdates := lo.FanIn(5, update, buildUpdates)
 
 		if isNonInteractive() {
 			fmt.Println("building project services")
@@ -211,13 +205,13 @@ var stackUpdateCmd = &cobra.Command{
 			}
 
 			// non-interactive environment
-			for update := range allUpdates {
+			for update := range buildUpdates {
 				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
 					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 				}
 			}
 		} else {
-			prog := teax.NewProgram(build.NewModel(allUpdates))
+			prog := teax.NewProgram(build.NewModel(buildUpdates))
 			// blocks but quits once the above updates channel is closed by the build process
 			buildModel, err := prog.Run()
 			tui.CheckErr(err)
@@ -254,6 +248,31 @@ var stackUpdateCmd = &cobra.Command{
 		defaultImageName, ok := proj.DefaultMigrationImage(fs)
 		if !ok {
 			defaultImageName = ""
+		}
+
+		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, fs)
+		tui.CheckErr(err)
+		// Build images from contexts and provide updates on the builds
+
+		migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts)
+		tui.CheckErr(err)
+
+		if isNonInteractive() {
+			fmt.Println("building project migration iamges")
+			// non-interactive environment
+			for update := range migrationBuildUpdates {
+				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+				}
+			}
+		} else {
+			prog := teax.NewProgram(build.NewModel(migrationBuildUpdates))
+			// blocks but quits once the above updates channel is closed by the build process
+			buildModel, err := prog.Run()
+			tui.CheckErr(err)
+			if buildModel.(build.Model).Err != nil {
+				tui.CheckErr(fmt.Errorf("error building services"))
+			}
 		}
 
 		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, defaultImageName)

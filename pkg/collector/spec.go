@@ -18,10 +18,12 @@ package collector
 
 import (
 	"crypto/md5"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -29,7 +31,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/samber/lo"
+	"github.com/spf13/afero"
 
+	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
@@ -131,6 +135,64 @@ func buildHttpRequirements(allServiceRequirements []*ServiceRequirements, projec
 	}
 
 	return resources, nil
+}
+
+//go:embed default-migrations.dockerfile
+var defaultMigrationFileContents string
+
+// Collect a list of migration images that need to be built
+// these requirements need to be supplied to the deployment serviceS
+func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirements, fs afero.Fs) (map[string]*runtime.RuntimeBuildContext, error) {
+	imageBuildContexts := map[string]*runtime.RuntimeBuildContext{}
+	declaredConfigs := map[string]string{}
+
+	for _, serviceRequirements := range allServiceRequirements {
+		for databaseName, databaseConfig := range serviceRequirements.sqlDatabases {
+			if databaseConfig.Migrations != nil && databaseConfig.Migrations.GetMigrationsPath() != "" {
+				migrationsUrl, err := url.Parse(databaseConfig.Migrations.GetMigrationsPath())
+				if err != nil {
+					return nil, err
+				}
+
+				// if the db has already been declared check that it dies not differ from a previous declaration
+				if _, exists := imageBuildContexts[databaseName]; exists {
+					if declaredConfigs[databaseName] != databaseConfig.Migrations.GetMigrationsPath() {
+						return nil, fmt.Errorf("multiple migrations paths declared for database '%s'", databaseName)
+					}
+					// otherwise set named config to the already build config
+					continue
+				}
+
+				declaredConfigs[databaseName] = databaseConfig.Migrations.GetMigrationsPath()
+
+				switch migrationsUrl.Scheme {
+				case "dockerfile":
+					// Read the referenced dockerfile
+					dockerfileContents, err := afero.ReadFile(fs, migrationsUrl.Path)
+					if err != nil {
+						return nil, err
+					}
+
+					imageBuildContexts[databaseName] = &runtime.RuntimeBuildContext{
+						BuildArguments:     map[string]string{},
+						DockerfileContents: string(dockerfileContents),
+						BaseDirectory:      ".",
+					}
+				case "file":
+					// Default dockerfile build context for the given path
+					imageBuildContexts[databaseName] = &runtime.RuntimeBuildContext{
+						BuildArguments:     map[string]string{},
+						DockerfileContents: string(defaultMigrationFileContents),
+						BaseDirectory:      ".",
+					}
+				default:
+					return nil, fmt.Errorf("unsupported migration path scheme: %s, must be one of dockerfile or file", migrationsUrl.Scheme)
+				}
+			}
+		}
+	}
+
+	return imageBuildContexts, nil
 }
 
 func buildDatabaseRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors, defaultMigrationImage string) ([]*deploymentspb.Resource, error) {

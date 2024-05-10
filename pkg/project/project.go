@@ -38,7 +38,6 @@ import (
 
 	"github.com/nitrictech/cli/pkg/cloud"
 	"github.com/nitrictech/cli/pkg/collector"
-	"github.com/nitrictech/cli/pkg/docker"
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/nitric/core/pkg/logger"
@@ -226,9 +225,6 @@ func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirement
 	return allServiceRequirements, nil
 }
 
-//go:embed default-migrations.dockerfile
-var defaultDockerfileContents string
-
 // DefaultMigrationImage - Returns the default migration image name for the project
 // Also returns ok if image is required or not
 func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
@@ -240,81 +236,81 @@ func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
 // Build migration images for this project
 // TODO: This may need to be moved to run post collection
 // if we allow specifying the migration location as part of the resource definition
-func (p *Project) BuildDefaultMigrationImage(fs afero.Fs) (chan ServiceBuildUpdate, error) {
-	migrateBuildChan := make(chan ServiceBuildUpdate)
+// func (p *Project) BuildDefaultMigrationImage(fs afero.Fs) (chan ServiceBuildUpdate, error) {
+// 	migrateBuildChan := make(chan ServiceBuildUpdate)
 
-	imageName, ok := p.DefaultMigrationImage(fs)
+// 	imageName, ok := p.DefaultMigrationImage(fs)
 
-	// TODO: Do a glob check for migrations SQL files
-	if !ok {
-		go func() {
-			migrateBuildChan <- ServiceBuildUpdate{
-				ServiceName: "migrations",
-				Message:     "No migrations found",
-				Status:      ServiceBuildStatus_Skipped,
-			}
-			close(migrateBuildChan)
-		}()
+// 	// TODO: Do a glob check for migrations SQL files
+// 	if !ok {
+// 		go func() {
+// 			migrateBuildChan <- ServiceBuildUpdate{
+// 				ServiceName: "migrations",
+// 				Message:     "No migrations found",
+// 				Status:      ServiceBuildStatus_Skipped,
+// 			}
+// 			close(migrateBuildChan)
+// 		}()
 
-		return migrateBuildChan, nil
-	}
+// 		return migrateBuildChan, nil
+// 	}
 
-	dockerClient, err := docker.New()
-	if err != nil {
-		return nil, err
-	}
+// 	dockerClient, err := docker.New()
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	err = fs.MkdirAll(tempBuildDir, os.ModePerm)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create temporary build directory %s: %w", tempBuildDir, err)
-	}
+// 	err = fs.MkdirAll(tempBuildDir, os.ModePerm)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("unable to create temporary build directory %s: %w", tempBuildDir, err)
+// 	}
 
-	tmpDockerFile, err := afero.TempFile(fs, tempBuildDir, "default-migrations-*.dockerfile")
-	if err != nil {
-		return nil, fmt.Errorf("unable to create temporary dockerfile for database migrations: %w", err)
-	}
+// 	tmpDockerFile, err := afero.TempFile(fs, tempBuildDir, "default-migrations-*.dockerfile")
+// 	if err != nil {
+// 		return nil, fmt.Errorf("unable to create temporary dockerfile for database migrations: %w", err)
+// 	}
 
-	if err := afero.WriteFile(fs, tmpDockerFile.Name(), []byte(defaultDockerfileContents), os.ModePerm); err != nil {
-		return nil, fmt.Errorf("unable to write temporary dockerfile for database migrations")
-	}
+// 	if err := afero.WriteFile(fs, tmpDockerFile.Name(), []byte(defaultDockerfileContents), os.ModePerm); err != nil {
+// 		return nil, fmt.Errorf("unable to write temporary dockerfile for database migrations")
+// 	}
 
-	go func() {
-		defer func() {
-			tmpDockerFile.Close()
+// 	go func() {
+// 		defer func() {
+// 			tmpDockerFile.Close()
 
-			err := fs.Remove(tmpDockerFile.Name())
-			if err != nil {
-				logger.Errorf("unable to remove temporary dockerfile %s: %s", tmpDockerFile.Name(), err)
-			}
-		}()
+// 			err := fs.Remove(tmpDockerFile.Name())
+// 			if err != nil {
+// 				logger.Errorf("unable to remove temporary dockerfile %s: %s", tmpDockerFile.Name(), err)
+// 			}
+// 		}()
 
-		serviceBuildUpdateWriter := &serviceBuildUpdateWriter{
-			buildUpdateChan: migrateBuildChan,
-			serviceName:     "migrations",
-		}
+// 		serviceBuildUpdateWriter := &serviceBuildUpdateWriter{
+// 			buildUpdateChan: migrateBuildChan,
+// 			serviceName:     "migrations",
+// 		}
 
-		err := dockerClient.Build(tmpDockerFile.Name(), ".", imageName, map[string]string{}, []string{}, serviceBuildUpdateWriter)
+// 		err := dockerClient.Build(tmpDockerFile.Name(), ".", imageName, map[string]string{}, []string{}, serviceBuildUpdateWriter)
 
-		if err != nil {
-			migrateBuildChan <- ServiceBuildUpdate{
-				ServiceName: "migrations",
-				Err:         err,
-				Message:     err.Error(),
-				Status:      ServiceBuildStatus_Error,
-			}
-		} else {
-			migrateBuildChan <- ServiceBuildUpdate{
-				ServiceName: "migrations",
-				Message:     "Build Complete",
-				Status:      ServiceBuildStatus_Complete,
-			}
-		}
+// 		if err != nil {
+// 			migrateBuildChan <- ServiceBuildUpdate{
+// 				ServiceName: "migrations",
+// 				Err:         err,
+// 				Message:     err.Error(),
+// 				Status:      ServiceBuildStatus_Error,
+// 			}
+// 		} else {
+// 			migrateBuildChan <- ServiceBuildUpdate{
+// 				ServiceName: "migrations",
+// 				Message:     "Build Complete",
+// 				Status:      ServiceBuildStatus_Complete,
+// 			}
+// 		}
 
-		close(migrateBuildChan)
-	}()
+// 		close(migrateBuildChan)
+// 	}()
 
-	return migrateBuildChan, nil
-}
+// 	return migrateBuildChan, nil
+// }
 
 // RunServices - Runs all the services locally using a startup command
 // use the stop channel to stop all running services

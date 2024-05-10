@@ -21,7 +21,7 @@ require (
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.6.0
 	github.com/nitrictech/go-mods-direct v0.0.0-20221212215233-12bba0c74a7f
-	github.com/nitrictech/nitric/core v0.0.0-20240424034433-50891eaaecb0
+	github.com/nitrictech/nitric/core v0.0.0-20240507051301-79747a0f077a
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4 // indirect

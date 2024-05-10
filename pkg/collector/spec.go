@@ -197,19 +197,20 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 	return imageBuildContexts, nil
 }
 
-func buildDatabaseRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors, defaultMigrationImage string) ([]*deploymentspb.Resource, error) {
+func buildDatabaseRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
-		for databaseName := range serviceRequirements.sqlDatabases {
+		for databaseName, dbConfig := range serviceRequirements.sqlDatabases {
 			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
 				return item.Id.Name == databaseName
 			})
 
 			var migrations *deploymentspb.SqlDatabase_ImageUri = nil
-			if defaultMigrationImage != "" {
+			if dbConfig.Migrations != nil && dbConfig.Migrations.GetMigrationsPath() != "" {
 				migrations = &deploymentspb.SqlDatabase_ImageUri{
-					ImageUri: defaultMigrationImage,
+					// FIXME: make this repeatable
+					ImageUri: databaseName + "-migrations",
 				}
 			}
 
@@ -831,7 +832,7 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 		Resources: []*deploymentspb.Resource{},
 	}
 
-	databaseResources, err := buildDatabaseRequirements(allServiceRequirements, projectErrors, defaultMigrationImage)
+	databaseResources, err := buildDatabaseRequirements(allServiceRequirements, projectErrors)
 	if err != nil {
 		return nil, err
 	}

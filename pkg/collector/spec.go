@@ -154,6 +154,9 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 					return nil, err
 				}
 
+				// Trim Path if it has a leading slash
+				migrationsUrl.Path = strings.TrimPrefix(migrationsUrl.Path, "/")
+
 				// if the db has already been declared check that it dies not differ from a previous declaration
 				if _, exists := imageBuildContexts[databaseName]; exists {
 					if declaredConfigs[databaseName] != databaseConfig.Migrations.GetMigrationsPath() {

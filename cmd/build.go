@@ -40,7 +40,7 @@ var buildCmd = &cobra.Command{
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := teax.NewProgram(build.NewModel(updates))
+		prog := teax.NewProgram(build.NewModel(updates, "Building Services"))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
 		tui.CheckErr(err)

@@ -17,6 +17,7 @@
 package build
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -34,6 +35,7 @@ import (
 )
 
 type Model struct {
+	title               string
 	serviceBuildUpdates map[string][]project.ServiceBuildUpdate
 	windowSize          tea.WindowSizeMsg
 
@@ -118,7 +120,7 @@ func (m Model) View() string {
 	v := view.New(view.WithStyle(lipgloss.NewStyle().Width(m.windowSize.Width)))
 	v.Add(fragments.Tag("build"))
 
-	v.Add("  Building services")
+	v.Add(fmt.Sprintf("  %s", m.title))
 
 	if !m.AllDone() {
 		v.Add(m.spinner.View())
@@ -181,8 +183,9 @@ func (m Model) View() string {
 	return v.Render()
 }
 
-func NewModel(serviceBuildUpdates <-chan project.ServiceBuildUpdate) Model {
+func NewModel(serviceBuildUpdates <-chan project.ServiceBuildUpdate, title string) Model {
 	return Model{
+		title:                      title,
 		spinner:                    spinner.New(spinner.WithSpinner(spinner.Ellipsis)),
 		serviceBuildUpdatesChannel: serviceBuildUpdates,
 		serviceBuildUpdates:        make(map[string][]project.ServiceBuildUpdate),

@@ -211,7 +211,7 @@ var stackUpdateCmd = &cobra.Command{
 				}
 			}
 		} else {
-			prog := teax.NewProgram(build.NewModel(buildUpdates))
+			prog := teax.NewProgram(build.NewModel(buildUpdates, "Building Services"))
 			// blocks but quits once the above updates channel is closed by the build process
 			buildModel, err := prog.Run()
 			tui.CheckErr(err)
@@ -258,7 +258,7 @@ var stackUpdateCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		if isNonInteractive() {
-			fmt.Println("building project migration iamges")
+			fmt.Println("building project migration images")
 			// non-interactive environment
 			for update := range migrationBuildUpdates {
 				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
@@ -266,7 +266,7 @@ var stackUpdateCmd = &cobra.Command{
 				}
 			}
 		} else {
-			prog := teax.NewProgram(build.NewModel(migrationBuildUpdates))
+			prog := teax.NewProgram(build.NewModel(migrationBuildUpdates, "Building Database Migrations"))
 			// blocks but quits once the above updates channel is closed by the build process
 			buildModel, err := prog.Run()
 			tui.CheckErr(err)

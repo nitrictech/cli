@@ -187,7 +187,7 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 						BuildArguments: map[string]string{
 							"MIGRATIONS_PATH": migrationsUrl.Path,
 						},
-						DockerfileContents: string(defaultMigrationFileContents),
+						DockerfileContents: defaultMigrationFileContents,
 						BaseDirectory:      ".",
 					}
 				default:
@@ -839,6 +839,7 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 	if err != nil {
 		return nil, err
 	}
+
 	newSpec.Resources = append(newSpec.Resources, databaseResources...)
 
 	bucketResources, err := buildBucketRequirements(allServiceRequirements, projectErrors)

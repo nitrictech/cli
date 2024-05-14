@@ -1,3 +1,19 @@
+// Copyright Nitric Pty Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package project
 
 import (
@@ -8,10 +24,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/spf13/afero"
+
 	"github.com/nitrictech/cli/pkg/docker"
 	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/nitric/core/pkg/logger"
-	"github.com/spf13/afero"
 )
 
 func BuildMigrationImage(fs afero.Fs, dbName string, buildContext *runtime.RuntimeBuildContext, logs io.Writer) error {
@@ -81,6 +98,7 @@ func BuildMigrationImages(fs afero.Fs, migrationBuildContexts map[string]*runtim
 			// Acquire a token by filling the maxConcurrentBuilds channel
 			// this will block once the buffer is full
 			maxConcurrentBuilds <- struct{}{}
+
 			svcName := fmt.Sprintf("%s-migrations", dbName)
 
 			// Start goroutine

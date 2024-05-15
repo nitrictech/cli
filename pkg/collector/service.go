@@ -97,6 +97,11 @@ func (s *ServiceRequirements) Error() error {
 	return nil
 }
 
+// TODO: Remove when databases are no longer in preview
+func (s *ServiceRequirements) HasDatabases() bool {
+	return len(s.sqlDatabases) > 0
+}
+
 func (s *ServiceRequirements) WorkerCount() int {
 	workerCount := len(lo.Values(s.routes)) +
 		len(s.listeners) +

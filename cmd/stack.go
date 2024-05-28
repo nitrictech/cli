@@ -254,24 +254,26 @@ var stackUpdateCmd = &cobra.Command{
 		tui.CheckErr(err)
 		// Build images from contexts and provide updates on the builds
 
-		migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts)
-		tui.CheckErr(err)
-
-		if isNonInteractive() {
-			fmt.Println("building project migration images")
-			// non-interactive environment
-			for update := range migrationBuildUpdates {
-				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
-					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
-				}
-			}
-		} else {
-			prog := teax.NewProgram(build.NewModel(migrationBuildUpdates, "Building Database Migrations"))
-			// blocks but quits once the above updates channel is closed by the build process
-			buildModel, err := prog.Run()
+		if len(migrationImageContexts) > 0 {
+			migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts)
 			tui.CheckErr(err)
-			if buildModel.(build.Model).Err != nil {
-				tui.CheckErr(fmt.Errorf("error building services"))
+
+			if isNonInteractive() {
+				fmt.Println("building project migration images")
+				// non-interactive environment
+				for update := range migrationBuildUpdates {
+					for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+						fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+					}
+				}
+			} else {
+				prog := teax.NewProgram(build.NewModel(migrationBuildUpdates, "Building Database Migrations"))
+				// blocks but quits once the above updates channel is closed by the build process
+				buildModel, err := prog.Run()
+				tui.CheckErr(err)
+				if buildModel.(build.Model).Err != nil {
+					tui.CheckErr(fmt.Errorf("error building services"))
+				}
 			}
 		}
 

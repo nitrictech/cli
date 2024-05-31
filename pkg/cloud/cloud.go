@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
+	"github.com/nitrictech/cli/pkg/cloud/batch"
 	"github.com/nitrictech/cli/pkg/cloud/gateway"
 	"github.com/nitrictech/cli/pkg/cloud/http"
 	"github.com/nitrictech/cli/pkg/cloud/keyvalue"
@@ -55,6 +56,7 @@ type LocalCloud struct {
 	servers    map[ServiceName]*server.NitricServer
 
 	Apis       *apis.LocalApiGatewayService
+	Batch      *batch.LocalBatchService
 	KeyValue   *keyvalue.BoltDocService
 	Gateway    *gateway.LocalGatewayService
 	Http       *http.LocalHttpProxy
@@ -66,8 +68,6 @@ type LocalCloud struct {
 	Websockets *websockets.LocalWebsocketService
 	Queues     *queues.LocalQueuesService
 	Databases  *sql.LocalSqlServer
-
-	// Store all the plugins locally
 }
 
 // StartLocalNitric - starts the Nitric Server, including plugins and their local dependencies (e.g. local versions of cloud services)
@@ -87,6 +87,74 @@ func (lc *LocalCloud) Stop() {
 	}
 }
 
+func (lc *LocalCloud) AddBatch(batchName string) (int, error) {
+	lc.serverLock.Lock()
+	defer lc.serverLock.Unlock()
+
+	if _, ok := lc.servers[batchName]; ok {
+		return 0, fmt.Errorf("batch %s already added", batchName)
+	}
+
+	// get an available port
+	ports, err := netx.TakePort(1)
+	if err != nil {
+		return 0, err
+	}
+
+	nitricRuntimeServer, _ := server.New(
+		server.WithJobHandlerPlugin(lc.Batch),
+		server.WithBatchPlugin(lc.Batch),
+		server.WithResourcesPlugin(lc.Resources),
+		server.WithApiPlugin(lc.Apis),
+		server.WithHttpPlugin(lc.Http),
+		server.WithSqlPlugin(lc.Databases),
+		server.WithServiceAddress(fmt.Sprintf("0.0.0.0:%d", ports[0])),
+		server.WithSecretManagerPlugin(lc.Secrets),
+		server.WithStoragePlugin(lc.Storage),
+		server.WithKeyValuePlugin(lc.KeyValue),
+		server.WithGatewayPlugin(lc.Gateway),
+		server.WithWebsocketPlugin(lc.Websockets),
+		server.WithQueuesPlugin(lc.Queues),
+		server.WithMinWorkers(0),
+		server.WithChildCommand([]string{}))
+
+	// Create a watcher that clears old resources when the service is restarted
+	_, err = resources.NewServiceResourceRefresher(batchName, resources.NewServiceResourceRefresherArgs{
+		Resources:  lc.Resources,
+		Apis:       lc.Apis,
+		Schedules:  lc.Schedules,
+		Http:       lc.Http,
+		Listeners:  lc.Storage,
+		Websockets: lc.Websockets,
+		Topics:     lc.Topics,
+		Storage:    lc.Storage,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	go func() {
+		interceptor, streamInterceptor := grpcx.CreateServiceNameInterceptor(batchName)
+
+		srv := grpc.NewServer(
+			grpc.UnaryInterceptor(interceptor),
+			grpc.StreamInterceptor(streamInterceptor),
+		)
+
+		// Enable reflection on the gRPC server for local testing
+		reflection.Register(srv)
+
+		err := nitricRuntimeServer.Start(server.WithGrpcServer(srv))
+		if err != nil {
+			logger.Errorf("Error starting nitric server: %s", err.Error())
+		}
+	}()
+
+	lc.servers[batchName] = nitricRuntimeServer
+
+	return ports[0], nil
+}
+
 func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	lc.serverLock.Lock()
 	defer lc.serverLock.Unlock()
@@ -102,6 +170,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	}
 
 	nitricRuntimeServer, _ := server.New(
+		server.WithBatchPlugin(lc.Batch),
 		server.WithResourcesPlugin(lc.Resources),
 		server.WithApiPlugin(lc.Apis),
 		server.WithHttpPlugin(lc.Http),
@@ -184,6 +253,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	}
 
 	localApis := apis.NewLocalApiGatewayService()
+	localBatch := batch.NewLocalBatchService()
 
 	localSchedules := schedules.NewLocalSchedulesService()
 	localHttpProxy := http.NewLocalHttpProxyService()
@@ -228,6 +298,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	return &LocalCloud{
 		servers:    make(map[string]*server.NitricServer),
 		Apis:       localApis,
+		Batch:      localBatch,
 		Http:       localHttpProxy,
 		Resources:  localResources,
 		Schedules:  localSchedules,

@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -198,6 +199,11 @@ var stackUpdateCmd = &cobra.Command{
 		buildUpdates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
+		batchBuildUpdates, err := proj.BuildBatches(fs)
+		tui.CheckErr(err)
+
+		allBuildUpdates := lo.FanIn(10, buildUpdates, batchBuildUpdates)
+
 		if isNonInteractive() {
 			fmt.Println("building project services")
 			for _, service := range proj.GetServices() {
@@ -205,13 +211,13 @@ var stackUpdateCmd = &cobra.Command{
 			}
 
 			// non-interactive environment
-			for update := range buildUpdates {
+			for update := range allBuildUpdates {
 				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
 					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 				}
 			}
 		} else {
-			prog := teax.NewProgram(build.NewModel(buildUpdates, "Building Services"))
+			prog := teax.NewProgram(build.NewModel(allBuildUpdates, "Building Services"))
 			// blocks but quits once the above updates channel is closed by the build process
 			buildModel, err := prog.Run()
 			tui.CheckErr(err)
@@ -223,6 +229,9 @@ var stackUpdateCmd = &cobra.Command{
 		// Step 2. Start the collectors and containers (respectively in pairs)
 		// Step 3. Merge requirements from collectors into a specification
 		serviceRequirements, err := proj.CollectServicesRequirements()
+		tui.CheckErr(err)
+
+		batchRequirements, err := proj.CollectBatchRequirements()
 		tui.CheckErr(err)
 
 		additionalEnvFiles := []string{}
@@ -245,12 +254,7 @@ var stackUpdateCmd = &cobra.Command{
 			envVariables["NITRIC_BETA_PROVIDERS"] = "true"
 		}
 
-		defaultImageName, ok := proj.DefaultMigrationImage(fs)
-		if !ok {
-			defaultImageName = ""
-		}
-
-		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, fs)
+		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, batchRequirements, fs)
 		tui.CheckErr(err)
 		// Build images from contexts and provide updates on the builds
 
@@ -277,7 +281,7 @@ var stackUpdateCmd = &cobra.Command{
 			}
 		}
 
-		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, defaultImageName)
+		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements)
 		tui.CheckErr(err)
 
 		providerStdout := make(chan string)

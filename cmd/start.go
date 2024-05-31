@@ -220,6 +220,15 @@ var startCmd = &cobra.Command{
 				tui.CheckErr(err)
 			}
 		}()
+		// FIXME: Duplicate code
+		go func() {
+			err := proj.RunBatchesWithCommand(localCloud, stopChan, updatesChan, localEnv)
+			if err != nil {
+				localCloud.Stop()
+
+				tui.CheckErr(err)
+			}
+		}()
 
 		tui.CheckErr(err)
 

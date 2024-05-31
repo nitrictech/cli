@@ -23,6 +23,7 @@ import (
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -117,7 +118,12 @@ var runCmd = &cobra.Command{
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := teax.NewProgram(build.NewModel(updates, "Building Services"))
+		batchBuildUpdates, err := proj.BuildBatches(fs)
+		tui.CheckErr(err)
+
+		allBuildUpdates := lo.FanIn(10, updates, batchBuildUpdates)
+
+		prog := teax.NewProgram(build.NewModel(allBuildUpdates, "Building Services"))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
 		tui.CheckErr(err)
@@ -134,6 +140,15 @@ var runCmd = &cobra.Command{
 
 		go func() {
 			err := proj.RunServices(localCloud, stopChan, updatesChan, loadEnv)
+			if err != nil {
+				localCloud.Stop()
+
+				tui.CheckErr(err)
+			}
+		}()
+
+		go func() {
+			err := proj.RunBatches(localCloud, stopChan, updatesChan, loadEnv)
 			if err != nil {
 				localCloud.Stop()
 

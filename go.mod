@@ -23,7 +23,7 @@ require (
 	github.com/hashicorp/consul/sdk v0.13.0
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.7.0
-	github.com/nitrictech/nitric/core v0.0.0-20240827004051-cd5d36aaa8e6
+	github.com/nitrictech/nitric/core v0.0.0-20240902041254-c5beb733ae42
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.1
 	github.com/valyala/fasthttp v1.51.0

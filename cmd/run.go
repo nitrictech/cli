@@ -119,7 +119,12 @@ var runCmd = &cobra.Command{
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
-		prog := teax.NewProgram(build.NewModel(updates, "Building Services"))
+		batchBuildUpdates, err := proj.BuildBatches(fs)
+		tui.CheckErr(err)
+
+		allBuildUpdates := lo.FanIn(10, updates, batchBuildUpdates)
+
+		prog := teax.NewProgram(build.NewModel(allBuildUpdates, "Building Services"))
 		// blocks but quits once the above updates channel is closed by the build process
 		_, err = prog.Run()
 		tui.CheckErr(err)
@@ -145,6 +150,16 @@ var runCmd = &cobra.Command{
 			}
 		}()
 
+		go func() {
+			err := proj.RunBatches(localCloud, stopChan, updatesChan, loadEnv)
+			if err != nil {
+				localCloud.Stop()
+
+				tui.CheckErr(err)
+			}
+		}()
+
+		tui.CheckErr(err)
 		// FIXME: This is a hack to get labelled logs into the TUI
 		// We should refactor the system logs to be more generic
 		systemChan := make(chan project.ServiceRunUpdate)

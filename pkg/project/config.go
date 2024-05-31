@@ -53,11 +53,23 @@ type ServiceConfiguration struct {
 	Start string `yaml:"start"`
 }
 
+type BatchConfiguration struct {
+	// This is the string version
+	Match string `yaml:"match"`
+
+	// This is the custom runtime version (is custom if not nil, we auto-detect a standard language runtime)
+	Runtime string `yaml:"runtime"`
+
+	// This is a command that will be use to run this job locally when using nitric start
+	Start string `yaml:"start"`
+}
+
 type ProjectConfiguration struct {
 	Name      string                          `yaml:"name"`
 	Directory string                          `yaml:"-"`
 	Services  []ServiceConfiguration          `yaml:"services"`
 	Ports     map[string]int                  `yaml:"ports,omitempty"`
+	Batches   []BatchConfiguration            `yaml:"batch-services"`
 	Runtimes  map[string]RuntimeConfiguration `yaml:"runtimes,omitempty"`
 	Preview   []preview.Feature               `yaml:"preview,omitempty"`
 }

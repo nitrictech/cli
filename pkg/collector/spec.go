@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -140,6 +139,25 @@ func buildHttpRequirements(allServiceRequirements []*ServiceRequirements, projec
 //go:embed default-migrations.dockerfile
 var defaultMigrationFileContents string
 
+// TODO: validate scheme types and paths
+var schemeRegex = regexp.MustCompile(`(?P<Scheme>^[a-z]+)://(?P<Path>.*)$`)
+
+func parseMigrationsScheme(migrationsPath string) (string, string, error) {
+	match := schemeRegex.FindStringSubmatch(migrationsPath)
+	if match == nil {
+		return "", "", fmt.Errorf("invalid migrations URI: %s", migrationsPath)
+	}
+
+	result := make(map[string]string)
+	for i, name := range schemeRegex.SubexpNames() {
+		if i != 0 && name != "" {
+			result[name] = match[i]
+		}
+	}
+
+	return result["Scheme"], result["Path"], nil
+}
+
 // Collect a list of migration images that need to be built
 // these requirements need to be supplied to the deployment serviceS
 func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirements, fs afero.Fs) (map[string]*runtime.RuntimeBuildContext, error) {
@@ -149,13 +167,10 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 	for _, serviceRequirements := range allServiceRequirements {
 		for databaseName, databaseConfig := range serviceRequirements.sqlDatabases {
 			if databaseConfig.Migrations != nil && databaseConfig.Migrations.GetMigrationsPath() != "" {
-				migrationsUrl, err := url.Parse(databaseConfig.Migrations.GetMigrationsPath())
+				scheme, path, err := parseMigrationsScheme(databaseConfig.Migrations.GetMigrationsPath())
 				if err != nil {
 					return nil, err
 				}
-
-				// Trim Path if it has a leading slash
-				migrationsUrl.Path = strings.TrimPrefix(migrationsUrl.Path, "/")
 
 				// if the db has already been declared check that it dies not differ from a previous declaration
 				if _, exists := imageBuildContexts[databaseName]; exists {
@@ -168,10 +183,10 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 
 				declaredConfigs[databaseName] = databaseConfig.Migrations.GetMigrationsPath()
 
-				switch migrationsUrl.Scheme {
+				switch scheme {
 				case "dockerfile":
 					// Read the referenced dockerfile
-					dockerfileContents, err := afero.ReadFile(fs, migrationsUrl.Path)
+					dockerfileContents, err := afero.ReadFile(fs, path)
 					if err != nil {
 						return nil, err
 					}
@@ -185,13 +200,13 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 					// Default dockerfile build context for the given path
 					imageBuildContexts[databaseName] = &runtime.RuntimeBuildContext{
 						BuildArguments: map[string]string{
-							"MIGRATIONS_PATH": migrationsUrl.Path,
+							"MIGRATIONS_PATH": path,
 						},
 						DockerfileContents: defaultMigrationFileContents,
 						BaseDirectory:      ".",
 					}
 				default:
-					return nil, fmt.Errorf("unsupported migration path scheme: %s, must be one of dockerfile or file", migrationsUrl.Scheme)
+					return nil, fmt.Errorf("unsupported migration path scheme: %s, must be one of dockerfile or file", scheme)
 				}
 			}
 		}

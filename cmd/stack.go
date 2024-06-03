@@ -416,9 +416,28 @@ nitric stack down -s aws -y`,
 
 		providerStdout := make(chan string)
 
+		additionalEnvFiles := []string{}
+		if envFile != "" {
+			additionalEnvFiles = append(additionalEnvFiles, envFile)
+		}
+
+		envVariables, err := env.ReadLocalEnv(additionalEnvFiles...)
+		if err != nil && os.IsNotExist(err) {
+			if !os.IsNotExist(err) {
+				tui.CheckErr(err)
+			}
+			// If it doesn't exist set blank
+			envVariables = map[string]string{}
+		}
+
+		// Allow Beta providers to be run if 'beta-providers' is enabled in preview flags
+		if slices.Contains(proj.Preview, preview.Feature_BetaProviders) {
+			envVariables["NITRIC_BETA_PROVIDERS"] = "true"
+		}
+
 		// Step 4. Start the deployment provider server
 		providerAddress, err := prov.Start(&provider.StartOptions{
-			Env:    map[string]string{},
+			Env:    envVariables,
 			StdOut: providerStdout,
 			StdErr: providerStdout,
 		})

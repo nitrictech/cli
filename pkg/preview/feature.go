@@ -20,4 +20,5 @@ type Feature = string
 
 const (
 	Feature_DockerProviders Feature = "docker-providers"
+	Feature_BetaProviders   Feature = "beta-providers"
 )

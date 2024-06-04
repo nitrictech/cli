@@ -22,6 +22,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -64,7 +65,12 @@ var runCmd = &cobra.Command{
 			tui.CheckErr(err)
 		}
 
-		runView := teax.NewProgram(local.NewLocalCloudStartModel())
+		teaOptions := []tea.ProgramOption{}
+		if isNonInteractive() {
+			teaOptions = append(teaOptions, tea.WithoutRenderer())
+		}
+
+		runView := teax.NewProgram(local.NewLocalCloudStartModel(), teaOptions...)
 
 		var localCloud *cloud.LocalCloud
 		go func() {

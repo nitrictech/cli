@@ -31,6 +31,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
+	"github.com/nitrictech/cli/pkg/view/tui/commands/local"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/services"
 	"github.com/nitrictech/cli/pkg/view/tui/teax"
 )
@@ -63,8 +64,17 @@ var runCmd = &cobra.Command{
 			tui.CheckErr(err)
 		}
 
-		// Start the local cloud service analogues
-		localCloud, err := cloud.New(proj.Name)
+		runView := teax.NewProgram(local.NewLocalCloudStartModel())
+
+		var localCloud *cloud.LocalCloud
+		go func() {
+			// Start the local cloud service analogues
+			localCloud, err = cloud.New(proj.Name)
+			tui.CheckErr(err)
+			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})
+		}()
+
+		_, err = runView.Run()
 		tui.CheckErr(err)
 
 		updates, err := proj.BuildServices(fs)

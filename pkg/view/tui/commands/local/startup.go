@@ -27,8 +27,9 @@ import (
 )
 
 type LocalCloudStartModel struct {
-	spinner spinner.Model
-	status  CloudStartupStatus
+	spinner          spinner.Model
+	status           CloudStartupStatus
+	isNonInteractive bool
 }
 
 type CloudStartupStatus int
@@ -80,8 +81,13 @@ func (t *LocalCloudStartModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (t *LocalCloudStartModel) View() string {
 	v := viewr.New()
+
 	if t.status != Done {
-		v.Add("%s Starting Local Cloud, if this is your first run this may take a few minutes", t.spinner.View())
+		if t.isNonInteractive {
+			v.Add("Starting Local Cloud, if this is your first run this may take a few minutes")
+		} else {
+			v.Add("%s Starting Local Cloud, if this is your first run this may take a few minutes", t.spinner.View())
+		}
 	} else {
 		v.Add("Local cloud started successfully")
 	}
@@ -89,13 +95,14 @@ func (t *LocalCloudStartModel) View() string {
 	return v.Render()
 }
 
-func NewLocalCloudStartModel() *LocalCloudStartModel {
+func NewLocalCloudStartModel(isNonInteractive bool) *LocalCloudStartModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = spinnerStyle
 
 	return &LocalCloudStartModel{
-		status:  Starting,
-		spinner: s,
+		status:           Starting,
+		spinner:          s,
+		isNonInteractive: isNonInteractive,
 	}
 }

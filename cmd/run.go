@@ -67,10 +67,10 @@ var runCmd = &cobra.Command{
 
 		teaOptions := []tea.ProgramOption{}
 		if isNonInteractive() {
-			teaOptions = append(teaOptions, tea.WithoutRenderer())
+			teaOptions = append(teaOptions, tea.WithoutRenderer(), tea.WithInput(nil))
 		}
 
-		runView := teax.NewProgram(local.NewLocalCloudStartModel(), teaOptions...)
+		runView := teax.NewProgram(local.NewLocalCloudStartModel(isNonInteractive()), teaOptions...)
 
 		var localCloud *cloud.LocalCloud
 		go func() {

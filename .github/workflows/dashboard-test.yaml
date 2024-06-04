@@ -52,7 +52,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/cli/pkg/dashboard/frontend/test-app
           yarn install
-          nitric start &
+          nitric start --ci &
 
       - name: Run Tests
         uses: cypress-io/github-action@v5

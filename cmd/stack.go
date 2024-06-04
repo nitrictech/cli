@@ -19,6 +19,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -29,6 +30,7 @@ import (
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/env"
 	"github.com/nitrictech/cli/pkg/pflagx"
+	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/project/stack"
 	"github.com/nitrictech/cli/pkg/provider"
@@ -238,6 +240,11 @@ var stackUpdateCmd = &cobra.Command{
 			envVariables = map[string]string{}
 		}
 
+		// Allow Beta providers to be run if 'beta-providers' is enabled in preview flags
+		if slices.Contains(proj.Preview, preview.Feature_BetaProviders) {
+			envVariables["NITRIC_BETA_PROVIDERS"] = "true"
+		}
+
 		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements)
 		tui.CheckErr(err)
 
@@ -409,9 +416,28 @@ nitric stack down -s aws -y`,
 
 		providerStdout := make(chan string)
 
+		additionalEnvFiles := []string{}
+		if envFile != "" {
+			additionalEnvFiles = append(additionalEnvFiles, envFile)
+		}
+
+		envVariables, err := env.ReadLocalEnv(additionalEnvFiles...)
+		if err != nil && os.IsNotExist(err) {
+			if !os.IsNotExist(err) {
+				tui.CheckErr(err)
+			}
+			// If it doesn't exist set blank
+			envVariables = map[string]string{}
+		}
+
+		// Allow Beta providers to be run if 'beta-providers' is enabled in preview flags
+		if slices.Contains(proj.Preview, preview.Feature_BetaProviders) {
+			envVariables["NITRIC_BETA_PROVIDERS"] = "true"
+		}
+
 		// Step 4. Start the deployment provider server
 		providerAddress, err := prov.Start(&provider.StartOptions{
-			Env:    map[string]string{},
+			Env:    envVariables,
 			StdOut: providerStdout,
 			StdErr: providerStdout,
 		})

@@ -42,14 +42,7 @@ type LocalCloudStartStatusMsg struct {
 	Status CloudStartupStatus
 }
 
-var (
-	titleStyle = lipgloss.NewStyle().
-			Padding(0, 1).
-			Foreground(tui.Colors.White).
-			Background(tui.Colors.Blue).
-			MarginRight(2)
-	spinnerStyle = lipgloss.NewStyle().Foreground(tui.Colors.Purple)
-)
+var spinnerStyle = lipgloss.NewStyle().Foreground(tui.Colors.Purple)
 
 var _ tea.Model = &TuiModel{}
 
@@ -97,7 +90,6 @@ func (t *LocalCloudStartModel) View() string {
 }
 
 func NewLocalCloudStartModel() *LocalCloudStartModel {
-
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = spinnerStyle

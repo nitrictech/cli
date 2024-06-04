@@ -149,6 +149,7 @@ func parseMigrationsScheme(migrationsPath string) (string, string, error) {
 	}
 
 	result := make(map[string]string)
+
 	for i, name := range schemeRegex.SubexpNames() {
 		if i != 0 && name != "" {
 			result[name] = match[i]

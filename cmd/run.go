@@ -112,10 +112,12 @@ var runCmd = &cobra.Command{
 				// Wait for a signal
 				<-sigChan
 
-				// Send stop signal to stopChan
-				close(stopChan)
+				fmt.Println("Stopping local cloud")
 
 				localCloud.Stop()
+
+				// Send stop signal to stopChan
+				close(stopChan)
 			}()
 
 			for {
@@ -124,6 +126,7 @@ var runCmd = &cobra.Command{
 					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
 				case <-stopChan:
 					fmt.Println("Shutting down services - exiting")
+					return nil
 				}
 			}
 		} else {

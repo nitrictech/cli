@@ -131,9 +131,6 @@ func (l *LocalSqlServer) start() error {
 		},
 	}, &container.HostConfig{
 		AutoRemove: true,
-		// Binds: []string{
-		// 	fmt.Sprintf("%s:/var/lib/postgresql/data", localSqlPath),
-		// },
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeVolume,
@@ -142,14 +139,12 @@ func (l *LocalSqlServer) start() error {
 			},
 		},
 		PortBindings: map[nat.Port][]nat.PortBinding{
-			// TODO: Randomize port number to allow multiple starts
 			"5432/tcp": {
 				{
 					HostPort: fmt.Sprint(freeport),
 				},
 			},
 		},
-		// TODO: Randomize instance name to allow multiple starts
 	}, nil, fmt.Sprintf("nitric-%s-local-sql", l.projectName))
 	if err != nil {
 		return err

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"regexp"
 	"strings"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v4"
 
 	"github.com/nitrictech/cli/pkg/docker"
+	"github.com/nitrictech/cli/pkg/netx"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
 )
@@ -112,6 +114,15 @@ func (l *LocalSqlServer) start() error {
 		}
 	}
 
+	newLis, err := netx.GetNextListener(netx.MinPort(5432))
+	if err != nil {
+		return err
+	}
+
+	freeport := newLis.Addr().(*net.TCPAddr).Port
+
+	_ = newLis.Close()
+
 	l.containerId, err = dockerClient.ContainerCreate(&container.Config{
 		Image: "postgres",
 		Env: []string{
@@ -134,12 +145,12 @@ func (l *LocalSqlServer) start() error {
 			// TODO: Randomize port number to allow multiple starts
 			"5432/tcp": {
 				{
-					HostPort: "5432",
+					HostPort: fmt.Sprint(freeport),
 				},
 			},
 		},
 		// TODO: Randomize instance name to allow multiple starts
-	}, nil, "nitric-local-sql")
+	}, nil, fmt.Sprintf("nitric-%s-local-sql", l.projectName))
 	if err != nil {
 		return err
 	}

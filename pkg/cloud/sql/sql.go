@@ -18,11 +18,9 @@ package sql
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net"
-	"regexp"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -46,17 +44,7 @@ type LocalSqlServer struct {
 
 var _ sqlpb.SqlServer = (*LocalSqlServer)(nil)
 
-func isValidDatabaseName(databaseName string) bool {
-	validRegex := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	return validRegex.MatchString(databaseName)
-}
-
 func ensureDatabaseExists(databaseName string) (string, error) {
-	// Check databaseName is valid
-	if !isValidDatabaseName(databaseName) {
-		return "", errors.New("invalid database name")
-	}
-
 	port := 5432
 	// Ensure the database exists
 	// Connect to the PostgreSQL instance
@@ -67,7 +55,7 @@ func ensureDatabaseExists(databaseName string) (string, error) {
 	defer conn.Close(context.Background())
 
 	// Create the new database
-	_, err = conn.Exec(context.Background(), fmt.Sprintf("CREATE DATABASE %s", databaseName))
+	_, err = conn.Exec(context.Background(), fmt.Sprintf(`CREATE DATABASE "%s"`, databaseName))
 	if err != nil {
 		// If the database already exists, don't treat it as an error
 		if strings.Contains(err.Error(), "already exists") {

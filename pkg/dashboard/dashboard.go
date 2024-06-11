@@ -94,6 +94,10 @@ type KeyValueSpec struct {
 	*BaseResourceSpec
 }
 
+type SQLDatabaseSpec struct {
+	*BaseResourceSpec
+}
+
 type NotifierSpec struct {
 	Bucket string `json:"bucket"`
 	Target string `json:"target"`
@@ -139,6 +143,7 @@ type Dashboard struct {
 	topics                 []*TopicSpec
 	buckets                []*BucketSpec
 	stores                 []*KeyValueSpec
+	sqlDatabases           []*SQLDatabaseSpec
 	websockets             []WebsocketSpec
 	subscriptions          []*SubscriberSpec
 	notifications          []*NotifierSpec
@@ -159,16 +164,17 @@ type Dashboard struct {
 }
 
 type DashboardResponse struct {
-	Apis          []ApiSpec         `json:"apis"`
-	Buckets       []*BucketSpec     `json:"buckets"`
-	Schedules     []ScheduleSpec    `json:"schedules"`
-	Topics        []*TopicSpec      `json:"topics"`
-	Websockets    []WebsocketSpec   `json:"websockets"`
-	Subscriptions []*SubscriberSpec `json:"subscriptions"`
-	Notifications []*NotifierSpec   `json:"notifications"`
-	Stores        []*KeyValueSpec   `json:"stores"`
-	Queues        []*QueueSpec      `json:"queues"`
-	HttpProxies   []*HttpProxySpec  `json:"httpProxies"`
+	Apis          []ApiSpec          `json:"apis"`
+	Buckets       []*BucketSpec      `json:"buckets"`
+	Schedules     []ScheduleSpec     `json:"schedules"`
+	Topics        []*TopicSpec       `json:"topics"`
+	Websockets    []WebsocketSpec    `json:"websockets"`
+	Subscriptions []*SubscriberSpec  `json:"subscriptions"`
+	Notifications []*NotifierSpec    `json:"notifications"`
+	Stores        []*KeyValueSpec    `json:"stores"`
+	SQLDatabases  []*SQLDatabaseSpec `json:"sqlDatabases"`
+	Queues        []*QueueSpec       `json:"queues"`
+	HttpProxies   []*HttpProxySpec   `json:"httpProxies"`
 
 	Services []*ServiceSpec `json:"services"`
 
@@ -220,7 +226,7 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.topics = []*TopicSpec{}
 	d.stores = []*KeyValueSpec{}
 	d.queues = []*QueueSpec{}
-	d.queues = []*QueueSpec{}
+	d.sqlDatabases = []*SQLDatabaseSpec{}
 	d.apiSecurityDefinitions = map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{}
 
 	d.policies = map[string]PolicySpec{}
@@ -325,6 +331,21 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 		d.apiSecurityDefinitions[apiDefinition.Resource.ApiName] = map[string]*resourcespb.ApiSecurityDefinitionResource{}
 
 		d.apiSecurityDefinitions[apiDefinition.Resource.ApiName][schemeName] = apiDefinition.Resource
+	}
+
+	for dbName, resource := range lrs.SqlDatabases.GetAll() {
+		exists := lo.ContainsBy(d.sqlDatabases, func(item *SQLDatabaseSpec) bool {
+			return item.Name == dbName
+		})
+
+		if !exists {
+			d.sqlDatabases = append(d.sqlDatabases, &SQLDatabaseSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               dbName,
+					RequestingServices: resource.RequestingServices,
+				},
+			})
+		}
 	}
 
 	d.refresh()
@@ -511,8 +532,9 @@ func (d *Dashboard) isConnected() bool {
 	notificationsRegistered := len(d.notifications) > 0
 	proxiesRegistered := len(d.httpProxies) > 0
 	storesRegistered := len(d.stores) > 0
+	sqlRegistered := len(d.sqlDatabases) > 0
 
-	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered
+	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered || sqlRegistered
 }
 
 func (d *Dashboard) Start() error {
@@ -667,6 +689,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		Topics:              d.topics,
 		Buckets:             d.buckets,
 		Stores:              d.stores,
+		SQLDatabases:        d.sqlDatabases,
 		Schedules:           d.schedules,
 		Websockets:          d.websockets,
 		Policies:            d.policies,
@@ -752,6 +775,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		notifications:          []*NotifierSpec{},
 		websockets:             []WebsocketSpec{},
 		stores:                 []*KeyValueSpec{},
+		sqlDatabases:           []*SQLDatabaseSpec{},
 		queues:                 []*QueueSpec{},
 		httpProxies:            []*HttpProxySpec{},
 		policies:               map[string]PolicySpec{},

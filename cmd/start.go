@@ -22,6 +22,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -31,6 +32,7 @@ import (
 	"github.com/nitrictech/cli/pkg/env"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/view/tui"
+	"github.com/nitrictech/cli/pkg/view/tui/commands/local"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/services"
 	"github.com/nitrictech/cli/pkg/view/tui/fragments"
 	"github.com/nitrictech/cli/pkg/view/tui/teax"
@@ -69,11 +71,23 @@ var startCmd = &cobra.Command{
 			tui.CheckErr(err)
 		}
 
-		// Start the local cloud service analogues
-		localCloud, err := cloud.New()
-		tui.CheckErr(err)
+		teaOptions := []tea.ProgramOption{}
+		if isNonInteractive() {
+			teaOptions = append(teaOptions, tea.WithoutRenderer(), tea.WithInput(nil))
+		}
 
-		fmt.Println("local nitric server started")
+		runView := teax.NewProgram(local.NewLocalCloudStartModel(isNonInteractive()), teaOptions...)
+
+		var localCloud *cloud.LocalCloud
+		go func() {
+			// Start the local cloud service analogues
+			localCloud, err = cloud.New(proj.Name)
+			tui.CheckErr(err)
+			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})
+		}()
+
+		_, err = runView.Run()
+		tui.CheckErr(err)
 
 		// Start dashboard
 		dash, err := dashboard.New(startNoBrowser, localCloud, proj)
@@ -112,10 +126,12 @@ var startCmd = &cobra.Command{
 				// Wait for a signal
 				<-sigChan
 
-				// Send stop signal to stopChan
-				close(stopChan)
+				fmt.Println("Stopping local cloud")
 
 				localCloud.Stop()
+
+				// Send stop signal to stopChan
+				close(stopChan)
 			}()
 
 			for {
@@ -124,6 +140,7 @@ var startCmd = &cobra.Command{
 					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
 				case <-stopChan:
 					fmt.Println("Shutting down services - exiting")
+					return nil
 				}
 			}
 		} else {

@@ -56,6 +56,7 @@ type ServiceRequirements struct {
 	keyValueStores        map[string]*resourcespb.KeyValueStoreResource
 	topics                map[string]*resourcespb.TopicResource
 	queues                map[string]*resourcespb.QueueResource
+	sqlDatabases          map[string]*resourcespb.SqlDatabaseResource
 
 	policies []*resourcespb.PolicyResource
 	secrets  map[string]*resourcespb.SecretResource
@@ -96,6 +97,11 @@ func (s *ServiceRequirements) Error() error {
 	return nil
 }
 
+// TODO: Remove when databases are no longer in preview
+func (s *ServiceRequirements) HasDatabases() bool {
+	return len(s.sqlDatabases) > 0
+}
+
 func (s *ServiceRequirements) WorkerCount() int {
 	workerCount := len(lo.Values(s.routes)) +
 		len(s.listeners) +
@@ -134,6 +140,10 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 	case resourcespb.ResourceType_Secret:
 		// Add a secret
 		s.secrets[req.Id.GetName()] = req.GetSecret()
+
+	case resourcespb.ResourceType_SqlDatabase:
+		// Add a sql database
+		s.sqlDatabases[req.Id.GetName()] = req.GetSqlDatabase()
 	case resourcespb.ResourceType_Policy:
 		// Services don't know their own name, so we need to add it here
 		if req.GetPolicy().GetPrincipals() == nil {
@@ -361,6 +371,7 @@ func NewServiceRequirements(serviceName string, serviceFile string, serviceType 
 		secrets:               make(map[string]*resourcespb.SecretResource),
 		listeners:             make(map[string]*storagepb.RegistrationRequest),
 		apis:                  make(map[string]*resourcespb.ApiResource),
+		sqlDatabases:          make(map[string]*resourcespb.SqlDatabaseResource),
 		apiSecurityDefinition: make(map[string]map[string]*resourcespb.ApiSecurityDefinitionResource),
 		queues:                make(map[string]*resourcespb.QueueResource),
 		errors:                []error{},

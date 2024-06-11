@@ -25,6 +25,8 @@ export interface Api extends BaseResource {
 
 export type KeyValue = BaseResource
 
+export type SQLDatabase = BaseResource
+
 export interface HttpProxy extends BaseResource {
   target: string
 }
@@ -99,6 +101,7 @@ export interface WebSocketResponse {
   topics: Topic[]
   services: Service[]
   stores: KeyValue[]
+  sqlDatabases: SQLDatabase[]
   httpProxies: HttpProxy[]
   websockets: WebSocket[]
   queues: Queue[]

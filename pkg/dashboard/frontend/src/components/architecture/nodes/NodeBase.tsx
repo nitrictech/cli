@@ -1,16 +1,19 @@
 import type { FC, PropsWithChildren } from 'react'
 import { Handle, Position, type NodeProps } from 'reactflow'
 import { DetailsDrawer, type DetailsDrawerProps } from '../DetailsDrawer'
+import type { IconType } from 'react-icons/lib'
 
 export interface NodeBaseData<T = Record<string, any>> {
   resource: T
   title: string
-  icon: React.ForwardRefExoticComponent<
-    Omit<React.SVGProps<SVGSVGElement>, 'ref'> & {
-      title?: string | undefined
-      titleId?: string | undefined
-    } & React.RefAttributes<SVGSVGElement>
-  >
+  icon:
+    | React.ForwardRefExoticComponent<
+        Omit<React.SVGProps<SVGSVGElement>, 'ref'> & {
+          title?: string | undefined
+          titleId?: string | undefined
+        } & React.RefAttributes<SVGSVGElement>
+      >
+    | IconType
   description?: string
   address?: string
 }

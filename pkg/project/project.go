@@ -18,12 +18,14 @@ package project
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -179,6 +181,10 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 		return nil, err
 	}
 
+	if serviceRequirements.HasDatabases() && !slices.Contains(p.Preview, preview.Feature_SqlDatabases) {
+		return nil, fmt.Errorf("service %s requires a database, but the project does not have the 'sql-databases' preview feature enabled. Please add sql-databases to the preview field of your nitric.yaml file to enable this feature", service.filepath)
+	}
+
 	return serviceRequirements, nil
 }
 
@@ -223,6 +229,93 @@ func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirement
 
 	return allServiceRequirements, nil
 }
+
+// DefaultMigrationImage - Returns the default migration image name for the project
+// Also returns ok if image is required or not
+func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
+	ok, _ := afero.DirExists(fs, "./migrations")
+
+	return fmt.Sprintf("%s-nitric-migrations", p.Name), ok
+}
+
+// Build migration images for this project
+// TODO: This may need to be moved to run post collection
+// if we allow specifying the migration location as part of the resource definition
+// func (p *Project) BuildDefaultMigrationImage(fs afero.Fs) (chan ServiceBuildUpdate, error) {
+// 	migrateBuildChan := make(chan ServiceBuildUpdate)
+
+// 	imageName, ok := p.DefaultMigrationImage(fs)
+
+// 	// TODO: Do a glob check for migrations SQL files
+// 	if !ok {
+// 		go func() {
+// 			migrateBuildChan <- ServiceBuildUpdate{
+// 				ServiceName: "migrations",
+// 				Message:     "No migrations found",
+// 				Status:      ServiceBuildStatus_Skipped,
+// 			}
+// 			close(migrateBuildChan)
+// 		}()
+
+// 		return migrateBuildChan, nil
+// 	}
+
+// 	dockerClient, err := docker.New()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	err = fs.MkdirAll(tempBuildDir, os.ModePerm)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("unable to create temporary build directory %s: %w", tempBuildDir, err)
+// 	}
+
+// 	tmpDockerFile, err := afero.TempFile(fs, tempBuildDir, "default-migrations-*.dockerfile")
+// 	if err != nil {
+// 		return nil, fmt.Errorf("unable to create temporary dockerfile for database migrations: %w", err)
+// 	}
+
+// 	if err := afero.WriteFile(fs, tmpDockerFile.Name(), []byte(defaultDockerfileContents), os.ModePerm); err != nil {
+// 		return nil, fmt.Errorf("unable to write temporary dockerfile for database migrations")
+// 	}
+
+// 	go func() {
+// 		defer func() {
+// 			tmpDockerFile.Close()
+
+// 			err := fs.Remove(tmpDockerFile.Name())
+// 			if err != nil {
+// 				logger.Errorf("unable to remove temporary dockerfile %s: %s", tmpDockerFile.Name(), err)
+// 			}
+// 		}()
+
+// 		serviceBuildUpdateWriter := &serviceBuildUpdateWriter{
+// 			buildUpdateChan: migrateBuildChan,
+// 			serviceName:     "migrations",
+// 		}
+
+// 		err := dockerClient.Build(tmpDockerFile.Name(), ".", imageName, map[string]string{}, []string{}, serviceBuildUpdateWriter)
+
+// 		if err != nil {
+// 			migrateBuildChan <- ServiceBuildUpdate{
+// 				ServiceName: "migrations",
+// 				Err:         err,
+// 				Message:     err.Error(),
+// 				Status:      ServiceBuildStatus_Error,
+// 			}
+// 		} else {
+// 			migrateBuildChan <- ServiceBuildUpdate{
+// 				ServiceName: "migrations",
+// 				Message:     "Build Complete",
+// 				Status:      ServiceBuildStatus_Complete,
+// 			}
+// 		}
+
+// 		close(migrateBuildChan)
+// 	}()
+
+// 	return migrateBuildChan, nil
+// }
 
 // RunServices - Runs all the services locally using a startup command
 // use the stop channel to stop all running services

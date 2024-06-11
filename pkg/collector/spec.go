@@ -18,6 +18,7 @@ package collector
 
 import (
 	"crypto/md5"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -29,7 +30,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/samber/lo"
+	"github.com/spf13/afero"
 
+	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
@@ -127,6 +130,123 @@ func buildHttpRequirements(allServiceRequirements []*ServiceRequirements, projec
 					},
 				},
 			})
+		}
+	}
+
+	return resources, nil
+}
+
+//go:embed default-migrations.dockerfile
+var defaultMigrationFileContents string
+
+// TODO: validate scheme types and paths
+var schemeRegex = regexp.MustCompile(`(?P<Scheme>^[a-z]+)://(?P<Path>.*)$`)
+
+func parseMigrationsScheme(migrationsPath string) (string, string, error) {
+	match := schemeRegex.FindStringSubmatch(migrationsPath)
+	if match == nil {
+		return "", "", fmt.Errorf("invalid migrations URI: %s", migrationsPath)
+	}
+
+	result := make(map[string]string)
+
+	for i, name := range schemeRegex.SubexpNames() {
+		if i != 0 && name != "" {
+			result[name] = match[i]
+		}
+	}
+
+	return result["Scheme"], result["Path"], nil
+}
+
+// Collect a list of migration images that need to be built
+// these requirements need to be supplied to the deployment serviceS
+func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirements, fs afero.Fs) (map[string]*runtime.RuntimeBuildContext, error) {
+	imageBuildContexts := map[string]*runtime.RuntimeBuildContext{}
+	declaredConfigs := map[string]string{}
+
+	for _, serviceRequirements := range allServiceRequirements {
+		for databaseName, databaseConfig := range serviceRequirements.sqlDatabases {
+			if databaseConfig.Migrations != nil && databaseConfig.Migrations.GetMigrationsPath() != "" {
+				scheme, path, err := parseMigrationsScheme(databaseConfig.Migrations.GetMigrationsPath())
+				if err != nil {
+					return nil, err
+				}
+
+				// if the db has already been declared check that it dies not differ from a previous declaration
+				if _, exists := imageBuildContexts[databaseName]; exists {
+					if declaredConfigs[databaseName] != databaseConfig.Migrations.GetMigrationsPath() {
+						return nil, fmt.Errorf("multiple migrations paths declared for database '%s'", databaseName)
+					}
+					// otherwise set named config to the already build config
+					continue
+				}
+
+				declaredConfigs[databaseName] = databaseConfig.Migrations.GetMigrationsPath()
+
+				switch scheme {
+				case "dockerfile":
+					// Read the referenced dockerfile
+					dockerfileContents, err := afero.ReadFile(fs, path)
+					if err != nil {
+						return nil, err
+					}
+
+					imageBuildContexts[databaseName] = &runtime.RuntimeBuildContext{
+						BuildArguments:     map[string]string{},
+						DockerfileContents: string(dockerfileContents),
+						BaseDirectory:      ".",
+					}
+				case "file":
+					// Default dockerfile build context for the given path
+					imageBuildContexts[databaseName] = &runtime.RuntimeBuildContext{
+						BuildArguments: map[string]string{
+							"MIGRATIONS_PATH": path,
+						},
+						DockerfileContents: defaultMigrationFileContents,
+						BaseDirectory:      ".",
+					}
+				default:
+					return nil, fmt.Errorf("unsupported migration path scheme: %s, must be one of dockerfile or file", scheme)
+				}
+			}
+		}
+	}
+
+	return imageBuildContexts, nil
+}
+
+func buildDatabaseRequirements(allServiceRequirements []*ServiceRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
+	resources := []*deploymentspb.Resource{}
+
+	for _, serviceRequirements := range allServiceRequirements {
+		for databaseName, dbConfig := range serviceRequirements.sqlDatabases {
+			_, exists := lo.Find(resources, func(item *deploymentspb.Resource) bool {
+				return item.Id.Name == databaseName
+			})
+
+			var migrations *deploymentspb.SqlDatabase_ImageUri = nil
+			if dbConfig.Migrations != nil && dbConfig.Migrations.GetMigrationsPath() != "" {
+				migrations = &deploymentspb.SqlDatabase_ImageUri{
+					// FIXME: make this repeatable
+					ImageUri: databaseName + "-migrations",
+				}
+			}
+
+			if !exists {
+				res := &deploymentspb.Resource{
+					Id: &resourcespb.ResourceIdentifier{
+						Name: databaseName,
+						Type: resourcespb.ResourceType_SqlDatabase,
+					},
+					Config: &deploymentspb.Resource_SqlDatabase{
+						SqlDatabase: &deploymentspb.SqlDatabase{
+							Migrations: migrations,
+						},
+					},
+				}
+				resources = append(resources, res)
+			}
 		}
 	}
 
@@ -720,7 +840,7 @@ func checkServiceRequirementErrors(allServiceRequirements []*ServiceRequirements
 }
 
 // convert service requirements to a cloud bill of materials
-func ServiceRequirementsToSpec(projectName string, environmentVariables map[string]string, allServiceRequirements []*ServiceRequirements) (*deploymentspb.Spec, error) {
+func ServiceRequirementsToSpec(projectName string, environmentVariables map[string]string, allServiceRequirements []*ServiceRequirements, defaultMigrationImage string) (*deploymentspb.Spec, error) {
 	if err := checkServiceRequirementErrors(allServiceRequirements); err != nil {
 		return nil, err
 	}
@@ -730,6 +850,13 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 	newSpec := &deploymentspb.Spec{
 		Resources: []*deploymentspb.Resource{},
 	}
+
+	databaseResources, err := buildDatabaseRequirements(allServiceRequirements, projectErrors)
+	if err != nil {
+		return nil, err
+	}
+
+	newSpec.Resources = append(newSpec.Resources, databaseResources...)
 
 	bucketResources, err := buildBucketRequirements(allServiceRequirements, projectErrors)
 	if err != nil {

@@ -107,7 +107,6 @@ func ConfigurationFromFile(fs afero.Fs, filePath string) (*ProjectConfiguration,
 	}
 
 	// TODO: Implement v0 yaml detection and provide link to the upgrade guide
-
 	projectConfig := &ProjectConfiguration{}
 
 	if err := yaml.Unmarshal(projectFileContents, projectConfig); err != nil {

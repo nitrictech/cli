@@ -66,6 +66,7 @@ const (
 	ServiceBuildStatus_InProgress ServiceBuildStatus = "In Progress"
 	ServiceBuildStatus_Complete   ServiceBuildStatus = "Complete"
 	ServiceBuildStatus_Error      ServiceBuildStatus = "Error"
+	ServiceBuildStatus_Skipped    ServiceBuildStatus = "Skipped"
 )
 
 type ServiceBuildUpdate struct {

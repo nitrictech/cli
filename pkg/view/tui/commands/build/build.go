@@ -17,6 +17,7 @@
 package build
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -34,10 +35,11 @@ import (
 )
 
 type Model struct {
+	title               string
 	serviceBuildUpdates map[string][]project.ServiceBuildUpdate
 	windowSize          tea.WindowSizeMsg
 
-	serviceBuildUpdatesChannel chan project.ServiceBuildUpdate
+	serviceBuildUpdatesChannel <-chan project.ServiceBuildUpdate
 
 	spinner spinner.Model
 
@@ -94,6 +96,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) AllDone() bool {
 	for _, serviceUpdates := range m.serviceBuildUpdates {
 		for _, update := range serviceUpdates {
+			if update.Status == project.ServiceBuildStatus_Skipped {
+				continue
+			}
+
 			if update.Status == project.ServiceBuildStatus_Complete {
 				continue
 			}
@@ -114,7 +120,7 @@ func (m Model) View() string {
 	v := view.New(view.WithStyle(lipgloss.NewStyle().Width(m.windowSize.Width)))
 	v.Add(fragments.Tag("build"))
 
-	v.Add("  Building services")
+	v.Add(fmt.Sprintf("  %s", m.title))
 
 	if !m.AllDone() {
 		v.Add(m.spinner.View())
@@ -143,28 +149,30 @@ func (m Model) View() string {
 
 		latestUpdate := service[len(service)-1]
 
-		statusColor := tui.Colors.Gray
-		if latestUpdate.Status == project.ServiceBuildStatus_Complete {
-			statusColor = tui.Colors.Green
-		} else if latestUpdate.Status == project.ServiceBuildStatus_InProgress {
-			statusColor = tui.Colors.Blue
-		} else if latestUpdate.Status == project.ServiceBuildStatus_Error {
-			statusColor = tui.Colors.Red
-		}
+		if latestUpdate.Status != project.ServiceBuildStatus_Skipped {
+			statusColor := tui.Colors.Gray
+			if latestUpdate.Status == project.ServiceBuildStatus_Complete {
+				statusColor = tui.Colors.Green
+			} else if latestUpdate.Status == project.ServiceBuildStatus_InProgress {
+				statusColor = tui.Colors.Blue
+			} else if latestUpdate.Status == project.ServiceBuildStatus_Error {
+				statusColor = tui.Colors.Red
+			}
 
-		serviceUpdates.Add("%s ", serviceName)
-		serviceUpdates.Addln(strings.ToLower(string(latestUpdate.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+			serviceUpdates.Add("%s ", serviceName)
+			serviceUpdates.Addln(strings.ToLower(string(latestUpdate.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
+		}
 
 		if m.Err != nil {
 			for _, update := range service {
 				messageLines := strings.Split(strings.TrimSpace(update.Message), "\n")
-				if len(messageLines) > 0 && update.Status != project.ServiceBuildStatus_Complete {
+				if len(messageLines) > 0 && update.Status != project.ServiceBuildStatus_Complete && latestUpdate.Status != project.ServiceBuildStatus_Skipped {
 					serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 				}
 			}
 		} else {
 			messageLines := strings.Split(strings.TrimSpace(latestUpdate.Message), "\n")
-			if len(messageLines) > 0 && latestUpdate.Status != project.ServiceBuildStatus_Complete {
+			if len(messageLines) > 0 && latestUpdate.Status != project.ServiceBuildStatus_Complete && latestUpdate.Status != project.ServiceBuildStatus_Skipped {
 				serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 			}
 		}
@@ -175,8 +183,9 @@ func (m Model) View() string {
 	return v.Render()
 }
 
-func NewModel(serviceBuildUpdates chan project.ServiceBuildUpdate) Model {
+func NewModel(serviceBuildUpdates <-chan project.ServiceBuildUpdate, title string) Model {
 	return Model{
+		title:                      title,
 		spinner:                    spinner.New(spinner.WithSpinner(spinner.Ellipsis)),
 		serviceBuildUpdatesChannel: serviceBuildUpdates,
 		serviceBuildUpdates:        make(map[string][]project.ServiceBuildUpdate),

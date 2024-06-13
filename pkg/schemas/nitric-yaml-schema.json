@@ -76,6 +76,10 @@
           {
             "const": "beta-providers",
             "description": "Use nitric providers that are currently in beta."
+          },
+          {
+            "const": "sql-databases",
+            "description": "Use SQL Databases."
           }
         ]
       }

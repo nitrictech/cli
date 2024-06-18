@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -266,12 +267,13 @@ func stackNameExistsValidator(projectDir string) validation.StringValidator {
 }
 
 const (
-	Aws   = "aws"
-	Azure = "azure"
-	Gcp   = "gcp"
+	Aws   = "AWS"
+	Azure = "Azure"
+	Gcp   = "GCP"
+	AwsTf = "AWS - Terraform (Preview)"
 )
 
-var availableProviders = []string{Aws, Gcp, Azure}
+var availableProviders = []string{Aws, Gcp, Azure, AwsTf}
 
 func New(fs afero.Fs, args Args) Model {
 	// Load and update the project name in the template's nitric.yaml
@@ -351,10 +353,26 @@ type stackCreateResultMsg struct {
 	filePath string
 }
 
+func providerLabelToValue(provider string) string {
+	switch provider {
+	case Aws:
+		return "aws"
+	case Azure:
+		return "azure"
+	case Gcp:
+		return "gcp"
+	case AwsTf:
+		return "aws-tf"
+	}
+
+	return strings.ToLower(provider)
+}
+
 // createStack returns a command that will create the stack on disk using the inputs gathered
 func (m Model) createStack() tea.Cmd {
 	return func() tea.Msg {
-		filePath, err := stack.NewStackFile(m.fs, m.provider, m.StackName(), "")
+
+		filePath, err := stack.NewStackFile(m.fs, providerLabelToValue(m.provider), m.StackName(), "")
 
 		return stackCreateResultMsg{
 			err:      err,

@@ -1,0 +1,51 @@
+# The nitric provider to use
+provider: nitric/awstf@1.6.1
+# The target aws region to deploy to
+# See available regions:
+# https://docs.aws.amazon.com/general/latest/gr/lambda-service.html
+region: 
+
+
+# Optional Configuration Below
+
+# The timezone that deployed schedules will run with
+# Format is in tz identifiers:
+# https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+# schedule-timezone: Australia/Sydney # Available since v0.27.0
+
+# # Apply configuration to nitric APIs
+# apis:
+#   # The nitric name of the API to configure
+#   my-api:
+#     # Array of domains to apply to the API
+#     # The domain or parent domain must have a hosted zone already in Route53
+#     domains:
+#       - api.example.com
+
+# # Configure your deployed functions/services
+# config:
+#   # How functions without a type will be deployed
+#   default:
+#     # configure a sample rate for telemetry (between 0 and 1) e.g. 0.5 is 50%
+#     telemetry: 0
+#     # configure functions to deploy to AWS lambda
+#     lambda: # Available since v0.26.0
+#       # set 128MB of RAM
+#       # See lambda configuration docs here:
+#       # https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-common.html#configuration-memory-console
+#       memory: 128
+#       # set a timeout of 15 seconds
+#       # See lambda timeout values here:
+#       # https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-common.html#configuration-timeout-console
+#       timeout: 15
+#       # set a provisioned concurrency value
+#       # For info on provisioned concurrency for AWS Lambda see:
+#       # https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html
+#   # Additional deployment types
+#   # You can target these types by setting a `type` in your project configuration
+#   big-service:
+#     telemetry: 0
+#     lambda:
+#       memory: 1024
+#       timeout: 60
+#       provisioned-concurrency: 1

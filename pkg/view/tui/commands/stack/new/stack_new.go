@@ -371,7 +371,6 @@ func providerLabelToValue(provider string) string {
 // createStack returns a command that will create the stack on disk using the inputs gathered
 func (m Model) createStack() tea.Cmd {
 	return func() tea.Msg {
-
 		filePath, err := stack.NewStackFile(m.fs, providerLabelToValue(m.provider), m.StackName(), "")
 
 		return stackCreateResultMsg{

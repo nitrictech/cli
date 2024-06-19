@@ -318,9 +318,9 @@ func New(fs afero.Fs, args Args) Model {
 	}
 
 	if args.ProviderName != "" {
-		if !lo.Contains([]string{"aws", "azure", "gcp"}, args.ProviderName) {
+		if !lo.Contains([]string{"aws", "azure", "gcp", "aws-tf"}, args.ProviderName) {
 			return Model{
-				err: fmt.Errorf("cloud name is not valid, must be aws, azure or gcp"),
+				err: fmt.Errorf("cloud name is not valid, must be aws, azure, gcp, or aws-tf"),
 			}
 		}
 

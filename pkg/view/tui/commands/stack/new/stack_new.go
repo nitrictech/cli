@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -28,6 +29,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/afero"
 
+	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/project/stack"
 	clitui "github.com/nitrictech/cli/pkg/view/tui"
@@ -220,6 +222,14 @@ func (m Model) View() string {
 
 		indent.Addln("Check the file for any additional configuration required.")
 		indent.Break()
+
+		if providerLabelToValue(m.ProviderName()) == "aws-tf" && !slices.Contains(m.projectConfig.Preview, preview.Feature_BetaProviders) {
+			indent.Add("Add ")
+			indent.Add("beta-providers").WithStyle(highlightStyle)
+			indent.Add(" to your nitric.yaml preview config to enable preview provider support.")
+			indent.Break()
+			indent.Break()
+		}
 
 		indent.Add("Then deploy your stack using ")
 		indent.Addln("nitric up").WithStyle(highlightStyle)

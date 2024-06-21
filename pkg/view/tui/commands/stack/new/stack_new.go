@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,6 +29,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/afero"
 
+	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/project/stack"
 	clitui "github.com/nitrictech/cli/pkg/view/tui"
@@ -220,6 +223,14 @@ func (m Model) View() string {
 		indent.Addln("Check the file for any additional configuration required.")
 		indent.Break()
 
+		if providerLabelToValue(m.ProviderName()) == "aws-tf" && !slices.Contains(m.projectConfig.Preview, preview.Feature_BetaProviders) {
+			indent.Add("Add ")
+			indent.Add("beta-providers").WithStyle(highlightStyle)
+			indent.Add(" to your nitric.yaml preview config to enable preview provider support.")
+			indent.Break()
+			indent.Break()
+		}
+
 		indent.Add("Then deploy your stack using ")
 		indent.Addln("nitric up").WithStyle(highlightStyle)
 
@@ -266,12 +277,13 @@ func stackNameExistsValidator(projectDir string) validation.StringValidator {
 }
 
 const (
-	Aws   = "aws"
-	Azure = "azure"
-	Gcp   = "gcp"
+	Aws   = "AWS"
+	Azure = "Azure"
+	Gcp   = "GCP"
+	AwsTf = "AWS - Terraform (Preview)"
 )
 
-var availableProviders = []string{Aws, Gcp, Azure}
+var availableProviders = []string{Aws, Gcp, Azure, AwsTf}
 
 func New(fs afero.Fs, args Args) Model {
 	// Load and update the project name in the template's nitric.yaml
@@ -316,9 +328,9 @@ func New(fs afero.Fs, args Args) Model {
 	}
 
 	if args.ProviderName != "" {
-		if !lo.Contains([]string{"aws", "azure", "gcp"}, args.ProviderName) {
+		if !lo.Contains([]string{"aws", "azure", "gcp", "aws-tf"}, args.ProviderName) {
 			return Model{
-				err: fmt.Errorf("cloud name is not valid, must be aws, azure or gcp"),
+				err: fmt.Errorf("cloud name is not valid, must be aws, azure, gcp, or aws-tf"),
 			}
 		}
 
@@ -351,10 +363,25 @@ type stackCreateResultMsg struct {
 	filePath string
 }
 
+func providerLabelToValue(provider string) string {
+	switch provider {
+	case Aws:
+		return "aws"
+	case Azure:
+		return "azure"
+	case Gcp:
+		return "gcp"
+	case AwsTf:
+		return "aws-tf"
+	}
+
+	return strings.ToLower(provider)
+}
+
 // createStack returns a command that will create the stack on disk using the inputs gathered
 func (m Model) createStack() tea.Cmd {
 	return func() tea.Msg {
-		filePath, err := stack.NewStackFile(m.fs, m.provider, m.StackName(), "")
+		filePath, err := stack.NewStackFile(m.fs, providerLabelToValue(m.provider), m.StackName(), "")
 
 		return stackCreateResultMsg{
 			err:      err,

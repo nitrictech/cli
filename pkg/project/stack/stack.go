@@ -36,6 +36,9 @@ type StackConfig[T any] struct {
 //go:embed aws.config.yaml
 var awsConfigTemplate string
 
+//go:embed awstf.config.yaml
+var awsTfConfigTemplate string
+
 //go:embed azure.config.yaml
 var azureConfigTemplate string
 
@@ -62,6 +65,8 @@ func NewStackFile(fs afero.Fs, providerName string, stackName string, dir string
 		template = gcpConfigTemplate
 	case "azure":
 		template = azureConfigTemplate
+	case "aws-tf":
+		template = awsTfConfigTemplate
 	}
 
 	fileName := StackFileName(stackName)

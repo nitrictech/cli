@@ -188,6 +188,8 @@ func dartBuildContext(entrypointFilePath string, additionalIgnores []string) (*R
 	}, nil
 }
 
+const customDockerfileDocLink = "https://nitric.io/docs/reference/custom-containers#create-a-dockerfile-template"
+
 // NewBuildContext - Creates a new runtime build context.
 // if a dockerfile path is provided a custom runtime is assumed, otherwise the entrypoint file is used for automatic detection of language runtime.
 func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
@@ -205,7 +207,7 @@ func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs
 	}
 
 	if fi, err := fs.Stat(entrypointFilePath); err == nil && fi.IsDir() {
-		return nil, fmt.Errorf("nitric does not support directories by default, use a custom runtime with a Dockerfile")
+		return nil, fmt.Errorf("nitric does not support directories by default, use a custom runtime with a Dockerfile see:\n %s", customDockerfileDocLink)
 	}
 
 	ext := filepath.Ext(entrypointFilePath)

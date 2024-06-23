@@ -207,10 +207,11 @@ func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs
 	}
 
 	if fi, err := fs.Stat(entrypointFilePath); err == nil && fi.IsDir() {
-		return nil, fmt.Errorf("nitric does not support directories by default, use a custom runtime with a Dockerfile see:\n %s", customDockerfileDocLink)
+		return nil, fmt.Errorf("nitric does not support directories by default, use a custom runtime with a Dockerfile see: %s", customDockerfileDocLink)
 	}
 
 	ext := filepath.Ext(entrypointFilePath)
+
 	dockerIgnores, err := getDockerIgnores(".dockerignore", fs)
 	if err != nil {
 		return nil, err

@@ -20,6 +20,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
@@ -66,16 +67,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.windowSize = msg
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "esc", "ctrl+c":
+		switch {
+		case key.Matches(msg, tui.KeyMap.Quit):
 			func() {
 				m.stopChan <- true
 			}()
 
 			return m, teax.Quit
-		case "up":
+		case key.Matches(msg, tui.KeyMap.Up):
 			m.viewOffset++
-		case "down":
+		case key.Matches(msg, tui.KeyMap.Down):
 			m.viewOffset = max(0, m.viewOffset-1)
 		}
 	case reactive.ChanMsg[project.ServiceRunUpdate]:
@@ -230,7 +231,7 @@ func (m Model) View() string {
 
 	sideBySide := lipgloss.JoinHorizontal(lipgloss.Top, lv.Render(), finalRightView.Render())
 
-	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide) + "\n " + fragments.Hotkey("q", "quit") + " " + fragments.Hotkey("↑/↓", "navigate logs")
+	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide) + "\n " + fragments.Hotkey("esc", "quit") + " " + fragments.Hotkey("↑/↓", "navigate logs")
 }
 
 func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUpdate, localCloud *cloud.LocalCloud, dashboardUrl string) Model {

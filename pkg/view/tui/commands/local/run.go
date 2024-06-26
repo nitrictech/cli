@@ -17,6 +17,7 @@
 package local
 
 import (
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -192,10 +193,8 @@ func (t *TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch typ := msg.(type) {
 	case tea.KeyMsg:
-		keyMsg := msg.(tea.KeyMsg)
-
-		switch keyMsg.String() {
-		case "ctrl+c", "q":
+		switch {
+		case key.Matches(typ, tui.KeyMap.Quit):
 			return t, teax.Quit
 		}
 

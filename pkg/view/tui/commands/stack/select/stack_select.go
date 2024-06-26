@@ -17,8 +17,10 @@
 package stack_select
 
 import (
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/components/list"
 	"github.com/nitrictech/cli/pkg/view/tui/components/listprompt"
 	"github.com/nitrictech/cli/pkg/view/tui/teax"
@@ -40,8 +42,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "esc", "ctrl+c":
+		switch {
+		case key.Matches(msg, tui.KeyMap.Quit):
 			return m, teax.Quit
 		}
 	}

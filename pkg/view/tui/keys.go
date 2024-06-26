@@ -32,8 +32,8 @@ var KeyMap = DefaultKeyMap{
 		key.WithHelp("enter", "submit input"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q", "exit"),
+		key.WithKeys("esc", "ctrl+c"),
+		key.WithHelp("esc", "exit"),
 	),
 	Up: key.NewBinding(
 		key.WithKeys("up"),

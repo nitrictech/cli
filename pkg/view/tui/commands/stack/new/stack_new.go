@@ -223,7 +223,9 @@ func (m Model) View() string {
 		indent.Addln("Check the file for any additional configuration required.")
 		indent.Break()
 
-		if providerLabelToValue(m.ProviderName()) == "aws-tf" && !slices.Contains(m.projectConfig.Preview, preview.Feature_BetaProviders) {
+		provName := providerLabelToValue(m.ProviderName())
+
+		if (provName == "aws-tf" || provName == "gcp-tf") && !slices.Contains(m.projectConfig.Preview, preview.Feature_BetaProviders) {
 			indent.Add("Add ")
 			indent.Add("beta-providers").WithStyle(highlightStyle)
 			indent.Add(" to your nitric.yaml preview config to enable preview provider support.")
@@ -281,9 +283,10 @@ const (
 	Azure = "Azure"
 	Gcp   = "GCP"
 	AwsTf = "AWS - Terraform (Preview)"
+	GcpTf = "GCP - Terraform (Preview)"
 )
 
-var availableProviders = []string{Aws, Gcp, Azure, AwsTf}
+var availableProviders = []string{Aws, Gcp, Azure, AwsTf, GcpTf}
 
 func New(fs afero.Fs, args Args) Model {
 	// Load and update the project name in the template's nitric.yaml
@@ -373,6 +376,8 @@ func providerLabelToValue(provider string) string {
 		return "gcp"
 	case AwsTf:
 		return "aws-tf"
+	case GcpTf:
+		return "gcp-tf"
 	}
 
 	return strings.ToLower(provider)

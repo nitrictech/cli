@@ -45,6 +45,9 @@ var azureConfigTemplate string
 //go:embed gcp.config.yaml
 var gcpConfigTemplate string
 
+//go:embed gcptf.config.yaml
+var gcpTfConfigTemplate string
+
 var fileNameRegex = regexp.MustCompile(`(?i)^nitric\.(\S+)\.ya?ml$`)
 
 func IsValidFileName(stackName string) bool {
@@ -67,6 +70,8 @@ func NewStackFile(fs afero.Fs, providerName string, stackName string, dir string
 		template = azureConfigTemplate
 	case "aws-tf":
 		template = awsTfConfigTemplate
+	case "gcp-tf":
+		template = gcpTfConfigTemplate
 	}
 
 	fileName := StackFileName(stackName)

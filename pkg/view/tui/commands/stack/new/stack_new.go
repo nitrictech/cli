@@ -281,9 +281,10 @@ const (
 	Azure = "Azure"
 	Gcp   = "GCP"
 	AwsTf = "AWS - Terraform (Preview)"
+	GcpTf = "GCP - Terraform (Preview)"
 )
 
-var availableProviders = []string{Aws, Gcp, Azure, AwsTf}
+var availableProviders = []string{Aws, Gcp, Azure, AwsTf, GcpTf}
 
 func New(fs afero.Fs, args Args) Model {
 	// Load and update the project name in the template's nitric.yaml
@@ -373,6 +374,8 @@ func providerLabelToValue(provider string) string {
 		return "gcp"
 	case AwsTf:
 		return "aws-tf"
+	case GcpTf:
+		return "gcp-tf"
 	}
 
 	return strings.ToLower(provider)

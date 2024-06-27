@@ -1,0 +1,55 @@
+
+# The provider to use and it's published version
+# See releases:
+# https://github.com/nitrictech/nitric/tags
+provider: nitric/gcptf@1.8.0
+
+# The target GCP region to deploy to
+# See available regions:
+# https://cloud.google.com/run/docs/locations
+region: 
+
+# # ID of the google cloud project to deploy into
+gcp-project-id: 
+
+# Optional configuration below
+
+# # The timezone that deployed schedules will run with
+# # Format is in tz identifiers:
+# # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+# schedule-timezone: Australia/Sydney # Available since v0.27.0
+
+# # Configure your deployed functions/services
+# config:
+#   # How functions without a type will be deployed
+#   default:
+#     # configure a sample rate for telemetry (between 0 and 1) e.g. 0.5 is 50%
+#     telemetry: 0
+#     # configure functions to deploy to Google Cloud Run
+#     cloudrun: # Available since v0.26.0
+#       # set 512MB of RAM
+#       # See cloudrun configuration docs here:
+#       # https://cloud.google.com/run/configuring/memory-limits
+#       memory: 512
+#       # set a timeout of 15 seconds
+#       # https://cloud.google.com/run/configuring/request-timeout
+#       timeout: 15
+#       # The maximum number of instances to scale down to
+#       # https://cloud.google.com/run/configuring/min-instances
+#       min-instances: 0
+#       # The maximum number of instances to scale up to
+#       # https://cloud.google.com/run/configuring/max-instances
+#       max-instances: 10
+#       # Number of concurrent requests that each instance can handle
+#       # https://cloud.google.com/run/configuring/concurrency
+#       concurrency: 80
+#   # Additional deployment types
+#   # You can target these types by setting a `type` in your project configuration
+#   big-service:
+#     telemetry: 0
+#     cloudrun:
+#       memory: 1024
+#       timeout: 60
+#       min-instances: 2
+#       max-instances: 100
+#       concurrency: 1000

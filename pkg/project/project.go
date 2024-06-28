@@ -42,13 +42,6 @@ import (
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/nitric/core/pkg/logger"
-	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
-	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
-	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
-	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
-	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
-	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
-	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 )
 
 const tempBuildDir = "./.nitric/build"
@@ -130,19 +123,12 @@ func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 }
 
 func (p *Project) collectServiceRequirements(service Service) (*collector.ServiceRequirements, error) {
-	serviceRequirements := collector.NewServiceRequirements(service.Name, service.GetFilePath(), service.Type, collector.ExecutionType_Service)
+	serviceRequirements := collector.NewServiceRequirements(service.Name, service.GetFilePath(), service.Type)
 
 	// start a grpc service with this registered
 	grpcServer := grpc.NewServer()
 
-	resourcespb.RegisterResourcesServer(grpcServer, serviceRequirements)
-	apispb.RegisterApiServer(grpcServer, serviceRequirements.ApiServer)
-	schedulespb.RegisterSchedulesServer(grpcServer, serviceRequirements)
-	topicspb.RegisterTopicsServer(grpcServer, serviceRequirements)
-	topicspb.RegisterSubscriberServer(grpcServer, serviceRequirements)
-	websocketspb.RegisterWebsocketHandlerServer(grpcServer, serviceRequirements)
-	storagepb.RegisterStorageListenerServer(grpcServer, serviceRequirements)
-	httppb.RegisterHttpServer(grpcServer, serviceRequirements)
+	serviceRequirements.RegisterServices(grpcServer)
 
 	listener, err := net.Listen("tcp", ":")
 	if err != nil {
@@ -239,85 +225,6 @@ func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
 	return fmt.Sprintf("%s-nitric-migrations", p.Name), ok
 }
 
-// Build migration images for this project
-// TODO: This may need to be moved to run post collection
-// if we allow specifying the migration location as part of the resource definition
-// func (p *Project) BuildDefaultMigrationImage(fs afero.Fs) (chan ServiceBuildUpdate, error) {
-// 	migrateBuildChan := make(chan ServiceBuildUpdate)
-
-// 	imageName, ok := p.DefaultMigrationImage(fs)
-
-// 	// TODO: Do a glob check for migrations SQL files
-// 	if !ok {
-// 		go func() {
-// 			migrateBuildChan <- ServiceBuildUpdate{
-// 				ServiceName: "migrations",
-// 				Message:     "No migrations found",
-// 				Status:      ServiceBuildStatus_Skipped,
-// 			}
-// 			close(migrateBuildChan)
-// 		}()
-
-// 		return migrateBuildChan, nil
-// 	}
-
-// 	dockerClient, err := docker.New()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	err = fs.MkdirAll(tempBuildDir, os.ModePerm)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("unable to create temporary build directory %s: %w", tempBuildDir, err)
-// 	}
-
-// 	tmpDockerFile, err := afero.TempFile(fs, tempBuildDir, "default-migrations-*.dockerfile")
-// 	if err != nil {
-// 		return nil, fmt.Errorf("unable to create temporary dockerfile for database migrations: %w", err)
-// 	}
-
-// 	if err := afero.WriteFile(fs, tmpDockerFile.Name(), []byte(defaultDockerfileContents), os.ModePerm); err != nil {
-// 		return nil, fmt.Errorf("unable to write temporary dockerfile for database migrations")
-// 	}
-
-// 	go func() {
-// 		defer func() {
-// 			tmpDockerFile.Close()
-
-// 			err := fs.Remove(tmpDockerFile.Name())
-// 			if err != nil {
-// 				logger.Errorf("unable to remove temporary dockerfile %s: %s", tmpDockerFile.Name(), err)
-// 			}
-// 		}()
-
-// 		serviceBuildUpdateWriter := &serviceBuildUpdateWriter{
-// 			buildUpdateChan: migrateBuildChan,
-// 			serviceName:     "migrations",
-// 		}
-
-// 		err := dockerClient.Build(tmpDockerFile.Name(), ".", imageName, map[string]string{}, []string{}, serviceBuildUpdateWriter)
-
-// 		if err != nil {
-// 			migrateBuildChan <- ServiceBuildUpdate{
-// 				ServiceName: "migrations",
-// 				Err:         err,
-// 				Message:     err.Error(),
-// 				Status:      ServiceBuildStatus_Error,
-// 			}
-// 		} else {
-// 			migrateBuildChan <- ServiceBuildUpdate{
-// 				ServiceName: "migrations",
-// 				Message:     "Build Complete",
-// 				Status:      ServiceBuildStatus_Complete,
-// 			}
-// 		}
-
-// 		close(migrateBuildChan)
-// 	}()
-
-// 	return migrateBuildChan, nil
-// }
-
 // RunServices - Runs all the services locally using a startup command
 // use the stop channel to stop all running services
 func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate) error {
@@ -390,6 +297,7 @@ func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) 
 // fromProjectConfiguration creates a new Instance of a nitric Project from a configuration files contents
 func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) (*Project, error) {
 	services := []Service{}
+	batches := []Batch{}
 
 	matches := map[string]string{}
 
@@ -522,7 +430,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 				runCmd:       batchSpec.Run,
 			}
 
-			batches = append(services, newBatch)
+			batches = append(batches, newBatch)
 		}
 	}
 

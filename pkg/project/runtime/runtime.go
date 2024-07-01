@@ -39,7 +39,6 @@ const (
 	RuntimeTypescript RuntimeExt = "ts"
 	RuntimeJavascript RuntimeExt = "js"
 	RuntimePython     RuntimeExt = "py"
-	RuntimeGolang     RuntimeExt = "go"
 	RuntimeCsharp     RuntimeExt = "cs"
 	RuntimeJvm        RuntimeExt = "jar"
 
@@ -112,21 +111,6 @@ func csharpBuildContext(entrypointFilePath string, additionalIgnores []string) (
 			"HANDLER": handler,
 		},
 		IgnoreFileContents: strings.Join(append(additionalIgnores, csharpIgnores...), "\n"),
-	}, nil
-}
-
-//go:embed golang.dockerfile
-var golangDockerfile string
-var golangIgnores = append([]string{}, commonIgnore...)
-
-func golangBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
-	return &RuntimeBuildContext{
-		DockerfileContents: golangDockerfile,
-		BaseDirectory:      ".", // use the nitric project directory
-		BuildArguments: map[string]string{
-			"HANDLER": filepath.ToSlash(entrypointFilePath),
-		},
-		IgnoreFileContents: strings.Join(append(additionalIgnores, golangIgnores...), "\n"),
 	}, nil
 }
 
@@ -204,6 +188,8 @@ func dartBuildContext(entrypointFilePath string, additionalIgnores []string) (*R
 	}, nil
 }
 
+const customDockerfileDocLink = "https://nitric.io/docs/reference/custom-containers#create-a-dockerfile-template"
+
 // NewBuildContext - Creates a new runtime build context.
 // if a dockerfile path is provided a custom runtime is assumed, otherwise the entrypoint file is used for automatic detection of language runtime.
 func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
@@ -220,6 +206,10 @@ func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs
 		return customBuildContext(entrypointFilePath, dockerfilePath, buildArgs, additionalIgnores, fs)
 	}
 
+	if fi, err := fs.Stat(entrypointFilePath); err == nil && fi.IsDir() {
+		return nil, fmt.Errorf("nitric does not support directories by default, use a custom runtime with a Dockerfile see: %s", customDockerfileDocLink)
+	}
+
 	ext := filepath.Ext(entrypointFilePath)
 
 	dockerIgnores, err := getDockerIgnores(".dockerignore", fs)
@@ -232,8 +222,6 @@ func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs
 	switch ext {
 	case ".csproj":
 		return csharpBuildContext(entrypointFilePath, additionalIgnores)
-	case ".go":
-		return golangBuildContext(entrypointFilePath, additionalIgnores)
 	case ".jar":
 		return jvmBuildContext(entrypointFilePath, additionalIgnores)
 	case ".py":

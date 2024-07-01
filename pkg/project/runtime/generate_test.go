@@ -26,7 +26,6 @@ import (
 
 func TestGenerate(t *testing.T) {
 	tsFile, _ := os.ReadFile("typescript.dockerfile")
-	goFile, _ := os.ReadFile("golang.dockerfile")
 	pythonFile, _ := os.ReadFile("python.dockerfile")
 	jsFile, _ := os.ReadFile("javascript.dockerfile")
 	jvmFile, _ := os.ReadFile("jvm.dockerfile")
@@ -42,11 +41,6 @@ func TestGenerate(t *testing.T) {
 			name:        "ts",
 			handler:     "functions/list.ts",
 			wantFwriter: string(tsFile),
-		},
-		{
-			name:        "go",
-			handler:     "pkg/handler/list.go",
-			wantFwriter: string(goFile),
 		},
 		{
 			name:        "python",

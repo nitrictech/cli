@@ -83,6 +83,13 @@ func customBuildContext(entrypointFilePath string, dockerfilePath string, buildA
 	// ensure build args exists
 	if buildArgs == nil {
 		buildArgs = map[string]string{}
+	} else {
+		// Copy the build args to avoid modifying the original
+		copiedBuildArgs := map[string]string{}
+		for k, v := range buildArgs {
+			copiedBuildArgs[k] = v
+		}
+		buildArgs = copiedBuildArgs
 	}
 
 	// Append handler to build args

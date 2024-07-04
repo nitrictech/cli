@@ -89,6 +89,7 @@ func customBuildContext(entrypointFilePath string, dockerfilePath string, buildA
 		for k, v := range buildArgs {
 			copiedBuildArgs[k] = v
 		}
+
 		buildArgs = copiedBuildArgs
 	}
 

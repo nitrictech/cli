@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"strings"
 	"sync"
 	"time"
 
@@ -189,6 +190,20 @@ func (s *LocalTopicsAndSubscribersService) deliverEvent(ctx context.Context, req
 	return err
 }
 
+// "no workers registered" is not an error when it occurs locally, so we suppress it
+func warnIfNoWorkersError(err error, topic string) error {
+	if err == nil {
+		return err
+	}
+
+	if strings.HasPrefix(err.Error(), "no workers registered") {
+		logger.Warnf("topic '%s' has no subscribers", topic)
+		return nil
+	}
+
+	return err
+}
+
 // Publish a message to a given topic
 func (s *LocalTopicsAndSubscribersService) Publish(ctx context.Context, req *topicspb.TopicPublishRequest) (*topicspb.TopicPublishResponse, error) {
 	newErr := grpc_errors.ErrorsWithScope("WorkerPoolEventService.Publish")
@@ -201,12 +216,16 @@ func (s *LocalTopicsAndSubscribersService) Publish(ctx context.Context, req *top
 			time.Sleep(req.Delay.AsDuration())
 
 			err := s.deliverEvent(ctx, evt)
+
+			err = warnIfNoWorkersError(err, evt.TopicName)
 			if err != nil {
 				logger.Errorf("could not publish event: %s", err.Error())
 			}
 		}(req)
 	} else {
 		err := s.deliverEvent(ctx, req)
+
+		err = warnIfNoWorkersError(err, req.TopicName)
 		if err != nil {
 			return nil, newErr(
 				codes.Internal,

@@ -72,7 +72,7 @@ func getDockerIgnores(dockerIgnorePath string, fs afero.Fs) ([]string, error) {
 	return []string{}, nil
 }
 
-func customBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
+func customBuildContext(entrypointFilePath string, dockerfilePath string, baseDirectory string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
 	// Get the dockerfile contents
 	// dockerfilePath
 	dockerfileContents, err := afero.ReadFile(fs, dockerfilePath)
@@ -98,7 +98,7 @@ func customBuildContext(entrypointFilePath string, dockerfilePath string, buildA
 
 	return &RuntimeBuildContext{
 		DockerfileContents: string(dockerfileContents),
-		BaseDirectory:      ".", // use the nitric project directory
+		BaseDirectory:      baseDirectory, // uses the nitric project directory by default
 		BuildArguments:     buildArgs,
 		IgnoreFileContents: strings.Join(append(additionalIgnores, commonIgnore...), "\n"),
 	}, nil
@@ -200,7 +200,11 @@ const customDockerfileDocLink = "https://nitric.io/docs/reference/custom-contain
 
 // NewBuildContext - Creates a new runtime build context.
 // if a dockerfile path is provided a custom runtime is assumed, otherwise the entrypoint file is used for automatic detection of language runtime.
-func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
+func NewBuildContext(entrypointFilePath string, dockerfilePath string, baseDirectory string, buildArgs map[string]string, additionalIgnores []string, fs afero.Fs) (*RuntimeBuildContext, error) {
+	if baseDirectory == "" {
+		baseDirectory = "."
+	}
+
 	if dockerfilePath != "" {
 		dockerIgnorePath := fmt.Sprintf("%s.dockerignore", dockerfilePath)
 
@@ -211,7 +215,7 @@ func NewBuildContext(entrypointFilePath string, dockerfilePath string, buildArgs
 
 		additionalIgnores = append(additionalIgnores, dockerIgnores...)
 
-		return customBuildContext(entrypointFilePath, dockerfilePath, buildArgs, additionalIgnores, fs)
+		return customBuildContext(entrypointFilePath, dockerfilePath, baseDirectory, buildArgs, additionalIgnores, fs)
 	}
 
 	if fi, err := fs.Stat(entrypointFilePath); err == nil && fi.IsDir() {

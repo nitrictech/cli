@@ -60,7 +60,7 @@ func TestGenerate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rt, err := NewBuildContext(tt.handler, "", map[string]string{}, []string{}, fs)
+			rt, err := NewBuildContext(tt.handler, "", ".", map[string]string{}, []string{}, fs)
 			if err != nil {
 				t.Error(err)
 			}

@@ -419,6 +419,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					customRuntime.Dockerfile,
+					customRuntime.Context, // will default to the project directory if not set
 					customRuntime.Args,
 					otherEntryPointFiles,
 					fs,
@@ -430,6 +431,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					"",
+					".",
 					map[string]string{},
 					otherEntryPointFiles,
 					fs,

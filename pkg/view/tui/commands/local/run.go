@@ -234,8 +234,8 @@ func (t *TuiModel) View() string {
 	}
 
 	for _, httpProxy := range t.httpProxies {
-		v.Add("http:%s -", httpProxy.name)
-		v.Addln(" http://%s", httpProxy.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Add("http:%s - ", httpProxy.name)
+		v.Addln(httpProxy.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
 	return v.Render()

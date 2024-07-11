@@ -59,7 +59,6 @@ type apiServer struct {
 	lis            net.Listener
 	srv            *fasthttp.Server
 	tlsCredentials *TLSCredentials
-	logger         *io.Writer
 }
 
 type socketServer struct {
@@ -146,7 +145,14 @@ func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
 
 	if len(s.httpServers) > 0 && len(s.httpWorkers) == len(s.httpServers) {
 		for idx, host := range s.httpWorkers {
-			addresses[host] = strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+			protocol := "http"
+			if s.apiServers[idx].tlsCredentials != nil {
+				protocol = "https"
+			}
+
+			address := strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+
+			addresses[host] = fmt.Sprintf("%s://%s", protocol, address)
 		}
 	}
 
@@ -623,6 +629,12 @@ func (s *LocalGatewayService) createWebsocketServers() error {
 }
 
 func (s *LocalGatewayService) createHttpServers() error {
+	// Expand servers to account for apis
+	lis, err := netx.GetNextListener()
+	if err != nil {
+		return err
+	}
+
 	// create an api server for every API worker
 	for len(s.httpServers) < len(s.httpWorkers) {
 		fhttp := &fasthttp.Server{
@@ -631,21 +643,23 @@ func (s *LocalGatewayService) createHttpServers() error {
 			CloseOnShutdown: true,
 			ReadBufferSize:  8192,
 			Handler:         s.handleHttpProxyRequest(len(s.httpServers)),
-		}
-		// Expand servers to account for apis
-		lis, err := netx.GetNextListener()
-		if err != nil {
-			return err
+			Logger:          log.New(s.logWriter, fmt.Sprintf("%s: ", lis.Addr().String()), 0),
 		}
 
 		srv := &apiServer{
-			lis: lis,
-			srv: fhttp,
+			lis:            lis,
+			srv:            fhttp,
+			tlsCredentials: s.ApiTlsCredentials,
 		}
 
 		// get a free port and listen on that for this API
 		go func(srv *apiServer) {
-			err := srv.srv.Serve(srv.lis)
+			var err error
+			if srv.tlsCredentials != nil {
+				err = srv.srv.ServeTLS(srv.lis, srv.tlsCredentials.CertFile, srv.tlsCredentials.KeyFile)
+			} else {
+				err = srv.srv.Serve(srv.lis)
+			}
 			if err != nil {
 				fmt.Println(err)
 			}

@@ -30,6 +30,8 @@ import (
 type RuntimeConfiguration struct {
 	// Template dockerfile to use as the base for the custom runtime
 	Dockerfile string
+	// Directory path for the Docker build context for the custom runtime
+	Context string
 	// Additional args to pass to the custom runtime
 	Args map[string]string
 }

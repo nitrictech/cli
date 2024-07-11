@@ -18,7 +18,7 @@ export const APINode: ComponentType<NodeProps<ApiNodeData>> = (props) => {
         icon: data.icon,
         nodeType: 'api',
         testHref: `/`, // TODO add url param to switch to resource
-        address: `http://${data.address}`,
+        address: data.address,
         services: data.resource.requestingServices,
       }}
     />

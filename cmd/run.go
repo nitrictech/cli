@@ -76,7 +76,7 @@ var runCmd = &cobra.Command{
 		var localCloud *cloud.LocalCloud
 		go func() {
 			// Start the local cloud service analogues
-			localCloud, err = cloud.New(proj.Name)
+			localCloud, err = cloud.New(proj.Name, cloud.LocalCloudOptions{})
 			tui.CheckErr(err)
 			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})
 		}()

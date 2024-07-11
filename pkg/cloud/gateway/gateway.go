@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/url"
@@ -55,8 +56,10 @@ import (
 )
 
 type apiServer struct {
-	lis net.Listener
-	srv *fasthttp.Server
+	lis            net.Listener
+	srv            *fasthttp.Server
+	tlsCredentials *TLSCredentials
+	logger         *io.Writer
 }
 
 type socketServer struct {
@@ -64,6 +67,13 @@ type socketServer struct {
 	srv *fasthttp.Server
 
 	workerCount int
+}
+
+type TLSCredentials struct {
+	// CertFile - Path to the certificate file
+	CertFile string
+	// KeyFile - Path to the private key file
+	KeyFile string
 }
 
 var upgrader = websocket.FastHTTPUpgrader{}
@@ -81,6 +91,10 @@ type LocalGatewayService struct {
 	topicsPlugin     *topics.LocalTopicsAndSubscribersService
 	schedulesPlugin  *schedules.LocalSchedulesService
 	serviceListener  net.Listener
+
+	logWriter io.Writer
+
+	ApiTlsCredentials *TLSCredentials
 
 	lock sync.RWMutex
 	gateway.UnimplementedGatewayPlugin
@@ -101,6 +115,7 @@ func (s *LocalGatewayService) GetTriggerAddress() string {
 	return ""
 }
 
+// GetApiAddresses - Returns a map of API names to their addresses, including protocol and port
 func (s *LocalGatewayService) GetApiAddresses() map[string]string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -109,7 +124,14 @@ func (s *LocalGatewayService) GetApiAddresses() map[string]string {
 
 	if len(s.apiServers) > 0 && len(s.apis) == len(s.apiServers) {
 		for idx, api := range s.apis {
-			addresses[api] = strings.Replace(s.apiServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+			protocol := "http"
+			if s.apiServers[idx].tlsCredentials != nil {
+				protocol = "https"
+			}
+
+			address := strings.Replace(s.apiServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+
+			addresses[api] = fmt.Sprintf("%s://%s", protocol, address)
 		}
 	}
 
@@ -170,7 +192,7 @@ func (s *LocalGatewayService) handleHttpProxyRequest(idx int) fasthttp.RequestHa
 func (s *LocalGatewayService) handleApiHttpRequest(idx int) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		if idx >= len(s.apis) {
-			ctx.Error("Sorry, nitric is listening on this port but is waiting for an API to be available to handle, you may have removed an API during development this port will be assigned to an API when one becomes available", 404)
+			ctx.Error("Sorry, nitric is listening on this port but is waiting for an API to be available to handle requests, you may have removed an API during development this port will be assigned to an API when one becomes available", 404)
 			return
 		}
 
@@ -508,27 +530,35 @@ func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 func (s *LocalGatewayService) createApiServers() error {
 	// create an api server for every API worker
 	for len(s.apiServers) < len(s.apis) {
-		fhttp := &fasthttp.Server{
-			ReadTimeout:     time.Second * 1,
-			IdleTimeout:     time.Second * 1,
-			CloseOnShutdown: true,
-			ReadBufferSize:  8192,
-			Handler:         s.handleApiHttpRequest(len(s.apiServers)),
-		}
 		// Expand servers to account for apis
 		lis, err := netx.GetNextListener()
 		if err != nil {
 			return err
 		}
 
+		fhttp := &fasthttp.Server{
+			ReadTimeout:     time.Second * 1,
+			IdleTimeout:     time.Second * 1,
+			CloseOnShutdown: true,
+			ReadBufferSize:  8192,
+			Handler:         s.handleApiHttpRequest(len(s.apiServers)),
+			Logger:          log.New(s.logWriter, fmt.Sprintf("%s: ", lis.Addr().String()), 0),
+		}
+
 		srv := &apiServer{
-			lis: lis,
-			srv: fhttp,
+			lis:            lis,
+			srv:            fhttp,
+			tlsCredentials: s.ApiTlsCredentials,
 		}
 
 		// get a free port and listen on that for this API
 		go func(srv *apiServer) {
-			err := srv.srv.Serve(srv.lis)
+			var err error
+			if srv.tlsCredentials != nil {
+				err = srv.srv.ServeTLS(srv.lis, srv.tlsCredentials.CertFile, srv.tlsCredentials.KeyFile)
+			} else {
+				err = srv.srv.Serve(srv.lis)
+			}
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -735,10 +765,17 @@ func (s *LocalGatewayService) Stop() error {
 	return nil
 }
 
+type NewGatewayOpts struct {
+	TLSCredentials *TLSCredentials
+	LogWriter      io.Writer
+}
+
 // Create new HTTP gateway
 // XXX: No External Args for function atm (currently the plugin loader does not pass any argument information)
-func NewGateway() (*LocalGatewayService, error) {
+func NewGateway(opts NewGatewayOpts) (*LocalGatewayService, error) {
 	return &LocalGatewayService{
-		bus: EventBus.New(),
+		ApiTlsCredentials: opts.TLSCredentials,
+		bus:               EventBus.New(),
+		logWriter:         opts.LogWriter,
 	}, nil
 }

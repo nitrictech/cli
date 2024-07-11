@@ -18,6 +18,7 @@ package dashboard
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -170,10 +171,17 @@ func (d *Dashboard) createCallProxyHttpHandler() func(http.ResponseWriter, *http
 		// Remove "/api/call/" prefix from URL path
 		path := strings.TrimPrefix(r.URL.Path, "/api/call/")
 
+		// Parse the callAddress as a URL
+		callUrl, err := url.ParseRequestURI(callAddress)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		// Build proxy request URL with query parameters
 		targetURL := &url.URL{
-			Scheme:   "http",
-			Host:     callAddress,
+			Scheme:   callUrl.Scheme,
+			Host:     callUrl.Host,
 			Path:     path,
 			RawQuery: r.URL.RawQuery,
 		}
@@ -191,7 +199,12 @@ func (d *Dashboard) createCallProxyHttpHandler() func(http.ResponseWriter, *http
 		}
 
 		// Send the new request and handle the response
-		client := &http.Client{}
+		client := &http.Client{
+			// skip tls verification, since local services can use self-signed certs
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
 
 		resp, err := client.Do(req)
 		if err != nil {

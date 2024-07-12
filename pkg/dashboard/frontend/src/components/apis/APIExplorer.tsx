@@ -461,9 +461,7 @@ const APIExplorer = () => {
                             <button
                               type="button"
                               onClick={() => {
-                                copyToClipboard(
-                                  `${apiAddress}${request.path}`,
-                                )
+                                copyToClipboard(`${apiAddress}${request.path}`)
                                 toast.success('Copied Route URL')
                               }}
                             >

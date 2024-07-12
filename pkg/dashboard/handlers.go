@@ -25,6 +25,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -167,6 +168,10 @@ func (d *Dashboard) createCallProxyHttpHandler() func(http.ResponseWriter, *http
 
 		// find call callAddress
 		callAddress := r.Header.Get("X-Nitric-Local-Call-Address")
+		// Assume http if no scheme is provided, since that was the previous default behavior
+		if !(regexp.MustCompile(`^.*://`).MatchString(callAddress)) {
+			callAddress = "http://" + callAddress
+		}
 
 		// Remove "/api/call/" prefix from URL path
 		path := strings.TrimPrefix(r.URL.Path, "/api/call/")

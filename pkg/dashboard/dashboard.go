@@ -756,7 +756,6 @@ func compare(a string, b string) int {
 }
 
 func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project) (*Dashboard, error) {
-
 	stackWebSocket := melody.New()
 	historyWebSocket := melody.New()
 	wsWebSocket := melody.New()

@@ -565,6 +565,7 @@ func (s *LocalGatewayService) createApiServers() error {
 			} else {
 				err = srv.srv.Serve(srv.lis)
 			}
+
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -660,6 +661,7 @@ func (s *LocalGatewayService) createHttpServers() error {
 			} else {
 				err = srv.srv.Serve(srv.lis)
 			}
+
 			if err != nil {
 				fmt.Println(err)
 			}

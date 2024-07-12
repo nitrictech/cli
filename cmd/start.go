@@ -50,8 +50,10 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/logger"
 )
 
-var startNoBrowser bool
-var httpsExperimental bool
+var (
+	startNoBrowser    bool
+	httpsExperimental bool
+)
 
 // generateSelfSignedCert generates a self-signed X.509 certificate and returns the PEM-encoded certificate and private key
 func generateSelfSignedCert() ([]byte, []byte, error) {

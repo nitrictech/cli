@@ -1,17 +1,15 @@
-
 # The provider to use and it's published version
 # See releases:
 # https://github.com/nitrictech/nitric/tags
-provider: nitric/gcp@1.8.0
+provider: nitric/gcp@1.10.1
 
 # The target GCP region to deploy to
 # See available regions:
 # https://cloud.google.com/run/docs/locations
-region: 
+region:
 
 # # ID of the google cloud project to deploy into
-gcp-project-id: 
-
+gcp-project-id:
 # Optional configuration below
 
 # # The timezone that deployed schedules will run with

@@ -1,18 +1,17 @@
 # The provider to use and it's published version
 # See releases:
 # https://github.com/nitrictech/nitric/tags
-provider: nitric/azure@1.8.0
+provider: nitric/azure@1.10.1
 # The target Azure region to deploy to
 # See available regions:
 # https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=container-apps
-region: 
+region:
 
 # Org to associate deployed API Management services with
-org: 
+org:
 
 # Admin email to associate deployed API Management services with, this can be any email address
 adminemail: test@example.com
-
 # Optional configuration below
 
 # # Configure your deployed functions/services

@@ -166,7 +166,7 @@ var specCmd = &cobra.Command{
 func init() {
 
 	specCmd.Flags().StringVarP(&debugEnvFile, "env-file", "e", "", "--env-file config/.my-env")
-	specCmd.Flags().StringVarP(&debugFile, "file", "f", "", "--file my-example-spec.json")
+	specCmd.Flags().StringVarP(&debugFile, "output", "o", "", "--file my-example-spec.json")
 
 	// Debug spec
 	debugCmd.AddCommand(specCmd)

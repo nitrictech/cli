@@ -165,13 +165,15 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	updatesChannel := make(chan ServiceRunUpdate)
 
 	go func() {
-		err := os.MkdirAll("./.nitric/collect", os.ModePerm)
+		// TODO: elevate env for tmp diretory and reuse
+		tmpCollectDir := "./.nitric/collect"
+		err := os.MkdirAll(tmpCollectDir, os.ModePerm)
 		if err != nil {
 			log.Fatalf("unable to create collect log directory %s", err)
 		}
 
 		// Create a temporary log file for this service
-		logFile, err := afero.TempFile(afero.NewOsFs(), "./.nitric/collect", fmt.Sprintf("nitric-%s-*.log", service.Name))
+		logFile, err := afero.TempFile(afero.NewOsFs(), tmpCollectDir, fmt.Sprintf("nitric-%s-*.log", service.Name))
 		if err != nil {
 			log.Fatalf("unable to create collect log file: %s", err)
 		}

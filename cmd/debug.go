@@ -157,6 +157,8 @@ var specCmd = &cobra.Command{
 		// output the spec
 		err = os.WriteFile(outputFile, specJson, 0644)
 		tui.CheckErr(err)
+		
+		fmt.Printf("Successfully outputted deployment spec to %s\n", outputFile)
 	},
 	Aliases: []string{"spec"},
 }

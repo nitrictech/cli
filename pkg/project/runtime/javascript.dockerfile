@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:alpine
+FROM node:22.4.1-alpine
 
 ARG HANDLER
 ENV HANDLER=${HANDLER}

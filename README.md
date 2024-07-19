@@ -56,6 +56,9 @@ nitric new --help
 Documentation for all available commands:
 
 - nitric build : Build a Nitric project
+- nitric debug : Debug Operations (utilities for debugging nitric applications)
+- nitric debug spec : Output the nitric application cloud spec.
+  (alias: nitric spec)
 - nitric new [projectName] [templateName] : Create a new project
 - nitric run : Run your project locally for development and testing
 - nitric stack : Manage stacks (the deployed app containing multiple resources e.g. services, buckets and topics)

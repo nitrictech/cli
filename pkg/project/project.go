@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -164,10 +165,34 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	updatesChannel := make(chan ServiceRunUpdate)
 
 	go func() {
-		for range updatesChannel {
-			// TODO: Provide some updates - bubbletea nice output
-			// fmt.Println("container update:", update)
-			continue
+		// TODO: elevate env for tmp diretory and reuse
+		tmpCollectDir := "./.nitric/collect"
+
+		err := os.MkdirAll(tmpCollectDir, os.ModePerm)
+		if err != nil {
+			log.Fatalf("unable to create collect log directory %s", err)
+		}
+
+		// Create a temporary log file for this service
+		logFile, err := afero.TempFile(afero.NewOsFs(), tmpCollectDir, fmt.Sprintf("nitric-%s-*.log", service.Name))
+		if err != nil {
+			log.Fatalf("unable to create collect log file: %s", err)
+		}
+
+		defer logFile.Close()
+
+		for update := range updatesChannel {
+			_, err = logFile.WriteString(update.Message)
+			if err != nil {
+				log.Fatalf("unable to write update log %s", err)
+			}
+
+			if update.Err != nil {
+				_, err = logFile.WriteString(update.Err.Error())
+				if err != nil {
+					log.Fatalf("unable to write update error log %s", err)
+				}
+			}
 		}
 	}()
 

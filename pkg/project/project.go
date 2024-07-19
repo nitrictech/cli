@@ -167,6 +167,7 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	go func() {
 		// TODO: elevate env for tmp diretory and reuse
 		tmpCollectDir := "./.nitric/collect"
+
 		err := os.MkdirAll(tmpCollectDir, os.ModePerm)
 		if err != nil {
 			log.Fatalf("unable to create collect log directory %s", err)
@@ -179,10 +180,18 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 		}
 
 		defer logFile.Close()
+
 		for update := range updatesChannel {
-			logFile.WriteString(update.Message)
+			_, err = logFile.WriteString(update.Message)
+			if err != nil {
+				log.Fatalf("unable to write update log %s", err)
+			}
+
 			if update.Err != nil {
-				logFile.WriteString(update.Err.Error())
+				_, err = logFile.WriteString(update.Err.Error())
+				if err != nil {
+					log.Fatalf("unable to write update error log %s", err)
+				}
 			}
 		}
 	}()

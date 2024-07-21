@@ -238,7 +238,8 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 		commandParts[1:]...,
 	)
 
-	cmd.Env = []string{}
+	cmd.Env = append([]string{}, os.Environ()...)
+
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}

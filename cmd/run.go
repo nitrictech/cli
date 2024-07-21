@@ -60,7 +60,7 @@ var runCmd = &cobra.Command{
 			additionalEnvFiles = append(additionalEnvFiles, envFile)
 		}
 
-		err = env.LoadLocalEnv(additionalEnvFiles...)
+		loadEnv, err := env.ReadLocalEnv(additionalEnvFiles...)
 		if err != nil && !os.IsNotExist(err) {
 			tui.CheckErr(err)
 		}
@@ -95,7 +95,7 @@ var runCmd = &cobra.Command{
 		stopChan := make(chan bool)
 		updatesChan := make(chan project.ServiceRunUpdate)
 		go func() {
-			err := proj.RunServices(localCloud, stopChan, updatesChan)
+			err := proj.RunServices(localCloud, stopChan, updatesChan, loadEnv)
 			if err != nil {
 				panic(err)
 			}

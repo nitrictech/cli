@@ -263,88 +263,9 @@ func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
 	return fmt.Sprintf("%s-nitric-migrations", p.Name), ok
 }
 
-// Build migration images for this project
-// TODO: This may need to be moved to run post collection
-// if we allow specifying the migration location as part of the resource definition
-// func (p *Project) BuildDefaultMigrationImage(fs afero.Fs) (chan ServiceBuildUpdate, error) {
-// 	migrateBuildChan := make(chan ServiceBuildUpdate)
-
-// 	imageName, ok := p.DefaultMigrationImage(fs)
-
-// 	// TODO: Do a glob check for migrations SQL files
-// 	if !ok {
-// 		go func() {
-// 			migrateBuildChan <- ServiceBuildUpdate{
-// 				ServiceName: "migrations",
-// 				Message:     "No migrations found",
-// 				Status:      ServiceBuildStatus_Skipped,
-// 			}
-// 			close(migrateBuildChan)
-// 		}()
-
-// 		return migrateBuildChan, nil
-// 	}
-
-// 	dockerClient, err := docker.New()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	err = fs.MkdirAll(tempBuildDir, os.ModePerm)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("unable to create temporary build directory %s: %w", tempBuildDir, err)
-// 	}
-
-// 	tmpDockerFile, err := afero.TempFile(fs, tempBuildDir, "default-migrations-*.dockerfile")
-// 	if err != nil {
-// 		return nil, fmt.Errorf("unable to create temporary dockerfile for database migrations: %w", err)
-// 	}
-
-// 	if err := afero.WriteFile(fs, tmpDockerFile.Name(), []byte(defaultDockerfileContents), os.ModePerm); err != nil {
-// 		return nil, fmt.Errorf("unable to write temporary dockerfile for database migrations")
-// 	}
-
-// 	go func() {
-// 		defer func() {
-// 			tmpDockerFile.Close()
-
-// 			err := fs.Remove(tmpDockerFile.Name())
-// 			if err != nil {
-// 				logger.Errorf("unable to remove temporary dockerfile %s: %s", tmpDockerFile.Name(), err)
-// 			}
-// 		}()
-
-// 		serviceBuildUpdateWriter := &serviceBuildUpdateWriter{
-// 			buildUpdateChan: migrateBuildChan,
-// 			serviceName:     "migrations",
-// 		}
-
-// 		err := dockerClient.Build(tmpDockerFile.Name(), ".", imageName, map[string]string{}, []string{}, serviceBuildUpdateWriter)
-
-// 		if err != nil {
-// 			migrateBuildChan <- ServiceBuildUpdate{
-// 				ServiceName: "migrations",
-// 				Err:         err,
-// 				Message:     err.Error(),
-// 				Status:      ServiceBuildStatus_Error,
-// 			}
-// 		} else {
-// 			migrateBuildChan <- ServiceBuildUpdate{
-// 				ServiceName: "migrations",
-// 				Message:     "Build Complete",
-// 				Status:      ServiceBuildStatus_Complete,
-// 			}
-// 		}
-
-// 		close(migrateBuildChan)
-// 	}()
-
-// 	return migrateBuildChan, nil
-// }
-
 // RunServices - Runs all the services locally using a startup command
 // use the stop channel to stop all running services
-func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate) error {
+func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
 	stopChannels := lo.FanOut[bool](len(p.services), 1, stop)
 
 	group, _ := errgroup.WithContext(context.TODO())
@@ -360,12 +281,17 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 				return err
 			}
 
-			return svc.Run(stopChannels[idx], updates, map[string]string{
+			envVariables := map[string]string{
 				"PYTHONUNBUFFERED":   "TRUE", // ensure all print statements print immediately for python
 				"NITRIC_ENVIRONMENT": "run",
 				"SERVICE_ADDRESS":    "localhost:" + strconv.Itoa(port),
-				// TODO: add .env variables.
-			})
+			}
+
+			for key, value := range env {
+				envVariables[key] = value
+			}
+
+			return svc.Run(stopChannels[idx], updates, envVariables)
 		})
 	}
 
@@ -374,7 +300,7 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 
 // RunServices - Runs all the services as containers
 // use the stop channel to stop all running services
-func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate) error {
+func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
 	stopChannels := lo.FanOut[bool](len(p.services), 1, stop)
 
 	group, _ := errgroup.WithContext(context.TODO())
@@ -389,7 +315,7 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 				return err
 			}
 
-			return svc.RunContainer(stopChannels[idx], updates, WithNitricPort(strconv.Itoa(port)))
+			return svc.RunContainer(stopChannels[idx], updates, WithNitricPort(strconv.Itoa(port)), WithEnvVars(env))
 		})
 	}
 

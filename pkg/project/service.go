@@ -238,12 +238,10 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 		commandParts[1:]...,
 	)
 
-	cmd.Env = append(cmd.Env, os.Environ()...)
+	cmd.Env = []string{}
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
-
-	// cmd.Env = append(cmd.Env, fmt.Sprintf("SERVICE_PATH=\"%s\"", s.filepath))
 
 	cmd.Stdout = &ServiceRunUpdateWriter{
 		updates:     updates,
@@ -339,17 +337,6 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", runtimeOptions.nitricHost),
 		fmt.Sprintf("NITRIC_HTTP_PROXY_PORT=%d", randomPort[0]),
 	}
-
-	osEnv := os.Environ()
-
-	// filter out env vars that can conflict with the container
-	bannedVars := []string{"TEMP", "TMP", "PATH", "HOME"}
-
-	osEnv = lo.Filter(osEnv, func(item string, index int) bool {
-		return !lo.Contains(bannedVars, strings.Split(item, "=")[0])
-	})
-
-	env = append(env, osEnv...)
 
 	for k, v := range runtimeOptions.envVars {
 		env = append(env, k+"="+v)

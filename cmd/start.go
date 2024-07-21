@@ -66,7 +66,7 @@ var startCmd = &cobra.Command{
 			additionalEnvFiles = append(additionalEnvFiles, envFile)
 		}
 
-		err = env.LoadLocalEnv(additionalEnvFiles...)
+		localEnv, err := env.ReadLocalEnv(additionalEnvFiles...)
 		if err != nil && !os.IsNotExist(err) {
 			tui.CheckErr(err)
 		}
@@ -108,7 +108,7 @@ var startCmd = &cobra.Command{
 		updatesChan := make(chan project.ServiceRunUpdate)
 
 		go func() {
-			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan)
+			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan, localEnv)
 			if err != nil {
 				// typically these are just exit statuses
 				logger.Debugf("Services exited with: %s", err.Error())

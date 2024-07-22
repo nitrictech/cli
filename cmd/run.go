@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/cloud"
+	"github.com/nitrictech/cli/pkg/dashboard"
 	docker "github.com/nitrictech/cli/pkg/docker"
 	"github.com/nitrictech/cli/pkg/env"
 	"github.com/nitrictech/cli/pkg/project"
@@ -83,6 +84,13 @@ var runCmd = &cobra.Command{
 		_, err = runView.Run()
 		tui.CheckErr(err)
 
+		// Start dashboard
+		dash, err := dashboard.New(startNoBrowser, localCloud, proj)
+		tui.CheckErr(err)
+
+		err = dash.Start()
+		tui.CheckErr(err)
+
 		updates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
@@ -130,7 +138,7 @@ var runCmd = &cobra.Command{
 				}
 			}
 		} else {
-			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, ""))
+			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
 
 			_, _ = runView.Run()
 

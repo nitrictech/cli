@@ -51,8 +51,8 @@ import (
 )
 
 var (
-	startNoBrowser    bool
-	httpsExperimental bool
+	startNoBrowser bool
+	enableHttps    bool
 )
 
 // generateSelfSignedCert generates a self-signed X.509 certificate and returns the PEM-encoded certificate and private key
@@ -151,7 +151,7 @@ var startCmd = &cobra.Command{
 		}
 
 		var tlsCredentials *gateway.TLSCredentials
-		if httpsExperimental {
+		if enableHttps {
 			createTlsCredentialsIfNotPresent(fs, proj.Directory)
 			tlsCredentials = &gateway.TLSCredentials{
 				CertFile: paths.NitricTlsCertFile(proj.Directory),
@@ -258,7 +258,7 @@ var startCmd = &cobra.Command{
 
 func init() {
 	startCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
-	startCmd.Flags().BoolVar(&httpsExperimental, "https-experimental", false, "enable experimental https support for local APIs")
+	startCmd.Flags().BoolVar(&enableHttps, "https-preview", false, "enable https support for local APIs (preview feature)")
 	startCmd.PersistentFlags().BoolVar(
 		&startNoBrowser,
 		"no-browser",

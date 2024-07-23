@@ -69,7 +69,7 @@ var runCmd = &cobra.Command{
 		}
 
 		var tlsCredentials *gateway.TLSCredentials
-		if httpsExperimental {
+		if enableHttps {
 			createTlsCredentialsIfNotPresent(fs, proj.Directory)
 			tlsCredentials = &gateway.TLSCredentials{
 				CertFile: paths.NitricTlsCertFile(proj.Directory),
@@ -173,7 +173,7 @@ var runCmd = &cobra.Command{
 
 func init() {
 	runCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
-	runCmd.Flags().BoolVar(&httpsExperimental, "https-experimental", false, "enable experimental https support for local APIs")
+	runCmd.Flags().BoolVar(&enableHttps, "https-preview", false, "enable https support for local APIs (preview feature)")
 	runCmd.PersistentFlags().BoolVar(
 		&runNoBrowser,
 		"no-browser",

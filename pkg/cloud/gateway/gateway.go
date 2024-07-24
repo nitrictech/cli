@@ -146,7 +146,7 @@ func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
 	if len(s.httpServers) > 0 && len(s.httpWorkers) == len(s.httpServers) {
 		for idx, host := range s.httpWorkers {
 			protocol := "http"
-			if s.apiServers[idx].tlsCredentials != nil {
+			if s.httpServers[idx].tlsCredentials != nil {
 				protocol = "https"
 			}
 

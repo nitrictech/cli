@@ -27,9 +27,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/cloud"
+	"github.com/nitrictech/cli/pkg/cloud/gateway"
 	"github.com/nitrictech/cli/pkg/dashboard"
 	docker "github.com/nitrictech/cli/pkg/docker"
 	"github.com/nitrictech/cli/pkg/env"
+	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
@@ -66,6 +68,22 @@ var runCmd = &cobra.Command{
 			tui.CheckErr(err)
 		}
 
+		var tlsCredentials *gateway.TLSCredentials
+		if enableHttps {
+			createTlsCredentialsIfNotPresent(fs, proj.Directory)
+			tlsCredentials = &gateway.TLSCredentials{
+				CertFile: paths.NitricTlsCertFile(proj.Directory),
+				KeyFile:  paths.NitricTlsKeyFile(proj.Directory),
+			}
+		}
+
+		logFilePath, err := paths.NewNitricLogFile(proj.Directory)
+		tui.CheckErr(err)
+
+		logWriter, err := fs.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+		tui.CheckErr(err)
+		defer logWriter.Close()
+
 		teaOptions := []tea.ProgramOption{}
 		if isNonInteractive() {
 			teaOptions = append(teaOptions, tea.WithoutRenderer(), tea.WithInput(nil))
@@ -76,7 +94,10 @@ var runCmd = &cobra.Command{
 		var localCloud *cloud.LocalCloud
 		go func() {
 			// Start the local cloud service analogues
-			localCloud, err = cloud.New(proj.Name)
+			localCloud, err = cloud.New(proj.Name, cloud.LocalCloudOptions{
+				TLSCredentials: tlsCredentials,
+				LogWriter:      logWriter,
+			})
 			tui.CheckErr(err)
 			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})
 		}()
@@ -152,6 +173,7 @@ var runCmd = &cobra.Command{
 
 func init() {
 	runCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
+	runCmd.Flags().BoolVar(&enableHttps, "https-preview", false, "enable https support for local APIs (preview feature)")
 	runCmd.PersistentFlags().BoolVar(
 		&runNoBrowser,
 		"no-browser",

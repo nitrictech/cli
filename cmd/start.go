@@ -17,10 +17,19 @@
 package cmd
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -28,8 +37,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/cloud"
+	"github.com/nitrictech/cli/pkg/cloud/gateway"
 	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/env"
+	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/local"
@@ -39,7 +50,75 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/logger"
 )
 
-var startNoBrowser bool
+var (
+	startNoBrowser bool
+	enableHttps    bool
+)
+
+// generateSelfSignedCert generates a self-signed X.509 certificate and returns the PEM-encoded certificate and private key
+func generateSelfSignedCert() ([]byte, []byte, error) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	notBefore := time.Now()
+	notAfter := notBefore.Add(365 * 24 * time.Hour)
+
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"Acme Co"},
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+
+	privBytes, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
+
+	return certPEM, keyPEM, nil
+}
+
+func createTlsCredentialsIfNotPresent(fs afero.Fs, projectDir string) {
+	certPath := paths.NitricTlsCertFile(projectDir)
+	keyPath := paths.NitricTlsKeyFile(projectDir)
+
+	if _, err := os.Stat(certPath); os.IsNotExist(err) {
+		certPEM, keyPEM, err := generateSelfSignedCert()
+		tui.CheckErr(err)
+
+		// Make sure the credentials directory exists
+		err = fs.MkdirAll(paths.NitricTlsCredentialsPath(projectDir), 0o700)
+		tui.CheckErr(err)
+
+		err = afero.WriteFile(fs, certPath, certPEM, 0o600)
+		tui.CheckErr(err)
+
+		err = afero.WriteFile(fs, keyPath, keyPEM, 0o600)
+		tui.CheckErr(err)
+	}
+}
 
 var startCmd = &cobra.Command{
 	Use:         "start",
@@ -71,6 +150,22 @@ var startCmd = &cobra.Command{
 			tui.CheckErr(err)
 		}
 
+		var tlsCredentials *gateway.TLSCredentials
+		if enableHttps {
+			createTlsCredentialsIfNotPresent(fs, proj.Directory)
+			tlsCredentials = &gateway.TLSCredentials{
+				CertFile: paths.NitricTlsCertFile(proj.Directory),
+				KeyFile:  paths.NitricTlsKeyFile(proj.Directory),
+			}
+		}
+
+		logFilePath, err := paths.NewNitricLogFile(proj.Directory)
+		tui.CheckErr(err)
+
+		logWriter, err := fs.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+		tui.CheckErr(err)
+		defer logWriter.Close()
+
 		teaOptions := []tea.ProgramOption{}
 		if isNonInteractive() {
 			teaOptions = append(teaOptions, tea.WithoutRenderer(), tea.WithInput(nil))
@@ -81,7 +176,10 @@ var startCmd = &cobra.Command{
 		var localCloud *cloud.LocalCloud
 		go func() {
 			// Start the local cloud service analogues
-			localCloud, err = cloud.New(proj.Name)
+			localCloud, err = cloud.New(proj.Name, cloud.LocalCloudOptions{
+				TLSCredentials: tlsCredentials,
+				LogWriter:      logWriter,
+			})
 			tui.CheckErr(err)
 			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})
 		}()
@@ -160,6 +258,7 @@ var startCmd = &cobra.Command{
 
 func init() {
 	startCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
+	startCmd.Flags().BoolVar(&enableHttps, "https-preview", false, "enable https support for local APIs (preview feature)")
 	startCmd.PersistentFlags().BoolVar(
 		&startNoBrowser,
 		"no-browser",

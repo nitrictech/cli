@@ -96,14 +96,14 @@ func NitricLocalPassphrasePath() string {
 	return filepath.Join(NitricHomeDir(), ".local-stack-pass")
 }
 
-// NitricLogDir returns the directory to find log files.
-func NitricLogDir(stackPath string) string {
+// NitricTmpDir returns the directory to find temporary files for a project.
+func NitricTmpDir(stackPath string) string {
 	return filepath.Join(stackPath, ".nitric")
 }
 
 // NewNitricLogFile returns a path to a unique log file that does not exist.
 func NewNitricLogFile(stackPath string) (string, error) {
-	logDir := NitricLogDir(stackPath)
+	logDir := NitricTmpDir(stackPath)
 
 	// ensure .nitric exists
 	err := os.MkdirAll(logDir, os.ModePerm)
@@ -121,9 +121,21 @@ func NewNitricLogFile(stackPath string) (string, error) {
 	return tf.Name(), nil
 }
 
+func NitricTlsCredentialsPath(stackPath string) string {
+	return filepath.Join(NitricTmpDir(stackPath), "./tls")
+}
+
+func NitricTlsCertFile(stackPath string) string {
+	return filepath.Join(NitricTlsCredentialsPath(stackPath), "./cert.pem")
+}
+
+func NitricTlsKeyFile(stackPath string) string {
+	return filepath.Join(NitricTlsCredentialsPath(stackPath), "./key.pem")
+}
+
 // NitricHistoryFile returns a path to a request history file, making one if it doesn't exist
 func NitricHistoryFile(stackPath string, historyType string) (string, error) {
-	logDir := NitricLogDir(stackPath)
+	logDir := NitricTmpDir(stackPath)
 
 	fileName := filepath.Clean(fmt.Sprintf("%s/history-%s.json", logDir, historyType))
 

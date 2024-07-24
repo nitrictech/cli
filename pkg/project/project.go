@@ -54,8 +54,6 @@ import (
 
 const tempBuildDir = "./.nitric/build"
 
-// BuildImage - Builds the docker image for the service
-
 type Project struct {
 	Name      string
 	Directory string
@@ -263,7 +261,7 @@ func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
 	return fmt.Sprintf("%s-nitric-migrations", p.Name), ok
 }
 
-// RunServices - Runs all the services locally using a startup command
+// RunServicesWithCommand - Runs all the services locally using a startup command
 // use the stop channel to stop all running services
 func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
 	stopChannels := lo.FanOut[bool](len(p.services), 1, stop)

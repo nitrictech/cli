@@ -19,8 +19,8 @@ export const HttpProxyNode: ComponentType<NodeProps<HttpProxyNodeData>> = (
         description: data.description,
         icon: data.icon,
         nodeType: 'httpproxy',
-        testHref: `http://${data.address}`,
-        address: `http://${data.address}`,
+        testHref: data.address,
+        address: data.address,
         services: [data.resource.target],
       }}
     />

@@ -443,7 +443,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
     const proxyAddress = data.httpWorkerAddresses[proxy.name]
 
     const node = createNode<HttpProxyNodeData>(proxy, 'httpproxy', {
-      title: `${proxyAddress.split(':')[1]}:${proxy.name.split(':')[1]}`,
+      title: `${proxyAddress.split(':')[2]}:${proxy.name.split(':')[1]}`,
       description: `Forwarding ${proxyAddress} to ${proxy.name}`,
       resource: proxy,
       icon: ArrowsRightLeftIcon,

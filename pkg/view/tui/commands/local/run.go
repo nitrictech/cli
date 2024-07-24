@@ -229,13 +229,13 @@ func (t *TuiModel) View() string {
 	}
 
 	for _, api := range t.apis {
-		v.Add("api:%s -", api.Name)
-		v.Addln(" http://%s", api.Url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Add("api:%s - ", api.Name)
+		v.Addln(api.Url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
 	for _, httpProxy := range t.httpProxies {
-		v.Add("http:%s -", httpProxy.name)
-		v.Addln(" http://%s", httpProxy.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Add("http:%s - ", httpProxy.name)
+		v.Addln(httpProxy.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
 	return v.Render()

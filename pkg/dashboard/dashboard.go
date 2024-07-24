@@ -138,6 +138,7 @@ type Dashboard struct {
 	storageService         *storage.LocalStorageService
 	gatewayService         *gateway.LocalGatewayService
 	apis                   []ApiSpec
+	apiUseHttps            bool
 	apiSecurityDefinitions map[string]map[string]*resourcespb.ApiSecurityDefinitionResource
 	schedules              []ScheduleSpec
 	topics                 []*TopicSpec
@@ -165,6 +166,7 @@ type Dashboard struct {
 
 type DashboardResponse struct {
 	Apis          []ApiSpec          `json:"apis"`
+	ApisUseHttps  bool               `json:"apisUseHttps"`
 	Buckets       []*BucketSpec      `json:"buckets"`
 	Schedules     []ScheduleSpec     `json:"schedules"`
 	Topics        []*TopicSpec       `json:"topics"`
@@ -763,6 +765,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		storageService:         localCloud.Storage,
 		gatewayService:         localCloud.Gateway,
 		apis:                   []ApiSpec{},
+		apiUseHttps:            localCloud.Gateway.ApiTlsCredentials != nil,
 		apiSecurityDefinitions: map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{},
 		envMap:                 map[string]string{},
 		stackWebSocket:         stackWebSocket,

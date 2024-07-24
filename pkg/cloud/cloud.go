@@ -18,6 +18,7 @@ package cloud
 
 import (
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/samber/lo"
@@ -165,7 +166,12 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	return ports[0], nil
 }
 
-func New(projectName string) (*LocalCloud, error) {
+type LocalCloudOptions struct {
+	TLSCredentials *gateway.TLSCredentials
+	LogWriter      io.Writer
+}
+
+func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	localTopics, err := topics.NewLocalTopicsService()
 	if err != nil {
 		return nil, err
@@ -194,7 +200,14 @@ func New(projectName string) (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localGateway, err := gateway.NewGateway()
+	if opts.LogWriter == nil {
+		opts.LogWriter = io.Discard
+	}
+
+	localGateway, err := gateway.NewGateway(gateway.NewGatewayOpts{
+		TLSCredentials: opts.TLSCredentials,
+		LogWriter:      opts.LogWriter,
+	})
 	if err != nil {
 		return nil, err
 	}

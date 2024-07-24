@@ -169,7 +169,7 @@ func configFromFile[T any](fs afero.Fs, filePath string) (*StackConfig[T], error
 	stackConfig := &StackConfig[T]{}
 
 	if err := yaml.Unmarshal(stackFileContents, stackConfig); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to parse stack file '%s': %w", filePath, err)
 	}
 
 	stackConfig.Name, err = GetStackNameFromFileName(filePath)

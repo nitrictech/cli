@@ -425,7 +425,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 func FromFile(fs afero.Fs, filepath string) (*Project, error) {
 	projectConfig, err := ConfigurationFromFile(fs, filepath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load nitric.yaml, are you currently in a nitric project?: %w", err)
+		return nil, fmt.Errorf("error loading nitric.yaml: %w", err)
 	}
 
 	return fromProjectConfiguration(projectConfig, fs)

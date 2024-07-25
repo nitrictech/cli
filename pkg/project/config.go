@@ -93,7 +93,7 @@ func ConfigurationFromFile(fs afero.Fs, filePath string) (*ProjectConfiguration,
 	info, err := fs.Stat(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("nitric.yaml not found in %s. A nitric project is required to load configuration", absProjectDir)
+			return nil, fmt.Errorf("nitric.yaml not found in %s. Check that you are in the root directory of a nitric project", absProjectDir)
 		}
 
 		return nil, err

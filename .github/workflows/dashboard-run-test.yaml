@@ -1,5 +1,5 @@
 ---
-name: Dashboard Tests
+name: Dashboard Tests with nitric run
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
   pull_request:
 
 concurrency:
-  group: ci-dash-tests-${{ github.ref_name }}
+  group: ci-dash-run-tests-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -28,14 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-
-      - name: Lint Dashboard
-        working-directory: cli/pkg/dashboard/frontend
-        run: |
-          yarn install
-          yarn format:check
-          yarn lint --quiet
+          node-version: 21
 
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -48,11 +41,11 @@ jobs:
           make build
           mv bin/nitric $(go env GOPATH)/bin/nitric
 
-      - name: Run nitric start with test-app in the background
+      - name: Run nitric run with test-app in the background
         run: |
           cd ${{ github.workspace }}/cli/pkg/dashboard/frontend/test-app
           yarn install
-          nitric start --ci &
+          nitric run --ci &
 
       - name: Run Tests
         uses: cypress-io/github-action@v5

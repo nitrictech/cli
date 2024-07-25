@@ -1,0 +1,77 @@
+---
+name: Dashboard Tests with nitric start
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+concurrency:
+  group: ci-dash-start-tests-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  GOPROXY: https://proxy.golang.org
+  FATHOM_SITE: FAKE1234
+  NITRIC_HTTP_PROXY_PORT: 8000
+
+jobs:
+  nitric-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: cli
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 21
+
+      - name: Lint Dashboard
+        working-directory: cli/pkg/dashboard/frontend
+        run: |
+          yarn install
+          yarn format:check
+          yarn lint --quiet
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21
+
+      - name: Build Nitric
+        run: |
+          cd ${{ github.workspace }}/cli
+          make build
+          mv bin/nitric $(go env GOPATH)/bin/nitric
+
+      - name: Run nitric start with test-app in the background
+        run: |
+          cd ${{ github.workspace }}/cli/pkg/dashboard/frontend/test-app
+          yarn install
+          nitric start --ci &
+
+      - name: Run Tests
+        uses: cypress-io/github-action@v5
+        with:
+          install: false
+          wait-on: "http://localhost:49152"
+          # wait for 3 minutes for the server to respond
+          wait-on-timeout: 180
+          working-directory: cli/pkg/dashboard/frontend
+          browser: chrome
+
+      - uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cli/pkg/dashboard/frontend/cypress/screenshots
+
+      - uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-videos
+          path: cli/pkg/dashboard/frontend/cypress/videos

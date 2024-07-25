@@ -627,7 +627,7 @@ func init() {
 	tui.CheckErr(AddOptions(stackUpdateCmd, false))
 
 	// Delete Stack (Down)
-	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd, tui.Pulumi))
+	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd, tui.Pulumi, tui.Docker))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
 	tui.CheckErr(AddOptions(stackDeleteCmd, false))
 

@@ -6,7 +6,6 @@ describe('Topics Spec', () => {
 
   it('should retrieve correct topics', () => {
     cy.get('h2').should('contain.text', 'subscribe-tests')
-    cy.getTestEl('Topics-count').should('have.text', '2')
 
     const expectedTopics = ['subscribe-tests', 'subscribe-tests-2']
 

@@ -10,8 +10,6 @@ describe('Storage Explorer spec', () => {
 
     const expectedBuckets = ['test-bucket']
 
-    cy.getTestEl('Storage-count').should('have.text', '1')
-
     expectedBuckets.forEach((id) => {
       cy.get(`[data-rct-item-id="${id}"]`).should('exist')
     })

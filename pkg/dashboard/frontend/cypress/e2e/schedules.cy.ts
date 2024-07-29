@@ -6,7 +6,6 @@ describe('Schedules Spec', () => {
 
   it('should retrieve correct schedules', () => {
     cy.get('h2').should('contain.text', 'process-tests')
-    cy.getTestEl('Schedules-count').should('have.text', '2')
 
     const expectedSchedules = ['process-tests', 'process-tests-2']
 

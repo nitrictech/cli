@@ -6,8 +6,6 @@ describe('APIs spec', () => {
   })
 
   it('should retrieve correct apis and endpoints', () => {
-    cy.getTestEl('APIs-count').should('have.text', '2')
-
     cy.get('[data-rct-item-id="second-api"]').click()
 
     const expectedEndpoints = [

@@ -48,7 +48,6 @@ import useSWRSubscription from 'swr/subscription'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { Badge } from '../ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { Separator } from '../ui/separator'
 import BreadCrumbs from '../layout/BreadCrumbs'
 
 export const LOCAL_STORAGE_KEY = 'nitric-local-dash-api-history'

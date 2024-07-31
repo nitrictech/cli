@@ -8,6 +8,7 @@ module.exports = {
     fontFamily: {
       display: ["'Sora'", 'sans-serif'],
       body: fontFamily.sans,
+      mono: fontFamily.mono,
     },
     container: {
       center: true,
@@ -50,6 +51,10 @@ module.exports = {
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
+        },
+        code: {
+          DEFAULT: '#282c34',
+          foreground: '#abb2bf',
         },
       },
       borderRadius: {

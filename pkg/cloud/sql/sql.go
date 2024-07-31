@@ -169,6 +169,65 @@ func (l *LocalSqlServer) ConnectionString(ctx context.Context, req *sqlpb.SqlCon
 	}, nil
 }
 
+// create a function that will execute a query on the local database
+func (l *LocalSqlServer) Query(ctx context.Context, connectionString string, query string) ([]map[string]interface{}, error) {
+	// Connect to the PostgreSQL instance using the provided connection string
+	conn, err := pgx.Connect(ctx, connectionString)
+	if err != nil {
+		return nil, err
+	}
+
+	defer conn.Close(ctx)
+
+	// Execute the query
+	rows, err := conn.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	// Get column descriptions
+	fieldDescriptions := rows.FieldDescriptions()
+	numColumns := len(fieldDescriptions)
+
+	// Prepare a slice to hold the results
+	results := make([]map[string]interface{}, 0)
+
+	// Process the query results
+	for rows.Next() {
+		// Create a map to hold the row values
+		row := make(map[string]interface{})
+		values := make([]interface{}, numColumns)
+		valuePointers := make([]interface{}, numColumns)
+
+		for i := range values {
+			valuePointers[i] = &values[i]
+		}
+
+		// Scan the row values into the slice
+		err := rows.Scan(valuePointers...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		// Assign values to the map using column names as keys
+		for i, val := range values {
+			row[string(fieldDescriptions[i].Name)] = val
+		}
+
+		// Append the row map to the results slice
+		results = append(results, row)
+	}
+
+	// Check for any errors encountered during iteration
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("row iteration failed: %w", rows.Err())
+	}
+
+	return results, nil
+}
+
 func NewLocalSqlServer(projectName string) (*LocalSqlServer, error) {
 	localSql := &LocalSqlServer{
 		projectName: projectName,

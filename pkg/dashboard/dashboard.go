@@ -17,6 +17,7 @@
 package dashboard
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -39,6 +40,7 @@ import (
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/netx"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
+	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
@@ -46,6 +48,7 @@ import (
 	httpproxy "github.com/nitrictech/cli/pkg/cloud/http"
 	"github.com/nitrictech/cli/pkg/cloud/resources"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
+	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/storage"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
@@ -96,6 +99,8 @@ type KeyValueSpec struct {
 
 type SQLDatabaseSpec struct {
 	*BaseResourceSpec
+
+	ConnectionString string `json:"connectionString"`
 }
 
 type NotifierSpec struct {
@@ -137,6 +142,7 @@ type Dashboard struct {
 	project                *project.Project
 	storageService         *storage.LocalStorageService
 	gatewayService         *gateway.LocalGatewayService
+	databaseService        *sql.LocalSqlServer
 	apis                   []ApiSpec
 	apiUseHttps            bool
 	apiSecurityDefinitions map[string]map[string]*resourcespb.ApiSecurityDefinitionResource
@@ -190,6 +196,7 @@ type DashboardResponse struct {
 	CurrentVersion      string                `json:"currentVersion"`
 	LatestVersion       string                `json:"latestVersion"`
 	Connected           bool                  `json:"connected"`
+	DashboardAddress    string                `json:"dashboardAddress"`
 }
 
 type Bucket struct {
@@ -341,13 +348,28 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 		})
 
 		if !exists {
+			connectionString, err := d.databaseService.ConnectionString(context.TODO(), &sqlpb.SqlConnectionStringRequest{
+				DatabaseName: dbName,
+			})
+			if err != nil {
+				fmt.Printf("Error getting connection string for database %s: %v\n", dbName, err)
+				continue
+			}
+
 			d.sqlDatabases = append(d.sqlDatabases, &SQLDatabaseSpec{
 				BaseResourceSpec: &BaseResourceSpec{
 					Name:               dbName,
 					RequestingServices: resource.RequestingServices,
 				},
+				ConnectionString: connectionString.GetConnectionString(),
 			})
 		}
+	}
+
+	if len(d.sqlDatabases) > 0 {
+		slices.SortFunc(d.sqlDatabases, func(a, b *SQLDatabaseSpec) int {
+			return compare(a.Name, b.Name)
+		})
 	}
 
 	d.refresh()
@@ -605,6 +627,8 @@ func (d *Dashboard) Start() error {
 
 	http.HandleFunc("/api/storage", d.handleStorage())
 
+	http.HandleFunc("/api/sql", d.createSqlQueryHandler())
+
 	// handle websockets
 	http.HandleFunc("/ws-info", func(w http.ResponseWriter, r *http.Request) {
 		err := d.wsWebSocket.HandleRequest(w, r)
@@ -706,9 +730,10 @@ func (d *Dashboard) sendStackUpdate() error {
 		HttpWorkerAddresses: d.gatewayService.GetHttpWorkerAddresses(),
 		TriggerAddress:      d.gatewayService.GetTriggerAddress(),
 		// StorageAddress:      d.storageService.GetStorageEndpoint(),
-		CurrentVersion: currentVersion,
-		LatestVersion:  latestVersion,
-		Connected:      d.isConnected(),
+		CurrentVersion:   currentVersion,
+		LatestVersion:    latestVersion,
+		Connected:        d.isConnected(),
+		DashboardAddress: d.GetDashboardUrl(),
 	}
 
 	// Encode the response as JSON
@@ -764,6 +789,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		project:                project,
 		storageService:         localCloud.Storage,
 		gatewayService:         localCloud.Gateway,
+		databaseService:        localCloud.Databases,
 		apis:                   []ApiSpec{},
 		apiUseHttps:            localCloud.Gateway.ApiTlsCredentials != nil,
 		apiSecurityDefinitions: map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{},

@@ -18,6 +18,7 @@ export const SQLNode: ComponentType<NodeProps<SQLNodeData>> = (props) => {
         description: data.description,
         icon: data.icon,
         nodeType: 'sql',
+        testHref: `/databases`, // TODO add url param to switch to resource
         services: data.resource.requestingServices,
       }}
     />

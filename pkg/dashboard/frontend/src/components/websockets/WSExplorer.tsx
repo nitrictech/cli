@@ -286,7 +286,7 @@ const WSExplorer = () => {
       secondLevelNav={
         data?.websockets?.length && selectedWebsocket ? (
           <>
-            <div className="mb-2 flex items-center justify-between px-2">
+            <div className="flex min-h-12 items-center justify-between px-2 py-1">
               <span className="text-lg">WebSockets</span>
             </div>
             <WSTreeView

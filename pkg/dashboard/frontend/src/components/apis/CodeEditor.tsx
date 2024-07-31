@@ -5,7 +5,7 @@ import CodeMirror, {
 import { StreamLanguage } from '@codemirror/language'
 import { parse } from '@prantlf/jsonlint'
 import { linter, type Diagnostic } from '@codemirror/lint'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   ClipboardDocumentCheckIcon,
   ClipboardIcon,
@@ -15,6 +15,7 @@ import { json } from '@codemirror/lang-json'
 import { html } from '@codemirror/lang-html'
 import { css } from '@codemirror/lang-css'
 import { xml } from '@codemirror/lang-xml'
+import { sql, PostgreSQL, type SQLConfig } from '@codemirror/lang-sql'
 import { spreadsheet } from '@codemirror/legacy-modes/mode/spreadsheet'
 import type { EditorView } from '@codemirror/view'
 import { copyToClipboard } from '../../lib/utils/copy-to-clipboard'
@@ -24,6 +25,7 @@ interface Props extends ReactCodeMirrorProps {
   contentType: string
   includeLinters?: boolean
   enableCopy?: boolean
+  sqlSchema?: SQLConfig['schema']
 }
 
 function getLineNumber(str: string, index: number) {
@@ -87,6 +89,7 @@ const CodeEditor: React.FC<Props> = ({
   includeLinters,
   onChange,
   enableCopy,
+  sqlSchema,
   ...props
 }) => {
   const editor = useRef<ReactCodeMirrorRef>(null)
@@ -117,6 +120,13 @@ const CodeEditor: React.FC<Props> = ({
         return [StreamLanguage.define(spreadsheet)]
       case 'text/css':
         return [css()]
+      case 'text/sql':
+        return [
+          sql({
+            dialect: PostgreSQL,
+            schema: sqlSchema,
+          }),
+        ]
       case 'text/xml':
       case 'application/xml':
         return [xml()]
@@ -125,7 +135,7 @@ const CodeEditor: React.FC<Props> = ({
     }
 
     return []
-  }, [contentType])
+  }, [contentType, sqlSchema])
 
   const handleOnChange: ReactCodeMirrorProps['onChange'] = (
     value,
@@ -184,7 +194,7 @@ const CodeEditor: React.FC<Props> = ({
           </button>
         </div>
       )}
-      <div className="overflow-hidden rounded-lg">
+      <div className="overflow-hidden rounded-lg shadow-md">
         <CodeMirror
           ref={editor}
           height="350px"

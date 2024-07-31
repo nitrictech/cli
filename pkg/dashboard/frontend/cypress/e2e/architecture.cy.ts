@@ -12,7 +12,10 @@ const expectedNodes = [
   'subscribe-tests',
   'subscribe-tests-2',
   ':8000',
-  'functions/my-test-function.ts',
+  'my-db',
+  'my-second-db',
+  'services/my-test-service.ts',
+  'services/my-test-db.ts',
 ]
 
 describe('Architecture Spec', () => {

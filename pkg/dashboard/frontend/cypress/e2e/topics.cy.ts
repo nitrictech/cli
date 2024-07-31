@@ -19,7 +19,7 @@ describe('Topics Spec', () => {
 
       cy.getTestEl('generated-request-path').should(
         'have.text',
-        `http://localhost:4000/topics/${topic}`,
+        `http://localhost:4001/topics/${topic}`,
       )
 
       cy.getTestEl('trigger-topics-btn').click()

@@ -45,8 +45,12 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
+	kvstorepb "github.com/nitrictech/nitric/core/pkg/proto/kvstore/v1"
+	queuespb "github.com/nitrictech/nitric/core/pkg/proto/queues/v1"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
+	secretspb "github.com/nitrictech/nitric/core/pkg/proto/secrets/v1"
+	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
@@ -141,6 +145,11 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	websocketspb.RegisterWebsocketHandlerServer(grpcServer, serviceRequirements)
 	storagepb.RegisterStorageListenerServer(grpcServer, serviceRequirements)
 	httppb.RegisterHttpServer(grpcServer, serviceRequirements)
+	storagepb.RegisterStorageServer(grpcServer, serviceRequirements)
+	queuespb.RegisterQueuesServer(grpcServer, serviceRequirements)
+	kvstorepb.RegisterKvStoreServer(grpcServer, serviceRequirements)
+	sqlpb.RegisterSqlServer(grpcServer, serviceRequirements)
+	secretspb.RegisterSecretManagerServer(grpcServer, serviceRequirements)
 
 	listener, err := net.Listen("tcp", ":")
 	if err != nil {

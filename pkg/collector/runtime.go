@@ -58,15 +58,15 @@ func (s *ServiceRequirements) ApiDetails(context.Context, *apispb.ApiDetailsRequ
 
 // Websockets
 func (s *ServiceRequirements) SocketDetails(context.Context, *websocketspb.WebsocketDetailsRequest) (*websocketspb.WebsocketDetailsResponse, error) {
-	return nil, s.illegalRuntimeMethodCall("Websocket::Websocket")
+	return nil, s.illegalRuntimeMethodCall("Websocket::SocketDetails")
 }
 
 func (s *ServiceRequirements) SendMessage(context.Context, *websocketspb.WebsocketSendRequest) (*websocketspb.WebsocketSendResponse, error) {
-	return nil, s.illegalRuntimeMethodCall("Websocket::Websocket")
+	return nil, s.illegalRuntimeMethodCall("Websocket::SendMessage")
 }
 
 func (s *ServiceRequirements) CloseConnection(context.Context, *websocketspb.WebsocketCloseConnectionRequest) (*websocketspb.WebsocketCloseConnectionResponse, error) {
-	return nil, s.illegalRuntimeMethodCall("Websocket::Websocket")
+	return nil, s.illegalRuntimeMethodCall("Websocket::CloseConnection")
 }
 
 // Secrets

@@ -179,50 +179,49 @@ func (l *LocalSqlServer) Query(ctx context.Context, connectionString string, que
 
 	defer conn.Close(ctx)
 
-	// Execute the query
-	rows, err := conn.Query(ctx, query)
+	// Begin transaction
+	tx, err := conn.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	defer rows.Close()
+	// Split commands from string
+	commands := strings.Split(query, ";")
 
-	// Get column descriptions
-	fieldDescriptions := rows.FieldDescriptions()
-	numColumns := len(fieldDescriptions)
+	results := []map[string]interface{}{}
 
-	// Prepare a slice to hold the results
-	results := make([]map[string]interface{}, 0)
-
-	// Process the query results
-	for rows.Next() {
-		// Create a map to hold the row values
-		row := make(map[string]interface{})
-		values := make([]interface{}, numColumns)
-		valuePointers := make([]interface{}, numColumns)
-
-		for i := range values {
-			valuePointers[i] = &values[i]
+	// Execute each command
+	for _, command := range commands {
+		command = strings.TrimSpace(command)
+		if command == "" {
+			continue
 		}
 
-		// Scan the row values into the slice
-		err := rows.Scan(valuePointers...)
+		rows, err := tx.Query(ctx, command)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			_ = tx.Rollback(ctx)
+
+			return nil, err
 		}
 
-		// Assign values to the map using column names as keys
-		for i, val := range values {
-			row[string(fieldDescriptions[i].Name)] = val
-		}
+		if rows.Next() {
+			// Process the query results
+			results, err = processRows(rows)
+			rows.Close()
 
-		// Append the row map to the results slice
-		results = append(results, row)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+
+				return nil, err
+			}
+		} else {
+			rows.Close()
+		}
 	}
 
-	// Check for any errors encountered during iteration
-	if rows.Err() != nil {
-		return nil, fmt.Errorf("row iteration failed: %w", rows.Err())
+	// Commit the transaction
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
 
 	return results, nil
@@ -239,4 +238,42 @@ func NewLocalSqlServer(projectName string) (*LocalSqlServer, error) {
 	}
 
 	return localSql, nil
+}
+
+func processRows(rows pgx.Rows) ([]map[string]interface{}, error) {
+	fieldDescriptions := rows.FieldDescriptions()
+	numColumns := len(fieldDescriptions)
+
+	results := make([]map[string]interface{}, 0)
+
+	for {
+		values := make([]interface{}, numColumns)
+		valuePointers := make([]interface{}, numColumns)
+
+		for i := range values {
+			valuePointers[i] = &values[i]
+		}
+
+		err := rows.Scan(valuePointers...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		row := make(map[string]interface{})
+		for i, val := range values {
+			row[string(fieldDescriptions[i].Name)] = val
+		}
+
+		results = append(results, row)
+
+		if !rows.Next() {
+			break
+		}
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("row iteration failed: %w", rows.Err())
+	}
+
+	return results, nil
 }

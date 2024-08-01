@@ -114,8 +114,17 @@ func (s *DevSecretService) Access(ctx context.Context, req *secretspb.SecretAcce
 
 	content, err := os.ReadFile(s.secretFileName(req.SecretVersion.Secret, req.SecretVersion.Version))
 	if err != nil {
+		// If the file is missing it's typically because it hasn't been created yet
+		if os.IsNotExist(err) {
+			return nil, newErr(
+				codes.NotFound,
+				"failed to retrieve secret value, ensure a value has been stored using the `put` method, before attempting to access it",
+				err,
+			)
+		}
+
 		return nil, newErr(
-			codes.InvalidArgument,
+			codes.Unknown,
 			"error reading secret store",
 			err,
 		)

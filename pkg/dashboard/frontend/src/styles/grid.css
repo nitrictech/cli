@@ -1,6 +1,5 @@
 .rdg {
-  @apply box-border h-full select-none overflow-x-auto overflow-y-scroll rounded-lg bg-code;
-  -webkit-user-select: none;
+  @apply box-border h-full overflow-x-auto overflow-y-scroll rounded-lg bg-code;
 }
 
 .rdg *,
@@ -10,7 +9,7 @@
 }
 
 .rdg-cell {
-  @apply flex flex border-b border-r border-gray-700 bg-code text-gray-200;
+  @apply flex flex border-b border-r border-gray-600 bg-code text-gray-200;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

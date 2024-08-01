@@ -1,5 +1,6 @@
 import type { OpenAPIV3 } from 'openapi-types'
 import type { FieldRow } from './components/shared/FieldRows'
+import { type Completion } from '@codemirror/autocomplete'
 
 export type APIDoc = OpenAPIV3.Document
 
@@ -197,3 +198,5 @@ export interface RequestHistory {
   headers: Record<string, string[]>
   body?: BodyInit | null
 }
+
+export type SchemaObj = { [key: string]: Completion[] }

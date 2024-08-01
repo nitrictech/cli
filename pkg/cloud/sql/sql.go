@@ -29,6 +29,7 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	"github.com/jackc/pgx/v4"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	"github.com/nitrictech/cli/pkg/docker"
 	"github.com/nitrictech/cli/pkg/netx"
@@ -170,7 +171,7 @@ func (l *LocalSqlServer) ConnectionString(ctx context.Context, req *sqlpb.SqlCon
 }
 
 // create a function that will execute a query on the local database
-func (l *LocalSqlServer) Query(ctx context.Context, connectionString string, query string) ([]map[string]interface{}, error) {
+func (l *LocalSqlServer) Query(ctx context.Context, connectionString string, query string) ([]*orderedmap.OrderedMap[string, any], error) {
 	// Connect to the PostgreSQL instance using the provided connection string
 	conn, err := pgx.Connect(ctx, connectionString)
 	if err != nil {
@@ -188,7 +189,7 @@ func (l *LocalSqlServer) Query(ctx context.Context, connectionString string, que
 	// Split commands from string
 	commands := strings.Split(query, ";")
 
-	results := []map[string]interface{}{}
+	results := []*orderedmap.OrderedMap[string, any]{}
 
 	// Execute each command
 	for _, command := range commands {
@@ -240,11 +241,11 @@ func NewLocalSqlServer(projectName string) (*LocalSqlServer, error) {
 	return localSql, nil
 }
 
-func processRows(rows pgx.Rows) ([]map[string]interface{}, error) {
+func processRows(rows pgx.Rows) ([]*orderedmap.OrderedMap[string, any], error) {
 	fieldDescriptions := rows.FieldDescriptions()
 	numColumns := len(fieldDescriptions)
 
-	results := make([]map[string]interface{}, 0)
+	results := []*orderedmap.OrderedMap[string, any]{}
 
 	for {
 		values := make([]interface{}, numColumns)
@@ -259,9 +260,10 @@ func processRows(rows pgx.Rows) ([]map[string]interface{}, error) {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
-		row := make(map[string]interface{})
+		row := orderedmap.New[string, any]()
+
 		for i, val := range values {
-			row[string(fieldDescriptions[i].Name)] = val
+			row.Set(string(fieldDescriptions[i].Name), val)
 		}
 
 		results = append(results, row)

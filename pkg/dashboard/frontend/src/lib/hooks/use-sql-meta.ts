@@ -7,6 +7,7 @@ export interface SqlMetaResult {
   columns: {
     column_name: string
     data_type: string
+    column_order: number
   }[]
   is_table: boolean
   qualified_name: string

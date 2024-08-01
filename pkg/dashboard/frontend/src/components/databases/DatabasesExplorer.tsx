@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWebSocket } from '../../lib/hooks/use-web-socket'
-import type { SQLDatabase } from '@/types'
+import type { SchemaObj, SQLDatabase } from '@/types'
 import { Loading } from '../shared'
 import { fieldRowArrToHeaders, getHost, generateResponse } from '@/lib/utils'
 
@@ -23,7 +23,6 @@ import { Button } from '../ui/button'
 import CodeEditor from '../apis/CodeEditor'
 import QueryResults from './QueryResults'
 import { useSqlMeta } from '@/lib/hooks/use-sql-meta'
-import { type Completion } from '@codemirror/autocomplete'
 
 interface QueryHistoryItem {
   query: string
@@ -66,24 +65,23 @@ const DatabasesExplorer: React.FC = () => {
   )
 
   // takes tables and converts it into an object of schema keys with an array of table names
-  const schemaObj: { [key: string]: Completion[] } | undefined = useMemo(() => {
-    return tables?.reduce(
-      (acc, table) => {
-        if (!acc) return {}
+  const schemaObj: SchemaObj | undefined = useMemo(() => {
+    return tables?.reduce((acc, table) => {
+      if (!acc) return {}
 
-        const key = `${table.schema_name}.${table.table_name}`
+      const key = `${table.schema_name}.${table.table_name}`
 
-        if (!acc[key]) {
-          acc[key] = table.columns.map((column) => ({
+      if (!acc[key]) {
+        acc[key] = table.columns
+          .sort((a, b) => a.column_order - b.column_order)
+          .map((column) => ({
             label: column.column_name,
             type: 'property',
           }))
-        }
+      }
 
-        return acc
-      },
-      {} as { [key: string]: Completion[] },
-    ) // Add index signature to allow indexing with a string
+      return acc
+    }, {} as SchemaObj) // Add index signature to allow indexing with a string
   }, [tables])
 
   if (import.meta.env.DEV) {

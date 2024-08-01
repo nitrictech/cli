@@ -11,7 +11,8 @@ SELECT
     jsonb_agg(
         jsonb_build_object(
             'column_name', a.attname,
-            'data_type', a.data_type
+            'data_type', a.data_type,
+            'column_order', a.attnum
         )
     ) AS columns
 FROM

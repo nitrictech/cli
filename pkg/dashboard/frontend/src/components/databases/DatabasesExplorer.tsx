@@ -146,6 +146,9 @@ const DatabasesExplorer: React.FC = () => {
     const callResponse = await generateResponse(res, startTime)
     setResponse(callResponse.data)
 
+    // refresh tables in case of DDL changes
+    refreshTables()
+
     setTimeout(() => setCallLoading(false), 300)
   }
 

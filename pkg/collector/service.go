@@ -62,10 +62,6 @@ type ServiceRequirements struct {
 	secrets  map[string]*resourcespb.SecretResource
 
 	errors []error
-	topicspb.UnimplementedTopicsServer
-	storagepb.UnimplementedStorageListenerServer
-	websocketspb.UnimplementedWebsocketServer
-	// apispb.UnimplementedApiServer
 
 	ApiServer apispb.ApiServer
 }

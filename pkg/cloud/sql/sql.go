@@ -28,7 +28,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	"github.com/nitrictech/cli/pkg/docker"
@@ -263,7 +263,7 @@ func processRows(rows pgx.Rows) ([]*orderedmap.OrderedMap[string, any], error) {
 		row := orderedmap.New[string, any]()
 
 		for i, val := range values {
-			row.Set(string(fieldDescriptions[i].Name), val)
+			row.Set(fieldDescriptions[i].Name, val)
 		}
 
 		results = append(results, row)

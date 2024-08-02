@@ -1,4 +1,4 @@
 name: test-app
 services:
-  - match: ./functions/*.ts
+  - match: ./services/*.ts
     start: yarn dev:functions $SERVICE_PATH

@@ -286,7 +286,7 @@ const WSExplorer = () => {
       secondLevelNav={
         data?.websockets?.length && selectedWebsocket ? (
           <>
-            <div className="mb-2 flex items-center justify-between px-2">
+            <div className="flex min-h-12 items-center justify-between px-2 py-1">
               <span className="text-lg">WebSockets</span>
             </div>
             <WSTreeView
@@ -302,7 +302,7 @@ const WSExplorer = () => {
     >
       <Loading delay={400} conditionToShow={!loading}>
         {data?.websockets?.length && selectedWebsocket ? (
-          <div className="flex max-w-6xl flex-col md:pr-8">
+          <div className="flex max-w-7xl flex-col md:pr-8">
             <div className="flex w-full flex-col gap-8">
               <div>
                 <BreadCrumbs className="mb-2 lg:hidden">

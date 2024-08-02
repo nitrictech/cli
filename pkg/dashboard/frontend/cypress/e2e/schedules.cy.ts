@@ -19,7 +19,7 @@ describe('Schedules Spec', () => {
 
       cy.getTestEl('generated-request-path').should(
         'have.text',
-        `http://localhost:4000/schedules/${schedule}`,
+        `http://localhost:4001/schedules/${schedule}`,
       )
 
       cy.getTestEl('trigger-schedules-btn').click()

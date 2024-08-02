@@ -1,0 +1,21 @@
+.rdg {
+  @apply box-border h-full overflow-x-auto overflow-y-scroll rounded-lg bg-code;
+}
+
+.rdg *,
+.rdg ::after,
+.rdg ::before {
+  box-sizing: inherit;
+}
+
+.rdg-cell {
+  @apply flex flex border-b border-r border-gray-600 bg-code text-sm text-gray-200;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: inherit;
+}
+
+.rdg-header-row .rdg-cell {
+  @apply bg-gray-700 text-gray-100;
+}

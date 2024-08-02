@@ -1,5 +1,6 @@
 import type { OpenAPIV3 } from 'openapi-types'
 import type { FieldRow } from './components/shared/FieldRows'
+import { type Completion } from '@codemirror/autocomplete'
 
 export type APIDoc = OpenAPIV3.Document
 
@@ -25,7 +26,9 @@ export interface Api extends BaseResource {
 
 export type KeyValue = BaseResource
 
-export type SQLDatabase = BaseResource
+export interface SQLDatabase extends BaseResource {
+  connectionString: string
+}
 
 export interface HttpProxy extends BaseResource {
   target: string
@@ -116,6 +119,7 @@ export interface WebSocketResponse {
   currentVersion: string
   latestVersion: string
   connected: boolean
+  dashboardAddress: string
 }
 
 export interface Param {
@@ -194,3 +198,5 @@ export interface RequestHistory {
   headers: Record<string, string[]>
   body?: BodyInit | null
 }
+
+export type SchemaObj = { [key: string]: Completion[] }

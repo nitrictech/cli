@@ -31,6 +31,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
@@ -290,6 +291,13 @@ func processRows(rows pgx.Rows) ([]*orderedmap.OrderedMap[string, any], error) {
 				val = result
 			case []uint8:
 				val = fmt.Sprintf("\\x%s", hex.EncodeToString(v))
+			case [16]uint8:
+				u, err := uuid.FromBytes(v[:])
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse UUID: %w", err)
+				}
+
+				val = u.String()
 			}
 
 			row.Set(fieldDescriptions[i].Name, val)

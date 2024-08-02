@@ -286,6 +286,7 @@ func processRows(rows pgx.Rows) ([]*orderedmap.OrderedMap[string, any], error) {
 				for _, b := range v.Bytes {
 					result += fmt.Sprintf("%08b", b)
 				}
+
 				val = result
 			case []uint8:
 				val = fmt.Sprintf("\\x%s", hex.EncodeToString(v))
@@ -323,12 +324,15 @@ func formatInterval(interval pgtype.Interval) string {
 	if years != 0 {
 		parts = append(parts, fmt.Sprintf("%d year%s", years, pluralSuffix(years)))
 	}
+
 	if months != 0 {
 		parts = append(parts, fmt.Sprintf("%d mon%s", months, pluralSuffix(months)))
 	}
+
 	if days != 0 {
 		parts = append(parts, fmt.Sprintf("%d day%s", days, pluralSuffix(days)))
 	}
+
 	if hours != 0 || minutes != 0 || seconds != 0 {
 		parts = append(parts, fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds))
 	}
@@ -340,5 +344,6 @@ func pluralSuffix(value int32) string {
 	if value == 1 {
 		return ""
 	}
+
 	return "s"
 }

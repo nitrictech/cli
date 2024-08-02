@@ -302,7 +302,7 @@ const WSExplorer = () => {
     >
       <Loading delay={400} conditionToShow={!loading}>
         {data?.websockets?.length && selectedWebsocket ? (
-          <div className="flex max-w-6xl flex-col md:pr-8">
+          <div className="flex max-w-7xl flex-col md:pr-8">
             <div className="flex w-full flex-col gap-8">
               <div>
                 <BreadCrumbs className="mb-2 lg:hidden">

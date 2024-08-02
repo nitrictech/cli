@@ -175,7 +175,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
     >
       <Loading delay={400} conditionToShow={!loading}>
         {selectedWorker && hasData ? (
-          <div className="flex max-w-6xl flex-col gap-8 md:pr-8">
+          <div className="flex max-w-7xl flex-col gap-8 md:pr-8">
             <div className="flex w-full flex-col gap-8">
               <div className="lg:hidden">
                 <div className="ml-auto flex items-center">

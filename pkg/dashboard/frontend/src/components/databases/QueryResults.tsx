@@ -8,6 +8,7 @@ import {
   ContextMenuTrigger,
 } from '../ui/context-menu'
 import { copyToClipboard } from '@/lib/utils/copy-to-clipboard'
+import { cn } from '@/lib/utils'
 
 interface QueryResultsProps {
   response?: string
@@ -38,6 +39,12 @@ const Container: React.FC<React.PropsWithChildren> = ({ children }) => {
 const EST_CHAR_WIDTH = 8
 const MIN_COLUMN_WIDTH = 100
 const MAX_COLUMN_WIDTH = 500
+
+function isBinaryString(str: string) {
+  // Regular expression to match a string with \x followed by two hexadecimal digits
+  const binaryPattern = /^\\x([0-9A-Fa-f]{2})+$/
+  return binaryPattern.test(str)
+}
 
 const QueryResults: React.FC<QueryResultsProps> = ({ response, loading }) => {
   if (loading) {
@@ -83,10 +90,32 @@ const QueryResults: React.FC<QueryResultsProps> = ({ response, loading }) => {
   }
 
   const formatter = (column: any, row: any) => {
+    const dataType = typeof row[column]
+
+    const isBinary = isBinaryString(row[column])
+
+    const isEmpty = row[column] === ''
+
+    const displayValue = isEmpty
+      ? 'empty'
+      : isBinary
+        ? 'binary'
+        : JSON.stringify(row[column]).replace(/^"|"$/g, '')
+
     return (
       <ContextMenu>
-        <ContextMenuTrigger className="w-full whitespace-pre font-mono text-xs">
-          {JSON.stringify(row[column])}
+        <ContextMenuTrigger
+          data-db-type={typeof row[column]}
+          className={cn('w-full whitespace-pre font-mono', {
+            uppercase:
+              row[column] === null ||
+              dataType === 'boolean' ||
+              isBinary ||
+              isEmpty,
+            'text-gray-400/90': row[column] === null || isEmpty,
+          })}
+        >
+          {displayValue}
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem
@@ -103,7 +132,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({ response, loading }) => {
 
   const renderColumn = (name: string) => {
     return (
-      <div className="flex h-full items-center justify-center font-mono text-xs">
+      <div className="flex h-full items-center justify-center font-mono">
         {name}
       </div>
     )
@@ -142,9 +171,14 @@ const QueryResults: React.FC<QueryResultsProps> = ({ response, loading }) => {
     },
   )
 
+  if (import.meta.env.DEV) {
+    console.log('result-rows: ', rows)
+  }
+
   return (
     <Container>
       <DataGrid
+        data-testid={'query-results'}
         columns={columns}
         rows={rows}
         className="flex-grow border-t-0"

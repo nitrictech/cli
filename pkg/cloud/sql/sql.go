@@ -18,10 +18,13 @@ package sql
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -29,6 +32,7 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	"github.com/nitrictech/cli/pkg/docker"
@@ -263,6 +267,30 @@ func processRows(rows pgx.Rows) ([]*orderedmap.OrderedMap[string, any], error) {
 		row := orderedmap.New[string, any]()
 
 		for i, val := range values {
+			// format values if necessary
+			switch v := val.(type) {
+			case time.Time:
+				if v.UTC().Hour() == 0 && v.UTC().Minute() == 0 && v.UTC().Second() == 0 {
+					val = v.Format("2006-01-02")
+				} else {
+					val = v.Format("2006-01-02 15:04:05")
+				}
+			case netip.Prefix:
+				val = v.Addr().String()
+			case net.HardwareAddr:
+				val = v.String()
+			case pgtype.Interval:
+				val = formatInterval(v)
+			case pgtype.Bits:
+				var result string
+				for _, b := range v.Bytes {
+					result += fmt.Sprintf("%08b", b)
+				}
+				val = result
+			case []uint8:
+				val = fmt.Sprintf("\\x%s", hex.EncodeToString(v))
+			}
+
 			row.Set(fieldDescriptions[i].Name, val)
 		}
 
@@ -278,4 +306,39 @@ func processRows(rows pgx.Rows) ([]*orderedmap.OrderedMap[string, any], error) {
 	}
 
 	return results, nil
+}
+
+func formatInterval(interval pgtype.Interval) string {
+	years := interval.Months / 12
+	months := interval.Months % 12
+	days := interval.Days
+
+	// Calculate hours, minutes, and seconds from microseconds
+	totalSeconds := interval.Microseconds / 1e6
+	hours := totalSeconds / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
+
+	parts := []string{}
+	if years != 0 {
+		parts = append(parts, fmt.Sprintf("%d year%s", years, pluralSuffix(years)))
+	}
+	if months != 0 {
+		parts = append(parts, fmt.Sprintf("%d mon%s", months, pluralSuffix(months)))
+	}
+	if days != 0 {
+		parts = append(parts, fmt.Sprintf("%d day%s", days, pluralSuffix(days)))
+	}
+	if hours != 0 || minutes != 0 || seconds != 0 {
+		parts = append(parts, fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds))
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func pluralSuffix(value int32) string {
+	if value == 1 {
+		return ""
+	}
+	return "s"
 }

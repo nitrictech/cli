@@ -9,7 +9,7 @@
 }
 
 .rdg-cell {
-  @apply flex flex border-b border-r border-gray-600 bg-code text-gray-200;
+  @apply flex flex border-b border-r border-gray-600 bg-code text-sm text-gray-200;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

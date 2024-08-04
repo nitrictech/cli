@@ -73,6 +73,8 @@ export type Bucket = BaseResource
 
 export type Queue = BaseResource
 
+export type Secret = BaseResource
+
 type ResourceType = 'bucket' | 'topic' | 'websocket' | 'kv' | 'secret' | 'queue'
 
 export type Notification = {
@@ -104,6 +106,7 @@ export interface WebSocketResponse {
   topics: Topic[]
   services: Service[]
   stores: KeyValue[]
+  secrets: Secret[]
   sqlDatabases: SQLDatabase[]
   httpProxies: HttpProxy[]
   websockets: WebSocket[]

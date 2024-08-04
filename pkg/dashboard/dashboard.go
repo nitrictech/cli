@@ -103,6 +103,10 @@ type SQLDatabaseSpec struct {
 	ConnectionString string `json:"connectionString"`
 }
 
+type SecretSpec struct {
+	*BaseResourceSpec
+}
+
 type NotifierSpec struct {
 	Bucket string `json:"bucket"`
 	Target string `json:"target"`
@@ -150,6 +154,7 @@ type Dashboard struct {
 	topics                 []*TopicSpec
 	buckets                []*BucketSpec
 	stores                 []*KeyValueSpec
+	secrets                []*SecretSpec
 	sqlDatabases           []*SQLDatabaseSpec
 	websockets             []WebsocketSpec
 	subscriptions          []*SubscriberSpec
@@ -181,6 +186,7 @@ type DashboardResponse struct {
 	Notifications []*NotifierSpec    `json:"notifications"`
 	Stores        []*KeyValueSpec    `json:"stores"`
 	SQLDatabases  []*SQLDatabaseSpec `json:"sqlDatabases"`
+	Secrets       []*SecretSpec      `json:"secrets"`
 	Queues        []*QueueSpec       `json:"queues"`
 	HttpProxies   []*HttpProxySpec   `json:"httpProxies"`
 
@@ -308,6 +314,27 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 
 	if len(d.topics) > 0 {
 		slices.SortFunc(d.topics, func(a, b *TopicSpec) int {
+			return compare(a.Name, b.Name)
+		})
+	}
+
+	for secretName, resource := range lrs.Secrets.GetAll() {
+		exists := lo.ContainsBy(d.secrets, func(item *SecretSpec) bool {
+			return item.Name == secretName
+		})
+
+		if !exists {
+			d.secrets = append(d.secrets, &SecretSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               secretName,
+					RequestingServices: resource.RequestingServices,
+				},
+			})
+		}
+	}
+
+	if len(d.secrets) > 0 {
+		slices.SortFunc(d.secrets, func(a, b *SecretSpec) int {
 			return compare(a.Name, b.Name)
 		})
 	}
@@ -557,8 +584,9 @@ func (d *Dashboard) isConnected() bool {
 	proxiesRegistered := len(d.httpProxies) > 0
 	storesRegistered := len(d.stores) > 0
 	sqlRegistered := len(d.sqlDatabases) > 0
+	secretsRegistered := len(d.secrets) > 0
 
-	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered || sqlRegistered
+	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered || sqlRegistered || secretsRegistered
 }
 
 func (d *Dashboard) Start() error {
@@ -720,6 +748,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		Websockets:          d.websockets,
 		Policies:            d.policies,
 		Queues:              d.queues,
+		Secrets:             d.secrets,
 		Services:            services,
 		Subscriptions:       d.subscriptions,
 		Notifications:       d.notifications,
@@ -805,6 +834,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		websockets:             []WebsocketSpec{},
 		stores:                 []*KeyValueSpec{},
 		sqlDatabases:           []*SQLDatabaseSpec{},
+		secrets:                []*SecretSpec{},
 		queues:                 []*QueueSpec{},
 		httpProxies:            []*HttpProxySpec{},
 		policies:               map[string]PolicySpec{},

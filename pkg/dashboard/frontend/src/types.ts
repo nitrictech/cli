@@ -122,7 +122,6 @@ export interface WebSocketResponse {
   currentVersion: string
   latestVersion: string
   connected: boolean
-  dashboardAddress: string
 }
 
 export interface Param {

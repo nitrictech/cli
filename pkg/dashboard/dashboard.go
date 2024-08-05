@@ -202,7 +202,6 @@ type DashboardResponse struct {
 	CurrentVersion      string                `json:"currentVersion"`
 	LatestVersion       string                `json:"latestVersion"`
 	Connected           bool                  `json:"connected"`
-	DashboardAddress    string                `json:"dashboardAddress"`
 }
 
 type Bucket struct {
@@ -759,10 +758,9 @@ func (d *Dashboard) sendStackUpdate() error {
 		HttpWorkerAddresses: d.gatewayService.GetHttpWorkerAddresses(),
 		TriggerAddress:      d.gatewayService.GetTriggerAddress(),
 		// StorageAddress:      d.storageService.GetStorageEndpoint(),
-		CurrentVersion:   currentVersion,
-		LatestVersion:    latestVersion,
-		Connected:        d.isConnected(),
-		DashboardAddress: d.GetDashboardUrl(),
+		CurrentVersion: currentVersion,
+		LatestVersion:  latestVersion,
+		Connected:      d.isConnected(),
 	}
 
 	// Encode the response as JSON

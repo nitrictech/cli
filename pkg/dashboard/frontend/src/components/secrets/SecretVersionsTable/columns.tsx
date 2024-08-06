@@ -1,5 +1,3 @@
-'use client'
-
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,7 +13,6 @@ import { EllipsisHorizontalIcon } from '@heroicons/react/20/solid'
 import { ArrowsUpDownIcon } from '@heroicons/react/24/outline'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Checkbox } from '@/components/ui/checkbox'
-import { VersionActionDialog } from '../VersionActionDialog'
 import { useSecretsContext } from '../SecretsContext'
 
 export const columns: ColumnDef<SecretVersion>[] = [

@@ -103,54 +103,54 @@ describe('Secrets Spec', () => {
 
       cy.getTestEl('data-table-0-latest-badge').should('have.text', 'Latest')
     })
+  })
 
-    it(`should retrieve and update value from sdk ${sec}`, () => {
-      cy.visit('/')
+  it(`should retrieve and update value from sdk for my-first-secret`, () => {
+    cy.visit('/')
 
-      cy.intercept('/api/call/**').as('apiCall')
+    cy.intercept('/api/call/**').as('apiCall')
 
-      cy.get('[data-rct-item-id="my-secret-api"]').click()
+    cy.get('[data-rct-item-id="my-secret-api"]').click()
 
-      cy.get('[data-rct-item-id="my-secret-api-/get-GET"]').click()
+    cy.get('[data-rct-item-id="my-secret-api-/get-GET"]').click()
 
-      cy.getTestEl('send-api-btn').click()
+    cy.getTestEl('send-api-btn').click()
 
-      cy.wait('@apiCall')
+    cy.wait('@apiCall')
 
-      cy.getAPIResponseCodeEditor()
-        .invoke('text')
-        .then((text) => {
-          expect(text).to.equal('my-secret-value-my-first-secret')
+    cy.getAPIResponseCodeEditor()
+      .invoke('text')
+      .then((text) => {
+        expect(text).to.equal('my-secret-value-my-first-secret')
+      })
+
+    cy.get('[data-rct-item-id="my-secret-api-/set-POST"]').click()
+
+    cy.intercept('/api/call/**').as('apiCall')
+
+    cy.getTestEl('Body-tab-btn').click()
+
+    cy.getJSONCodeEditorElement()
+      .clear()
+      .invoke('html', '{ "my-secret-test": 12345 }')
+
+    cy.getTestEl('send-api-btn').click()
+
+    cy.wait('@apiCall')
+
+    cy.get('[data-rct-item-id="my-secret-api-/get-GET"]').click()
+
+    cy.getTestEl('send-api-btn').click()
+
+    cy.wait('@apiCall')
+
+    cy.getAPIResponseCodeEditor()
+      .invoke('text')
+      .then((text) => {
+        expect(JSON.parse(text)).to.deep.equal({
+          'my-secret-test': 12345,
         })
-
-      cy.get('[data-rct-item-id="my-secret-api-/set-POST"]').click()
-
-      cy.intercept('/api/call/**').as('apiCall')
-
-      cy.getTestEl('Body-tab-btn').click()
-
-      cy.getJSONCodeEditorElement()
-        .clear()
-        .invoke('html', '{ "my-secret-test": 12345 }')
-
-      cy.getTestEl('send-api-btn').click()
-
-      cy.wait('@apiCall')
-
-      cy.get('[data-rct-item-id="my-secret-api-/get-GET"]').click()
-
-      cy.getTestEl('send-api-btn').click()
-
-      cy.wait('@apiCall')
-
-      cy.getAPIResponseCodeEditor()
-        .invoke('text')
-        .then((text) => {
-          expect(JSON.parse(text)).to.deep.equal({
-            'my-secret-test': 12345,
-          })
-        })
-    })
+      })
   })
 
   it(`should have latest secret from sdk set call for my-first-secret`, () => {

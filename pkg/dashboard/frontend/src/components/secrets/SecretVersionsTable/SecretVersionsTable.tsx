@@ -38,6 +38,7 @@ export const SecretVersionsTable = () => {
               <Button
                 size="sm"
                 variant="outline"
+                data-testid="delete-selected-versions"
                 disabled={versions.length === 0}
                 onClick={() => {
                   setSelectedVersions(versions)
@@ -51,6 +52,7 @@ export const SecretVersionsTable = () => {
 
               <Button
                 size="sm"
+                data-testid="create-new-version"
                 onClick={() => {
                   setDialogAction('add')
                   setDialogOpen(true)

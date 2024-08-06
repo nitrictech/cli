@@ -17,6 +17,8 @@ const expectedNodes = [
   'services/my-test-service.ts',
   'services/my-test-db.ts',
   'services/my-test-secret.ts',
+  'my-first-secret',
+  'my-second-secret',
 ]
 
 describe('Architecture Spec', () => {

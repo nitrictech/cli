@@ -98,6 +98,7 @@ export function VersionActionDialog({
                 <Input
                   ref={inputRef}
                   id="value"
+                  data-testid="secret-value"
                   required
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
@@ -113,7 +114,11 @@ export function VersionActionDialog({
             <Button variant="ghost">Cancel</Button>
           </DialogClose>
 
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            data-testid="submit-secrets-dialog"
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {action === 'add' ? 'Add New Version' : 'Delete selected versions'}
           </Button>

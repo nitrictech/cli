@@ -50,7 +50,14 @@ export const columns: ColumnDef<SecretVersion>[] = [
       return (
         <div className="text-left">
           {secretVersion.version}
-          {secretVersion.latest && <Badge className="ml-2">Latest</Badge>}
+          {secretVersion.latest && (
+            <Badge
+              className="ml-2"
+              data-testid={`data-table-${row.id}-latest-badge`}
+            >
+              Latest
+            </Badge>
+          )}
         </div>
       )
     },

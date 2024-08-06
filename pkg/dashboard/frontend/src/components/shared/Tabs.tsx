@@ -22,7 +22,7 @@ interface Props {
 
 const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round, pill }) => {
   return (
-    <div>
+    <div className="rounded-lg">
       <div className="sm:hidden">
         <Select
           value={index.toString()}
@@ -45,7 +45,7 @@ const Tabs: React.FC<Props> = ({ tabs, index, setIndex, round, pill }) => {
           className={cn(
             pill
               ? 'flex space-x-4'
-              : 'isolate flex divide-x divide-gray-200 shadow',
+              : 'isolate flex divide-x divide-gray-200 rounded-t-lg shadow',
             round && 'rounded-lg',
           )}
           aria-label="Tabs"

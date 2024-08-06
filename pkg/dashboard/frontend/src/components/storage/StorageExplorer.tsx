@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
+import SectionCard from '../shared/SectionCard'
 
 const LOCAL_STORAGE_KEY = 'nitric-local-dash-storage-history'
 
@@ -102,11 +103,9 @@ const StorageExplorer = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="bg-white shadow sm:rounded-lg">
-                <div className="flex flex-col gap-4 px-4 py-5 sm:p-6">
-                  <FileBrowser bucket={selectedBucket.name} />
-                </div>
-              </div>
+              <SectionCard title="File Explorer">
+                <FileBrowser bucket={selectedBucket.name} />
+              </SectionCard>
             </div>
           </div>
         ) : !buckets?.length ? (

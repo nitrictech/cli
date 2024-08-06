@@ -23,7 +23,7 @@ import { Button } from '../ui/button'
 import CodeEditor from '../apis/CodeEditor'
 import QueryResults from './QueryResults'
 import { useSqlMeta } from '@/lib/hooks/use-sql-meta'
-import Section from '../shared/Section'
+import SectionCard from '../shared/SectionCard'
 
 interface QueryHistoryItem {
   query: string
@@ -239,7 +239,7 @@ const DatabasesExplorer: React.FC = () => {
                   </h2>
                 </BreadCrumbs>
               </div>
-              <Section title="Connect">
+              <SectionCard title="Connect">
                 <div className="mb-4 flex max-w-full gap-x-2 text-sm">
                   <span
                     data-testid="connection-string"
@@ -265,8 +265,8 @@ const DatabasesExplorer: React.FC = () => {
                     </TooltipContent>
                   </Tooltip>
                 </div>
-              </Section>
-              <Section title="SQL Editor">
+              </SectionCard>
+              <SectionCard title="SQL Editor">
                 <div>
                   <CodeEditor
                     id="sql-editor"
@@ -301,7 +301,7 @@ const DatabasesExplorer: React.FC = () => {
                     <QueryResults response={response} loading={callLoading} />
                   </div>
                 </div>
-              </Section>
+              </SectionCard>
             </div>
           </div>
         ) : !hasData ? (

@@ -36,19 +36,14 @@ import { format } from 'date-fns/format'
 import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
 import CodeEditor from '../apis/CodeEditor'
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '../ui/card'
+
 import { Textarea } from '../ui/textarea'
 import useSWRSubscription from 'swr/subscription'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { Badge } from '../ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import BreadCrumbs from '../layout/BreadCrumbs'
+import SectionCard from '../shared/SectionCard'
 
 export const LOCAL_STORAGE_KEY = 'nitric-local-dash-api-history'
 
@@ -418,10 +413,11 @@ const WSExplorer = () => {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="monitor">
-                  <Card className="mt-4">
-                    <CardHeader className="relative">
-                      <CardTitle>Messages</CardTitle>
-                      <div className="absolute right-0 top-0 flex gap-2 p-6">
+                  <SectionCard
+                    className="mt-4"
+                    title="Messages"
+                    headerSiblings={
+                      <div className="flex gap-2 ">
                         <Badge
                           data-testid="connections-status"
                           className="font-semibold uppercase"
@@ -434,301 +430,89 @@ const WSExplorer = () => {
                           Connections: {wsInfo?.connectionCount || 0}
                         </Badge>
                       </div>
-                      <div className="my-4 flex gap-2 pt-4">
-                        <Input
-                          placeholder="Search"
-                          className="w-4/12"
-                          value={monitorMessageFilter}
-                          onChange={(evt) =>
-                            setMonitorMessageFilter(evt.target.value)
-                          }
-                        />
+                    }
+                  >
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Search"
+                        className="w-4/12"
+                        value={monitorMessageFilter}
+                        onChange={(evt) =>
+                          setMonitorMessageFilter(evt.target.value)
+                        }
+                      />
 
-                        <Button
-                          data-testid="clear-messages-btn"
-                          variant="outline"
-                          onClick={clearMessages}
-                        >
-                          <TrashIcon className="mr-2 h-4 w-4" />
-                          Clear Messages
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="my-4 max-w-full text-sm">
-                        {wsInfo?.messages?.length ? (
-                          <ScrollArea
-                            className="h-[50vh] w-full px-6"
-                            type="always"
-                          >
-                            {wsInfo.messages
-                              .filter((message) => {
-                                let pass = true
-
-                                if (
-                                  monitorMessageFilter &&
-                                  typeof message.data === 'string'
-                                ) {
-                                  pass = message.data
-                                    .toLowerCase()
-                                    .includes(
-                                      monitorMessageFilter.toLowerCase(),
-                                    )
-                                }
-
-                                return pass
-                              })
-                              .map((message, i) => {
-                                const shouldBeJSON = /^[{[]/.test(
-                                  message.data.trim(),
-                                )
-
-                                return (
-                                  <Accordion type="multiple" key={i}>
-                                    <AccordionItem value={message.time}>
-                                      <AccordionTrigger className="flex justify-between">
-                                        <div>
-                                          <MessageIcon
-                                            type={
-                                              message.data ===
-                                              'Binary messages are not currently supported by AWS'
-                                                ? 'error'
-                                                : 'message-in'
-                                            }
-                                          />
-                                        </div>
-                                        <span
-                                          data-testid={`accordion-message-${i}`}
-                                          className="max-w-3xl truncate px-2"
-                                        >
-                                          {message.data}
-                                        </span>
-                                        <span className="ml-auto px-2">
-                                          {format(
-                                            new Date(message.time),
-                                            'HH:mm:ss',
-                                          )}
-                                        </span>
-                                      </AccordionTrigger>
-                                      <AccordionContent>
-                                        {message.data ===
-                                        'Binary messages are not currently supported by AWS' ? (
-                                          <p>
-                                            Binary messages are not currently
-                                            supported by AWS. Util this is
-                                            supported, use a text-based payload.
-                                          </p>
-                                        ) : (
-                                          <CodeEditor
-                                            id="message-viewer"
-                                            contentType={
-                                              shouldBeJSON
-                                                ? 'application/json'
-                                                : 'text/html'
-                                            }
-                                            readOnly
-                                            value={
-                                              shouldBeJSON
-                                                ? formatJSON(message.data)
-                                                : message.data
-                                            }
-                                            height="208px"
-                                            className="h-52"
-                                          />
-                                        )}
-                                      </AccordionContent>
-                                    </AccordionItem>
-                                  </Accordion>
-                                )
-                              })}
-                          </ScrollArea>
-                        ) : (
-                          <span className="text-lg text-gray-500">
-                            Send a message to get a response.
-                          </span>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="send-messages" className="space-y-10">
-                  <Card className="mt-4">
-                    <CardHeader>
-                      <CardTitle>Query Params</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="w-full">
-                        <FieldRows
-                          rows={queryParams}
-                          readOnly={connected}
-                          testId="query"
-                          setRows={(rows) => {
-                            setQueryParams(rows)
-                          }}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="flex-row items-start justify-between space-y-0">
-                      <CardTitle>Message</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {payloadType === 'text' && (
-                        <Textarea
-                          placeholder="Enter message"
-                          data-testid="message-text-input"
-                          value={currentPayload}
-                          onChange={(evt) =>
-                            setCurrentPayload(evt.target.value)
-                          }
-                        />
-                      )}
-                      {['json', 'xml', 'html'].includes(payloadType) && (
-                        <CodeEditor
-                          id="message-editor"
-                          contentType={
-                            {
-                              json: 'application/json',
-                              xml: 'application/xml',
-                              html: 'text/html',
-                            }[payloadType] || ''
-                          }
-                          value={
-                            typeof currentPayload === 'string'
-                              ? currentPayload
-                              : ''
-                          }
-                          height="208px"
-                          className="h-52"
-                          includeLinters
-                          onChange={(value) => {
-                            setCurrentPayload(value)
-                          }}
-                        />
-                      )}
-                    </CardContent>
-                    <CardFooter className="flex gap-2">
-                      <Select
-                        value={payloadType}
-                        onValueChange={setPayloadType}
-                      >
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue placeholder="Select Message Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="text">Text</SelectItem>
-                          <SelectItem value="json">JSON</SelectItem>
-                          <SelectItem value="xml">XML</SelectItem>
-                          <SelectItem value="html">HTML</SelectItem>
-                        </SelectContent>
-                      </Select>
                       <Button
-                        size={'lg'}
-                        className="ml-auto"
-                        data-testid="send-message-btn"
-                        disabled={!currentPayload || !connected}
-                        onClick={sendMessage}
+                        data-testid="clear-messages-btn"
+                        variant="outline"
+                        onClick={clearMessages}
                       >
-                        Send
+                        <TrashIcon className="mr-2 h-4 w-4" />
+                        Clear Messages
                       </Button>
-                    </CardFooter>
-                  </Card>
-                  <Card>
-                    <CardHeader className="relative">
-                      <CardTitle>Messages</CardTitle>
-                      <div className="absolute right-0 top-0 flex gap-2 p-6">
-                        <Badge
-                          data-testid="connected-status"
-                          className="font-semibold uppercase"
-                          variant={connected ? 'success' : 'destructive'}
+                    </div>
+                    <div className="my-4 max-w-full text-sm">
+                      {wsInfo?.messages?.length ? (
+                        <ScrollArea
+                          className="h-[50vh] w-full px-6"
+                          type="always"
                         >
-                          {connected ? 'Connected' : 'Disconnected'}
-                        </Badge>
-                      </div>
-                      <div className="my-4 flex gap-2 pt-4">
-                        <Input
-                          placeholder="Search"
-                          className="w-4/12"
-                          onChange={(evt) => setMessageFilter(evt.target.value)}
-                        />
-                        <Select
-                          value={messageTypeFilter}
-                          onValueChange={setMessageTypeFilter}
-                        >
-                          <SelectTrigger className="w-[150px]">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Messages</SelectItem>
-                            <SelectItem value="out">Sent</SelectItem>
-                            <SelectItem value="in">Recieved</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="outline"
-                          onClick={() => setMessages([])}
-                        >
-                          <TrashIcon className="mr-2 h-4 w-4" />
-                          Clear Messages
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="my-4 max-w-full text-sm">
-                        {messages.length ? (
-                          <ScrollArea className="h-[30vh] px-6" type="always">
-                            {messages
-                              .filter((message) => {
-                                let pass = false
+                          {wsInfo.messages
+                            .filter((message) => {
+                              let pass = true
 
-                                if (messageTypeFilter === 'in') {
-                                  pass = message.type === 'message-in'
-                                } else if (messageTypeFilter === 'out') {
-                                  pass = message.type === 'message-out'
-                                } else {
-                                  pass = true
-                                }
+                              if (
+                                monitorMessageFilter &&
+                                typeof message.data === 'string'
+                              ) {
+                                pass = message.data
+                                  .toLowerCase()
+                                  .includes(monitorMessageFilter.toLowerCase())
+                              }
 
-                                if (
-                                  messageFilter &&
-                                  typeof message.data === 'string'
-                                ) {
-                                  pass = message.data
-                                    .toLowerCase()
-                                    .includes(messageFilter.toLowerCase())
-                                }
+                              return pass
+                            })
+                            .map((message, i) => {
+                              const shouldBeJSON = /^[{[]/.test(
+                                message.data.trim(),
+                              )
 
-                                return pass
-                              })
-                              .map((message, i) => {
-                                const shouldBeJSON = /^[{[]/.test(
-                                  message.data.trim(),
-                                )
-
-                                return (
-                                  <Accordion type="multiple" key={i}>
-                                    <AccordionItem
-                                      value={message.ts.toString()}
-                                    >
-                                      <AccordionTrigger className="flex justify-between">
-                                        <div>
-                                          <MessageIcon type={message.type} />
-                                        </div>
-                                        <span
-                                          data-testid={`accordion-message-${i}`}
-                                          className="truncate px-2"
-                                        >
-                                          {message.data}
-                                        </span>
-                                        <span className="ml-auto px-2">
-                                          {format(
-                                            new Date(message.ts),
-                                            'HH:mm:ss',
-                                          )}
-                                        </span>
-                                      </AccordionTrigger>
-                                      <AccordionContent>
+                              return (
+                                <Accordion type="multiple" key={i}>
+                                  <AccordionItem value={message.time}>
+                                    <AccordionTrigger className="flex justify-between">
+                                      <div>
+                                        <MessageIcon
+                                          type={
+                                            message.data ===
+                                            'Binary messages are not currently supported by AWS'
+                                              ? 'error'
+                                              : 'message-in'
+                                          }
+                                        />
+                                      </div>
+                                      <span
+                                        data-testid={`accordion-message-${i}`}
+                                        className="max-w-3xl truncate px-2"
+                                      >
+                                        {message.data}
+                                      </span>
+                                      <span className="ml-auto px-2">
+                                        {format(
+                                          new Date(message.time),
+                                          'HH:mm:ss',
+                                        )}
+                                      </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                      {message.data ===
+                                      'Binary messages are not currently supported by AWS' ? (
+                                        <p>
+                                          Binary messages are not currently
+                                          supported by AWS. Util this is
+                                          supported, use a text-based payload.
+                                        </p>
+                                      ) : (
                                         <CodeEditor
                                           id="message-viewer"
                                           contentType={
@@ -745,20 +529,219 @@ const WSExplorer = () => {
                                           height="208px"
                                           className="h-52"
                                         />
-                                      </AccordionContent>
-                                    </AccordionItem>
-                                  </Accordion>
-                                )
-                              })}
-                          </ScrollArea>
-                        ) : (
-                          <span className="text-lg text-gray-500">
-                            Send a message to get a response.
-                          </span>
-                        )}
+                                      )}
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                              )
+                            })}
+                        </ScrollArea>
+                      ) : (
+                        <span className="text-lg text-gray-500">
+                          Send a message to get a response.
+                        </span>
+                      )}
+                    </div>
+                  </SectionCard>
+                </TabsContent>
+                <TabsContent value="send-messages" className="space-y-10">
+                  <SectionCard className="mt-4" title="Query Params">
+                    <div className="w-full">
+                      <FieldRows
+                        rows={queryParams}
+                        readOnly={connected}
+                        testId="query"
+                        setRows={(rows) => {
+                          setQueryParams(rows)
+                        }}
+                      />
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard
+                    className="mt-4"
+                    title="Message"
+                    footer={
+                      <>
+                        <Select
+                          value={payloadType}
+                          onValueChange={setPayloadType}
+                        >
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="Select Message Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">Text</SelectItem>
+                            <SelectItem value="json">JSON</SelectItem>
+                            <SelectItem value="xml">XML</SelectItem>
+                            <SelectItem value="html">HTML</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size={'lg'}
+                          className="ml-auto"
+                          data-testid="send-message-btn"
+                          disabled={!currentPayload || !connected}
+                          onClick={sendMessage}
+                        >
+                          Send
+                        </Button>
+                      </>
+                    }
+                  >
+                    {payloadType === 'text' && (
+                      <Textarea
+                        placeholder="Enter message"
+                        data-testid="message-text-input"
+                        value={currentPayload}
+                        onChange={(evt) => setCurrentPayload(evt.target.value)}
+                      />
+                    )}
+                    {['json', 'xml', 'html'].includes(payloadType) && (
+                      <CodeEditor
+                        id="message-editor"
+                        contentType={
+                          {
+                            json: 'application/json',
+                            xml: 'application/xml',
+                            html: 'text/html',
+                          }[payloadType] || ''
+                        }
+                        value={
+                          typeof currentPayload === 'string'
+                            ? currentPayload
+                            : ''
+                        }
+                        height="208px"
+                        className="h-52"
+                        includeLinters
+                        onChange={(value) => {
+                          setCurrentPayload(value)
+                        }}
+                      />
+                    )}
+                  </SectionCard>
+
+                  <SectionCard
+                    className="mt-4"
+                    title="Messages"
+                    headerSiblings={
+                      <div className="flex gap-2">
+                        <Badge
+                          data-testid="connected-status"
+                          className="font-semibold uppercase"
+                          variant={connected ? 'success' : 'destructive'}
+                        >
+                          {connected ? 'Connected' : 'Disconnected'}
+                        </Badge>
                       </div>
-                    </CardContent>
-                  </Card>
+                    }
+                  >
+                    <div className="my-4 flex gap-2 pt-4">
+                      <Input
+                        placeholder="Search"
+                        className="w-4/12"
+                        onChange={(evt) => setMessageFilter(evt.target.value)}
+                      />
+                      <Select
+                        value={messageTypeFilter}
+                        onValueChange={setMessageTypeFilter}
+                      >
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Messages</SelectItem>
+                          <SelectItem value="out">Sent</SelectItem>
+                          <SelectItem value="in">Recieved</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="outline" onClick={() => setMessages([])}>
+                        <TrashIcon className="mr-2 h-4 w-4" />
+                        Clear Messages
+                      </Button>
+                    </div>
+                    <div className="-mx-4 my-4 max-w-full text-sm">
+                      {messages.length ? (
+                        <ScrollArea className="h-[30vh] px-6" type="always">
+                          {messages
+                            .filter((message) => {
+                              let pass = false
+
+                              if (messageTypeFilter === 'in') {
+                                pass = message.type === 'message-in'
+                              } else if (messageTypeFilter === 'out') {
+                                pass = message.type === 'message-out'
+                              } else {
+                                pass = true
+                              }
+
+                              if (
+                                messageFilter &&
+                                typeof message.data === 'string'
+                              ) {
+                                pass = message.data
+                                  .toLowerCase()
+                                  .includes(messageFilter.toLowerCase())
+                              }
+
+                              return pass
+                            })
+                            .map((message, i) => {
+                              const shouldBeJSON = /^[{[]/.test(
+                                message.data.trim(),
+                              )
+
+                              return (
+                                <Accordion type="multiple" key={i}>
+                                  <AccordionItem value={message.ts.toString()}>
+                                    <AccordionTrigger className="flex justify-between">
+                                      <div>
+                                        <MessageIcon type={message.type} />
+                                      </div>
+                                      <span
+                                        data-testid={`accordion-message-${i}`}
+                                        className="truncate px-2"
+                                      >
+                                        {message.data}
+                                      </span>
+                                      <span className="ml-auto px-2">
+                                        {format(
+                                          new Date(message.ts),
+                                          'HH:mm:ss',
+                                        )}
+                                      </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                      <CodeEditor
+                                        id="message-viewer"
+                                        contentType={
+                                          shouldBeJSON
+                                            ? 'application/json'
+                                            : 'text/html'
+                                        }
+                                        readOnly
+                                        value={
+                                          shouldBeJSON
+                                            ? formatJSON(message.data)
+                                            : message.data
+                                        }
+                                        height="208px"
+                                        className="h-52"
+                                      />
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                              )
+                            })}
+                        </ScrollArea>
+                      ) : (
+                        <span className="text-lg text-gray-500">
+                          Send a message to get a response.
+                        </span>
+                      )}
+                    </div>
+                  </SectionCard>
                 </TabsContent>
               </Tabs>
             </div>

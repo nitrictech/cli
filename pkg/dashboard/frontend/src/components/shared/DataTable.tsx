@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useEffect, useState } from 'react'
-import Section from './Section'
+import SectionCard from './SectionCard'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -58,11 +58,11 @@ export function DataTable<TData, TValue>({
   }, [data])
 
   return (
-    <Section
+    <SectionCard
       title={title}
       headerClassName="px-4"
       headerSiblings={headerSiblings ? headerSiblings(rowSelection) : undefined}
-      innerClassName="px-0 sm:px-0 pb-0 sm:pb-0"
+      className="px-0 pb-0 sm:px-0 sm:pb-0"
     >
       <Table className="rounded-lg border-t">
         <TableHeader className="bg-gray-50">
@@ -110,6 +110,6 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
-    </Section>
+    </SectionCard>
   )
 }

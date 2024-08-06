@@ -117,11 +117,6 @@ const AppLayout: React.FC<Props> = ({
       icon: CircleStackIcon,
     },
     {
-      name: 'Websockets',
-      href: '/websockets',
-      icon: ChatBubbleLeftRightIcon,
-    },
-    {
       name: 'Schedules',
       href: '/schedules',
       icon: ClockIcon,
@@ -132,17 +127,21 @@ const AppLayout: React.FC<Props> = ({
       icon: ArchiveBoxIcon,
     },
     {
+      name: 'Topics',
+      href: '/topics',
+      icon: MegaphoneIcon,
+    },
+    {
       name: 'Secrets',
       href: '/secrets',
       icon: LockClosedIcon,
     },
     {
-      name: 'Topics',
-      href: '/topics',
-      icon: MegaphoneIcon,
+      name: 'Websockets',
+      href: '/websockets',
+      icon: ChatBubbleLeftRightIcon,
     },
     // { name: "Key Value Stores", href: "#", icon: FolderIcon, current: false },
-    // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
   ]
 
   const showAlert = data?.connected === false || state === 'error'

@@ -23,6 +23,7 @@ import { Button } from '../ui/button'
 import CodeEditor from '../apis/CodeEditor'
 import QueryResults from './QueryResults'
 import { useSqlMeta } from '@/lib/hooks/use-sql-meta'
+import Section from '../shared/Section'
 
 interface QueryHistoryItem {
   query: string
@@ -238,97 +239,69 @@ const DatabasesExplorer: React.FC = () => {
                   </h2>
                 </BreadCrumbs>
               </div>
-              <div className="bg-white shadow sm:rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="sm:flex sm:items-start sm:justify-between">
-                    <div className="relative w-full">
-                      <div className="flex items-center gap-4">
-                        <h3 className="text-xl font-semibold leading-6 text-gray-900">
-                          Connect
-                        </h3>
-                      </div>
+              <Section title="Connect">
+                <div className="mb-4 flex max-w-full gap-x-2 text-sm">
+                  <span
+                    data-testid="connection-string"
+                    className="truncate font-mono"
+                  >
+                    {selectedDb.connectionString}
+                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          copyToClipboard(selectedDb.connectionString)
+                          toast.success(`Copied Connection String`)
+                        }}
+                      >
+                        <span className="sr-only">Copy connection string</span>
+                        <ClipboardIcon className="h-5 w-5 text-gray-500" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Copy Connection String</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </Section>
+              <Section title="SQL Editor">
+                <div>
+                  <CodeEditor
+                    id="sql-editor"
+                    value={sql}
+                    enableCopy
+                    sqlSchema={schemaObj}
+                    contentType="text/sql"
+                    onChange={(payload: string) => {
+                      try {
+                        setSql(payload)
+                      } catch {
+                        return
+                      }
+                    }}
+                  />
 
-                      <div className="my-4 flex max-w-full gap-x-2 text-sm">
-                        <span
-                          data-testid="connection-string"
-                          className="truncate font-mono"
-                        >
-                          {selectedDb.connectionString}
-                        </span>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                copyToClipboard(selectedDb.connectionString)
-                                toast.success(`Copied Connection String`)
-                              }}
-                            >
-                              <span className="sr-only">
-                                Copy connection string
-                              </span>
-                              <ClipboardIcon className="h-5 w-5 text-gray-500" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Copy Connection String</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
+                  <div className="mt-4 flex w-full items-center justify-between">
+                    <div className="flex items-center gap-x-2">
+                      <h3 className="text-xl font-semibold leading-6 text-gray-900">
+                        Results
+                      </h3>
                     </div>
+                    <Button
+                      size="lg"
+                      data-testid={`run-btn`}
+                      onClick={handleRun}
+                    >
+                      Run
+                    </Button>
+                  </div>
+                  <div className="mt-4">
+                    <QueryResults response={response} loading={callLoading} />
                   </div>
                 </div>
-              </div>
-              <div className="bg-white shadow sm:rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="sm:flex sm:items-start sm:justify-between">
-                    <div className="relative w-full space-y-4">
-                      <div className="flex items-center gap-4">
-                        <h3 className="text-xl font-semibold leading-6 text-gray-900">
-                          SQL Editor
-                        </h3>
-                      </div>
-                      <div>
-                        <CodeEditor
-                          id="sql-editor"
-                          value={sql}
-                          enableCopy
-                          sqlSchema={schemaObj}
-                          contentType="text/sql"
-                          onChange={(payload: string) => {
-                            try {
-                              setSql(payload)
-                            } catch {
-                              return
-                            }
-                          }}
-                        />
-
-                        <div className="mt-4 flex w-full items-center justify-between">
-                          <div className="flex items-center gap-x-2">
-                            <h3 className="text-xl font-semibold leading-6 text-gray-900">
-                              Results
-                            </h3>
-                          </div>
-                          <Button
-                            size="lg"
-                            data-testid={`run-btn`}
-                            onClick={handleRun}
-                          >
-                            Run
-                          </Button>
-                        </div>
-                        <div className="mt-4">
-                          <QueryResults
-                            response={response}
-                            loading={callLoading}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              </Section>
             </div>
           </div>
         ) : !hasData ? (

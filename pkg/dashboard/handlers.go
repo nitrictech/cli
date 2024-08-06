@@ -37,6 +37,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	secretspb "github.com/nitrictech/nitric/core/pkg/proto/secrets/v1"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
 
@@ -280,6 +281,99 @@ func (d *Dashboard) createSqlQueryHandler() func(http.ResponseWriter, *http.Requ
 		_, err = w.Write(jsonResponse)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (d *Dashboard) createSecretsHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		secretName := r.URL.Query().Get("secret")
+		action := r.URL.Query().Get("action")
+		version := r.URL.Query().Get("version")
+		latest := r.URL.Query().Get("latest")
+
+		if secretName == "" {
+			http.Error(w, "missing secret param", http.StatusBadRequest)
+			return
+		}
+
+		switch action {
+		case "list-versions":
+			secretVersions, err := d.secretService.List(context.Background(), secretName)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			jsonResponse, err := json.Marshal(secretVersions)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+
+			_, err = w.Write(jsonResponse)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+		case "add-secret-version":
+			// get data from body
+			var requestBody struct {
+				Value string `json:"value"`
+			}
+
+			err := json.NewDecoder(r.Body).Decode(&requestBody)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if requestBody.Value == "" {
+				http.Error(w, "missing value param", http.StatusBadRequest)
+				return
+			}
+
+			_, err = d.secretService.Put(context.Background(), &secretspb.SecretPutRequest{
+				Secret: &secretspb.Secret{
+					Name: secretName,
+				},
+				Value: []byte(requestBody.Value),
+			})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+		case "delete-secret":
+			if version == "" {
+				http.Error(w, "missing version param", http.StatusBadRequest)
+				return
+			}
+
+			err := d.secretService.Delete(context.Background(), secretName, version, latest == "true")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+		default:
+			http.Error(w, "invalid action", http.StatusBadRequest)
 			return
 		}
 	}

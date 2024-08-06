@@ -21,9 +21,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -35,6 +38,7 @@ import (
 
 type DevSecretService struct {
 	secDir string
+	mu     sync.RWMutex
 }
 
 var _ secretspb.SecretManagerServer = (*DevSecretService)(nil)
@@ -75,6 +79,7 @@ func (s *DevSecretService) Put(ctx context.Context, req *secretspb.SecretPutRequ
 	}
 
 	writer.Flush()
+	file.Close()
 
 	// Creates a new file as latest
 	latestFile, err := os.Create(s.secretFileName(req.Secret, "latest"))
@@ -98,6 +103,7 @@ func (s *DevSecretService) Put(ctx context.Context, req *secretspb.SecretPutRequ
 	}
 
 	latestWriter.Flush()
+	latestFile.Close()
 
 	return &secretspb.SecretPutResponse{
 		SecretVersion: &secretspb.SecretVersion{
@@ -108,6 +114,9 @@ func (s *DevSecretService) Put(ctx context.Context, req *secretspb.SecretPutRequ
 }
 
 func (s *DevSecretService) Access(ctx context.Context, req *secretspb.SecretAccessRequest) (*secretspb.SecretAccessResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	newErr := grpc_errors.ErrorsWithScope(
 		"DevSecretService.Access",
 	)
@@ -149,6 +158,195 @@ func (s *DevSecretService) Access(ctx context.Context, req *secretspb.SecretAcce
 		},
 		Value: sVal,
 	}, nil
+}
+
+type SecretVersion struct {
+	Version   string `json:"version"`
+	Value     string `json:"value"`
+	Latest    bool   `json:"latest"`
+	CreatedAt string `json:"createdAt"`
+}
+
+// List all secret versions and values for a given secret, used by dashboard
+func (s *DevSecretService) List(ctx context.Context, secretName string) ([]SecretVersion, error) {
+	newErr := grpc_errors.ErrorsWithScope(
+		"DevSecretService.List",
+	)
+
+	// Check whether file exists
+	_, err := os.Stat(s.secDir)
+	if os.IsNotExist(err) {
+		return nil, newErr(codes.NotFound, "secret store not found", err)
+	}
+
+	// List all files in the directory
+	files, err := os.ReadDir(s.secDir)
+	if err != nil {
+		return nil, newErr(codes.FailedPrecondition, "error reading secret store", err)
+	}
+
+	// Create a response
+	resp := []SecretVersion{}
+
+	var latestVersion SecretVersion
+
+	for _, file := range files {
+		// Check whether the file is a secret file
+		if strings.HasSuffix(file.Name(), ".txt") {
+			// Split the file name to get the secret name and version
+			splitName := strings.Split(file.Name(), "_")
+			// Check whether the secret name matches the requested secret
+			if splitName[0] == secretName {
+				version := strings.TrimSuffix(splitName[1], ".txt")
+
+				info, err := file.Info()
+				if err != nil {
+					return nil, newErr(codes.FailedPrecondition, "error reading file info", err)
+				}
+
+				createdAt := info.ModTime().Format("2006-01-02 15:04:05")
+
+				valueResp, err := s.Access(ctx, &secretspb.SecretAccessRequest{
+					SecretVersion: &secretspb.SecretVersion{
+						Secret:  &secretspb.Secret{Name: secretName},
+						Version: version,
+					},
+				})
+				if err != nil {
+					// check if not found and add blank value
+					if strings.HasPrefix(err.Error(), "rpc error: code = NotFound desc") {
+						resp = append(resp, SecretVersion{
+							Version:   version,
+							Value:     "",
+							CreatedAt: createdAt,
+						})
+
+						continue
+					}
+
+					return nil, newErr(codes.FailedPrecondition, "error reading version value", err)
+				}
+
+				// Check whether the version is the latest
+				if version == "latest" {
+					latestVersion = SecretVersion{
+						Value:     string(valueResp.Value),
+						CreatedAt: createdAt,
+					}
+
+					continue
+				}
+
+				// Add the secret to the response
+				resp = append(resp, SecretVersion{
+					Version:   version,
+					Value:     string(valueResp.Value),
+					CreatedAt: createdAt,
+				})
+			}
+		}
+	}
+
+	if len(resp) > 0 {
+		// sort by created at
+		sort.Slice(resp, func(i, j int) bool {
+			return resp[i].CreatedAt > resp[j].CreatedAt
+		})
+
+		// mark latest version
+		if resp[0].Value == latestVersion.Value {
+			resp[0].Latest = true
+		}
+	}
+
+	return resp, nil
+}
+
+// Delete a secret version, used by dashboard
+func (s *DevSecretService) Delete(ctx context.Context, secretName string, version string, latest bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	newErr := grpc_errors.ErrorsWithScope(
+		"DevSecretService.Delete",
+	)
+
+	// Check whether file exists
+	_, err := os.Stat(s.secDir)
+	if os.IsNotExist(err) {
+		return newErr(codes.NotFound, "secret store not found", err)
+	}
+
+	// delete the version file
+	err = os.Remove(s.secretFileName(&secretspb.Secret{Name: secretName}, version))
+	if err != nil {
+		return newErr(codes.Internal, "error deleting secret version", err)
+	}
+
+	if latest {
+		// delete the latest file
+		err = os.Remove(s.secretFileName(&secretspb.Secret{Name: secretName}, "latest"))
+		if err != nil {
+			return newErr(codes.Internal, "error deleting latest secret version", err)
+		}
+
+		// get last latest version and create a new latest
+		entries, err := os.ReadDir(s.secDir)
+		if err != nil {
+			return newErr(codes.FailedPrecondition, "error reading secret store", err)
+		}
+
+		var files []os.FileInfo
+
+		for _, entry := range entries {
+			info, err := entry.Info()
+			if err != nil {
+				return newErr(codes.FailedPrecondition, "error reading file info", err)
+			}
+
+			files = append(files, info)
+		}
+
+		// sort files by date
+		sort.Slice(files, func(i, j int) bool {
+			return files[i].ModTime().Before(files[j].ModTime())
+		})
+
+		for _, file := range files {
+			if strings.HasSuffix(file.Name(), ".txt") {
+				splitName := strings.Split(file.Name(), "_")
+				if splitName[0] == secretName {
+					version := strings.TrimSuffix(splitName[1], ".txt")
+
+					// copy file as new latest file with same contents
+					destinationFile, err := os.Create(s.secretFileName(&secretspb.Secret{Name: secretName}, "latest"))
+					if err != nil {
+						return newErr(codes.FailedPrecondition, "error creating latest secret version", err)
+					}
+
+					sourceFile, err := os.Open(s.secretFileName(&secretspb.Secret{Name: secretName}, version))
+					if err != nil {
+						return newErr(codes.FailedPrecondition, "error reading secret version", err)
+					}
+
+					_, err = io.Copy(destinationFile, sourceFile)
+					if err != nil {
+						return newErr(codes.FailedPrecondition, "error copying secret version", err)
+					}
+
+					err = destinationFile.Sync()
+					if err != nil {
+						return newErr(codes.FailedPrecondition, "error syncing latest secret version", err)
+					}
+
+					sourceFile.Close()
+					destinationFile.Close()
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // Create new secret store

@@ -1,6 +1,8 @@
 import { api, secret } from '@nitric/sdk'
 
-const mySecret = secret('my-secret').allow('access')
+const mySecret = secret('my-secret').allow('access', 'put')
+
+const mySecondSecret = secret('my-second-secret').allow('access', 'put')
 
 const shhApi = api('my-secret-api')
 

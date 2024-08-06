@@ -20,6 +20,7 @@ module.exports = {
       rules: {
         '@typescript-eslint/no-explicit-any': 'warn',
         '@typescript-eslint/triple-slash-reference': 'off',
+        '@typescript-eslint/no-empty-function': 'off',
         'react/react-in-jsx-scope': 'off',
         'react/prop-types': 'off',
         'jsx-a11y/media-has-caption': 'off',

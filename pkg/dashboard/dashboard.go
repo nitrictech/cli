@@ -48,6 +48,7 @@ import (
 	httpproxy "github.com/nitrictech/cli/pkg/cloud/http"
 	"github.com/nitrictech/cli/pkg/cloud/resources"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
+	"github.com/nitrictech/cli/pkg/cloud/secrets"
 	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/storage"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
@@ -147,6 +148,7 @@ type Dashboard struct {
 	storageService         *storage.LocalStorageService
 	gatewayService         *gateway.LocalGatewayService
 	databaseService        *sql.LocalSqlServer
+	secretService          *secrets.DevSecretService
 	apis                   []ApiSpec
 	apiUseHttps            bool
 	apiSecurityDefinitions map[string]map[string]*resourcespb.ApiSecurityDefinitionResource
@@ -656,6 +658,8 @@ func (d *Dashboard) Start() error {
 
 	http.HandleFunc("/api/sql", d.createSqlQueryHandler())
 
+	http.HandleFunc("/api/secrets", d.createSecretsHandler())
+
 	// handle websockets
 	http.HandleFunc("/ws-info", func(w http.ResponseWriter, r *http.Request) {
 		err := d.wsWebSocket.HandleRequest(w, r)
@@ -817,6 +821,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		storageService:         localCloud.Storage,
 		gatewayService:         localCloud.Gateway,
 		databaseService:        localCloud.Databases,
+		secretService:          localCloud.Secrets,
 		apis:                   []ApiSpec{},
 		apiUseHttps:            localCloud.Gateway.ApiTlsCredentials != nil,
 		apiSecurityDefinitions: map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{},

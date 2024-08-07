@@ -163,4 +163,29 @@ describe('Secrets Spec', () => {
 
     cy.getTestEl('data-table-0-latest-badge').should('have.text', 'Latest')
   })
+
+  it(`should format Uint8Array secret correctly`, () => {
+    cy.visit('/')
+
+    cy.intercept('/api/call/**').as('apiCall')
+
+    cy.get('[data-rct-item-id="my-secret-api"]').click()
+
+    cy.get('[data-rct-item-id="my-secret-api-/set-binary-POST"]').click()
+
+    cy.getTestEl('send-api-btn').click()
+
+    cy.wait('@apiCall')
+
+    cy.visit('/secrets')
+
+    cy.get(`[data-rct-item-id="my-first-secret"]`).click()
+
+    cy.getTestEl('data-table-cell-0_value').should(
+      'have.text',
+      '00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F \n10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F \n20 21 22 23 24 25 26 27 28 29 2A 2B 2C 2D 2E 2F \n',
+    )
+
+    cy.getTestEl('data-table-0-latest-badge').should('have.text', 'Latest')
+  })
 })

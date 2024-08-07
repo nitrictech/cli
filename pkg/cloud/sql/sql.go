@@ -45,16 +45,16 @@ import (
 type LocalSqlServer struct {
 	projectName string
 	containerId string
+	port        int
 	sqlpb.UnimplementedSqlServer
 }
 
 var _ sqlpb.SqlServer = (*LocalSqlServer)(nil)
 
-func ensureDatabaseExists(databaseName string) (string, error) {
-	port := 5432
+func (l *LocalSqlServer) ensureDatabaseExists(databaseName string) (string, error) {
 	// Ensure the database exists
 	// Connect to the PostgreSQL instance
-	conn, err := pgx.Connect(context.Background(), fmt.Sprintf("user=postgres password=localsecret host=localhost port=%d dbname=postgres sslmode=disable", port))
+	conn, err := pgx.Connect(context.Background(), fmt.Sprintf("user=postgres password=localsecret host=localhost port=%d dbname=postgres sslmode=disable", l.port))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func ensureDatabaseExists(databaseName string) (string, error) {
 	// TODO: Run migrations/seeds if necessary
 
 	// Return the connection string of the new database
-	return fmt.Sprintf("postgresql://postgres:localsecret@localhost:%d/%s?sslmode=disable", port, databaseName), nil
+	return fmt.Sprintf("postgresql://postgres:localsecret@localhost:%d/%s?sslmode=disable", l.port, databaseName), nil
 }
 
 func (l *LocalSqlServer) start() error {
@@ -114,6 +114,8 @@ func (l *LocalSqlServer) start() error {
 	}
 
 	freeport := newLis.Addr().(*net.TCPAddr).Port
+
+	l.port = freeport
 
 	_ = newLis.Close()
 
@@ -164,7 +166,7 @@ func (l *LocalSqlServer) Stop() error {
 }
 
 func (l *LocalSqlServer) ConnectionString(ctx context.Context, req *sqlpb.SqlConnectionStringRequest) (*sqlpb.SqlConnectionStringResponse, error) {
-	connectionString, err := ensureDatabaseExists(req.DatabaseName)
+	connectionString, err := l.ensureDatabaseExists(req.DatabaseName)
 	if err != nil {
 		return nil, err
 	}

@@ -14,6 +14,12 @@ import { ArrowsUpDownIcon } from '@heroicons/react/24/outline'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useSecretsContext } from '../SecretsContext'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export const columns: ColumnDef<SecretVersion>[] = [
   {
@@ -67,17 +73,21 @@ export const columns: ColumnDef<SecretVersion>[] = [
 
       return (
         <div className="text-left">
-          <span className="text-gray-500 font-mono">
-            {secretVersion.value.split('\n').map((line, index) => (
-              <span key={index}>
-                {line}
-                <br />
-              </span>
-            ))}
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="max-w-md truncate font-mono text-gray-500">
+                {secretVersion.value}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <ScrollArea className="max-w-96 whitespace-pre font-mono text-gray-500">
+                <div className="max-h-72">{secretVersion.value}</div>
+              </ScrollArea>
+            </TooltipContent>
+          </Tooltip>
         </div>
       )
-    }
+    },
   },
   {
     accessorKey: 'createdAt',

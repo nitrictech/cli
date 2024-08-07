@@ -168,17 +168,6 @@ type SecretVersion struct {
 	CreatedAt string `json:"createdAt"`
 }
 
-// isPrintableASCII checks if all characters in the byte array are printable ASCII characters.
-func isPrintableASCII(byteArray []byte) bool {
-	for _, b := range byteArray {
-		if b < 32 || b > 126 {
-			return false
-		}
-	}
-
-	return true
-}
-
 // formatUint8Array formats a byte array as a hexadecimal string with a space between each byte.
 func formatUint8Array(byteArray []byte) string {
 	result := ""
@@ -259,10 +248,10 @@ func (s *DevSecretService) List(ctx context.Context, secretName string) ([]Secre
 
 				var value string
 
-				if utf8.Valid(valueResp.Value) && !isPrintableASCII(valueResp.Value) {
-					value = formatUint8Array(valueResp.Value)
-				} else {
+				if utf8.Valid(valueResp.Value) {
 					value = string(valueResp.Value)
+				} else {
+					value = formatUint8Array(valueResp.Value)
 				}
 
 				// Check whether the version is the latest

@@ -73,6 +73,15 @@ export type Bucket = BaseResource
 
 export type Queue = BaseResource
 
+export type Secret = BaseResource
+
+export interface SecretVersion {
+  version: string
+  value: string
+  createdAt: string
+  latest: boolean
+}
+
 type ResourceType = 'bucket' | 'topic' | 'websocket' | 'kv' | 'secret' | 'queue'
 
 export type Notification = {
@@ -104,6 +113,7 @@ export interface WebSocketResponse {
   topics: Topic[]
   services: Service[]
   stores: KeyValue[]
+  secrets: Secret[]
   sqlDatabases: SQLDatabase[]
   httpProxies: HttpProxy[]
   websockets: WebSocket[]
@@ -115,11 +125,10 @@ export interface WebSocketResponse {
   apiAddresses: Record<string, string>
   websocketAddresses: Record<string, string>
   httpWorkerAddresses: Record<string, string>
-  storageAddress: string // has http:// prefix
+  storageAddress: string
   currentVersion: string
   latestVersion: string
   connected: boolean
-  dashboardAddress: string
 }
 
 export interface Param {

@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
+import SectionCard from '../shared/SectionCard'
 
 interface Props {
   workerType: 'schedules' | 'topics'
@@ -270,153 +271,146 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               </div>
 
               {workerType === 'topics' && (
-                <div className="flex flex-col py-4">
-                  <div className="bg-white px-4 py-5 shadow sm:rounded-lg sm:p-6">
-                    <h2>Payload</h2>
-                    <div>
-                      <CodeEditor
-                        value={formatJSON(body)}
-                        contentType="application/json"
-                        onChange={(payload: string) => {
-                          try {
-                            setBody(JSON.parse(payload))
-                          } catch {
-                            return
-                          }
-                        }}
-                      />
+                <SectionCard title="Payload">
+                  <div>
+                    <CodeEditor
+                      value={formatJSON(body)}
+                      contentType="application/json"
+                      onChange={(payload: string) => {
+                        try {
+                          setBody(JSON.parse(payload))
+                        } catch {
+                          return
+                        }
+                      }}
+                    />
 
-                      <Button
-                        size="lg"
-                        className="ml-auto mt-6 flex"
-                        data-testid={`trigger-${workerType}-btn`}
-                        onClick={handleSend}
-                      >
-                        {workerType === 'topics' ? 'Publish' : 'Trigger'}
-                      </Button>
-                    </div>
+                    <Button
+                      size="lg"
+                      className="ml-auto mt-6 flex"
+                      data-testid={`trigger-${workerType}-btn`}
+                      onClick={handleSend}
+                    >
+                      {workerType === 'topics' ? 'Publish' : 'Trigger'}
+                    </Button>
                   </div>
-                </div>
+                </SectionCard>
               )}
-              <div className="bg-white shadow sm:rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="sm:flex sm:items-start sm:justify-between">
-                    <div className="relative w-full">
-                      <div className="flex items-center gap-4">
-                        <h3 className="text-xl font-semibold leading-6 text-gray-900">
-                          Response
-                        </h3>
-                        {callLoading && (
-                          <Spinner
-                            className="absolute top-0"
-                            color="info"
-                            size={'md'}
-                          />
-                        )}
-                      </div>
-                      <div className="absolute right-0 top-0 flex gap-2">
-                        {response?.status && (
-                          <Badge
-                            status={response.status >= 400 ? 'red' : 'green'}
-                          >
-                            Status: {response.status}
-                          </Badge>
-                        )}
-                        {response?.time && (
-                          <Badge status={'green'}>
-                            Time: {formatResponseTime(response.time)}
-                          </Badge>
-                        )}
-                        {typeof response?.size === 'number' && (
-                          <Badge status={'green'}>
-                            Size: {formatFileSize(response.size)}
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="my-4 max-w-full text-sm">
-                        {response?.data ? (
-                          <div className="flex flex-col gap-4">
-                            <Tabs
-                              tabs={[
-                                {
-                                  name: 'Response',
-                                },
-                                {
-                                  name: 'Headers',
-                                  count: Object.keys(response.headers || {})
-                                    .length,
-                                },
-                              ]}
-                              round
-                              index={responseTabIndex}
-                              setIndex={setResponseTabIndex}
-                            />
-                            {responseTabIndex === 0 && (
-                              <APIResponseContent response={response} />
-                            )}
-                            {responseTabIndex === 1 && (
-                              <div className="overflow-x-auto">
-                                <div className="inline-block min-w-full py-2 align-middle">
-                                  <table className="min-w-full divide-y divide-gray-300">
-                                    <thead>
-                                      <tr>
-                                        <th
-                                          scope="col"
-                                          className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
-                                        >
-                                          Header
-                                        </th>
-                                        <th
-                                          scope="col"
-                                          className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                        >
-                                          Value
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200 bg-white">
-                                      {Object.entries(
-                                        response.headers || {},
-                                      ).map(([key, value]) => (
-                                        <tr key={key}>
-                                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
-                                            {key}
-                                          </td>
-                                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            {value}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : response ? (
-                          <span className="text-lg text-gray-500">
-                            No response data available for this request.
-                          </span>
-                        ) : (
-                          <span className="text-lg text-gray-500">
-                            Send a request to get a response.
-                          </span>
-                        )}
-                      </div>
+              <SectionCard
+                title="Response"
+                headerSiblings={
+                  <>
+                    {callLoading && (
+                      <Spinner
+                        className="absolute left-0 top-0 ml-28"
+                        color="info"
+                        size={'md'}
+                      />
+                    )}
+                    <div className="absolute right-0 top-0 flex gap-2">
+                      {response?.status && (
+                        <Badge
+                          status={response.status >= 400 ? 'red' : 'green'}
+                        >
+                          Status: {response.status}
+                        </Badge>
+                      )}
+                      {response?.time && (
+                        <Badge status={'green'}>
+                          Time: {formatResponseTime(response.time)}
+                        </Badge>
+                      )}
+                      {typeof response?.size === 'number' && (
+                        <Badge status={'green'}>
+                          Size: {formatFileSize(response.size)}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
+                  </>
+                }
+              >
+                <div className="my-4 max-w-full text-sm">
+                  {response?.data ? (
+                    <div className="flex flex-col gap-4">
+                      <Tabs
+                        tabs={[
+                          {
+                            name: 'Response',
+                          },
+                          {
+                            name: 'Headers',
+                            count: Object.keys(response.headers || {}).length,
+                          },
+                        ]}
+                        round
+                        index={responseTabIndex}
+                        setIndex={setResponseTabIndex}
+                      />
+                      {responseTabIndex === 0 && (
+                        <APIResponseContent response={response} />
+                      )}
+                      {responseTabIndex === 1 && (
+                        <div className="overflow-x-auto">
+                          <div className="inline-block min-w-full py-2 align-middle">
+                            <table className="min-w-full divide-y divide-gray-300">
+                              <thead>
+                                <tr>
+                                  <th
+                                    scope="col"
+                                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
+                                  >
+                                    Header
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                  >
+                                    Value
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200 bg-white">
+                                {Object.entries(response.headers || {}).map(
+                                  ([key, value]) => (
+                                    <tr key={key}>
+                                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
+                                        {key}
+                                      </td>
+                                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                        {value}
+                                      </td>
+                                    </tr>
+                                  ),
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : response ? (
+                    <span className="text-lg text-gray-500">
+                      No response data available for this request.
+                    </span>
+                  ) : (
+                    <span className="text-lg text-gray-500">
+                      Send a request to get a response.
+                    </span>
+                  )}
                 </div>
-              </div>
+              </SectionCard>
             </div>
-            <div className="flex w-full flex-col gap-8 pb-20">
-              <h3 className="text-2xl font-semibold leading-6">History</h3>
+            <SectionCard
+              title="History"
+              className="m-0 mb-20 border-none px-0 shadow-none sm:px-0"
+              headerClassName="px-4 sm:px-2"
+            >
               <EventsHistory
                 history={eventHistory}
                 workerType={workerType}
                 selectedWorker={selectedWorker}
               />
-            </div>
+            </SectionCard>
           </div>
         ) : !hasData ? (
           <div>

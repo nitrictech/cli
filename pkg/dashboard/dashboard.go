@@ -48,6 +48,7 @@ import (
 	httpproxy "github.com/nitrictech/cli/pkg/cloud/http"
 	"github.com/nitrictech/cli/pkg/cloud/resources"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
+	"github.com/nitrictech/cli/pkg/cloud/secrets"
 	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/storage"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
@@ -103,6 +104,10 @@ type SQLDatabaseSpec struct {
 	ConnectionString string `json:"connectionString"`
 }
 
+type SecretSpec struct {
+	*BaseResourceSpec
+}
+
 type NotifierSpec struct {
 	Bucket string `json:"bucket"`
 	Target string `json:"target"`
@@ -143,6 +148,7 @@ type Dashboard struct {
 	storageService         *storage.LocalStorageService
 	gatewayService         *gateway.LocalGatewayService
 	databaseService        *sql.LocalSqlServer
+	secretService          *secrets.DevSecretService
 	apis                   []ApiSpec
 	apiUseHttps            bool
 	apiSecurityDefinitions map[string]map[string]*resourcespb.ApiSecurityDefinitionResource
@@ -150,6 +156,7 @@ type Dashboard struct {
 	topics                 []*TopicSpec
 	buckets                []*BucketSpec
 	stores                 []*KeyValueSpec
+	secrets                []*SecretSpec
 	sqlDatabases           []*SQLDatabaseSpec
 	websockets             []WebsocketSpec
 	subscriptions          []*SubscriberSpec
@@ -181,6 +188,7 @@ type DashboardResponse struct {
 	Notifications []*NotifierSpec    `json:"notifications"`
 	Stores        []*KeyValueSpec    `json:"stores"`
 	SQLDatabases  []*SQLDatabaseSpec `json:"sqlDatabases"`
+	Secrets       []*SecretSpec      `json:"secrets"`
 	Queues        []*QueueSpec       `json:"queues"`
 	HttpProxies   []*HttpProxySpec   `json:"httpProxies"`
 
@@ -196,7 +204,6 @@ type DashboardResponse struct {
 	CurrentVersion      string                `json:"currentVersion"`
 	LatestVersion       string                `json:"latestVersion"`
 	Connected           bool                  `json:"connected"`
-	DashboardAddress    string                `json:"dashboardAddress"`
 }
 
 type Bucket struct {
@@ -308,6 +315,27 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 
 	if len(d.topics) > 0 {
 		slices.SortFunc(d.topics, func(a, b *TopicSpec) int {
+			return compare(a.Name, b.Name)
+		})
+	}
+
+	for secretName, resource := range lrs.Secrets.GetAll() {
+		exists := lo.ContainsBy(d.secrets, func(item *SecretSpec) bool {
+			return item.Name == secretName
+		})
+
+		if !exists {
+			d.secrets = append(d.secrets, &SecretSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               secretName,
+					RequestingServices: resource.RequestingServices,
+				},
+			})
+		}
+	}
+
+	if len(d.secrets) > 0 {
+		slices.SortFunc(d.secrets, func(a, b *SecretSpec) int {
 			return compare(a.Name, b.Name)
 		})
 	}
@@ -557,8 +585,9 @@ func (d *Dashboard) isConnected() bool {
 	proxiesRegistered := len(d.httpProxies) > 0
 	storesRegistered := len(d.stores) > 0
 	sqlRegistered := len(d.sqlDatabases) > 0
+	secretsRegistered := len(d.secrets) > 0
 
-	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered || sqlRegistered
+	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered || sqlRegistered || secretsRegistered
 }
 
 func (d *Dashboard) Start() error {
@@ -628,6 +657,8 @@ func (d *Dashboard) Start() error {
 	http.HandleFunc("/api/storage", d.handleStorage())
 
 	http.HandleFunc("/api/sql", d.createSqlQueryHandler())
+
+	http.HandleFunc("/api/secrets", d.createSecretsHandler())
 
 	// handle websockets
 	http.HandleFunc("/ws-info", func(w http.ResponseWriter, r *http.Request) {
@@ -720,6 +751,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		Websockets:          d.websockets,
 		Policies:            d.policies,
 		Queues:              d.queues,
+		Secrets:             d.secrets,
 		Services:            services,
 		Subscriptions:       d.subscriptions,
 		Notifications:       d.notifications,
@@ -730,10 +762,9 @@ func (d *Dashboard) sendStackUpdate() error {
 		HttpWorkerAddresses: d.gatewayService.GetHttpWorkerAddresses(),
 		TriggerAddress:      d.gatewayService.GetTriggerAddress(),
 		// StorageAddress:      d.storageService.GetStorageEndpoint(),
-		CurrentVersion:   currentVersion,
-		LatestVersion:    latestVersion,
-		Connected:        d.isConnected(),
-		DashboardAddress: d.GetDashboardUrl(),
+		CurrentVersion: currentVersion,
+		LatestVersion:  latestVersion,
+		Connected:      d.isConnected(),
 	}
 
 	// Encode the response as JSON
@@ -790,6 +821,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		storageService:         localCloud.Storage,
 		gatewayService:         localCloud.Gateway,
 		databaseService:        localCloud.Databases,
+		secretService:          localCloud.Secrets,
 		apis:                   []ApiSpec{},
 		apiUseHttps:            localCloud.Gateway.ApiTlsCredentials != nil,
 		apiSecurityDefinitions: map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{},
@@ -805,6 +837,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		websockets:             []WebsocketSpec{},
 		stores:                 []*KeyValueSpec{},
 		sqlDatabases:           []*SQLDatabaseSpec{},
+		secrets:                []*SecretSpec{},
 		queues:                 []*QueueSpec{},
 		httpProxies:            []*HttpProxySpec{},
 		policies:               map[string]PolicySpec{},

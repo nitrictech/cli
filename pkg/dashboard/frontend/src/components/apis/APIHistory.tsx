@@ -75,79 +75,74 @@ const ApiHistoryAccordionContent: React.FC<ApiHistoryItem> = ({
   const jsonTabs = [...tabs, { name: 'Payload' }]
 
   return (
-    <div className="flex flex-col py-4">
-      <div className="bg-white sm:rounded-lg">
-        <Tabs
-          tabs={isJson ? jsonTabs : tabs}
-          index={tabIndex}
-          setIndex={setTabIndex}
-        />
-        <div className="py-5">
-          {tabIndex === 0 && (
-            <TableGroup
-              headers={['Key', 'Value']}
-              rowDataClassName="max-w-[100px]"
-              groups={[
-                {
-                  name: 'Request Headers',
-                  rows: Object.entries(request.headers)
-                    .filter(([key, value]) => key && value)
-                    .map(([key, value]) => [
-                      key.toLowerCase(),
-                      value.join(', '),
-                    ]),
-                },
-                {
-                  name: 'Response Headers',
-                  rows: Object.entries(response.headers ?? [])
-                    .filter(([key, value]) => key && value)
-                    .map(([key, value]) => [key.toLowerCase(), value]),
-                },
-              ]}
-            />
-          )}
-          {tabIndex === 1 && (
-            <div className="flex flex-col gap-8">
-              <div className="flex flex-col gap-2">
-                <p className="text-md font-semibold">Response Data</p>
-                <APIResponseContent
-                  response={{ ...response, data: atob(response.data) }}
-                />
-              </div>
+    <div>
+      <Tabs
+        tabs={isJson ? jsonTabs : tabs}
+        index={tabIndex}
+        setIndex={setTabIndex}
+      />
+      <div className="py-5">
+        {tabIndex === 0 && (
+          <TableGroup
+            headers={['Key', 'Value']}
+            rowDataClassName="max-w-[100px]"
+            groups={[
+              {
+                name: 'Request Headers',
+                rows: Object.entries(request.headers)
+                  .filter(([key, value]) => key && value)
+                  .map(([key, value]) => [key.toLowerCase(), value.join(', ')]),
+              },
+              {
+                name: 'Response Headers',
+                rows: Object.entries(response.headers ?? [])
+                  .filter(([key, value]) => key && value)
+                  .map(([key, value]) => [key.toLowerCase(), value]),
+              },
+            ]}
+          />
+        )}
+        {tabIndex === 1 && (
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <p className="text-md font-semibold">Response Data</p>
+              <APIResponseContent
+                response={{ ...response, data: atob(response.data) }}
+              />
             </div>
-          )}
-          {tabIndex === 2 && (
-            <div className="flex flex-col gap-8">
-              <div className="flex flex-col gap-2">
-                <p className="text-md font-semibold">Request Body</p>
-                <CodeEditor
-                  contentType="application/json"
-                  readOnly={true}
-                  value={formatJSON(
-                    JSON.parse(atob(request.body?.toString() ?? '')),
-                  )}
-                  title="Request Body"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                {request.queryParams && (
-                  <TableGroup
-                    headers={['Key', 'Value']}
-                    rowDataClassName="max-w-[100px]"
-                    groups={[
-                      {
-                        name: 'Query Params',
-                        rows: request.queryParams
-                          .filter(({ key, value }) => key && value)
-                          .map(({ key, value }) => [key, value]),
-                      },
-                    ]}
-                  />
+          </div>
+        )}
+        {tabIndex === 2 && (
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <p className="text-md font-semibold">Request Body</p>
+              <CodeEditor
+                contentType="application/json"
+                readOnly={true}
+                value={formatJSON(
+                  JSON.parse(atob(request.body?.toString() ?? '')),
                 )}
-              </div>
+                title="Request Body"
+              />
             </div>
-          )}
-        </div>
+            <div className="flex flex-col gap-2">
+              {request.queryParams && (
+                <TableGroup
+                  headers={['Key', 'Value']}
+                  rowDataClassName="max-w-[100px]"
+                  groups={[
+                    {
+                      name: 'Query Params',
+                      rows: request.queryParams
+                        .filter(({ key, value }) => key && value)
+                        .map(({ key, value }) => [key, value]),
+                    },
+                  ]}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

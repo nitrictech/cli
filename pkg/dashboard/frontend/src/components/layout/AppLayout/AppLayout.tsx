@@ -13,6 +13,7 @@ import {
   MapIcon,
   HeartIcon,
   CircleStackIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import { useWebSocket } from '../../../lib/hooks/use-web-socket'
@@ -25,7 +26,6 @@ import { Spinner } from '../../shared'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { Sheet, SheetContent, SheetTrigger } from '../../ui/sheet'
 import NavigationBar from './NavigationBar'
-import { Separator } from '@/components/ui/separator'
 
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
@@ -117,11 +117,6 @@ const AppLayout: React.FC<Props> = ({
       icon: CircleStackIcon,
     },
     {
-      name: 'Websockets',
-      href: '/websockets',
-      icon: ChatBubbleLeftRightIcon,
-    },
-    {
       name: 'Schedules',
       href: '/schedules',
       icon: ClockIcon,
@@ -136,8 +131,17 @@ const AppLayout: React.FC<Props> = ({
       href: '/topics',
       icon: MegaphoneIcon,
     },
+    {
+      name: 'Secrets',
+      href: '/secrets',
+      icon: LockClosedIcon,
+    },
+    {
+      name: 'Websockets',
+      href: '/websockets',
+      icon: ChatBubbleLeftRightIcon,
+    },
     // { name: "Key Value Stores", href: "#", icon: FolderIcon, current: false },
-    // { name: "Secrets", href: "#", icon: LockClosedIcon, current: false },
   ]
 
   const showAlert = data?.connected === false || state === 'error'
@@ -333,21 +337,23 @@ const AppLayout: React.FC<Props> = ({
                           Reach out to the community
                         </h3>
                         <div className="grid grid-cols-2 divide-x divide-gray-900/5">
-                          {communityLinks.map((item) => (
-                            <a
-                              key={item.name}
-                              href={item.href}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
-                            >
-                              <item.icon
-                                className="h-5 w-5 flex-none text-gray-400"
-                                aria-hidden="true"
-                              />
-                              {item.name}
-                            </a>
-                          ))}
+                          {communityLinks
+                            .filter((item) => item.name !== 'Sponsor')
+                            .map((item) => (
+                              <a
+                                key={item.name}
+                                href={item.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
+                              >
+                                <item.icon
+                                  className="h-5 w-5 flex-none text-gray-400"
+                                  aria-hidden="true"
+                                />
+                                {item.name}
+                              </a>
+                            ))}
                         </div>
                       </div>
                     </div>
@@ -410,21 +416,23 @@ const AppLayout: React.FC<Props> = ({
                           Reach out to the community
                         </h3>
                         <div className="grid grid-cols-2 divide-x divide-gray-900/5">
-                          {communityLinks.map((item) => (
-                            <a
-                              key={item.name}
-                              href={item.href}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
-                            >
-                              <item.icon
-                                className="h-5 w-5 flex-none text-gray-400"
-                                aria-hidden="true"
-                              />
-                              {item.name}
-                            </a>
-                          ))}
+                          {communityLinks
+                            .filter((item) => item.name !== 'Sponsor')
+                            .map((item) => (
+                              <a
+                                key={item.name}
+                                href={item.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
+                              >
+                                <item.icon
+                                  className="h-5 w-5 flex-none text-gray-400"
+                                  aria-hidden="true"
+                                />
+                                {item.name}
+                              </a>
+                            ))}
                         </div>
                         <p className="ml-auto w-full truncate border-t px-4 py-2 text-center text-gray-400">
                           CLI Version: v{data?.currentVersion}

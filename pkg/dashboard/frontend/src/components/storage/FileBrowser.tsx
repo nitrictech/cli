@@ -11,7 +11,6 @@ import {
   FileContextMenu,
 } from 'chonky'
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react'
-import { useWebSocket } from '../../lib/hooks/use-web-socket'
 import { useBucket } from '../../lib/hooks/use-bucket'
 
 import { ChonkyIconFA } from 'chonky-icon-fontawesome'
@@ -20,6 +19,7 @@ import FileUpload from './FileUpload'
 import { Loading } from '../shared'
 import { downloadFiles } from './download-files'
 import { STORAGE_API } from '@/lib/constants'
+import SectionCard from '../shared/SectionCard'
 
 interface Props {
   bucket: string
@@ -108,7 +108,6 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
   const [rootFiles, setRootFiles] = useState<FileArray>([])
   const [folderFiles, setFolderFiles] = useState<FileArray>([])
   const [folderPrefix, setFolderPrefix] = useState<string>('/')
-  const { data } = useWebSocket()
   const {
     data: contents,
     writeFile,
@@ -246,40 +245,39 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
 
   return (
     <Loading className="my-20" delay={500} conditionToShow={!loading}>
-      <div>
-        <h2 className="mb-4">Bucket File Explorer</h2>
-        <div style={{ height: 300 }} className="file-explorer">
-          {!loading && (
-            <ChonkFileBrowser
-              instanceId={bucket}
-              files={folderFiles}
-              disableDefaultFileActions={actionsToDisable}
-              fileActions={[
-                ChonkyActions.DeleteFiles,
-                ChonkyActions.DownloadFiles,
-              ]}
-              folderChain={folderChain}
-              onFileAction={handleFileAction}
-              thumbnailGenerator={(file) =>
-                !file.isDir
-                  ? `${STORAGE_API}?action=read-file&bucket=${bucket}&fileKey=${encodeURI(
-                      file.id,
-                    )}`
-                  : null
-              }
-            >
-              <FileNavbar />
-              <FileToolbar />
-              <FileList />
-              <FileContextMenu />
-            </ChonkFileBrowser>
-          )}
-        </div>
+      <div style={{ height: 300 }} className="file-explorer">
+        {!loading && (
+          <ChonkFileBrowser
+            instanceId={bucket}
+            files={folderFiles}
+            disableDefaultFileActions={actionsToDisable}
+            fileActions={[
+              ChonkyActions.DeleteFiles,
+              ChonkyActions.DownloadFiles,
+            ]}
+            folderChain={folderChain}
+            onFileAction={handleFileAction}
+            thumbnailGenerator={(file) =>
+              !file.isDir
+                ? `${STORAGE_API}?action=read-file&bucket=${bucket}&fileKey=${encodeURI(
+                    file.id,
+                  )}`
+                : null
+            }
+          >
+            <FileNavbar />
+            <FileToolbar />
+            <FileList />
+            <FileContextMenu />
+          </ChonkFileBrowser>
+        )}
       </div>
-      <div>
-        <h2 className="mb-4">Upload Files</h2>
+      <SectionCard
+        title="Upload Files"
+        className="mt-6 border-none p-0 shadow-none sm:p-0"
+      >
         <FileUpload multiple onDrop={onDrop} />
-      </div>
+      </SectionCard>
     </Loading>
   )
 }

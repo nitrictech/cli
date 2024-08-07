@@ -4,6 +4,7 @@ describe('a11y test suite', () => {
     '/schedules',
     '/storage',
     '/databases',
+    '/secrets',
     '/topics',
     '/not-found',
     '/architecture',

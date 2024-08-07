@@ -17,6 +17,7 @@ import {
   GlobeAltIcon,
   ArrowsRightLeftIcon,
   QueueListIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline'
 import {
   MarkerType,
@@ -54,6 +55,7 @@ import { QueueNode } from '@/components/architecture/nodes/QueueNode'
 import { SQLNode } from '@/components/architecture/nodes/SQLNode'
 import { SiPostgresql } from 'react-icons/si'
 import { unique } from 'radash'
+import { SecretNode } from '@/components/architecture/nodes/SecretNode'
 
 export const nodeTypes = {
   api: APINode,
@@ -66,6 +68,7 @@ export const nodeTypes = {
   sql: SQLNode,
   httpproxy: HttpProxyNode,
   queue: QueueNode,
+  secret: SecretNode,
 }
 
 const createNode = <T>(
@@ -178,6 +181,7 @@ const actionVerbs = [
   'Write',
   'Enqueue',
   'Dequeue',
+  'Access',
 ]
 
 function verbFromNitricAction(action: string) {
@@ -321,6 +325,16 @@ export function generateArchitectureData(data: WebSocketResponse): {
       title: store.name,
       resource: store,
       icon: CircleStackIcon,
+    })
+
+    nodes.push(node)
+  })
+
+  data.secrets.forEach((secret) => {
+    const node = createNode<BucketNodeData>(secret, 'secret', {
+      title: secret.name,
+      resource: secret,
+      icon: LockClosedIcon,
     })
 
     nodes.push(node)

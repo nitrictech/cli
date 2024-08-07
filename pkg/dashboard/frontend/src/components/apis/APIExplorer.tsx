@@ -54,6 +54,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Alert } from '../ui/alert'
+import SectionCard from '../shared/SectionCard'
 
 const getTabCount = (rows: FieldRow[]) => {
   if (!rows) return 0
@@ -515,231 +516,220 @@ const APIExplorer = () => {
                   </Alert>
                 )}
               </div>
-              <div className="rounded-lg bg-white shadow">
+              <SectionCard className="p-0 sm:p-0">
                 <Tabs
                   tabs={tabs}
                   index={currentTabIndex}
                   setIndex={setCurrentTabIndex}
                 />
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="sm:flex sm:items-start sm:justify-between">
-                    <div className="w-full">
-                      <div className="relative flex w-full">
-                        <h3 className="text-xl font-semibold leading-6 text-gray-900">
-                          {currentTabName}
-                        </h3>
-                      </div>
-                      {currentTabName === 'Params' && (
-                        <ul className="my-4 divide-gray-200">
-                          {request.pathParams.length > 0 && (
-                            <li className="flex flex-col py-4">
-                              <h4 className="text-lg font-medium text-gray-900">
-                                Path Params
-                              </h4>
-                              <FieldRows
-                                lockKeys
-                                testId="path"
-                                valueRequired
-                                rows={request.pathParams}
-                                valueErrors={requiredPathParamErrors}
-                                setRows={(rows) => {
-                                  setRequest((prev) => ({
-                                    ...prev,
-                                    pathParams: rows,
-                                  }))
-                                }}
-                              />
-                            </li>
-                          )}
-                          <li className="flex flex-col py-4">
-                            <h4 className="text-lg font-medium text-gray-900">
-                              Query Params
-                            </h4>
-                            <FieldRows
-                              rows={request.queryParams}
-                              testId="query"
-                              setRows={(rows) => {
-                                setRequest((prev) => ({
-                                  ...prev,
-                                  queryParams: rows,
-                                }))
-                              }}
-                            />
-                          </li>
-                        </ul>
-                      )}
-                      {currentTabName === 'Headers' && (
-                        <div className="my-4">
+                <SectionCard
+                  className="border-none shadow-none"
+                  title={currentTabName}
+                >
+                  {currentTabName === 'Params' && (
+                    <ul className="my-4 divide-gray-200">
+                      {request.pathParams.length > 0 && (
+                        <li className="flex flex-col py-4">
+                          <h4 className="text-lg font-medium text-gray-900">
+                            Path Params
+                          </h4>
                           <FieldRows
-                            rows={request.headers}
-                            testId="header"
+                            lockKeys
+                            testId="path"
+                            valueRequired
+                            rows={request.pathParams}
+                            valueErrors={requiredPathParamErrors}
                             setRows={(rows) => {
                               setRequest((prev) => ({
                                 ...prev,
-                                headers: rows,
+                                pathParams: rows,
                               }))
                             }}
                           />
-                        </div>
+                        </li>
                       )}
-                      {currentTabName === 'Body' && (
-                        <div className="my-4 flex flex-col gap-4">
-                          <Tabs
-                            tabs={bodyTabs}
-                            index={bodyTabIndex}
-                            pill
-                            setIndex={setBodyTabIndex}
-                          />
-                          {currentBodyTabName === 'JSON' && (
-                            <CodeEditor
-                              id="json-editor"
-                              contentType={'application/json'}
-                              value={JSONBody}
-                              includeLinters
-                              onChange={(value) => {
-                                setJSONBody(value)
-                              }}
-                            />
-                          )}
-                          {currentBodyTabName === 'Binary' && (
-                            <div className="mb-2 flex flex-col">
-                              <h4 className="mb-2 text-lg font-medium text-gray-900">
-                                Binary File
-                              </h4>
-                              <FileUpload multiple={false} onDrop={onDrop} />
-                              {fileToUpload && (
-                                <span
-                                  data-testid="file-upload-info"
-                                  className="flex items-center px-4 py-4 sm:px-0"
-                                >
-                                  {fileToUpload.name} -{' '}
-                                  {formatFileSize(fileToUpload.size)}
-                                </span>
-                              )}
-                            </div>
+                      <li className="flex flex-col py-4">
+                        <h4 className="text-lg font-medium text-gray-900">
+                          Query Params
+                        </h4>
+                        <FieldRows
+                          rows={request.queryParams}
+                          testId="query"
+                          setRows={(rows) => {
+                            setRequest((prev) => ({
+                              ...prev,
+                              queryParams: rows,
+                            }))
+                          }}
+                        />
+                      </li>
+                    </ul>
+                  )}
+                  {currentTabName === 'Headers' && (
+                    <div className="my-4">
+                      <FieldRows
+                        rows={request.headers}
+                        testId="header"
+                        setRows={(rows) => {
+                          setRequest((prev) => ({
+                            ...prev,
+                            headers: rows,
+                          }))
+                        }}
+                      />
+                    </div>
+                  )}
+                  {currentTabName === 'Body' && (
+                    <div className="my-4 flex flex-col gap-4">
+                      <Tabs
+                        tabs={bodyTabs}
+                        index={bodyTabIndex}
+                        pill
+                        setIndex={setBodyTabIndex}
+                      />
+                      {currentBodyTabName === 'JSON' && (
+                        <CodeEditor
+                          id="json-editor"
+                          contentType={'application/json'}
+                          value={JSONBody}
+                          includeLinters
+                          onChange={(value) => {
+                            setJSONBody(value)
+                          }}
+                        />
+                      )}
+                      {currentBodyTabName === 'Binary' && (
+                        <div className="mb-2 flex flex-col">
+                          <h4 className="mb-2 text-lg font-medium text-gray-900">
+                            Binary File
+                          </h4>
+                          <FileUpload multiple={false} onDrop={onDrop} />
+                          {fileToUpload && (
+                            <span
+                              data-testid="file-upload-info"
+                              className="flex items-center px-4 py-4 sm:px-0"
+                            >
+                              {fileToUpload.name} -{' '}
+                              {formatFileSize(fileToUpload.size)}
+                            </span>
                           )}
                         </div>
                       )}
                     </div>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg bg-white shadow">
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="sm:flex sm:items-start sm:justify-between">
-                    <div className="relative w-full">
-                      <div className="flex items-center gap-4">
-                        <h3 className="text-xl font-semibold leading-6 text-gray-900">
-                          Response
-                        </h3>
-                        {callLoading && (
-                          <Spinner
-                            className="absolute top-0"
-                            color="info"
-                            size={'md'}
-                          />
-                        )}
-                      </div>
-                      <div className="absolute right-0 top-0 flex gap-2">
-                        {response?.status && (
-                          <Badge
-                            data-testid="response-status"
-                            status={response.status >= 400 ? 'red' : 'green'}
-                          >
-                            Status: {response.status}
-                          </Badge>
-                        )}
-                        {response?.time && (
-                          <Badge data-testid="response-time" status={'green'}>
-                            Time: {formatResponseTime(response.time)}
-                          </Badge>
-                        )}
-                        {typeof response?.size === 'number' && (
-                          <Badge data-testid="response-size" status={'green'}>
-                            Size: {formatFileSize(response.size)}
-                          </Badge>
-                        )}
-                      </div>
+                  )}
+                </SectionCard>
+              </SectionCard>
 
-                      <div className="my-4 max-w-full text-sm">
-                        {response?.data ? (
-                          <div className="flex flex-col gap-4">
-                            <Tabs
-                              tabs={[
-                                {
-                                  name: 'Response',
-                                },
-                                {
-                                  name: 'Headers',
-                                  count: Object.keys(response.headers || {})
-                                    .length,
-                                },
-                              ]}
-                              round
-                              index={responseTabIndex}
-                              setIndex={setResponseTabIndex}
-                            />
-                            {responseTabIndex === 0 && (
-                              <APIResponseContent response={response} />
-                            )}
-                            {responseTabIndex === 1 && (
-                              <div className="overflow-x-auto">
-                                <div className="inline-block min-w-full py-2 align-middle">
-                                  <table className="min-w-full divide-y divide-gray-300">
-                                    <thead>
-                                      <tr>
-                                        <th
-                                          scope="col"
-                                          className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
-                                        >
-                                          Header
-                                        </th>
-                                        <th
-                                          scope="col"
-                                          className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                        >
-                                          Value
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200 bg-white">
-                                      {Object.entries(
-                                        response.headers || {},
-                                      ).map(([key, value]) => (
-                                        <tr key={key}>
-                                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
-                                            {key}
-                                          </td>
-                                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                            {value}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : response ? (
-                          <span className="text-lg text-gray-500">
-                            No response data available for this request.
-                          </span>
-                        ) : (
-                          <span className="text-lg text-gray-500">
-                            Send a request to get a response.
-                          </span>
-                        )}
-                      </div>
+              <SectionCard
+                title="Response"
+                headerSiblings={
+                  <>
+                    {callLoading && (
+                      <Spinner
+                        className="absolute left-0 top-0 ml-28"
+                        color="info"
+                        size={'md'}
+                      />
+                    )}
+                    <div className="absolute right-0 top-0 flex gap-2">
+                      {response?.status && (
+                        <Badge
+                          data-testid="response-status"
+                          status={response.status >= 400 ? 'red' : 'green'}
+                        >
+                          Status: {response.status}
+                        </Badge>
+                      )}
+                      {response?.time && (
+                        <Badge data-testid="response-time" status={'green'}>
+                          Time: {formatResponseTime(response.time)}
+                        </Badge>
+                      )}
+                      {typeof response?.size === 'number' && (
+                        <Badge data-testid="response-size" status={'green'}>
+                          Size: {formatFileSize(response.size)}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
+                  </>
+                }
+              >
+                <div className="my-4 max-w-full text-sm">
+                  {response?.data ? (
+                    <div className="flex flex-col gap-4">
+                      <Tabs
+                        tabs={[
+                          {
+                            name: 'Response',
+                          },
+                          {
+                            name: 'Headers',
+                            count: Object.keys(response.headers || {}).length,
+                          },
+                        ]}
+                        round
+                        index={responseTabIndex}
+                        setIndex={setResponseTabIndex}
+                      />
+                      {responseTabIndex === 0 && (
+                        <APIResponseContent response={response} />
+                      )}
+                      {responseTabIndex === 1 && (
+                        <div className="overflow-x-auto">
+                          <div className="inline-block min-w-full py-2 align-middle">
+                            <table className="min-w-full divide-y divide-gray-300">
+                              <thead>
+                                <tr>
+                                  <th
+                                    scope="col"
+                                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
+                                  >
+                                    Header
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                  >
+                                    Value
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200 bg-white">
+                                {Object.entries(response.headers || {}).map(
+                                  ([key, value]) => (
+                                    <tr key={key}>
+                                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
+                                        {key}
+                                      </td>
+                                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                        {value}
+                                      </td>
+                                    </tr>
+                                  ),
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : response ? (
+                    <span className="text-lg text-gray-500">
+                      No response data available for this request.
+                    </span>
+                  ) : (
+                    <span className="text-lg text-gray-500">
+                      Send a request to get a response.
+                    </span>
+                  )}
                 </div>
-              </div>
+              </SectionCard>
             </div>
-            <div className="flex w-full flex-col gap-8 pb-20">
-              <h3 className="text-2xl font-semibold leading-6">
-                Request History
-              </h3>
+            <SectionCard
+              title="Request History"
+              className="m-0 mb-20 border-none px-0 shadow-none sm:px-0"
+              headerClassName="px-4 sm:px-2"
+            >
               <APIHistory
                 history={history?.apis ?? []}
                 selectedRequest={{
@@ -747,7 +737,7 @@ const APIExplorer = () => {
                   method: request.method,
                 }}
               />
-            </div>
+            </SectionCard>
           </div>
         ) : (
           <div>

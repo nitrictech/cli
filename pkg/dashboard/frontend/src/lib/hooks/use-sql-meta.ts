@@ -1,7 +1,6 @@
 import useSWR from 'swr'
 import { fetcher } from './fetcher'
-import { TABLE_QUERY } from '../constants'
-import { getHost } from '../utils'
+import { SQL_API, TABLE_QUERY } from '../constants'
 
 export interface SqlMetaResult {
   columns: {
@@ -17,7 +16,7 @@ export interface SqlMetaResult {
 
 export const useSqlMeta = (connectionString?: string) => {
   const { data, mutate } = useSWR<SqlMetaResult[]>(
-    connectionString ? `http://${getHost()}/api/sql` : null,
+    connectionString ? SQL_API : null,
     fetcher({
       method: 'POST',
       body: JSON.stringify({ query: TABLE_QUERY, connectionString }),

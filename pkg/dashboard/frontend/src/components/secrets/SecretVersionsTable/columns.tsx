@@ -62,6 +62,22 @@ export const columns: ColumnDef<SecretVersion>[] = [
   {
     accessorKey: 'value',
     header: 'Value',
+    cell: ({ row }) => {
+      const secretVersion = row.original
+
+      return (
+        <div className="text-left">
+          <span className="text-gray-500 font-mono">
+            {secretVersion.value.split('\n').map((line, index) => (
+              <span key={index}>
+                {line}
+                <br />
+              </span>
+            ))}
+          </span>
+        </div>
+      )
+    }
   },
   {
     accessorKey: 'createdAt',

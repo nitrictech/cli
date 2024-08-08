@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -296,6 +297,23 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 	return err
 }
 
+// GetLocalIP returns the non loopback local IP of the host
+func getLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
+}
+
 // RunContainer - Runs a container for the service, blocking until the container exits
 func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, opts ...RunContainerOption) error {
 	runtimeOptions := lo.ToPtr(defaultRunContainerOptions)
@@ -323,9 +341,11 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	}
 
 	if goruntime.GOOS == "linux" {
+		var localIp = getLocalIP()
+
 		// setup host.docker.internal to route to host gateway
 		// to access rpc server hosted by local CLI run
-		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
+		hostConfig.ExtraHosts = []string{"host.docker.internal:" + localIp}
 	}
 
 	randomPort, _ := netx.TakePort(1)

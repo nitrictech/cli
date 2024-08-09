@@ -323,9 +323,22 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	}
 
 	if goruntime.GOOS == "linux" {
+		isWSL, _ := docker.IsDockerRunningInWSL2(dockerClient)
+
+		// default docker host ip
+		dockerHostIP := "172.17.0.1"
+
+		if isWSL {
+			wslEth0IP := docker.GetNonLoopbackLocalIPForWSL()
+
+			if wslEth0IP != "" {
+				dockerHostIP = wslEth0IP
+			}
+		}
+
 		// setup host.docker.internal to route to host gateway
 		// to access rpc server hosted by local CLI run
-		hostConfig.ExtraHosts = []string{"host.docker.internal:172.17.0.1"}
+		hostConfig.ExtraHosts = []string{"host.docker.internal:" + dockerHostIP}
 	}
 
 	randomPort, _ := netx.TakePort(1)

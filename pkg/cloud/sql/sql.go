@@ -97,7 +97,7 @@ func (l *LocalSqlServer) start() error {
 	}
 
 	// create a persistent volume for the database
-	volume, err := dockerClient.VolumeCreate(context.Background(), volume.VolumeCreateBody{
+	volume, err := dockerClient.VolumeCreate(context.Background(), volume.CreateOptions{
 		Driver: "local",
 		Name:   fmt.Sprintf("%s-local-sql", l.projectName),
 	})
@@ -146,7 +146,7 @@ func (l *LocalSqlServer) start() error {
 		return err
 	}
 
-	return dockerClient.ContainerStart(context.Background(), l.containerId, types.ContainerStartOptions{})
+	return dockerClient.ContainerStart(context.Background(), l.containerId, container.StartOptions{})
 }
 
 func (l *LocalSqlServer) Stop() error {
@@ -155,7 +155,7 @@ func (l *LocalSqlServer) Stop() error {
 		return err
 	}
 
-	err = dockerClient.ContainerStop(context.Background(), l.containerId, nil)
+	err = dockerClient.ContainerStop(context.Background(), l.containerId, container.StopOptions{})
 	if err != nil {
 		return err
 	}

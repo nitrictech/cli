@@ -266,7 +266,7 @@ func (d *Docker) ContainerCreate(config *container.Config, hostConfig *container
 }
 
 func (d *Docker) RemoveByLabel(labels map[string]string) error {
-	opts := types.ContainerListOptions{
+	opts := container.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(),
 	}
@@ -281,7 +281,7 @@ func (d *Docker) RemoveByLabel(labels map[string]string) error {
 	}
 
 	for _, con := range res {
-		err = d.Client.ContainerRemove(context.Background(), con.ID, types.ContainerRemoveOptions{Force: true})
+		err = d.Client.ContainerRemove(context.Background(), con.ID, container.RemoveOptions{Force: true})
 		if err != nil {
 			return err
 		}

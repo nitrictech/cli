@@ -113,13 +113,13 @@ func (pi *ProviderImage) Start(options *StartOptions) (string, error) {
 		}
 	}
 
-	err = client.ContainerStart(context.Background(), pi.containerId, types.ContainerStartOptions{})
+	err = client.ContainerStart(context.Background(), pi.containerId, container.StartOptions{})
 	if err != nil {
 		return "", err
 	}
 
 	// TODO: Split stdout and stderr
-	stdOutAtt, err := client.ContainerAttach(context.Background(), pi.containerId, types.ContainerAttachOptions{
+	stdOutAtt, err := client.ContainerAttach(context.Background(), pi.containerId, container.AttachOptions{
 		Stream: true,
 		Stdout: true,
 		Stderr: true,
@@ -156,7 +156,7 @@ func (pi *ProviderImage) Stop() error {
 	}
 
 	// Stop the container
-	return client.ContainerStop(context.Background(), pi.containerId, nil)
+	return client.ContainerStop(context.Background(), pi.containerId, container.StopOptions{})
 }
 
 func (pi *ProviderImage) Uninstall() error {
@@ -166,7 +166,7 @@ func (pi *ProviderImage) Uninstall() error {
 	}
 
 	// Remove the container
-	err = client.ContainerRemove(context.Background(), pi.containerId, types.ContainerRemoveOptions{})
+	err = client.ContainerRemove(context.Background(), pi.containerId, container.RemoveOptions{})
 	if err != nil {
 		return err
 	}

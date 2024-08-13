@@ -28,7 +28,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
@@ -390,7 +389,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		return nil
 	}
 
-	err = dockerClient.ContainerStart(context.TODO(), containerId, types.ContainerStartOptions{})
+	err = dockerClient.ContainerStart(context.TODO(), containerId, container.StartOptions{})
 	if err != nil {
 		updates <- ServiceRunUpdate{
 			ServiceName: s.Name,
@@ -410,7 +409,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	}
 
 	// Attach to the container to get stdout and stderr
-	attachOptions := types.ContainerAttachOptions{
+	attachOptions := container.AttachOptions{
 		Stream: true,
 		Stdout: true,
 		Stderr: true,
@@ -460,7 +459,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			return err
 		case okBody := <-okChan:
 			if okBody.StatusCode != 0 {
-				logOptions := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "20"}
+				logOptions := container.LogsOptions{ShowStdout: true, ShowStderr: true, Tail: "20"}
 
 				logReader, err := dockerClient.ContainerLogs(context.Background(), containerId, logOptions)
 				if err != nil {
@@ -494,7 +493,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 
 			return nil
 		case <-stop:
-			if err := dockerClient.ContainerStop(context.Background(), containerId, nil); err != nil {
+			if err := dockerClient.ContainerStop(context.Background(), containerId, container.StopOptions{}); err != nil {
 				updates <- ServiceRunUpdate{
 					Label:       s.filepath,
 					ServiceName: s.Name,

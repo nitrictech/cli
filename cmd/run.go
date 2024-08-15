@@ -152,7 +152,13 @@ var runCmd = &cobra.Command{
 			for {
 				select {
 				case update := <-updatesChan:
-					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
+					message := update.Message
+
+					if update.Err != nil {
+						message = update.Err.Error()
+					}
+
+					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, message)
 				case <-stopChan:
 					fmt.Println("Shutting down services - exiting")
 					return nil

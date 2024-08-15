@@ -194,7 +194,7 @@ func (l *LocalSqlServer) Query(ctx context.Context, connectionString string, que
 	}
 
 	// Split commands from string
-	commands := strings.Split(query, ";")
+	commands := SQLSplit(query)
 
 	results := []*orderedmap.OrderedMap[string, any]{}
 

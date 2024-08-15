@@ -1,13 +1,14 @@
 describe('a11y test suite', () => {
   const pages = [
     '/',
+    '/architecture',
+    '/databases',
     '/schedules',
     '/storage',
-    '/databases',
     '/secrets',
     '/topics',
+    '/websockets',
     '/not-found',
-    '/architecture',
   ]
 
   pages.forEach((page) => {

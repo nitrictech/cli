@@ -44,7 +44,7 @@ INSERT INTO test_table (
     '172.16.0.1', '08:00:2b:07:08:09', B'00001111', 'UVWXYZABCD', '3 days', '\\xBAADF00D', 'af6d05e9-095f-4b1e-bb12-c3215b383d62'
   ),
   (
-    'Diana', 35, '1988-04-04', '2023-04-04 18:12:12', false, 5678.90, 
+    'Diana with special; chars ''', 35, '1988-04-04', '2023-04-04 18:12:12', false, 5678.90, 
     '{"hobbies": ["painting", "running"]}', '{"theme": "red", "notifications": false}', 78, 456456456456456, 0.58, 0.5772156649, 
     '192.168.100.1', '08:00:2b:10:11:12', B'11001100', 'EFGHIJKLMN', '4 hours', '\\xFEEDFACE', '179e1545-ec38-42da-b0cb-8ee20fcb0912'
   );
@@ -134,7 +134,7 @@ const expectedResults = [
   },
   {
     id: 4,
-    name: 'Diana',
+    name: "Diana with special; chars '",
     age: 35,
     birth_date: '1988-04-04',
     last_login: '2023-04-04 18:12:12',

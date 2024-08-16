@@ -306,12 +306,14 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 
 	dockerClient, err := docker.New()
 	if err != nil {
+		fmt.Println("Error creating docker client", err.Error())
+
 		return err
 	}
 
 	hostConfig := &container.HostConfig{
 		// TODO: make this configurable through an cmd param
-		AutoRemove: true,
+		AutoRemove: false,
 		// LogConfig:  *f.ce.Logger(f.runCtx).Config(),
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -369,6 +371,8 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		s.Name,
 	)
 	if err != nil {
+		fmt.Println("Error creating container", err)
+
 		updates <- ServiceRunUpdate{
 			ServiceName: s.Name,
 			Label:       s.filepath,
@@ -381,6 +385,8 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 
 	err = dockerClient.ContainerStart(context.TODO(), containerId, container.StartOptions{})
 	if err != nil {
+		fmt.Println("Error starting container", err.Error())
+
 		updates <- ServiceRunUpdate{
 			ServiceName: s.Name,
 			Label:       s.filepath,
@@ -407,6 +413,8 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 
 	attachResponse, err := dockerClient.ContainerAttach(context.TODO(), containerId, attachOptions)
 	if err != nil {
+		fmt.Println("Error attaching to container", err.Error())
+
 		return fmt.Errorf("error attaching to container %s: %w", s.Name, err)
 	}
 
@@ -425,6 +433,8 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			return len(p), nil
 		}), attachResponse.Reader)
 		if err != nil {
+			fmt.Println("Error reading container output", err.Error())
+
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
 				Label:       s.filepath,
@@ -439,6 +449,8 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	for {
 		select {
 		case err := <-errChan:
+			fmt.Println("Error waiting for container", err.Error())
+
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
 				Label:       s.filepath,
@@ -451,8 +463,16 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			if okBody.StatusCode != 0 {
 				logOptions := container.LogsOptions{ShowStdout: true, ShowStderr: true, Tail: "20"}
 
+				fmt.Println("Service exited with non 0 status", okBody.StatusCode)
+
+				if okBody.Error != nil {
+					fmt.Println("Service exited with non 0 status", okBody.Error.Message)
+				}
+
 				logReader, err := dockerClient.ContainerLogs(context.Background(), containerId, logOptions)
 				if err != nil {
+					fmt.Println("Error reading logs", err.Error())
+
 					return err
 				}
 

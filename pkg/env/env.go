@@ -25,7 +25,7 @@ import (
 var defaultEnv = ".env"
 
 func ReadEnv(filePath string) (map[string]string, error) {
-	file, err := os.OpenFile(filePath, os.O_RDONLY|os.O_CREATE, 0o666)
+	file, err := os.OpenFile(filePath, os.O_RDONLY, 0o666)
 	if err != nil {
 		return nil, err
 	}

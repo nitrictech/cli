@@ -126,7 +126,9 @@ var runCmd = &cobra.Command{
 		go func() {
 			err := proj.RunServices(localCloud, stopChan, updatesChan, loadEnv)
 			if err != nil {
-				panic(err)
+				localCloud.Stop()
+
+				tui.CheckErr(err)
 			}
 		}()
 

@@ -47,7 +47,6 @@ import (
 	"github.com/nitrictech/cli/pkg/view/tui/commands/services"
 	"github.com/nitrictech/cli/pkg/view/tui/fragments"
 	"github.com/nitrictech/cli/pkg/view/tui/teax"
-	"github.com/nitrictech/nitric/core/pkg/logger"
 )
 
 var (
@@ -208,8 +207,9 @@ var startCmd = &cobra.Command{
 		go func() {
 			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan, localEnv)
 			if err != nil {
-				// typically these are just exit statuses
-				logger.Debugf("Services exited with: %s", err.Error())
+				localCloud.Stop()
+
+				tui.CheckErr(err)
 			}
 		}()
 

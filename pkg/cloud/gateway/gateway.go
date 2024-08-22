@@ -59,6 +59,7 @@ type apiServer struct {
 	lis            net.Listener
 	srv            *fasthttp.Server
 	tlsCredentials *TLSCredentials
+	name           string // name of the API or host
 }
 
 type socketServer struct {
@@ -78,6 +79,7 @@ type TLSCredentials struct {
 var upgrader = websocket.FastHTTPUpgrader{}
 
 type LocalGatewayService struct {
+	portMapping      map[string]int
 	apiServers       []*apiServer
 	httpServers      []*apiServer
 	apis             []string
@@ -122,15 +124,15 @@ func (s *LocalGatewayService) GetApiAddresses() map[string]string {
 	addresses := make(map[string]string)
 
 	if len(s.apiServers) > 0 && len(s.apis) == len(s.apiServers) {
-		for idx, api := range s.apis {
+		for _, srv := range s.apiServers {
 			protocol := "http"
-			if s.apiServers[idx].tlsCredentials != nil {
+			if srv.tlsCredentials != nil {
 				protocol = "https"
 			}
 
-			address := strings.Replace(s.apiServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+			address := strings.Replace(srv.lis.Addr().String(), "[::]", "localhost", 1)
 
-			addresses[api] = fmt.Sprintf("%s://%s", protocol, address)
+			addresses[srv.name] = fmt.Sprintf("%s://%s", protocol, address)
 		}
 	}
 
@@ -144,15 +146,15 @@ func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
 	addresses := make(map[string]string)
 
 	if len(s.httpServers) > 0 && len(s.httpWorkers) == len(s.httpServers) {
-		for idx, host := range s.httpWorkers {
+		for _, srv := range s.httpServers {
 			protocol := "http"
-			if s.httpServers[idx].tlsCredentials != nil {
+			if srv.tlsCredentials != nil {
 				protocol = "https"
 			}
 
-			address := strings.Replace(s.httpServers[idx].lis.Addr().String(), "[::]", "localhost", 1)
+			address := strings.Replace(srv.lis.Addr().String(), "[::]", "localhost", 1)
 
-			addresses[host] = fmt.Sprintf("%s://%s", protocol, address)
+			addresses[srv.name] = fmt.Sprintf("%s://%s", protocol, address)
 		}
 	}
 
@@ -195,14 +197,12 @@ func (s *LocalGatewayService) handleHttpProxyRequest(idx int) fasthttp.RequestHa
 	}
 }
 
-func (s *LocalGatewayService) handleApiHttpRequest(idx int) fasthttp.RequestHandler {
+func (s *LocalGatewayService) handleApiHttpRequest(apiName string) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		if idx >= len(s.apis) {
+		if !s.apiServerExists(apiName) {
 			ctx.Error("Sorry, nitric is listening on this port but is waiting for an API to be available to handle requests, you may have removed an API during development this port will be assigned to an API when one becomes available", 404)
 			return
 		}
-
-		apiName := s.apis[idx]
 
 		headerMap := base_http.HttpHeadersToMap(&ctx.Request.Header)
 
@@ -485,9 +485,7 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 
 	s.httpWorkers = make([]string, 0)
 
-	var uniqHttpWorkers []string
-
-	uniqHttpWorkers = lo.Reduce(lo.Keys(state), func(agg []string, host string, idx int) []string {
+	uniqHttpWorkers := lo.Reduce(lo.Keys(state), func(agg []string, host string, idx int) []string {
 		if !lo.Contains(agg, host) {
 			agg = append(agg, host)
 		}
@@ -535,9 +533,12 @@ func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 
 func (s *LocalGatewayService) createApiServers() error {
 	// create an api server for every API worker
-	for len(s.apiServers) < len(s.apis) {
-		// Expand servers to account for apis
-		lis, err := netx.GetNextListener()
+	for _, apiName := range s.apis {
+		if s.apiServerExists(apiName) {
+			continue
+		}
+
+		lis, err := s.getListener("api", apiName)
 		if err != nil {
 			return err
 		}
@@ -547,7 +548,7 @@ func (s *LocalGatewayService) createApiServers() error {
 			IdleTimeout:     time.Second * 1,
 			CloseOnShutdown: true,
 			ReadBufferSize:  8192,
-			Handler:         s.handleApiHttpRequest(len(s.apiServers)),
+			Handler:         s.handleApiHttpRequest(apiName),
 			Logger:          log.New(s.logWriter, fmt.Sprintf("%s: ", lis.Addr().String()), 0),
 		}
 
@@ -555,6 +556,7 @@ func (s *LocalGatewayService) createApiServers() error {
 			lis:            lis,
 			srv:            fhttp,
 			tlsCredentials: s.ApiTlsCredentials,
+			name:           apiName,
 		}
 
 		// get a free port and listen on that for this API
@@ -575,6 +577,21 @@ func (s *LocalGatewayService) createApiServers() error {
 	}
 
 	return nil
+}
+
+func (s *LocalGatewayService) apiServerExists(apiName string) bool {
+	return lo.SomeBy(s.apiServers, func(as *apiServer) bool {
+		return as.name == apiName
+	})
+}
+
+func (s *LocalGatewayService) getListener(key string, name string) (net.Listener, error) {
+	portKey := fmt.Sprintf("%s:%s", key, name)
+	if port, exists := s.portMapping[portKey]; exists {
+		return net.Listen("tcp", fmt.Sprintf(":%d", port))
+	}
+
+	return netx.GetNextListener()
 }
 
 func (s *LocalGatewayService) createWebsocketServers() error {
@@ -651,6 +668,7 @@ func (s *LocalGatewayService) createHttpServers() error {
 			lis:            lis,
 			srv:            fhttp,
 			tlsCredentials: s.ApiTlsCredentials,
+			name:           s.httpWorkers[len(s.httpServers)],
 		}
 
 		// get a free port and listen on that for this API
@@ -784,6 +802,7 @@ func (s *LocalGatewayService) Stop() error {
 type NewGatewayOpts struct {
 	TLSCredentials *TLSCredentials
 	LogWriter      io.Writer
+	PortMapping    map[string]int
 }
 
 // Create new HTTP gateway
@@ -793,5 +812,6 @@ func NewGateway(opts NewGatewayOpts) (*LocalGatewayService, error) {
 		ApiTlsCredentials: opts.TLSCredentials,
 		bus:               EventBus.New(),
 		logWriter:         opts.LogWriter,
+		portMapping:       opts.PortMapping,
 	}, nil
 }

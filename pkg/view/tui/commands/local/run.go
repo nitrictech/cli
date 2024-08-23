@@ -17,6 +17,9 @@
 package local
 
 import (
+	"fmt"
+	"sort"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -115,6 +118,11 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 
+		// sort the apis by name
+		sort.Slice(newApiSummary, func(i, j int) bool {
+			return newApiSummary[i].Name < newApiSummary[j].Name
+		})
+
 		t.apis = newApiSummary
 	case websockets.State:
 		// update the api state by getting the latest API addresses
@@ -123,9 +131,14 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for api, host := range t.localCloud.Gateway.GetWebsocketAddresses() {
 			newWebsocketsSummary = append(newWebsocketsSummary, WebsocketSummary{
 				name: api,
-				url:  host,
+				url:  fmt.Sprintf("ws://%s", host),
 			})
 		}
+
+		// sort by name
+		sort.Slice(newWebsocketsSummary, func(i, j int) bool {
+			return newWebsocketsSummary[i].name < newWebsocketsSummary[j].name
+		})
 
 		t.websockets = newWebsocketsSummary
 	case http.State:
@@ -236,6 +249,11 @@ func (t *TuiModel) View() string {
 	for _, httpProxy := range t.httpProxies {
 		v.Add("http:%s - ", httpProxy.name)
 		v.Addln(httpProxy.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+	}
+
+	for _, websocket := range t.websockets {
+		v.Add("ws:%s - ", websocket.name)
+		v.Addln(websocket.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
 	return v.Render()

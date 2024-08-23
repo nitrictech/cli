@@ -19,7 +19,7 @@ describe('Websockets Spec', () => {
   it('should have correct websocket url', () => {
     cy.getTestEl('generated-request-path', 5000).should(
       'contain.text',
-      'ws://localhost:40',
+      'ws://localhost:7001',
     )
   })
 
@@ -32,7 +32,7 @@ describe('Websockets Spec', () => {
 
     cy.getTestEl('accordion-message-0').should(
       'contain.text',
-      'Connected to ws://localhost:40',
+      'Connected to ws://localhost:7001',
     )
 
     cy.getTestEl('message-text-input').type('My awesome test message!')
@@ -79,12 +79,12 @@ describe('Websockets Spec', () => {
 
     cy.getTestEl('accordion-message-0').should(
       'contain.text',
-      'Disconnected from ws://localhost:40',
+      'Disconnected from ws://localhost:7003',
     )
 
     cy.getTestEl('accordion-message-1').should(
       'contain.text',
-      'Error connecting to ws://localhost:40',
+      'Error connecting to ws://localhost:7003',
     )
   })
 

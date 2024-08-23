@@ -43,6 +43,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/netx"
+	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/cli/pkg/view/tui"
 
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
@@ -79,7 +80,6 @@ type TLSCredentials struct {
 var upgrader = websocket.FastHTTPUpgrader{}
 
 type LocalGatewayService struct {
-	portMapping      map[string]int
 	apiServers       []*apiServer
 	httpServers      []*apiServer
 	apis             []string
@@ -92,6 +92,8 @@ type LocalGatewayService struct {
 	topicsPlugin     *topics.LocalTopicsAndSubscribersService
 	schedulesPlugin  *schedules.LocalSchedulesService
 	serviceListener  net.Listener
+
+	localConfig localconfig.LocalConfiguration
 
 	logWriter io.Writer
 
@@ -538,7 +540,7 @@ func (s *LocalGatewayService) createApiServers() error {
 			continue
 		}
 
-		lis, err := s.getListener("api", apiName)
+		lis, err := getListener(s.localConfig.Apis, apiName)
 		if err != nil {
 			return err
 		}
@@ -585,10 +587,11 @@ func (s *LocalGatewayService) apiServerExists(apiName string) bool {
 	})
 }
 
-func (s *LocalGatewayService) getListener(key string, name string) (net.Listener, error) {
-	portKey := fmt.Sprintf("%s:%s", key, name)
-	if port, exists := s.portMapping[portKey]; exists {
-		return net.Listen("tcp", fmt.Sprintf(":%d", port))
+func getListener(mapping map[string]localconfig.LocalResourceConfiguration, name string) (net.Listener, error) {
+	if config, exists := mapping[name]; exists {
+		if config.Port != 0 {
+			return net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
+		}
 	}
 
 	return netx.GetNextListener()
@@ -610,7 +613,7 @@ func (s *LocalGatewayService) createWebsocketServers() error {
 				Handler:         s.handleWebsocketRequest(sock),
 			}
 
-			lis, err := netx.GetNextListener()
+			lis, err := getListener(s.localConfig.Websockets, sock)
 			if err != nil {
 				return err
 			}
@@ -802,7 +805,7 @@ func (s *LocalGatewayService) Stop() error {
 type NewGatewayOpts struct {
 	TLSCredentials *TLSCredentials
 	LogWriter      io.Writer
-	PortMapping    map[string]int
+	LocalConfig    localconfig.LocalConfiguration
 }
 
 // Create new HTTP gateway
@@ -812,6 +815,6 @@ func NewGateway(opts NewGatewayOpts) (*LocalGatewayService, error) {
 		ApiTlsCredentials: opts.TLSCredentials,
 		bus:               EventBus.New(),
 		logWriter:         opts.LogWriter,
-		portMapping:       opts.PortMapping,
+		localConfig:       opts.LocalConfig,
 	}, nil
 }

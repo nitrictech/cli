@@ -97,6 +97,7 @@ var runCmd = &cobra.Command{
 			localCloud, err = cloud.New(proj.Name, cloud.LocalCloudOptions{
 				TLSCredentials: tlsCredentials,
 				LogWriter:      logWriter,
+				LocalConfig:    proj.LocalConfig,
 			})
 			tui.CheckErr(err)
 			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})

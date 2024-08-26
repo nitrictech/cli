@@ -31,6 +31,7 @@ describe('Architecture Spec', () => {
     cy.wait(500)
 
     expectedNodes.forEach((content) => {
+      cy.log(`Checking that node: ${content} exists`)
       expect(cy.contains('.react-flow__node', content)).to.exist
     })
   })

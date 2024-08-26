@@ -21,7 +21,6 @@ import (
 	"io"
 	"sync"
 
-	"github.com/samber/lo"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -40,7 +39,7 @@ import (
 	"github.com/nitrictech/cli/pkg/grpcx"
 	"github.com/nitrictech/cli/pkg/netx"
 	"github.com/nitrictech/nitric/core/pkg/logger"
-	"github.com/nitrictech/nitric/core/pkg/membrane"
+	"github.com/nitrictech/nitric/core/pkg/server"
 )
 
 type Subscribable[T any, A any] interface {
@@ -51,8 +50,8 @@ type Subscribable[T any, A any] interface {
 type ServiceName = string
 
 type LocalCloud struct {
-	membraneLock sync.Mutex
-	membranes    map[ServiceName]*membrane.Membrane
+	serverLock sync.Mutex
+	servers    map[ServiceName]*server.NitricServer
 
 	Apis       *apis.LocalApiGatewayService
 	KeyValue   *keyvalue.BoltDocService
@@ -70,9 +69,9 @@ type LocalCloud struct {
 	// Store all the plugins locally
 }
 
-// StartLocalNitric - starts the Nitric Server (membrane), including plugins and their local dependencies (e.g. local versions of cloud services
+// StartLocalNitric - starts the Nitric Server, including plugins and their local dependencies (e.g. local versions of cloud services)
 func (lc *LocalCloud) Stop() {
-	for _, m := range lc.membranes {
+	for _, m := range lc.servers {
 		m.Stop()
 	}
 
@@ -88,10 +87,10 @@ func (lc *LocalCloud) Stop() {
 }
 
 func (lc *LocalCloud) AddService(serviceName string) (int, error) {
-	lc.membraneLock.Lock()
-	defer lc.membraneLock.Unlock()
+	lc.serverLock.Lock()
+	defer lc.serverLock.Unlock()
 
-	if _, ok := lc.membranes[serviceName]; ok {
+	if _, ok := lc.servers[serviceName]; ok {
 		return 0, fmt.Errorf("service %s already started", serviceName)
 	}
 
@@ -101,33 +100,24 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 		return 0, err
 	}
 
-	nitricMembraneServer, _ := membrane.New(&membrane.MembraneOptions{
-		// worker/listener plugins (these delegate incoming events/requests to handlers written with nitric)
-		ApiPlugin:               lc.Apis,
-		HttpPlugin:              lc.Http,
-		SchedulesPlugin:         lc.Schedules,
-		TopicsListenerPlugin:    lc.Topics,
-		StorageListenerPlugin:   lc.Storage,
-		WebsocketListenerPlugin: lc.Websockets,
-		SqlPlugin:               lc.Databases,
-
-		// address used by nitric clients to connect to the membrane (e.g. SDKs)
-		ServiceAddress: fmt.Sprintf("0.0.0.0:%d", ports[0]),
-
-		// cloud service plugins
-		SecretManagerPlugin: lc.Secrets,
-		StoragePlugin:       lc.Storage,
-		KeyValuePlugin:      lc.KeyValue,
-		GatewayPlugin:       lc.Gateway,
-		TopicsPlugin:        lc.Topics,
-		ResourcesPlugin:     lc.Resources,
-		WebsocketPlugin:     lc.Websockets,
-		QueuesPlugin:        lc.Queues,
-
-		MinWorkers: lo.ToPtr(0),
-
-		SuppressLogs: false,
-	})
+	nitricRuntimeServer, _ := server.New(
+		server.WithResourcesPlugin(lc.Resources),
+		server.WithApiPlugin(lc.Apis),
+		server.WithHttpPlugin(lc.Http),
+		server.WithSchedulesPlugin(lc.Schedules),
+		server.WithTopicsListenerPlugin(lc.Topics),
+		server.WithStorageListenerPlugin(lc.Storage),
+		server.WithWebsocketListenerPlugin(lc.Websockets),
+		server.WithSqlPlugin(lc.Databases),
+		server.WithServiceAddress(fmt.Sprintf("0.0.0.0:%d", ports[0])),
+		server.WithSecretManagerPlugin(lc.Secrets),
+		server.WithStoragePlugin(lc.Storage),
+		server.WithKeyValuePlugin(lc.KeyValue),
+		server.WithGatewayPlugin(lc.Gateway),
+		server.WithWebsocketPlugin(lc.Websockets),
+		server.WithQueuesPlugin(lc.Queues),
+		server.WithMinWorkers(0),
+		server.WithChildCommand([]string{}))
 
 	// Create a watcher that clears old resources when the service is restarted
 	_, err = resources.NewServiceResourceRefresher(serviceName, resources.NewServiceResourceRefresherArgs{
@@ -155,13 +145,13 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 		// Enable reflection on the gRPC server for local testing
 		reflection.Register(srv)
 
-		err := nitricMembraneServer.Start(membrane.WithGrpcServer(srv))
+		err := nitricRuntimeServer.Start(server.WithGrpcServer(srv))
 		if err != nil {
-			logger.Errorf("Error starting membrane: %s", err.Error())
+			logger.Errorf("Error starting nitric server: %s", err.Error())
 		}
 	}()
 
-	lc.membranes[serviceName] = nitricMembraneServer
+	lc.servers[serviceName] = nitricRuntimeServer
 
 	return ports[0], nil
 }
@@ -232,7 +222,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	}
 
 	return &LocalCloud{
-		membranes:  make(map[string]*membrane.Membrane),
+		servers:    make(map[string]*server.NitricServer),
 		Apis:       localApis,
 		Http:       localHttpProxy,
 		Resources:  localResources,

@@ -68,9 +68,3 @@ generate_check: generate fmt
 
 .PHONY: check
 check: lint test generate_check
-
-.PHONY: go-mod-update
-go-mod-update:
-	go run ./hack/github_release open-telemetry opentelemetry-collector-releases > pkg/project/otel-collector-version.txt
-	go get -u $$(go run github.com/nitrictech/go-mods-direct)
-	go mod tidy

@@ -18,6 +18,7 @@ package collector
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -87,7 +88,7 @@ func (s *ServiceRequirements) Error() error {
 			errorView.Addln("- %s", err.Error())
 		}
 
-		return fmt.Errorf(errorView.Render())
+		return errors.New(errorView.Render())
 	}
 
 	return nil

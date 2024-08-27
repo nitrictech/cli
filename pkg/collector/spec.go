@@ -59,7 +59,7 @@ func (pe ProjectErrors) Error() error {
 			errorView.Addln("- %s", err.Error()).WithStyle(lipgloss.NewStyle().MarginLeft(2))
 		}
 
-		return fmt.Errorf(errorView.Render())
+		return errors.New(errorView.Render())
 	}
 
 	return nil

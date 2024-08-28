@@ -40,6 +40,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/gateway"
 	"github.com/nitrictech/cli/pkg/dashboard"
 	"github.com/nitrictech/cli/pkg/env"
+	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/view/tui"
@@ -204,6 +205,12 @@ var startCmd = &cobra.Command{
 		// Run the app code (project services)
 		stopChan := make(chan bool)
 		updatesChan := make(chan project.ServiceRunUpdate)
+
+		// Subscribe to exit events
+		exit.GetExitService().SubscribeToExit(func(err error) {
+			localCloud.Stop()
+			tui.CheckErr(err)
+		})
 
 		go func() {
 			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan, localEnv)

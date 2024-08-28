@@ -42,6 +42,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
+	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/netx"
 	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/cli/pkg/view/tui"
@@ -49,7 +50,6 @@ import (
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 
 	"github.com/nitrictech/nitric/core/pkg/gateway"
-	"github.com/nitrictech/nitric/core/pkg/logger"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
@@ -477,7 +477,7 @@ func (s *LocalGatewayService) refreshApis(apiState apis.State) {
 
 	err := s.createApiServers()
 	if err != nil {
-		logger.Errorf("Error creating api servers: %s", err.Error())
+		exit.GetExitService().Exit(fmt.Errorf("error creating api servers: %s", err.Error()))
 	}
 }
 
@@ -502,7 +502,7 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 
 	err := s.createHttpServers()
 	if err != nil {
-		logger.Errorf("Error creating http servers: %s", err.Error())
+		exit.GetExitService().Exit(fmt.Errorf("error creating http servers: %s", err.Error()))
 	}
 }
 
@@ -529,7 +529,7 @@ func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 
 	err := s.createWebsocketServers()
 	if err != nil {
-		logger.Errorf("Error creating websocket servers: %s", err.Error())
+		exit.GetExitService().Exit(fmt.Errorf("error creating websocket servers: %s", err.Error()))
 	}
 }
 
@@ -590,7 +590,12 @@ func (s *LocalGatewayService) apiServerExists(apiName string) bool {
 func getListener(mapping map[string]localconfig.LocalResourceConfiguration, name string) (net.Listener, error) {
 	if config, exists := mapping[name]; exists {
 		if config.Port != 0 {
-			return net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
+			list, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
+			if err != nil {
+				return nil, fmt.Errorf("error mapping %s to port %d, %s", name, config.Port, err.Error())
+			}
+
+			return list, nil
 		}
 	}
 

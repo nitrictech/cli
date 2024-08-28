@@ -37,6 +37,7 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	"github.com/nitrictech/cli/pkg/docker"
+	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/netx"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
@@ -56,7 +57,7 @@ func (l *LocalSqlServer) ensureDatabaseExists(databaseName string) (string, erro
 	// Connect to the PostgreSQL instance
 	conn, err := pgx.Connect(context.Background(), fmt.Sprintf("user=postgres password=localsecret host=localhost port=%d dbname=postgres sslmode=disable", l.port))
 	if err != nil {
-		log.Fatal(err)
+		exit.GetExitService().Exit(err)
 	}
 	defer conn.Close(context.Background())
 

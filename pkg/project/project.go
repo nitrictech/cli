@@ -41,6 +41,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud"
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/preview"
+	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
@@ -59,9 +60,10 @@ import (
 const tempBuildDir = "./.nitric/build"
 
 type Project struct {
-	Name      string
-	Directory string
-	Preview   []preview.Feature
+	Name        string
+	Directory   string
+	Preview     []preview.Feature
+	LocalConfig localconfig.LocalConfiguration
 
 	services []Service
 }
@@ -345,7 +347,7 @@ func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) 
 }
 
 // fromProjectConfiguration creates a new Instance of a nitric Project from a configuration files contents
-func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) (*Project, error) {
+func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *localconfig.LocalConfiguration, fs afero.Fs) (*Project, error) {
 	services := []Service{}
 
 	matches := map[string]string{}
@@ -421,11 +423,17 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, fs afero.Fs) 
 		}
 	}
 
+	// create an empty local configuration if none is provided
+	if localConfig == nil {
+		localConfig = &localconfig.LocalConfiguration{}
+	}
+
 	return &Project{
-		Name:      projectConfig.Name,
-		Directory: projectConfig.Directory,
-		Preview:   projectConfig.Preview,
-		services:  services,
+		Name:        projectConfig.Name,
+		Directory:   projectConfig.Directory,
+		Preview:     projectConfig.Preview,
+		LocalConfig: *localConfig,
+		services:    services,
 	}, nil
 }
 
@@ -437,5 +445,11 @@ func FromFile(fs afero.Fs, filepath string) (*Project, error) {
 		return nil, fmt.Errorf("error loading nitric.yaml: %w", err)
 	}
 
-	return fromProjectConfiguration(projectConfig, fs)
+	// load local configuration
+	localConfig, err := localconfig.LocalConfigurationFromFile(fs, "")
+	if err != nil {
+		return nil, fmt.Errorf("error loading local.nitric.yaml: %w", err)
+	}
+
+	return fromProjectConfiguration(projectConfig, localConfig, fs)
 }

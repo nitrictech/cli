@@ -41,10 +41,10 @@ type ServiceConfiguration struct {
 	Match string `yaml:"match"`
 
 	// This is the custom runtime version (is custom if not nil, we auto-detect a standard language runtime)
-	Runtime string `yaml:"runtime"`
+	Runtime string `yaml:"runtime,omitempty"`
 
 	// This allows specifying a particular service type (e.g. "Job"), this is optional and custom service types can be defined for each stack
-	Type string `yaml:"type"`
+	Type string `yaml:"type,omitempty"`
 
 	// This is a command that will be use to run these services when using nitric start
 	Start string `yaml:"start"`
@@ -54,6 +54,7 @@ type ProjectConfiguration struct {
 	Name      string                          `yaml:"name"`
 	Directory string                          `yaml:"-"`
 	Services  []ServiceConfiguration          `yaml:"services"`
+	Ports     map[string]int                  `yaml:"ports,omitempty"`
 	Runtimes  map[string]RuntimeConfiguration `yaml:"runtimes,omitempty"`
 	Preview   []preview.Feature               `yaml:"preview,omitempty"`
 }

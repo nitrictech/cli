@@ -1,0 +1,27 @@
+# local.nitric.yaml
+# Local development configuration for Nitric services.
+
+apis:
+  # API Resources
+  first-api:
+    port: 6001
+
+  second-api:
+    port: 6002
+
+  my-db-api:
+    port: 6003
+
+  my-secret-api:
+    port: 6004
+
+websockets:
+  # WebSocket Resources
+  socket:
+    port: 7001
+
+  socket-2:
+    port: 7002
+
+  socket-3:
+    port: 7003

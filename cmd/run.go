@@ -31,6 +31,7 @@ import (
 	"github.com/nitrictech/cli/pkg/dashboard"
 	docker "github.com/nitrictech/cli/pkg/docker"
 	"github.com/nitrictech/cli/pkg/env"
+	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/view/tui"
@@ -97,6 +98,7 @@ var runCmd = &cobra.Command{
 			localCloud, err = cloud.New(proj.Name, cloud.LocalCloudOptions{
 				TLSCredentials: tlsCredentials,
 				LogWriter:      logWriter,
+				LocalConfig:    proj.LocalConfig,
 			})
 			tui.CheckErr(err)
 			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})
@@ -120,9 +122,16 @@ var runCmd = &cobra.Command{
 		_, err = prog.Run()
 		tui.CheckErr(err)
 
+		// Subscribe to exit events
+		exit.GetExitService().SubscribeToExit(func(err error) {
+			localCloud.Stop()
+			tui.CheckErr(err)
+		})
+
 		// Run the app code (project services)
 		stopChan := make(chan bool)
 		updatesChan := make(chan project.ServiceRunUpdate)
+
 		go func() {
 			err := proj.RunServices(localCloud, stopChan, updatesChan, loadEnv)
 			if err != nil {

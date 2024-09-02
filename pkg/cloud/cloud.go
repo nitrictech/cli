@@ -38,6 +38,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/grpcx"
 	"github.com/nitrictech/cli/pkg/netx"
+	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	"github.com/nitrictech/nitric/core/pkg/server"
 )
@@ -159,6 +160,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 type LocalCloudOptions struct {
 	TLSCredentials *gateway.TLSCredentials
 	LogWriter      io.Writer
+	LocalConfig    localconfig.LocalConfiguration
 }
 
 func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
@@ -197,6 +199,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	localGateway, err := gateway.NewGateway(gateway.NewGatewayOpts{
 		TLSCredentials: opts.TLSCredentials,
 		LogWriter:      opts.LogWriter,
+		LocalConfig:    opts.LocalConfig,
 	})
 	if err != nil {
 		return nil, err

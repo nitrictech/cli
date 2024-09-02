@@ -56,6 +56,7 @@ const setStorageHistory = (value: QueryHistory) => {
 const DatabasesExplorer: React.FC = () => {
   const { data, loading } = useWebSocket()
   const [callLoading, setCallLoading] = useState(false)
+  const [migrationLoading, setMigrationLoading] = useState(false)
 
   const [response, setResponse] = useState<string>()
 
@@ -151,6 +152,43 @@ const DatabasesExplorer: React.FC = () => {
     setTimeout(() => setCallLoading(false), 300)
   }
 
+  const handleMigrate = async () => {
+    if (!selectedDb) return
+
+    setMigrationLoading(true)
+
+    const loadingId = toast.loading('Migrating database')
+
+    const url = `http://${getHost()}/api/sql/migrate`
+
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      body: JSON.stringify({
+        databaseName: selectedDb.name,
+      }),
+      headers: fieldRowArrToHeaders([
+        {
+          key: 'Accept',
+          value: '*/*',
+        },
+        {
+          key: 'User-Agent',
+          value: 'Nitric Client (https://www.nitric.io)',
+        },
+      ]),
+    }
+
+    const res = await fetch(url, requestOptions)
+
+    if (res.ok) {
+      toast.success('Migration successful', { id: loadingId })
+    } else {
+      toast.error('Migration failed', { id: loadingId })
+    }
+
+    setMigrationLoading(false)
+  }
+
   const hasData = Boolean(data && data.sqlDatabases.length)
 
   // Save and retrieve SQL from localStorage
@@ -206,7 +244,6 @@ const DatabasesExplorer: React.FC = () => {
           <div className="flex max-w-[2000px] flex-col gap-8 md:pr-8">
             <div className="flex w-full flex-col gap-8">
               <div className="lg:hidden">
-                <div className="ml-auto flex items-center"></div>
                 {hasData && (
                   <Select
                     value={selectedDb.name}
@@ -230,6 +267,25 @@ const DatabasesExplorer: React.FC = () => {
                     </SelectContent>
                   </Select>
                 )}
+                {selectedDb.migrationsPath && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        disabled={migrationLoading}
+                        onClick={handleMigrate}
+                        className="ml-auto mt-2 flex"
+                      >
+                        Run Migrations
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        This will rebuild and run migrations for{' '}
+                        <strong>{selectedDb.name}</strong>
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
               <div className="hidden items-center gap-4 lg:flex">
                 <BreadCrumbs className="text-lg">
@@ -238,6 +294,25 @@ const DatabasesExplorer: React.FC = () => {
                     {selectedDb.name}
                   </h2>
                 </BreadCrumbs>
+                {selectedDb.migrationsPath && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        disabled={migrationLoading}
+                        onClick={handleMigrate}
+                        className="ml-auto"
+                      >
+                        Run Migrations
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        This will rebuild and run migrations for{' '}
+                        <strong>{selectedDb.name}</strong>
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
               <SectionCard title="Connect">
                 <div className="mb-4 flex max-w-full gap-x-2 text-sm">

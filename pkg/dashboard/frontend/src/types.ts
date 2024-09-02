@@ -28,6 +28,8 @@ export type KeyValue = BaseResource
 
 export interface SQLDatabase extends BaseResource {
   connectionString: string
+  status: 'starting' | 'active' | 'building migrations' | 'applying migrations'
+  migrationsPath: string
 }
 
 export interface HttpProxy extends BaseResource {

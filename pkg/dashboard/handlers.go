@@ -37,6 +37,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	secretspb "github.com/nitrictech/nitric/core/pkg/proto/secrets/v1"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
 )
@@ -283,6 +284,56 @@ func (d *Dashboard) createSqlQueryHandler() func(http.ResponseWriter, *http.Requ
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func (d *Dashboard) createApplySqlMigrationsHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Set CORs headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Parse the SQL migrations from the request body
+		var requestBody struct {
+			DatabaseName string `json:"databaseName"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&requestBody)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if requestBody.DatabaseName == "" {
+			http.Error(w, "missing databaseName param", http.StatusBadRequest)
+			return
+		}
+
+		// Apply the SQL migrations
+		databasesToMigrate := map[string]*resourcespb.SqlDatabaseResource{}
+
+		dbState := d.databaseService.GetState()
+
+		if _, ok := dbState[requestBody.DatabaseName]; !ok {
+			http.Error(w, "database not found", http.StatusBadRequest)
+			return
+		}
+
+		databasesToMigrate[requestBody.DatabaseName] = dbState[requestBody.DatabaseName].ResourceRegister.Resource
+
+		err = d.databaseService.BuildAndRunMigrations(databasesToMigrate)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
 

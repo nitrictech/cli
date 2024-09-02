@@ -27,7 +27,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
-	"github.com/nitrictech/cli/pkg/project"
+	projservice "github.com/nitrictech/cli/pkg/project/service"
 	tui "github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
 	"github.com/nitrictech/cli/pkg/view/tui/fragments"
@@ -37,10 +37,10 @@ import (
 
 type Model struct {
 	title               string
-	serviceBuildUpdates map[string][]project.ServiceBuildUpdate
+	serviceBuildUpdates map[string][]projservice.ServiceBuildUpdate
 	windowSize          tea.WindowSizeMsg
 
-	serviceBuildUpdatesChannel <-chan project.ServiceBuildUpdate
+	serviceBuildUpdatesChannel <-chan projservice.ServiceBuildUpdate
 
 	spinner spinner.Model
 
@@ -65,14 +65,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		m.windowSize = msg
-	case reactive.ChanMsg[project.ServiceBuildUpdate]:
+	case reactive.ChanMsg[projservice.ServiceBuildUpdate]:
 		// channel closed, the build is complete.
 		if !msg.Ok {
 			return m, teax.Quit
 		}
 
 		if m.serviceBuildUpdates[msg.Value.ServiceName] == nil {
-			m.serviceBuildUpdates[msg.Value.ServiceName] = make([]project.ServiceBuildUpdate, 0)
+			m.serviceBuildUpdates[msg.Value.ServiceName] = make([]projservice.ServiceBuildUpdate, 0)
 		}
 
 		m.serviceBuildUpdates[msg.Value.ServiceName] = append(m.serviceBuildUpdates[msg.Value.ServiceName], msg.Value)
@@ -97,15 +97,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) AllDone() bool {
 	for _, serviceUpdates := range m.serviceBuildUpdates {
 		for _, update := range serviceUpdates {
-			if update.Status == project.ServiceBuildStatus_Skipped {
+			if update.Status == projservice.ServiceBuildStatus_Skipped {
 				continue
 			}
 
-			if update.Status == project.ServiceBuildStatus_Complete {
+			if update.Status == projservice.ServiceBuildStatus_Complete {
 				continue
 			}
 
-			if update.Status == project.ServiceBuildStatus_Error {
+			if update.Status == projservice.ServiceBuildStatus_Error {
 				continue
 			}
 
@@ -150,13 +150,13 @@ func (m Model) View() string {
 
 		latestUpdate := service[len(service)-1]
 
-		if latestUpdate.Status != project.ServiceBuildStatus_Skipped {
+		if latestUpdate.Status != projservice.ServiceBuildStatus_Skipped {
 			statusColor := tui.Colors.Gray
-			if latestUpdate.Status == project.ServiceBuildStatus_Complete {
+			if latestUpdate.Status == projservice.ServiceBuildStatus_Complete {
 				statusColor = tui.Colors.Green
-			} else if latestUpdate.Status == project.ServiceBuildStatus_InProgress {
+			} else if latestUpdate.Status == projservice.ServiceBuildStatus_InProgress {
 				statusColor = tui.Colors.Blue
-			} else if latestUpdate.Status == project.ServiceBuildStatus_Error {
+			} else if latestUpdate.Status == projservice.ServiceBuildStatus_Error {
 				statusColor = tui.Colors.Red
 			}
 
@@ -167,13 +167,13 @@ func (m Model) View() string {
 		if m.Err != nil {
 			for _, update := range service {
 				messageLines := strings.Split(strings.TrimSpace(update.Message), "\n")
-				if len(messageLines) > 0 && update.Status != project.ServiceBuildStatus_Complete && latestUpdate.Status != project.ServiceBuildStatus_Skipped {
+				if len(messageLines) > 0 && update.Status != projservice.ServiceBuildStatus_Complete && latestUpdate.Status != projservice.ServiceBuildStatus_Skipped {
 					serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 				}
 			}
 		} else {
 			messageLines := strings.Split(strings.TrimSpace(latestUpdate.Message), "\n")
-			if len(messageLines) > 0 && latestUpdate.Status != project.ServiceBuildStatus_Complete && latestUpdate.Status != project.ServiceBuildStatus_Skipped {
+			if len(messageLines) > 0 && latestUpdate.Status != projservice.ServiceBuildStatus_Complete && latestUpdate.Status != projservice.ServiceBuildStatus_Skipped {
 				serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
 			}
 		}
@@ -184,11 +184,11 @@ func (m Model) View() string {
 	return v.Render()
 }
 
-func NewModel(serviceBuildUpdates <-chan project.ServiceBuildUpdate, title string) Model {
+func NewModel(serviceBuildUpdates <-chan projservice.ServiceBuildUpdate, title string) Model {
 	return Model{
 		title:                      title,
 		spinner:                    spinner.New(spinner.WithSpinner(spinner.Ellipsis)),
 		serviceBuildUpdatesChannel: serviceBuildUpdates,
-		serviceBuildUpdates:        make(map[string][]project.ServiceBuildUpdate),
+		serviceBuildUpdates:        make(map[string][]projservice.ServiceBuildUpdate),
 	}
 }

@@ -26,7 +26,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/cloud"
-	"github.com/nitrictech/cli/pkg/project"
+	projservice "github.com/nitrictech/cli/pkg/project/service"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/local"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
@@ -37,14 +37,14 @@ import (
 
 type Model struct {
 	stopChan           chan<- bool
-	updateChan         <-chan project.ServiceRunUpdate
+	updateChan         <-chan projservice.ServiceRunUpdate
 	localServicesModel tea.Model
 
 	windowSize tea.WindowSizeMsg
 	viewOffset int
 
-	serviceStatus     map[string]project.ServiceRunUpdate
-	serviceRunUpdates []project.ServiceRunUpdate
+	serviceStatus     map[string]projservice.ServiceRunUpdate
+	serviceRunUpdates []projservice.ServiceRunUpdate
 }
 
 var _ tea.Model = (*Model)(nil)
@@ -79,7 +79,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, tui.KeyMap.Down):
 			m.viewOffset = max(0, m.viewOffset-1)
 		}
-	case reactive.ChanMsg[project.ServiceRunUpdate]:
+	case reactive.ChanMsg[projservice.ServiceRunUpdate]:
 		// we know we have a service update
 		m.serviceStatus[msg.Value.ServiceName] = msg.Value
 		m.serviceRunUpdates = append(m.serviceRunUpdates, msg.Value)
@@ -141,7 +141,7 @@ func tail(text string, take int, offset int) string {
 	return strings.Join(lines[start:end], "\n")
 }
 
-func getMessageChunks(columnWidth int, update project.ServiceRunUpdate) []string {
+func getMessageChunks(columnWidth int, update projservice.ServiceRunUpdate) []string {
 	messageLines := strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n")
 	messageChunks := []string{}
 
@@ -205,7 +205,7 @@ func (m Model) View() string {
 
 	for _, update := range m.serviceRunUpdates {
 		statusColor := tui.Colors.Gray
-		if update.Status == project.ServiceRunStatus(project.ServiceBuildStatus_Error) {
+		if update.Status == projservice.ServiceRunStatus(projservice.ServiceBuildStatus_Error) {
 			statusColor = tui.Colors.Red
 		}
 
@@ -234,15 +234,15 @@ func (m Model) View() string {
 	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(tui.Colors.Gray).Render(sideBySide) + "\n " + fragments.Hotkey("esc", "quit") + " " + fragments.Hotkey("↑/↓", "navigate logs")
 }
 
-func NewModel(stopChannel chan<- bool, updateChannel <-chan project.ServiceRunUpdate, localCloud *cloud.LocalCloud, dashboardUrl string) Model {
+func NewModel(stopChannel chan<- bool, updateChannel <-chan projservice.ServiceRunUpdate, localCloud *cloud.LocalCloud, dashboardUrl string) Model {
 	localServicesModel := local.NewTuiModel(localCloud, dashboardUrl)
 
 	return Model{
 		stopChan:           stopChannel,
 		localServicesModel: localServicesModel,
 		updateChan:         updateChannel,
-		serviceStatus:      make(map[string]project.ServiceRunUpdate),
-		serviceRunUpdates:  []project.ServiceRunUpdate{},
+		serviceStatus:      make(map[string]projservice.ServiceRunUpdate),
+		serviceRunUpdates:  []projservice.ServiceRunUpdate{},
 		viewOffset:         0,
 	}
 }

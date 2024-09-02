@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package project
+package service
 
 import (
 	"bytes"
@@ -53,6 +53,12 @@ type Service struct {
 	buildContext runtime.RuntimeBuildContext
 
 	startCmd string
+}
+
+const tempBuildDir = "./.nitric/build"
+
+func GetTempBuildDir() string {
+	return tempBuildDir
 }
 
 func (s *Service) GetFilePath() string {
@@ -126,6 +132,13 @@ func (b *serviceBuildUpdateWriter) Write(data []byte) (int, error) {
 	}
 
 	return len(data), nil
+}
+
+func NewBuildUpdateWriter(serviceName string, buildUpdateChan chan ServiceBuildUpdate) io.Writer {
+	return &serviceBuildUpdateWriter{
+		serviceName:     serviceName,
+		buildUpdateChan: buildUpdateChan,
+	}
 }
 
 func (s *Service) BuildImage(fs afero.Fs, logs io.Writer) error {
@@ -496,5 +509,15 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 				return nil
 			}
 		}
+	}
+}
+
+func New(name, serviceType, filepath string, buildContext runtime.RuntimeBuildContext, startCmd string) *Service {
+	return &Service{
+		Name:         name,
+		Type:         serviceType,
+		filepath:     filepath,
+		buildContext: buildContext,
+		startCmd:     startCmd,
 	}
 }

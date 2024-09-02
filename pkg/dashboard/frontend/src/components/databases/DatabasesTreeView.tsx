@@ -2,6 +2,7 @@ import { type FC, useMemo } from 'react'
 import type { SQLDatabase } from '../../types'
 import TreeView, { type TreeItemType } from '../shared/TreeView'
 import type { TreeItem, TreeItemIndex } from 'react-complex-tree'
+import { Badge } from '../ui/badge'
 
 export type DatabasesTreeItemType = TreeItemType<SQLDatabase>
 
@@ -57,7 +58,18 @@ const DatabasesTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
         }
       }}
       renderItemTitle={({ item }) => {
-        return <span className="truncate">{item.data.label}</span>
+        return (
+          <div className="flex w-full items-center justify-between">
+            <span className="truncate">{item.data.label}</span>
+            {item.data.data?.status !== 'active' && (
+              <span>
+                <Badge className={'ml-2 bg-blue-600'}>
+                  {item.data.data?.status}
+                </Badge>
+              </span>
+            )}
+          </div>
+        )
       }}
     />
   )

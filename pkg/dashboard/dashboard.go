@@ -17,7 +17,6 @@
 package dashboard
 
 import (
-	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -40,7 +39,6 @@ import (
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/netx"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
-	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
@@ -102,6 +100,8 @@ type SQLDatabaseSpec struct {
 	*BaseResourceSpec
 
 	ConnectionString string `json:"connectionString"`
+	Status           string `json:"status"`
+	MigrationsPath   string `json:"migrationsPath"`
 }
 
 type SecretSpec struct {
@@ -242,7 +242,6 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.topics = []*TopicSpec{}
 	d.stores = []*KeyValueSpec{}
 	d.queues = []*QueueSpec{}
-	d.sqlDatabases = []*SQLDatabaseSpec{}
 	d.apiSecurityDefinitions = map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{}
 
 	d.policies = map[string]PolicySpec{}
@@ -368,36 +367,6 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 		d.apiSecurityDefinitions[apiDefinition.Resource.ApiName] = map[string]*resourcespb.ApiSecurityDefinitionResource{}
 
 		d.apiSecurityDefinitions[apiDefinition.Resource.ApiName][schemeName] = apiDefinition.Resource
-	}
-
-	for dbName, resource := range lrs.SqlDatabases.GetAll() {
-		exists := lo.ContainsBy(d.sqlDatabases, func(item *SQLDatabaseSpec) bool {
-			return item.Name == dbName
-		})
-
-		if !exists {
-			connectionString, err := d.databaseService.ConnectionString(context.TODO(), &sqlpb.SqlConnectionStringRequest{
-				DatabaseName: dbName,
-			})
-			if err != nil {
-				fmt.Printf("Error getting connection string for database %s: %v\n", dbName, err)
-				continue
-			}
-
-			d.sqlDatabases = append(d.sqlDatabases, &SQLDatabaseSpec{
-				BaseResourceSpec: &BaseResourceSpec{
-					Name:               dbName,
-					RequestingServices: resource.RequestingServices,
-				},
-				ConnectionString: connectionString.GetConnectionString(),
-			})
-		}
-	}
-
-	if len(d.sqlDatabases) > 0 {
-		slices.SortFunc(d.sqlDatabases, func(a, b *SQLDatabaseSpec) int {
-			return compare(a.Name, b.Name)
-		})
 	}
 
 	d.refresh()
@@ -568,6 +537,35 @@ func (d *Dashboard) updateHttpProxies(state httpproxy.State) {
 	d.refresh()
 }
 
+func (d *Dashboard) updateSqlDatabases(state sql.State) {
+	d.resourcesLock.Lock()
+	defer d.resourcesLock.Unlock()
+
+	sqlDatabases := []*SQLDatabaseSpec{}
+
+	for dbName, db := range state {
+		sqlDatabases = append(sqlDatabases, &SQLDatabaseSpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name:               dbName,
+				RequestingServices: db.ResourceRegister.RequestingServices,
+			},
+			ConnectionString: db.ConnectionString,
+			Status:           db.Status,
+			MigrationsPath:   db.ResourceRegister.Resource.Migrations.GetMigrationsPath(),
+		})
+	}
+
+	if len(sqlDatabases) > 0 {
+		slices.SortFunc(sqlDatabases, func(a, b *SQLDatabaseSpec) int {
+			return compare(a.Name, b.Name)
+		})
+	}
+
+	d.sqlDatabases = sqlDatabases
+
+	d.refresh()
+}
+
 func (d *Dashboard) refresh() {
 	if !d.noBrowser && !d.browserHasOpened {
 		d.openBrowser()
@@ -659,6 +657,8 @@ func (d *Dashboard) Start() error {
 	http.HandleFunc("/api/sql", d.createSqlQueryHandler())
 
 	http.HandleFunc("/api/secrets", d.createSecretsHandler())
+
+	http.HandleFunc("/api/sql/migrate", d.createApplySqlMigrationsHandler())
 
 	// handle websockets
 	http.HandleFunc("/ws-info", func(w http.ResponseWriter, r *http.Request) {
@@ -864,6 +864,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	localCloud.Topics.SubscribeToState(dash.updateTopicSubscriptions)
 	localCloud.Storage.SubscribeToState(dash.updateBucketNotifications)
 	localCloud.Http.SubscribeToState(dash.updateHttpProxies)
+	localCloud.Databases.SubscribeToState(dash.updateSqlDatabases)
 
 	// subscribe to history events from gateway
 	localCloud.Apis.SubscribeToAction(dash.handleApiHistory)

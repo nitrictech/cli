@@ -176,7 +176,7 @@ describe('Databases Spec', () => {
       cy.get(`[data-rct-item-id="${id}"]`).should('exist')
     })
   })
-  ;['my-db', 'my-second-db'].forEach((db) => {
+  ;['my-db', 'my-second-db'].forEach((db, idx) => {
     it(`should check connection string for ${db}`, () => {
       cy.get(`[data-rct-item-id="${db}"]`).click()
 
@@ -219,6 +219,90 @@ describe('Databases Spec', () => {
         // Validate the response
         expect(interception.response.statusCode).to.equal(200)
         expect(interception.response.body).to.deep.equal(expectedResults)
+      })
+    })
+
+    it(`should create test table ${db} and see if it exists`, () => {
+      cy.get(`[data-rct-item-id="${db}"]`).click()
+
+      cy.get('#sql-editor .cm-content', {
+        timeout: 5000,
+      })
+        .clear({
+          force: true,
+        })
+        .invoke('html', testQueries)
+
+      cy.getTestEl('run-btn').click()
+
+      cy.intercept('POST', '/api/sql', (req) => {
+        if (req.body && req.body.query === 'select * from test_table;') {
+          req.continue()
+        }
+      }).as('query')
+
+      cy.get('#sql-editor .cm-content', {
+        timeout: 5000,
+      })
+        .clear({
+          force: true,
+        })
+        .invoke('html', 'select * from test_table;')
+
+      cy.getTestEl('run-btn').click()
+
+      cy.wait('@query').then((interception) => {
+        // Validate the response
+        expect(interception.response.statusCode).to.equal(200)
+        expect(interception.response.body).to.deep.equal(expectedResults)
+      })
+    })
+
+    it(`should of applied migrations for ${db}`, () => {
+      cy.get(`[data-rct-item-id="${db}"]`).click()
+
+      cy.get('#sql-editor .cm-content', {
+        timeout: 5000,
+      })
+        .clear({
+          force: true,
+        })
+        .invoke('html', testQueries)
+
+      cy.getTestEl('run-btn').click()
+
+      cy.intercept('POST', '/api/sql', (req) => {
+        if (
+          req.body &&
+          req.body.query === `select * from my_migration_table;`
+        ) {
+          req.continue()
+        }
+      }).as('query')
+
+      cy.get('#sql-editor .cm-content', {
+        timeout: 5000,
+      })
+        .clear({
+          force: true,
+        })
+        .invoke('html', 'select * from my_migration_table;')
+
+      cy.getTestEl('run-btn').click()
+
+      cy.wait('@query').then((interception) => {
+        // Validate the response
+        expect(interception.response.statusCode).to.equal(200)
+        expect(interception.response.body).to.deep.equal([
+          {
+            id: 1,
+            name: `${db}-foo`,
+          },
+          {
+            id: 2,
+            name: `${db}-bar`,
+          },
+        ])
       })
     })
   })

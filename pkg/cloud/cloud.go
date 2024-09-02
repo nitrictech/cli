@@ -220,7 +220,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localDatabaseService, err := sql.NewLocalSqlServer(projectName)
+	localDatabaseService, err := sql.NewLocalSqlServer(projectName, localResources)
 	if err != nil {
 		return nil, err
 	}

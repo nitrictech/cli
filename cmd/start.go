@@ -36,6 +36,8 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
+	projservice "github.com/nitrictech/cli/pkg/project/service"
+
 	"github.com/nitrictech/cli/pkg/cloud"
 	"github.com/nitrictech/cli/pkg/cloud/gateway"
 	"github.com/nitrictech/cli/pkg/dashboard"
@@ -204,7 +206,7 @@ var startCmd = &cobra.Command{
 
 		// Run the app code (project services)
 		stopChan := make(chan bool)
-		updatesChan := make(chan project.ServiceRunUpdate)
+		updatesChan := make(chan projservice.ServiceRunUpdate)
 
 		// Subscribe to exit events
 		exit.GetExitService().SubscribeToExit(func(err error) {

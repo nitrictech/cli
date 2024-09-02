@@ -34,6 +34,7 @@ import (
 	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/cli/pkg/project"
+	"github.com/nitrictech/cli/pkg/project/service"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/local"

@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"maps"
 	"net"
 	"net/netip"
@@ -150,7 +149,7 @@ func (l *LocalSqlServer) start() error {
 	if err != nil {
 		// FIXME: Use error container type to validate here
 		if !strings.Contains(err.Error(), "name already in use") {
-			log.Fatalf("Failed to create volume: %v", err)
+			exit.GetExitService().Exit(fmt.Errorf("failed to create volume: %w", err))
 		}
 	}
 
@@ -288,19 +287,19 @@ func (l *LocalSqlServer) BuildAndRunMigrations(databasesToMigrate map[string]*re
 
 	migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, fs)
 	if err != nil {
-		log.Fatalf("Failed to get migration image build contexts: %v", err)
+		exit.GetExitService().Exit(fmt.Errorf("failed to get migration image build contexts: %w", err))
 	}
 
 	if len(migrationImageContexts) > 0 {
 		updates, err := migrations.BuildMigrationImages(fs, migrationImageContexts)
 		if err != nil {
-			log.Fatalf("Failed to build migration images: %v", err)
+			exit.GetExitService().Exit(fmt.Errorf("failed to build migration images: %w", err))
 		}
 
 		// wait for updates to complete
 		for update := range updates {
 			if update.Err != nil {
-				log.Fatalf("Failed to build migration image: %v", update.Err)
+				exit.GetExitService().Exit(fmt.Errorf("failed to build migration image: %w", update.Err))
 			}
 		}
 
@@ -324,7 +323,7 @@ func (l *LocalSqlServer) BuildAndRunMigrations(databasesToMigrate map[string]*re
 
 		err = migrations.RunMigrations(localMigrations)
 		if err != nil {
-			log.Fatalf("Failed to run migrations: %v", err)
+			exit.GetExitService().Exit(fmt.Errorf("failed to run migrations: %w", err))
 		}
 
 		// Update the status to running
@@ -347,7 +346,7 @@ func (l *LocalSqlServer) HandleUpdates(lrs resources.LocalResourcesState) {
 
 		connectionString, err := l.ensureDatabaseExists(dbName)
 		if err != nil {
-			log.Fatalf("Failed to ensure database exists: %v", err)
+			exit.GetExitService().Exit(fmt.Errorf("failed to ensure database exists: %w", err))
 		}
 
 		if !ok {
@@ -382,7 +381,7 @@ func (l *LocalSqlServer) HandleUpdates(lrs resources.LocalResourcesState) {
 	if len(databasesToMigrate) > 0 {
 		err := l.BuildAndRunMigrations(databasesToMigrate)
 		if err != nil {
-			log.Fatalf("Failed to build and run migrations: %v", err)
+			exit.GetExitService().Exit(fmt.Errorf("failed to build and run migrations: %w", err))
 		}
 	}
 }

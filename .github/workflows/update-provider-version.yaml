@@ -1,0 +1,54 @@
+name: Update Nitric Provider Version
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Runs daily at midnight
+  workflow_dispatch:
+
+jobs:
+  update-nitric-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Get latest Nitric version
+        id: get_version
+        run: |
+          LATEST_VERSION=$(curl --silent "https://api.github.com/repos/nitrictech/nitric/releases/latest" | jq -r .tag_name)
+          # Remove any leading 'v' from the version
+          CLEAN_VERSION=${LATEST_VERSION#v}
+          echo "VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+
+      - name: Update provider versions in YAML files
+        id: update_files
+        run: |
+          for FILE in pkg/project/stack/*.config.yaml; do
+            if grep -q "provider: nitric" "$FILE"; then
+              # Update only the version part after the '@'
+              sed -i "s|\(provider: nitric/[a-z]*@\)[0-9.]*|\1$VERSION|g" "$FILE"
+            fi
+          done
+
+          # Check if any files were actually modified
+          if git diff --exit-code --quiet; then
+            echo "No changes detected."
+            echo "FILES_CHANGED=false" >> $GITHUB_ENV
+          else
+            echo "Files updated."
+            FILES_CHANGED=true
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add pkg/project/stack/*.config.yaml
+            git commit -m "Update Nitric provider version to $VERSION"
+            echo "FILES_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+      - name: Create Pull Request
+        if: env.FILES_CHANGED == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: Update Nitric provider version to ${{ env.VERSION }}
+          title: "Update Nitric provider version to ${{ env.VERSION }}"
+          body: "This PR updates the Nitric provider version in the YAML configuration files to the latest release."
+          branch: update-nitric-version

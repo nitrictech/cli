@@ -23,6 +23,7 @@ import (
 	"maps"
 	"net"
 	"net/netip"
+	goruntime "runtime"
 	"strings"
 	"time"
 
@@ -44,6 +45,7 @@ import (
 	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/netx"
 	"github.com/nitrictech/cli/pkg/project/migrations"
+	"github.com/nitrictech/nitric/core/pkg/env"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
@@ -362,11 +364,19 @@ func (l *LocalSqlServer) HandleUpdates(lrs resources.LocalResourcesState) {
 		migrationPath := r.Resource.Migrations.GetMigrationsPath()
 
 		if migrationPath != "" && l.State[dbName].LocalMigration == nil {
+			dockerHost := "host.docker.internal"
+
+			if goruntime.GOOS == "linux" {
+				host := env.GetEnv("NITRIC_DOCKER_HOST", "172.17.0.1")
+
+				dockerHost = host.String()
+			}
+
 			l.State[dbName].Status = string(DatabaseStatusBuildingMigrations)
 			l.State[dbName].LocalMigration = &migrations.LocalMigration{
 				DatabaseName: dbName,
 				// Replace localhost with host.docker.internal to allow the container to connect to the host
-				ConnectionString: strings.Replace(connectionString, "localhost", "host.docker.internal", 1),
+				ConnectionString: strings.Replace(connectionString, "localhost", dockerHost, 1),
 			}
 
 			databasesToMigrate[dbName] = r.Resource

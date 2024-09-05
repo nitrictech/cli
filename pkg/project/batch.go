@@ -45,6 +45,8 @@ type Batch struct {
 	Name string
 
 	// filepath relative to the project root directory
+	basedir string
+	// filepath relative to the basedir
 	filepath     string
 	buildContext runtime.RuntimeBuildContext
 
@@ -52,11 +54,11 @@ type Batch struct {
 }
 
 func (s *Batch) GetFilePath() string {
-	return s.filepath
+	return filepath.Join(s.basedir, s.filepath)
 }
 
 func (s *Batch) GetAbsoluteFilePath() (string, error) {
-	return filepath.Abs(s.filepath)
+	return filepath.Abs(s.GetFilePath())
 }
 
 // Run - runs the service using the provided command, typically not in a container.
@@ -80,6 +82,7 @@ func (s *Batch) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[s
 	)
 
 	cmd.Env = append([]string{}, os.Environ()...)
+	cmd.Dir = s.basedir
 
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
@@ -88,14 +91,14 @@ func (s *Batch) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[s
 	cmd.Stdout = &ServiceRunUpdateWriter{
 		updates:     updates,
 		serviceName: s.Name,
-		label:       s.filepath,
+		label:       s.GetFilePath(),
 		status:      ServiceRunStatus_Running,
 	}
 
 	cmd.Stderr = &ServiceRunUpdateWriter{
 		updates:     updates,
 		serviceName: s.Name,
-		label:       s.filepath,
+		label:       s.GetFilePath(),
 		status:      ServiceRunStatus_Error,
 	}
 
@@ -110,7 +113,7 @@ func (s *Batch) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[s
 				ServiceName: s.Name,
 				Label:       "nitric",
 				Status:      ServiceRunStatus_Running,
-				Message:     fmt.Sprintf("started service %s", s.filepath),
+				Message:     fmt.Sprintf("started service %s", s.GetFilePath()),
 			}
 		}
 
@@ -212,7 +215,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 	if err != nil {
 		updates <- ServiceRunUpdate{
 			ServiceName: s.Name,
-			Label:       s.filepath,
+			Label:       s.GetFilePath(),
 			Status:      ServiceRunStatus_Error,
 			Err:         err,
 		}
@@ -224,7 +227,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 	if err != nil {
 		updates <- ServiceRunUpdate{
 			ServiceName: s.Name,
-			Label:       s.filepath,
+			Label:       s.GetFilePath(),
 			Status:      ServiceRunStatus_Error,
 			Err:         err,
 		}
@@ -234,7 +237,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 
 	updates <- ServiceRunUpdate{
 		ServiceName: s.Name,
-		Label:       s.filepath,
+		Label:       s.GetFilePath(),
 		Message:     fmt.Sprintf("Service %s started", s.Name),
 		Status:      ServiceRunStatus_Running,
 	}
@@ -258,7 +261,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 		_, err := io.Copy(writerFunc(func(p []byte) (int, error) {
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
-				Label:       s.filepath,
+				Label:       s.GetFilePath(),
 				Message:     string(p),
 				Status:      ServiceRunStatus_Running,
 			}
@@ -268,7 +271,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 		if err != nil {
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
-				Label:       s.filepath,
+				Label:       s.GetFilePath(),
 				Status:      ServiceRunStatus_Error,
 				Err:         err,
 			}
@@ -282,7 +285,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 		case err := <-errChan:
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
-				Label:       s.filepath,
+				Label:       s.GetFilePath(),
 				Err:         err,
 				Status:      ServiceRunStatus_Error,
 			}
@@ -307,7 +310,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 
 				updates <- ServiceRunUpdate{
 					ServiceName: s.Name,
-					Label:       s.filepath,
+					Label:       s.GetFilePath(),
 					Err:         err,
 					Status:      ServiceRunStatus_Error,
 				}
@@ -315,7 +318,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 				return err
 			} else {
 				updates <- ServiceRunUpdate{
-					Label:       s.filepath,
+					Label:       s.GetFilePath(),
 					ServiceName: s.Name,
 					Message:     "Service successfully exited",
 					Status:      ServiceRunStatus_Done,
@@ -326,7 +329,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 		case <-stop:
 			if err := dockerClient.ContainerStop(context.Background(), containerId, container.StopOptions{}); err != nil {
 				updates <- ServiceRunUpdate{
-					Label:       s.filepath,
+					Label:       s.GetFilePath(),
 					ServiceName: s.Name,
 					Status:      ServiceRunStatus_Error,
 					Err:         err,

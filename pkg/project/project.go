@@ -354,6 +354,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 
 	for _, serviceSpec := range projectConfig.Services {
 		serviceMatch := filepath.Join(serviceSpec.Basedir, serviceSpec.Match)
+
 		files, err := afero.Glob(fs, serviceMatch)
 		if err != nil {
 			return nil, fmt.Errorf("unable to match service files for pattern %s: %w", serviceMatch, err)

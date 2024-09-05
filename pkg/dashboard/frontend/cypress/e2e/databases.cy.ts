@@ -261,6 +261,8 @@ describe('Databases Spec', () => {
     it(`should of applied migrations for ${db}`, () => {
       cy.get(`[data-rct-item-id="${db}"]`).click()
 
+      cy.wait(1000)
+
       cy.intercept('POST', '/api/sql/migrate').as('migrate')
 
       cy.getTestEl('migrate-btn').click()
@@ -268,13 +270,19 @@ describe('Databases Spec', () => {
       cy.wait('@migrate')
 
       cy.intercept('POST', '/api/sql', (req) => {
-        if (
-          req.body &&
-          req.body.query === `select * from my_migration_table;`
-        ) {
+        let body = req.body
+
+        if (typeof req.body === 'string') {
+          body = JSON.parse(req.body)
+        }
+
+        if (body && body.query.trim() === `select * from my_migration_table;`) {
+          req.alias = 'query'
+          req.continue()
+        } else {
           req.continue()
         }
-      }).as('query')
+      })
 
       cy.get('#sql-editor .cm-content', {
         timeout: 5000,
@@ -288,7 +296,7 @@ describe('Databases Spec', () => {
 
       cy.wait('@query').then((interception) => {
         // Validate the response
-        //expect(interception.response.statusCode).to.equal(200)
+        expect(interception.response.statusCode).to.equal(200)
         expect(interception.response.body).to.deep.equal([
           {
             id: 1,

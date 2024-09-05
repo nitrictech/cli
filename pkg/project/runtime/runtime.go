@@ -108,13 +108,13 @@ func customBuildContext(entrypointFilePath string, dockerfilePath string, baseDi
 var csharpDockerfile string
 var csharpIgnores = append([]string{"obj/", "bin/"}, commonIgnore...)
 
-func csharpBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
+func csharpBuildContext(entrypointFilePath string, baseDir string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	// Convert the service name to the name of the binary produced. i.e. services/hello.csproj -> hello
 	handler := strings.ReplaceAll(filepath.Base(entrypointFilePath), ".csproj", "")
 
 	return &RuntimeBuildContext{
 		DockerfileContents: csharpDockerfile,
-		BaseDirectory:      ".", // use the nitric project directory
+		BaseDirectory:      baseDir, // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": handler,
 		},
@@ -126,10 +126,10 @@ func csharpBuildContext(entrypointFilePath string, additionalIgnores []string) (
 var jvmDockerfile string
 var jvmIgnores = append([]string{"obj/", "bin/"}, commonIgnore...)
 
-func jvmBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
+func jvmBuildContext(entrypointFilePath string, baseDir string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
 		DockerfileContents: jvmDockerfile,
-		BaseDirectory:      ".", // use the nitric project directory
+		BaseDirectory:      baseDir, // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),
 		},
@@ -141,10 +141,10 @@ func jvmBuildContext(entrypointFilePath string, additionalIgnores []string) (*Ru
 var pythonDockerfile string
 var pythonIgnores = append([]string{"__pycache__/", "*.py[cod]", "*$py.class"}, commonIgnore...)
 
-func pythonBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
+func pythonBuildContext(entrypointFilePath string, baseDir string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
 		DockerfileContents: pythonDockerfile,
-		BaseDirectory:      ".", // use the nitric project directory
+		BaseDirectory:      baseDir, // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),
 		},
@@ -156,10 +156,10 @@ func pythonBuildContext(entrypointFilePath string, additionalIgnores []string) (
 var javascriptDockerfile string
 var javascriptIgnores = append([]string{"node_modules/"}, commonIgnore...)
 
-func javascriptBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
+func javascriptBuildContext(entrypointFilePath string, baseDir string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
 		DockerfileContents: javascriptDockerfile,
-		BaseDirectory:      ".", // use the nitric project directory
+		BaseDirectory:      baseDir, // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),
 		},
@@ -170,10 +170,10 @@ func javascriptBuildContext(entrypointFilePath string, additionalIgnores []strin
 //go:embed typescript.dockerfile
 var typescriptDockerfile string
 
-func typescriptBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
+func typescriptBuildContext(entrypointFilePath string, baseDir string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
 		DockerfileContents: typescriptDockerfile,
-		BaseDirectory:      ".", // use the nitric project directory
+		BaseDirectory:      baseDir, // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),
 		},
@@ -185,10 +185,10 @@ func typescriptBuildContext(entrypointFilePath string, additionalIgnores []strin
 var dartDockerfile string
 var dartIgnores = append([]string{}, commonIgnore...)
 
-func dartBuildContext(entrypointFilePath string, additionalIgnores []string) (*RuntimeBuildContext, error) {
+func dartBuildContext(entrypointFilePath string, baseDir string, additionalIgnores []string) (*RuntimeBuildContext, error) {
 	return &RuntimeBuildContext{
 		DockerfileContents: dartDockerfile,
-		BaseDirectory:      ".", // use the nitric project directory
+		BaseDirectory:      baseDir, // use the nitric project directory
 		BuildArguments: map[string]string{
 			"HANDLER": filepath.ToSlash(entrypointFilePath),
 		},
@@ -233,17 +233,17 @@ func NewBuildContext(entrypointFilePath string, dockerfilePath string, baseDirec
 
 	switch ext {
 	case ".csproj":
-		return csharpBuildContext(entrypointFilePath, additionalIgnores)
+		return csharpBuildContext(entrypointFilePath, baseDirectory, additionalIgnores)
 	case ".jar":
-		return jvmBuildContext(entrypointFilePath, additionalIgnores)
+		return jvmBuildContext(entrypointFilePath, baseDirectory, additionalIgnores)
 	case ".py":
-		return pythonBuildContext(entrypointFilePath, additionalIgnores)
+		return pythonBuildContext(entrypointFilePath, baseDirectory, additionalIgnores)
 	case ".js":
-		return javascriptBuildContext(entrypointFilePath, additionalIgnores)
+		return javascriptBuildContext(entrypointFilePath, baseDirectory, additionalIgnores)
 	case ".ts":
-		return typescriptBuildContext(entrypointFilePath, additionalIgnores)
+		return typescriptBuildContext(entrypointFilePath, baseDirectory, additionalIgnores)
 	case ".dart":
-		return dartBuildContext(entrypointFilePath, additionalIgnores)
+		return dartBuildContext(entrypointFilePath, baseDirectory, additionalIgnores)
 	default:
 		return nil, fmt.Errorf("nitric does not support files with extension %s by default", ext)
 	}

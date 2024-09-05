@@ -285,7 +285,7 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 
 		// start the service with the given file reference from its projects CWD
 		group.Go(func() error {
-			port, err := localCloud.AddService(svc.filepath)
+			port, err := localCloud.AddService(svc.GetFilePath())
 			if err != nil {
 				return err
 			}
@@ -319,7 +319,7 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 		svc := service
 
 		group.Go(func() error {
-			port, err := localCloud.AddService(svc.filepath)
+			port, err := localCloud.AddService(svc.GetFilePath())
 			if err != nil {
 				return err
 			}
@@ -353,15 +353,18 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 	matches := map[string]string{}
 
 	for _, serviceSpec := range projectConfig.Services {
-		files, err := afero.Glob(fs, serviceSpec.Match)
+		serviceMatch := filepath.Join(serviceSpec.Basedir, serviceSpec.Match)
+
+		files, err := afero.Glob(fs, serviceMatch)
 		if err != nil {
-			return nil, fmt.Errorf("unable to match service files for pattern %s: %w", serviceSpec.Match, err)
+			return nil, fmt.Errorf("unable to match service files for pattern %s: %w", serviceMatch, err)
 		}
 
 		for _, f := range files {
-			relativeServiceEntrypointPath, _ := filepath.Rel(projectConfig.Directory, f)
+			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, serviceSpec.Basedir), f)
+			projectRelativeServiceFile := filepath.Join(projectConfig.Directory, f)
 
-			serviceName := projectConfig.pathToNormalizedServiceName(relativeServiceEntrypointPath)
+			serviceName := projectConfig.pathToNormalizedServiceName(projectRelativeServiceFile)
 
 			var buildContext *runtime.RuntimeBuildContext
 
@@ -379,7 +382,8 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					customRuntime.Dockerfile,
-					customRuntime.Context, // will default to the project directory if not set
+					// will default to the project directory if not set
+					lo.Ternary(customRuntime.Context != "", customRuntime.Context, serviceSpec.Basedir),
 					customRuntime.Args,
 					otherEntryPointFiles,
 					fs,
@@ -391,7 +395,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					"",
-					".",
+					serviceSpec.Basedir,
 					map[string]string{},
 					otherEntryPointFiles,
 					fs,
@@ -407,9 +411,15 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 
 			matches[f] = serviceSpec.Match
 
+			relativeFilePath, err := filepath.Rel(serviceSpec.Basedir, f)
+			if err != nil {
+				return nil, fmt.Errorf("unable to get relative file path for service %s: %w", f, err)
+			}
+
 			newService := Service{
 				Name:         serviceName,
-				filepath:     f,
+				filepath:     relativeFilePath,
+				basedir:      serviceSpec.Basedir,
 				buildContext: *buildContext,
 				Type:         serviceSpec.Type,
 				startCmd:     serviceSpec.Start,

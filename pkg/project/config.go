@@ -37,6 +37,9 @@ type RuntimeConfiguration struct {
 }
 
 type ServiceConfiguration struct {
+	// The base directory for source files
+	Basedir string `yaml:"basedir"`
+
 	// This is the string version
 	Match string `yaml:"match"`
 

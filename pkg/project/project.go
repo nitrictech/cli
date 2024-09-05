@@ -361,8 +361,9 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 
 		for _, f := range files {
 			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, serviceSpec.Basedir), f)
+			projectRelativeServiceFile := filepath.Join(projectConfig.Directory, f)
 
-			serviceName := projectConfig.pathToNormalizedServiceName(relativeServiceEntrypointPath)
+			serviceName := projectConfig.pathToNormalizedServiceName(projectRelativeServiceFile)
 
 			var buildContext *runtime.RuntimeBuildContext
 

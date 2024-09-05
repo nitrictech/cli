@@ -48,6 +48,7 @@ type Service struct {
 	Type string
 
 	// filepath relative to the project root directory
+	basedir      string
 	filepath     string
 	buildContext runtime.RuntimeBuildContext
 
@@ -55,11 +56,11 @@ type Service struct {
 }
 
 func (s *Service) GetFilePath() string {
-	return s.filepath
+	return filepath.Join(s.basedir, s.filepath)
 }
 
 func (s *Service) GetAbsoluteFilePath() (string, error) {
-	return filepath.Abs(s.filepath)
+	return filepath.Abs(s.GetFilePath())
 }
 
 const (
@@ -239,6 +240,7 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 	)
 
 	cmd.Env = append([]string{}, os.Environ()...)
+	cmd.Dir = s.basedir
 
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
@@ -247,14 +249,14 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 	cmd.Stdout = &ServiceRunUpdateWriter{
 		updates:     updates,
 		serviceName: s.Name,
-		label:       s.filepath,
+		label:       s.GetFilePath(),
 		status:      ServiceRunStatus_Running,
 	}
 
 	cmd.Stderr = &ServiceRunUpdateWriter{
 		updates:     updates,
 		serviceName: s.Name,
-		label:       s.filepath,
+		label:       s.GetFilePath(),
 		status:      ServiceRunStatus_Error,
 	}
 

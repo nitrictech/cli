@@ -97,6 +97,9 @@ const DatabasesExplorer: React.FC = () => {
   useEffect(() => {
     if (data && data.sqlDatabases.length && !selectedDb) {
       setSelectedDb(data.sqlDatabases[0])
+    } else if (selectedDb?.status === 'active') {
+      // refresh tables when selectedDb is active, after migrations
+      refreshTables()
     }
   }, [data])
 
@@ -280,8 +283,8 @@ const DatabasesExplorer: React.FC = () => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        This will rebuild and run migrations for{' '}
-                        <strong>{selectedDb.name}</strong>
+                        Run migrations from{' '}
+                        <strong>{selectedDb.migrationsPath}</strong>
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -298,6 +301,7 @@ const DatabasesExplorer: React.FC = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
+                        data-testid="migrate-btn"
                         disabled={migrationLoading}
                         onClick={handleMigrate}
                         className="ml-auto"
@@ -307,8 +311,8 @@ const DatabasesExplorer: React.FC = () => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        This will rebuild and run migrations for{' '}
-                        <strong>{selectedDb.name}</strong>
+                        Run migrations from{' '}
+                        <strong>{selectedDb.migrationsPath}</strong>
                       </p>
                     </TooltipContent>
                   </Tooltip>

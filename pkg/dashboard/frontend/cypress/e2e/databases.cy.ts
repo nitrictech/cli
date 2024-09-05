@@ -261,7 +261,11 @@ describe('Databases Spec', () => {
     it(`should of applied migrations for ${db}`, () => {
       cy.get(`[data-rct-item-id="${db}"]`).click()
 
-      cy.wait(1500)
+      cy.intercept('POST', '/api/sql/migrate').as('migrate')
+
+      cy.getTestEl('migrate-btn').click()
+
+      cy.wait('@migrate')
 
       cy.intercept('POST', '/api/sql', (req) => {
         if (

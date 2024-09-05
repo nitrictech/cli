@@ -339,59 +339,48 @@ func (l *LocalSqlServer) BuildAndRunMigrations(databasesToMigrate map[string]*re
 	return nil
 }
 
-func (l *LocalSqlServer) HandleUpdates(lrs resources.LocalResourcesState) {
-	databasesToMigrate := make(map[string]*resourcespb.SqlDatabaseResource)
-
+func (l *LocalSqlServer) RegisterDatabases(lrs resources.LocalResourcesState) {
 	// Check for new databases to migrate
 	for dbName, r := range lrs.SqlDatabases.GetAll() {
 		_, ok := l.State[dbName]
-
-		connectionString, err := l.ensureDatabaseExists(dbName)
-		if err != nil {
-			exit.GetExitService().Exit(fmt.Errorf("failed to ensure database exists: %w", err))
-		}
 
 		if !ok {
 			l.State[dbName] = &DatabaseState{
 				Status:           string(DatabaseStatusStarting),
 				ResourceRegister: r,
-				ConnectionString: connectionString,
+				ConnectionString: "",
 			}
 
 			l.Publish(l.State)
-		}
 
-		migrationPath := r.Resource.Migrations.GetMigrationsPath()
-
-		if migrationPath != "" && l.State[dbName].LocalMigration == nil {
-			dockerHost := "host.docker.internal"
-
-			if goruntime.GOOS == "linux" {
-				host := env.GetEnv("NITRIC_DOCKER_HOST", "172.17.0.1")
-
-				dockerHost = host.String()
+			connectionString, err := l.ensureDatabaseExists(dbName)
+			if err != nil {
+				exit.GetExitService().Exit(fmt.Errorf("failed to ensure database exists: %w", err))
 			}
 
-			l.State[dbName].Status = string(DatabaseStatusBuildingMigrations)
-			l.State[dbName].LocalMigration = &migrations.LocalMigration{
-				DatabaseName: dbName,
-				// Replace localhost with host.docker.internal to allow the container to connect to the host
-				ConnectionString: strings.Replace(connectionString, "localhost", dockerHost, 1),
-			}
-
-			databasesToMigrate[dbName] = r.Resource
-
-			l.Publish(l.State)
-		} else {
+			// Update the connection string
+			l.State[dbName].ConnectionString = connectionString
 			l.State[dbName].Status = string(DatabaseStatusActive)
-			l.Publish(l.State)
-		}
-	}
 
-	if len(databasesToMigrate) > 0 {
-		err := l.BuildAndRunMigrations(databasesToMigrate)
-		if err != nil {
-			exit.GetExitService().Exit(fmt.Errorf("failed to build and run migrations: %w", err))
+			migrationPath := r.Resource.Migrations.GetMigrationsPath()
+
+			if migrationPath != "" {
+				dockerHost := "host.docker.internal"
+
+				if goruntime.GOOS == "linux" {
+					host := env.GetEnv("NITRIC_DOCKER_HOST", "172.17.0.1")
+
+					dockerHost = host.String()
+				}
+
+				l.State[dbName].LocalMigration = &migrations.LocalMigration{
+					DatabaseName: dbName,
+					// Replace localhost with host.docker.internal to allow the container to connect to the host
+					ConnectionString: strings.Replace(connectionString, "localhost", dockerHost, 1),
+				}
+			}
+
+			l.Publish(l.State)
 		}
 	}
 }
@@ -409,7 +398,7 @@ func NewLocalSqlServer(projectName string, localResources *resources.LocalResour
 	}
 
 	// subscribe to local resources for migrations
-	localResources.SubscribeToState(localSql.HandleUpdates)
+	localResources.SubscribeToState(localSql.RegisterDatabases)
 
 	return localSql, nil
 }

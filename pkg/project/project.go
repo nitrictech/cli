@@ -617,6 +617,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		}
 	}
 
+	// TODO: DRY this up with common composition with services
 	for _, batchSpec := range projectConfig.Batches {
 		files, err := afero.Glob(fs, batchSpec.Match)
 		if err != nil {
@@ -624,9 +625,10 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		}
 
 		for _, f := range files {
-			relativeServiceEntrypointPath, _ := filepath.Rel(projectConfig.Directory, f)
+			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, batchSpec.Basedir), f)
+			projectRelativeServiceFile := filepath.Join(projectConfig.Directory, f)
 
-			serviceName := projectConfig.pathToNormalizedServiceName(relativeServiceEntrypointPath)
+			serviceName := projectConfig.pathToNormalizedServiceName(projectRelativeServiceFile)
 
 			var buildContext *runtime.RuntimeBuildContext
 
@@ -644,7 +646,8 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					customRuntime.Dockerfile,
-					customRuntime.Context,
+					// will default to the project directory if not set
+					lo.Ternary(customRuntime.Context != "", customRuntime.Context, batchSpec.Basedir),
 					customRuntime.Args,
 					otherEntryPointFiles,
 					fs,
@@ -656,7 +659,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					"",
-					".",
+					batchSpec.Basedir,
 					map[string]string{},
 					otherEntryPointFiles,
 					fs,
@@ -674,7 +677,8 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 
 			newBatch := Batch{
 				Name:         serviceName,
-				filepath:     f,
+				basedir:      batchSpec.Basedir,
+				filepath:     relativeServiceEntrypointPath,
 				buildContext: *buildContext,
 				runCmd:       batchSpec.Start,
 			}
@@ -694,7 +698,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		Preview:     projectConfig.Preview,
 		LocalConfig: *localConfig,
 		services:    services,
-		batches:   batches,
+		batches:     batches,
 	}, nil
 }
 

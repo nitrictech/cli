@@ -107,6 +107,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 		server.WithHttpPlugin(lc.Http),
 		server.WithSchedulesPlugin(lc.Schedules),
 		server.WithTopicsListenerPlugin(lc.Topics),
+		server.WithTopicsPlugin(lc.Topics),
 		server.WithStorageListenerPlugin(lc.Storage),
 		server.WithWebsocketListenerPlugin(lc.Websockets),
 		server.WithSqlPlugin(lc.Databases),

@@ -373,7 +373,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	if err != nil {
 		updates <- ServiceRunUpdate{
 			ServiceName: s.Name,
-			Label:       s.filepath,
+			Label:       s.GetFilePath(),
 			Status:      ServiceRunStatus_Error,
 			Err:         err,
 		}
@@ -385,7 +385,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	if err != nil {
 		updates <- ServiceRunUpdate{
 			ServiceName: s.Name,
-			Label:       s.filepath,
+			Label:       s.GetFilePath(),
 			Status:      ServiceRunStatus_Error,
 			Err:         err,
 		}
@@ -395,7 +395,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 
 	updates <- ServiceRunUpdate{
 		ServiceName: s.Name,
-		Label:       s.filepath,
+		Label:       s.GetFilePath(),
 		Message:     fmt.Sprintf("Service %s started", s.Name),
 		Status:      ServiceRunStatus_Running,
 	}
@@ -419,7 +419,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		_, err := io.Copy(writerFunc(func(p []byte) (int, error) {
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
-				Label:       s.filepath,
+				Label:       s.GetFilePath(),
 				Message:     string(p),
 				Status:      ServiceRunStatus_Running,
 			}
@@ -429,7 +429,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		if err != nil {
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
-				Label:       s.filepath,
+				Label:       s.GetFilePath(),
 				Status:      ServiceRunStatus_Error,
 				Err:         err,
 			}
@@ -443,7 +443,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		case err := <-errChan:
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
-				Label:       s.filepath,
+				Label:       s.GetFilePath(),
 				Err:         err,
 				Status:      ServiceRunStatus_Error,
 			}
@@ -476,7 +476,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 				return err
 			} else {
 				updates <- ServiceRunUpdate{
-					Label:       s.filepath,
+					Label:       s.GetFilePath(),
 					ServiceName: s.Name,
 					Message:     "Service successfully exited",
 					Status:      ServiceRunStatus_Done,
@@ -487,7 +487,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		case <-stop:
 			if err := dockerClient.ContainerStop(context.Background(), containerId, container.StopOptions{}); err != nil {
 				updates <- ServiceRunUpdate{
-					Label:       s.filepath,
+					Label:       s.GetFilePath(),
 					ServiceName: s.Name,
 					Status:      ServiceRunStatus_Error,
 					Err:         err,

@@ -640,7 +640,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, batchSpec.Basedir), f)
 			projectRelativeServiceFile := filepath.Join(projectConfig.Directory, f)
 
-			serviceName := projectConfig.pathToNormalizedServiceName(projectRelativeServiceFile)
+			batchName := projectConfig.pathToNormalizedServiceName(projectRelativeServiceFile)
 
 			var buildContext *runtime.RuntimeBuildContext
 
@@ -688,7 +688,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			matches[f] = batchSpec.Match
 
 			newBatch := Batch{
-				Name:         serviceName,
+				Name:         batchName,
 				basedir:      batchSpec.Basedir,
 				filepath:     relativeServiceEntrypointPath,
 				buildContext: *buildContext,

@@ -206,7 +206,13 @@ var stackUpdateCmd = &cobra.Command{
 
 			// non-interactive environment
 			for update := range buildUpdates {
-				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+				message := update.Message
+
+				if update.Err != nil {
+					message = update.Err.Error()
+				}
+
+				for _, line := range strings.Split(strings.TrimSuffix(message, "\n"), "\n") {
 					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 				}
 			}
@@ -262,7 +268,13 @@ var stackUpdateCmd = &cobra.Command{
 				fmt.Println("building project migration images")
 				// non-interactive environment
 				for update := range migrationBuildUpdates {
-					for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+					message := update.Message
+
+					if update.Err != nil {
+						message = update.Err.Error()
+					}
+
+					for _, line := range strings.Split(strings.TrimSuffix(message, "\n"), "\n") {
 						fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 					}
 				}

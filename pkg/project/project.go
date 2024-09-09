@@ -437,10 +437,10 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 	return group.Wait()
 }
 
-// RunServicesWithCommand - Runs all the services locally using a startup command
-// use the stop channel to stop all running services
+// RunBatchesWithCommand - Runs all the batches locally using a startup command
+// use the stop channel to stop all running batches
 func (p *Project) RunBatchesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
-	stopChannels := lo.FanOut[bool](len(p.services), 1, stop)
+	stopChannels := lo.FanOut[bool](len(p.batches), 1, stop)
 
 	group, _ := errgroup.WithContext(context.TODO())
 
@@ -472,11 +472,10 @@ func (p *Project) RunBatchesWithCommand(localCloud *cloud.LocalCloud, stop <-cha
 	return group.Wait()
 }
 
-// AddBatches - Pre-registers membrane servers for all batches in preparation for running them
-// RunServices - Runs all the services as containers
-// use the stop channel to stop all running services
+// RunBatches - Runs all the batches as containers
+// use the stop channel to stop all running batches
 func (p *Project) RunBatches(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
-	stopChannels := lo.FanOut[bool](len(p.services), 1, stop)
+	stopChannels := lo.FanOut[bool](len(p.batches), 1, stop)
 
 	group, _ := errgroup.WithContext(context.TODO())
 

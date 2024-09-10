@@ -44,10 +44,15 @@ export type Topic = BaseResource
 
 export type Service = BaseResource
 
+export type Batch = BaseResource
+
+export type BatchJob = BaseResource
+
 export interface History {
   apis: ApiHistoryItem[]
   schedules: EventHistoryItem[]
   topics: EventHistoryItem[]
+  jobs: EventHistoryItem[]
 }
 
 export type WebsocketEvent = 'connect' | 'disconnect' | 'message'
@@ -107,6 +112,8 @@ export interface WebSocketResponse {
   projectName: string
   buckets: Bucket[]
   apis: Api[]
+  batchServices: Batch[]
+  jobs: BatchJob[]
   schedules: Schedule[]
   notifications: Notification[]
   subscriptions: Subscriber[]
@@ -180,9 +187,20 @@ export interface HistoryItem<T> {
   event: T
 }
 
-export type EventHistoryItem = TopicHistoryItem | ScheduleHistoryItem
+export type EventHistoryItem =
+  | TopicHistoryItem
+  | ScheduleHistoryItem
+  | BatchHistoryItem
+
+export type EventResource = Schedule | Topic | BatchJob
 
 export type TopicHistoryItem = HistoryItem<{
+  name: string
+  payload: string
+  success: boolean
+}>
+
+export type BatchHistoryItem = HistoryItem<{
   name: string
   payload: string
   success: boolean

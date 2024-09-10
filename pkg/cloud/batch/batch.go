@@ -19,28 +19,147 @@ package batch
 import (
 	"context"
 	"fmt"
+	"maps"
+	"sync"
 
+	"github.com/asaskevich/EventBus"
+
+	"github.com/nitrictech/cli/pkg/grpcx"
+	"github.com/nitrictech/nitric/core/pkg/logger"
 	batchpb "github.com/nitrictech/nitric/core/pkg/proto/batch/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/jobs"
 )
 
 type BatchRunner func(req *batchpb.JobSubmitRequest) error
 
-type LocalBatchService struct {
-	*jobs.JobManager
-	batchpb.UnimplementedBatchServer
+type (
+	jobName     = string
+	serviceName = string
+)
+
+type ActionState struct {
+	JobName string
+	Payload string
+	Success bool
 }
+
+type (
+	State             = map[jobName]map[serviceName]int
+	LocalBatchService struct {
+		*jobs.JobManager
+		batchpb.UnimplementedBatchServer
+
+		state     State
+		batchLock sync.RWMutex
+
+		bus EventBus.Bus
+	}
+)
 
 var (
 	_ batchpb.BatchServer = (*LocalBatchService)(nil)
 	_ batchpb.JobServer   = (*LocalBatchService)(nil)
 )
 
+const (
+	localBatchTopic         = "local-batch"
+	localBatchDeliveryTopic = "local-batch-delivery"
+)
+
+func (l *LocalBatchService) SubscribeToState(subscriberFunction func(State)) {
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = l.bus.Subscribe(localBatchTopic, subscriberFunction)
+}
+
+func (l *LocalBatchService) publishState() {
+	l.bus.Publish(localBatchTopic, l.GetState())
+}
+
+func (l *LocalBatchService) GetState() State {
+	return maps.Clone(l.state)
+}
+
+func (l *LocalBatchService) publishAction(action ActionState) {
+	l.bus.Publish(localBatchDeliveryTopic, action)
+}
+
+func (l *LocalBatchService) SubscribeToAction(subscription func(ActionState)) {
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = l.bus.Subscribe(localBatchDeliveryTopic, subscription)
+}
+
+func (l *LocalBatchService) registerJob(serviceName string, registration *batchpb.RegistrationRequest) {
+	l.batchLock.Lock()
+	defer l.batchLock.Unlock()
+
+	if l.state[registration.JobName] == nil {
+		l.state[registration.JobName] = make(map[string]int)
+	}
+
+	l.state[registration.JobName][serviceName]++
+
+	l.publishState()
+}
+
+func (l *LocalBatchService) unregisterJob(serviceName string, registration *batchpb.RegistrationRequest) {
+	l.batchLock.Lock()
+	defer l.batchLock.Unlock()
+
+	if l.state[registration.JobName] == nil {
+		l.state[registration.JobName] = make(map[string]int)
+	}
+
+	l.state[registration.JobName][serviceName]--
+
+	if l.state[registration.JobName][serviceName] == 0 {
+		delete(l.state, registration.JobName)
+	}
+
+	l.publishState()
+}
+
+func (l *LocalBatchService) HandleJob(stream batchpb.Job_HandleJobServer) error {
+	serviceName, err := grpcx.GetServiceNameFromStream(stream)
+	if err != nil {
+		return err
+	}
+
+	peekableStream := grpcx.NewPeekableStreamServer[*batchpb.ServerMessage, *batchpb.ClientMessage](stream)
+
+	firstRequest, err := peekableStream.Peek()
+	if err != nil {
+		return err
+	}
+
+	if firstRequest.GetRegistrationRequest() == nil {
+		return fmt.Errorf("first request must be a registration request")
+	}
+
+	err = stream.Send(&batchpb.ServerMessage{
+		Id: firstRequest.Id,
+		Content: &batchpb.ServerMessage_RegistrationResponse{
+			RegistrationResponse: &batchpb.RegistrationResponse{},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Keep track of our local batch subscriptions
+	l.registerJob(serviceName, firstRequest.GetRegistrationRequest())
+	defer l.unregisterJob(serviceName, firstRequest.GetRegistrationRequest())
+
+	return l.JobManager.HandleJob(peekableStream)
+}
+
 func (l *LocalBatchService) SubmitJob(ctx context.Context, req *batchpb.JobSubmitRequest) (*batchpb.JobSubmitResponse, error) {
-	// TODO: Error if job does not exist
-	// Execute the job request in the background
 	go func() {
-		_, err := l.HandleJobRequest(&batchpb.ServerMessage{
+		json, err := req.Data.GetStruct().MarshalJSON()
+		if err != nil {
+			logger.Errorf("Error marshalling job request data: %s", err.Error())
+		}
+
+		_, err = l.HandleJobRequest(&batchpb.ServerMessage{
 			Content: &batchpb.ServerMessage_JobRequest{
 				JobRequest: &batchpb.JobRequest{
 					JobName: req.GetJobName(),
@@ -49,9 +168,22 @@ func (l *LocalBatchService) SubmitJob(ctx context.Context, req *batchpb.JobSubmi
 			},
 		})
 		if err != nil {
-			// TODO: Log error correctly
-			fmt.Println("Error handling job request: ", err)
+			logger.Errorf("Error handling job request: %s", err.Error())
+
+			l.publishAction(ActionState{
+				JobName: req.GetJobName(),
+				Success: false,
+				Payload: string(json),
+			})
+
+			return
 		}
+
+		l.publishAction(ActionState{
+			JobName: req.GetJobName(),
+			Success: true,
+			Payload: string(json),
+		})
 	}()
 
 	return &batchpb.JobSubmitResponse{}, nil
@@ -60,5 +192,7 @@ func (l *LocalBatchService) SubmitJob(ctx context.Context, req *batchpb.JobSubmi
 func NewLocalBatchService() *LocalBatchService {
 	return &LocalBatchService{
 		JobManager: jobs.New(),
+		state:      make(map[string]map[string]int),
+		bus:        EventBus.New(),
 	}
 }

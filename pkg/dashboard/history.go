@@ -32,14 +32,16 @@ type HistoryEvents struct {
 	ScheduleHistory []*HistoryEvent[ScheduleHistoryItem] `json:"schedules"`
 	TopicHistory    []*HistoryEvent[TopicHistoryItem]    `json:"topics"`
 	ApiHistory      []*HistoryEvent[ApiHistoryItem]      `json:"apis"`
+	BatchHistory    []*HistoryEvent[BatchHistoryItem]    `json:"jobs"`
 }
 
 type RecordType string
 
 const (
-	API      RecordType = "apis"
-	TOPIC    RecordType = "topics"
-	SCHEDULE RecordType = "schedules"
+	API       RecordType = "apis"
+	TOPIC     RecordType = "topics"
+	SCHEDULE  RecordType = "schedules"
+	BATCHJOBS RecordType = "jobs"
 )
 
 type HistoryItem interface {
@@ -54,6 +56,12 @@ type HistoryEvent[Event HistoryItem] struct {
 type TopicHistoryItem struct {
 	Name    string `json:"name,omitempty"`
 	Delay   int    `json:"delay,omitempty"`
+	Payload string `json:"payload,omitempty"`
+	Success bool   `json:"success,omitempty"`
+}
+
+type BatchHistoryItem struct {
+	Name    string `json:"name,omitempty"`
 	Payload string `json:"payload,omitempty"`
 	Success bool   `json:"success,omitempty"`
 }
@@ -152,10 +160,16 @@ func (d *Dashboard) ReadAllHistoryRecords() (*HistoryEvents, error) {
 		return nil, fmt.Errorf("error occurred reading api history: %w", err)
 	}
 
+	jobs, err := ReadHistoryRecords[BatchHistoryItem](d.project.Directory, BATCHJOBS)
+	if err != nil {
+		return nil, fmt.Errorf("error occurred reading batch job history: %w", err)
+	}
+
 	return &HistoryEvents{
 		ScheduleHistory: schedules,
 		TopicHistory:    topics,
 		ApiHistory:      apis,
+		BatchHistory:    jobs,
 	}, nil
 }
 

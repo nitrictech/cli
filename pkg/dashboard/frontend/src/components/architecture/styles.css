@@ -69,6 +69,13 @@
   --nitric-node-icon-color: #059669; /* emerald 600 */
 }
 
+.react-flow__node-job {
+  --nitric-node-from: #ca8a04; /* yellow 600 */
+  --nitric-node-via: #facc15; /* yellow 400 */
+  --nitric-node-to: #a16207; /* yellow 700 */
+  --nitric-node-icon-color: #ca8a04; /* yellow 600 */
+}
+
 .react-flow__node-topic {
   --nitric-node-from: #d97706; /* amber 600 */
   --nitric-node-via: #fbbf24; /* amber 400 */
@@ -95,6 +102,13 @@
   --nitric-node-via: #38bdf8; /* Sky 400 */
   --nitric-node-to: #0369a1; /* Sky 700 */
   --nitric-node-icon-color: #0284c7; /* Sky 600 */
+}
+
+.react-flow__node-batch {
+  --nitric-node-from: #ea580c; /* orange 600 */
+  --nitric-node-via: #fb923c; /* orange 400 */
+  --nitric-node-to: #c2410c; /* orange 700 */
+  --nitric-node-icon-color: #ea580c; /* orange 600 */
 }
 
 .react-flow__node-websocket {

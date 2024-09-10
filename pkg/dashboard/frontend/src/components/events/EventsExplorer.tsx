@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useWebSocket } from '../../lib/hooks/use-web-socket'
-import type { APIResponse, EventHistoryItem, Schedule, Topic } from '@/types'
+import type {
+  APIResponse,
+  BatchJob,
+  EventHistoryItem,
+  Schedule,
+  Topic,
+} from '@/types'
 import { Badge, Spinner, Tabs, Loading } from '../shared'
 import APIResponseContent from '../apis/APIResponseContent'
 import {
@@ -20,7 +26,7 @@ import EventsTreeView from './EventsTreeView'
 import { copyToClipboard } from '../../lib/utils/copy-to-clipboard'
 import ClipboardIcon from '@heroicons/react/24/outline/ClipboardIcon'
 import toast from 'react-hot-toast'
-import { capitalize } from 'radash'
+import { title } from 'radash'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import BreadCrumbs from '../layout/BreadCrumbs'
@@ -35,13 +41,13 @@ import {
 import SectionCard from '../shared/SectionCard'
 
 interface Props {
-  workerType: 'schedules' | 'topics'
+  workerType: 'schedules' | 'topics' | 'jobs'
 }
 
-type Worker = Schedule | Topic
+type Worker = Schedule | Topic | BatchJob
 
 const EventsExplorer: React.FC<Props> = ({ workerType }) => {
-  const storageKey = `nitric-local-dash-${workerType}-history`
+  const storageKey = `nitric-local-dash-${workerType.toLowerCase()}-history`
 
   const { data, loading } = useWebSocket()
   const [callLoading, setCallLoading] = useState(false)
@@ -59,7 +65,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
 
   useEffect(() => {
     if (history) {
-      setEventHistory(history ? history[workerType] : [])
+      setEventHistory(history ? history[workerType] ?? [] : [])
     }
   }, [history])
 
@@ -136,14 +142,14 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
     setTimeout(() => setCallLoading(false), 300)
   }
 
-  const workerTitleSingle = capitalize(workerType).slice(0, -1)
+  const workerTitleSingle = title(workerType).slice(0, -1)
   const generatedURL = `http://${data?.triggerAddress}/${workerType}/${selectedWorker?.name}`
 
   const hasData = Boolean(data && data[workerType]?.length)
 
   return (
     <AppLayout
-      title={capitalize(workerType)}
+      title={title(workerType)}
       hideTitle
       routePath={`/${workerType}`}
       secondLevelNav={
@@ -151,7 +157,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
         selectedWorker && (
           <>
             <div className="flex min-h-12 items-center justify-between px-2 py-1">
-              <span className="text-lg">{capitalize(workerType)}</span>
+              <span className="text-lg">{title(workerType)}</span>
               <EventsMenu
                 selected={selectedWorker.name}
                 storageKey={storageKey}
@@ -200,7 +206,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue
-                        placeholder={`Select ${capitalize(workerType)}`}
+                        placeholder={`Select ${title(workerType)}`}
                       />
                     </SelectTrigger>
                     <SelectContent>
@@ -217,7 +223,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               </div>
               <div className="flex items-center gap-4">
                 <BreadCrumbs className="hidden text-lg lg:block">
-                  <span>{capitalize(workerType)}</span>
+                  <span>{title(workerType)}</span>
                   <h2 className="font-body text-lg font-semibold">
                     {selectedWorker.name}
                   </h2>
@@ -270,7 +276,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                 )}
               </div>
 
-              {workerType === 'topics' && (
+              {['jobs', 'topics'].includes(workerType) && (
                 <SectionCard title="Payload">
                   <div>
                     <CodeEditor
@@ -291,7 +297,13 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                       data-testid={`trigger-${workerType}-btn`}
                       onClick={handleSend}
                     >
-                      {workerType === 'topics' ? 'Publish' : 'Trigger'}
+                      {
+                        {
+                          schedules: 'Trigger',
+                          topics: 'Publish',
+                          jobs: 'Submit',
+                        }[workerType]
+                      }
                     </Button>
                   </div>
                 </SectionCard>
@@ -421,7 +433,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
               href="https://nitric.io/docs/messaging"
               rel="noreferrer"
             >
-              creating {capitalize(workerType)}
+              creating {title(workerType)}
             </a>{' '}
             as we are unable to find any existing {workerType}.
           </div>

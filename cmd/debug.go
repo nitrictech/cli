@@ -28,7 +28,6 @@ import (
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/env"
 	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/project/migrations"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
 	"github.com/nitrictech/cli/pkg/view/tui/teax"
@@ -117,7 +116,7 @@ var specCmd = &cobra.Command{
 		// Build images from contexts and provide updates on the builds
 
 		if len(migrationImageContexts) > 0 {
-			migrationBuildUpdates, err := migrations.BuildMigrationImages(fs, migrationImageContexts)
+			migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts)
 			tui.CheckErr(err)
 
 			if isNonInteractive() {

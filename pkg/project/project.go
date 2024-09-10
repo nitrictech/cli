@@ -43,7 +43,6 @@ import (
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/cli/pkg/project/runtime"
-	projservice "github.com/nitrictech/cli/pkg/project/service"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
@@ -64,16 +63,16 @@ type Project struct {
 	Preview     []preview.Feature
 	LocalConfig localconfig.LocalConfiguration
 
-	services []projservice.Service
+	services []Service
 }
 
-func (p *Project) GetServices() []projservice.Service {
+func (p *Project) GetServices() []Service {
 	return p.services
 }
 
 // BuildServices - Builds all the services in the project
-func (p *Project) BuildServices(fs afero.Fs) (chan projservice.ServiceBuildUpdate, error) {
-	updatesChan := make(chan projservice.ServiceBuildUpdate)
+func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
+	updatesChan := make(chan ServiceBuildUpdate)
 
 	if len(p.services) == 0 {
 		return nil, fmt.Errorf("no services found in project, nothing to build. This may indicate misconfigured `match` patterns in your nitric.yaml file")
@@ -86,26 +85,26 @@ func (p *Project) BuildServices(fs afero.Fs) (chan projservice.ServiceBuildUpdat
 	for _, service := range p.services {
 		waitGroup.Add(1)
 		// Create writer
-		serviceBuildUpdateWriter := projservice.NewBuildUpdateWriter(service.Name, updatesChan)
+		serviceBuildUpdateWriter := NewBuildUpdateWriter(service.Name, updatesChan)
 
-		go func(svc projservice.Service, writer io.Writer) {
+		go func(svc Service, writer io.Writer) {
 			// Acquire a token by filling the maxConcurrentBuilds channel
 			// this will block once the buffer is full
 			maxConcurrentBuilds <- struct{}{}
 
 			// Start goroutine
 			if err := svc.BuildImage(fs, writer); err != nil {
-				updatesChan <- projservice.ServiceBuildUpdate{
+				updatesChan <- ServiceBuildUpdate{
 					ServiceName: svc.Name,
 					Err:         err,
 					Message:     err.Error(),
-					Status:      projservice.ServiceBuildStatus_Error,
+					Status:      ServiceBuildStatus_Error,
 				}
 			} else {
-				updatesChan <- projservice.ServiceBuildUpdate{
+				updatesChan <- ServiceBuildUpdate{
 					ServiceName: svc.Name,
 					Message:     "Build Complete",
-					Status:      projservice.ServiceBuildStatus_Complete,
+					Status:      ServiceBuildStatus_Complete,
 				}
 			}
 
@@ -129,7 +128,7 @@ func (p *Project) BuildServices(fs afero.Fs) (chan projservice.ServiceBuildUpdat
 	return updatesChan, nil
 }
 
-func (p *Project) collectServiceRequirements(service projservice.Service) (*collector.ServiceRequirements, error) {
+func (p *Project) collectServiceRequirements(service Service) (*collector.ServiceRequirements, error) {
 	serviceRequirements := collector.NewServiceRequirements(service.Name, service.GetFilePath(), service.Type)
 
 	// start a grpc service with this registered
@@ -167,7 +166,7 @@ func (p *Project) collectServiceRequirements(service projservice.Service) (*coll
 	// run the service we want to collect for targeting the grpc server
 	// TODO: load and run .env files, etc.
 	stopChannel := make(chan bool)
-	updatesChannel := make(chan projservice.ServiceRunUpdate)
+	updatesChannel := make(chan ServiceRunUpdate)
 
 	go func() {
 		// TODO: elevate env for tmp diretory and reuse
@@ -206,7 +205,7 @@ func (p *Project) collectServiceRequirements(service projservice.Service) (*coll
 		return nil, fmt.Errorf("unable to split host and port for local Nitric collection server: %w", err)
 	}
 
-	err = service.RunContainer(stopChannel, updatesChannel, projservice.WithNitricPort(port), projservice.WithNitricEnvironment("build"))
+	err = service.RunContainer(stopChannel, updatesChannel, WithNitricPort(port), WithNitricEnvironment("build"))
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +230,7 @@ func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirement
 
 		wg.Add(1)
 
-		go func(s projservice.Service) {
+		go func(s Service) {
 			defer wg.Done()
 
 			serviceRequirements, err := p.collectServiceRequirements(s)
@@ -270,7 +269,7 @@ func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
 
 // RunServicesWithCommand - Runs all the services locally using a startup command
 // use the stop channel to stop all running services
-func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- projservice.ServiceRunUpdate, env map[string]string) error {
+func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
 	stopChannels := lo.FanOut[bool](len(p.services), 1, stop)
 
 	group, _ := errgroup.WithContext(context.TODO())
@@ -305,7 +304,7 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 
 // RunServices - Runs all the services as containers
 // use the stop channel to stop all running services
-func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- projservice.ServiceRunUpdate, env map[string]string) error {
+func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
 	stopChannels := lo.FanOut[bool](len(p.services), 1, stop)
 
 	group, _ := errgroup.WithContext(context.TODO())
@@ -320,7 +319,7 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 				return err
 			}
 
-			return svc.RunContainer(stopChannels[idx], updates, projservice.WithNitricPort(strconv.Itoa(port)), projservice.WithEnvVars(env))
+			return svc.RunContainer(stopChannels[idx], updates, WithNitricPort(strconv.Itoa(port)), WithEnvVars(env))
 		})
 	}
 
@@ -344,7 +343,7 @@ func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) 
 
 // fromProjectConfiguration creates a new Instance of a nitric Project from a configuration files contents
 func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *localconfig.LocalConfiguration, fs afero.Fs) (*Project, error) {
-	services := []projservice.Service{}
+	services := []Service{}
 
 	matches := map[string]string{}
 
@@ -412,7 +411,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				return nil, fmt.Errorf("unable to get relative file path for service %s: %w", f, err)
 			}
 
-			newService := projservice.New(serviceName, serviceSpec.Type, relativeFilePath, *buildContext, serviceSpec.Start)
+			newService := New(serviceName, serviceSpec.Type, relativeFilePath, *buildContext, serviceSpec.Start)
 
 			if serviceSpec.Type == "" {
 				serviceSpec.Type = "default"

@@ -23,6 +23,7 @@ import (
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -31,10 +32,9 @@ import (
 	"github.com/nitrictech/cli/pkg/dashboard"
 	docker "github.com/nitrictech/cli/pkg/docker"
 	"github.com/nitrictech/cli/pkg/env"
-	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/nitrictech/cli/pkg/project"
-	projectservice "github.com/nitrictech/cli/pkg/project/service"
+	"github.com/nitrictech/cli/pkg/system"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/local"
@@ -100,7 +100,7 @@ var runCmd = &cobra.Command{
 				TLSCredentials: tlsCredentials,
 				LogWriter:      logWriter,
 				LocalConfig:    proj.LocalConfig,
-			})
+			}, project.BuildAndRunMigrations)
 			tui.CheckErr(err)
 			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})
 		}()
@@ -123,15 +123,17 @@ var runCmd = &cobra.Command{
 		_, err = prog.Run()
 		tui.CheckErr(err)
 
-		// Subscribe to exit events
-		exit.GetExitService().SubscribeToExit(func(err error) {
-			localCloud.Stop()
-			tui.CheckErr(err)
-		})
-
 		// Run the app code (project services)
 		stopChan := make(chan bool)
-		updatesChan := make(chan projectservice.ServiceRunUpdate)
+		updatesChan := make(chan project.ServiceRunUpdate)
+
+		// panic recovery for local cloud
+		// gracefully stop the local cloud in the case of a panic
+		defer func() {
+			if r := recover(); r != nil {
+				localCloud.Stop()
+			}
+		}()
 
 		go func() {
 			err := proj.RunServices(localCloud, stopChan, updatesChan, loadEnv)
@@ -142,7 +144,19 @@ var runCmd = &cobra.Command{
 			}
 		}()
 
-		tui.CheckErr(err)
+		// FIXME: This is a hack to get labelled logs into the TUI
+		// We should refactor the system logs to be more generic
+		systemChan := make(chan project.ServiceRunUpdate)
+		system.SubscribeToLogs(func(msg string) {
+			systemChan <- project.ServiceRunUpdate{
+				ServiceName: "nitric",
+				Label:       "nitric",
+				Status:      project.ServiceRunStatus_Running,
+				Message:     msg,
+			}
+		})
+
+		allUpdates := lo.FanIn(10, updatesChan, systemChan)
 
 		// non-interactive environment
 		if isNonInteractive() {
@@ -163,7 +177,7 @@ var runCmd = &cobra.Command{
 
 			for {
 				select {
-				case update := <-updatesChan:
+				case update := <-allUpdates:
 					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
 				case <-stopChan:
 					fmt.Println("Shutting down services - exiting")
@@ -171,7 +185,7 @@ var runCmd = &cobra.Command{
 				}
 			}
 		} else {
-			runView := teax.NewProgram(services.NewModel(stopChan, updatesChan, localCloud, dash.GetDashboardUrl()))
+			runView := teax.NewProgram(services.NewModel(stopChan, allUpdates, localCloud, dash.GetDashboardUrl()))
 
 			_, _ = runView.Run()
 

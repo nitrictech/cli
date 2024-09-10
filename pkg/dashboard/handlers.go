@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/spf13/afero"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
@@ -287,7 +288,7 @@ func (d *Dashboard) createSqlQueryHandler() func(http.ResponseWriter, *http.Requ
 	}
 }
 
-func (d *Dashboard) createApplySqlMigrationsHandler() func(http.ResponseWriter, *http.Request) {
+func (d *Dashboard) createApplySqlMigrationsHandler(fs afero.Fs) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set CORs headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -327,7 +328,7 @@ func (d *Dashboard) createApplySqlMigrationsHandler() func(http.ResponseWriter, 
 
 		databasesToMigrate[requestBody.DatabaseName] = dbState[requestBody.DatabaseName].ResourceRegister.Resource
 
-		err = d.databaseService.BuildAndRunMigrations(databasesToMigrate)
+		err = d.databaseService.BuildAndRunMigrations(fs, databasesToMigrate)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

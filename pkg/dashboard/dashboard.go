@@ -33,6 +33,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/olahol/melody"
 	"github.com/samber/lo"
+	"github.com/spf13/afero"
 
 	"github.com/nitrictech/cli/pkg/browser"
 	"github.com/nitrictech/cli/pkg/cloud"
@@ -597,6 +598,9 @@ func (d *Dashboard) Start() error {
 
 	fs := http.FileServer(http.FS(staticFiles))
 
+	// TODO: Inject this into start for testability
+	aferoFs := afero.NewOsFs()
+
 	// Serve the files using the http package
 	http.Handle("/", fs)
 
@@ -658,7 +662,7 @@ func (d *Dashboard) Start() error {
 
 	http.HandleFunc("/api/secrets", d.createSecretsHandler())
 
-	http.HandleFunc("/api/sql/migrate", d.createApplySqlMigrationsHandler())
+	http.HandleFunc("/api/sql/migrate", d.createApplySqlMigrationsHandler(aferoFs))
 
 	// handle websockets
 	http.HandleFunc("/ws-info", func(w http.ResponseWriter, r *http.Request) {

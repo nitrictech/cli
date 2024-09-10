@@ -32,7 +32,6 @@ import (
 	"github.com/nitrictech/cli/pkg/pflagx"
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project"
-	"github.com/nitrictech/cli/pkg/project/migrations"
 	"github.com/nitrictech/cli/pkg/project/stack"
 	"github.com/nitrictech/cli/pkg/provider"
 	"github.com/nitrictech/cli/pkg/provider/pulumi"
@@ -256,7 +255,7 @@ var stackUpdateCmd = &cobra.Command{
 		// Build images from contexts and provide updates on the builds
 
 		if len(migrationImageContexts) > 0 {
-			migrationBuildUpdates, err := migrations.BuildMigrationImages(fs, migrationImageContexts)
+			migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts)
 			tui.CheckErr(err)
 
 			if isNonInteractive() {

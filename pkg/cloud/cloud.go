@@ -164,7 +164,7 @@ type LocalCloudOptions struct {
 	LocalConfig    localconfig.LocalConfiguration
 }
 
-func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
+func New(projectName string, opts LocalCloudOptions, migrationRunner sql.MigrationRunner) (*LocalCloud, error) {
 	localTopics, err := topics.NewLocalTopicsService()
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localDatabaseService, err := sql.NewLocalSqlServer(projectName, localResources)
+	localDatabaseService, err := sql.NewLocalSqlServer(projectName, localResources, migrationRunner)
 	if err != nil {
 		return nil, err
 	}

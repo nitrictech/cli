@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package migrations
+package project
 
 import (
 	"context"
@@ -28,10 +28,13 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/spf13/afero"
 
+	"github.com/nitrictech/cli/pkg/cloud/sql"
+	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/docker"
 	"github.com/nitrictech/cli/pkg/project/runtime"
-	"github.com/nitrictech/cli/pkg/project/service"
+	"github.com/nitrictech/nitric/core/pkg/env"
 	"github.com/nitrictech/nitric/core/pkg/logger"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
 
 type LocalMigration struct {
@@ -39,12 +42,46 @@ type LocalMigration struct {
 	ConnectionString string
 }
 
+type DatabaseMigrationState struct {
+	*LocalMigration
+}
+
 func migrationImageName(dbName string) string {
 	return fmt.Sprintf("%s-migrations", dbName)
 }
 
+func BuildAndRunMigrations(fs afero.Fs, servers map[string]*sql.DatabaseServer, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource) error {
+	serviceRequirements := collector.MakeDatabaseServiceRequirements(databasesToMigrate)
+
+	migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, fs)
+	if err != nil {
+		return fmt.Errorf("failed to get migration image build contexts: %w", err)
+	}
+
+	if len(migrationImageContexts) > 0 {
+		updates, err := BuildMigrationImages(fs, migrationImageContexts)
+		if err != nil {
+			return err
+		}
+
+		// wait for updates to complete
+		for update := range updates {
+			if update.Err != nil {
+				return fmt.Errorf("failed to build migration image: %w", update.Err)
+			}
+		}
+
+		err = RunMigrations(servers)
+		if err != nil {
+			return fmt.Errorf("failed to run migrations: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func BuildMigrationImage(fs afero.Fs, dbName string, buildContext *runtime.RuntimeBuildContext, logs io.Writer) error {
-	tempBuildDir := service.GetTempBuildDir()
+	tempBuildDir := GetTempBuildDir()
 	svcName := migrationImageName(dbName)
 
 	dockerClient, err := docker.New()
@@ -92,8 +129,8 @@ func BuildMigrationImage(fs afero.Fs, dbName string, buildContext *runtime.Runti
 }
 
 // FIXME: This is essentially a copy of the project.BuildServiceImages function
-func BuildMigrationImages(fs afero.Fs, migrationBuildContexts map[string]*runtime.RuntimeBuildContext) (chan service.ServiceBuildUpdate, error) {
-	updatesChan := make(chan service.ServiceBuildUpdate)
+func BuildMigrationImages(fs afero.Fs, migrationBuildContexts map[string]*runtime.RuntimeBuildContext) (chan ServiceBuildUpdate, error) {
+	updatesChan := make(chan ServiceBuildUpdate)
 
 	maxConcurrentBuilds := make(chan struct{}, min(goruntime.NumCPU(), goruntime.GOMAXPROCS(0)))
 
@@ -102,7 +139,7 @@ func BuildMigrationImages(fs afero.Fs, migrationBuildContexts map[string]*runtim
 	for dbName, buildContext := range migrationBuildContexts {
 		waitGroup.Add(1)
 
-		serviceBuildUpdateWriter := service.NewBuildUpdateWriter(migrationImageName(dbName), updatesChan)
+		serviceBuildUpdateWriter := NewBuildUpdateWriter(migrationImageName(dbName), updatesChan)
 
 		go func(dbName string, buildContext *runtime.RuntimeBuildContext, writer io.Writer) {
 			// Acquire a token by filling the maxConcurrentBuilds channel
@@ -113,17 +150,17 @@ func BuildMigrationImages(fs afero.Fs, migrationBuildContexts map[string]*runtim
 
 			// Start goroutine
 			if err := BuildMigrationImage(fs, dbName, buildContext, writer); err != nil {
-				updatesChan <- service.ServiceBuildUpdate{
+				updatesChan <- ServiceBuildUpdate{
 					ServiceName: svcName,
 					Err:         err,
 					Message:     err.Error(),
-					Status:      service.ServiceBuildStatus_Error,
+					Status:      ServiceBuildStatus_Error,
 				}
 			} else {
-				updatesChan <- service.ServiceBuildUpdate{
+				updatesChan <- ServiceBuildUpdate{
 					ServiceName: svcName,
 					Message:     "Build Complete",
-					Status:      service.ServiceBuildStatus_Complete,
+					Status:      ServiceBuildStatus_Complete,
 				}
 			}
 
@@ -157,12 +194,22 @@ func RunMigration(databaseName string, connectionString string) error {
 	// Run the migrations
 	imageName := migrationImageName(databaseName)
 
+	// Update connection string for docker host...
+	dockerHost := "host.docker.internal"
+	if goruntime.GOOS == "linux" {
+		host := env.GetEnv("NITRIC_DOCKER_HOST", "172.17.0.1")
+
+		dockerHost = host.String()
+	}
+
+	dockerConnectionString := strings.Replace(connectionString, "localhost", dockerHost, 1)
+
 	// Create the container
 	containerId, err := client.ContainerCreate(&container.Config{
 		Image: imageName,
 		Env: []string{
 			fmt.Sprintf("NITRIC_DB_NAME=%s", databaseName),
-			fmt.Sprintf("DB_URL=%s", connectionString),
+			fmt.Sprintf("DB_URL=%s", dockerConnectionString),
 		},
 	}, &container.HostConfig{
 		AutoRemove: true,
@@ -180,12 +227,12 @@ func RunMigration(databaseName string, connectionString string) error {
 	return nil
 }
 
-func RunMigrations(migrations []LocalMigration) error {
+func RunMigrations(servers map[string]*sql.DatabaseServer) error {
 	var wg sync.WaitGroup
 
-	errChan := make(chan error, len(migrations))
+	errChan := make(chan error, len(servers))
 
-	for _, mig := range migrations {
+	for name, mig := range servers {
 		wg.Add(1)
 
 		go func(dbName string, connectionString string) {
@@ -195,7 +242,7 @@ func RunMigrations(migrations []LocalMigration) error {
 			if err != nil {
 				errChan <- err
 			}
-		}(mig.DatabaseName, mig.ConnectionString)
+		}(name, mig.ConnectionString)
 	}
 
 	go func() {

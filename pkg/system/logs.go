@@ -54,20 +54,3 @@ func SubscribeToLogs(subscription func(string)) {
 	s := getInstance()
 	_ = s.bus.Subscribe(logTopic, subscription)
 }
-
-// func SubscribeToLogsAsRunUpdate() chan project.ServiceRunUpdate {
-// 	s := getInstance()
-
-// 	runUpdateChan := make(chan project.ServiceRunUpdate)
-
-// 	_ = s.bus.Subscribe(logTopic, func(msg string) {
-// 		runUpdateChan <- project.ServiceRunUpdate{
-// 			ServiceName: "nitric",
-// 			Label:       "nitric",
-// 			Status:      project.ServiceRunStatus_Running,
-// 			Message:     msg,
-// 		}
-// 	})
-
-// 	return runUpdateChan
-// }

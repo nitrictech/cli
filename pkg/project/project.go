@@ -411,7 +411,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				return nil, fmt.Errorf("unable to get relative file path for service %s: %w", f, err)
 			}
 
-			newService := New(serviceName, serviceSpec.Type, relativeFilePath, *buildContext, serviceSpec.Start)
+			newService := NewService(serviceName, serviceSpec.Type, relativeFilePath, *buildContext, serviceSpec.Start)
 
 			if serviceSpec.Type == "" {
 				serviceSpec.Type = "default"

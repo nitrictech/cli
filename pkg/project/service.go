@@ -512,7 +512,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	}
 }
 
-func New(name, serviceType, filepath string, buildContext runtime.RuntimeBuildContext, startCmd string) *Service {
+func NewService(name, serviceType, filepath string, buildContext runtime.RuntimeBuildContext, startCmd string) *Service {
 	return &Service{
 		Name:         name,
 		Type:         serviceType,

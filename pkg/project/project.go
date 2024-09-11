@@ -653,14 +653,20 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		localConfig = &localconfig.LocalConfiguration{}
 	}
 
-	return &Project{
+	project := &Project{
 		Name:        projectConfig.Name,
 		Directory:   projectConfig.Directory,
 		Preview:     projectConfig.Preview,
 		LocalConfig: *localConfig,
 		services:    services,
 		batches:     batches,
-	}, nil
+	}
+
+	if len(project.batches) > 0 && !slices.Contains(project.Preview, preview.Feature_BatchServices) {
+		return nil, fmt.Errorf("project contains batch services, but the project does not have the 'batch-services' preview feature enabled. Please add batch-services to the preview field of your nitric.yaml file to enable this feature")
+	}
+
+	return project, nil
 }
 
 // FromFile - Loads a nitric project from a nitric.yaml file

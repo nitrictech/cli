@@ -196,6 +196,7 @@ func RunMigration(databaseName string, connectionString string) error {
 
 	// Update connection string for docker host...
 	dockerHost := "host.docker.internal"
+
 	if goruntime.GOOS == "linux" {
 		host := env.GetEnv("NITRIC_DOCKER_HOST", "172.17.0.1")
 

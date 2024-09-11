@@ -178,10 +178,11 @@ var startCmd = &cobra.Command{
 		go func() {
 			// Start the local cloud service analogues
 			localCloud, err = cloud.New(proj.Name, cloud.LocalCloudOptions{
-				TLSCredentials: tlsCredentials,
-				LogWriter:      logWriter,
-				LocalConfig:    proj.LocalConfig,
-			}, project.BuildAndRunMigrations)
+				TLSCredentials:  tlsCredentials,
+				LogWriter:       logWriter,
+				LocalConfig:     proj.LocalConfig,
+				MigrationRunner: project.BuildAndRunMigrations,
+			})
 			tui.CheckErr(err)
 			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})
 		}()

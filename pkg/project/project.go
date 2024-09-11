@@ -546,8 +546,17 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 
 	matches := map[string]string{}
 
+	baseServices := []BaseService{}
 	for _, serviceSpec := range projectConfig.Services {
-		serviceMatch := filepath.Join(serviceSpec.Basedir, serviceSpec.Match)
+		baseServices = append(baseServices, serviceSpec)
+	}
+
+	for _, batchSpec := range projectConfig.Batches {
+		baseServices = append(baseServices, batchSpec)
+	}
+
+	for _, baseService := range baseServices {
+		serviceMatch := filepath.Join(baseService.GetBasedir(), baseService.GetMatch())
 
 		files, err := afero.Glob(fs, serviceMatch)
 		if err != nil {
@@ -555,7 +564,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		}
 
 		for _, f := range files {
-			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, serviceSpec.Basedir), f)
+			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, baseService.GetBasedir()), f)
 			projectRelativeServiceFile := filepath.Join(projectConfig.Directory, f)
 
 			serviceName := projectConfig.pathToNormalizedServiceName(projectRelativeServiceFile)
@@ -566,18 +575,18 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				return file != f
 			})
 
-			if serviceSpec.Runtime != "" {
+			if baseService.GetRuntime() != "" {
 				// We have a custom runtime
-				customRuntime, ok := projectConfig.Runtimes[serviceSpec.Runtime]
+				customRuntime, ok := projectConfig.Runtimes[baseService.GetRuntime()]
 				if !ok {
-					return nil, fmt.Errorf("unable to find runtime %s", serviceSpec.Runtime)
+					return nil, fmt.Errorf("unable to find runtime %s", baseService.GetRuntime())
 				}
 
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					customRuntime.Dockerfile,
 					// will default to the project directory if not set
-					lo.Ternary(customRuntime.Context != "", customRuntime.Context, serviceSpec.Basedir),
+					lo.Ternary(customRuntime.Context != "", customRuntime.Context, baseService.GetBasedir()),
 					customRuntime.Args,
 					otherEntryPointFiles,
 					fs,
@@ -589,7 +598,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					"",
-					serviceSpec.Basedir,
+					baseService.GetBasedir(),
 					map[string]string{},
 					otherEntryPointFiles,
 					fs,
@@ -600,93 +609,42 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			}
 
 			if matches[f] != "" {
-				return nil, fmt.Errorf("service file %s matched by multiple patterns: %s and %s, services must only be matched by a single pattern", f, matches[f], serviceSpec.Match)
+				return nil, fmt.Errorf("service file %s matched by multiple patterns: %s and %s, services must only be matched by a single pattern", f, matches[f], baseService.GetMatch())
 			}
 
-			matches[f] = serviceSpec.Match
+			matches[f] = baseService.GetMatch()
 
-			relativeFilePath, err := filepath.Rel(serviceSpec.Basedir, f)
+			relativeFilePath, err := filepath.Rel(baseService.GetBasedir(), f)
 			if err != nil {
 				return nil, fmt.Errorf("unable to get relative file path for service %s: %w", f, err)
 			}
 
-			newService := NewService(serviceName, serviceSpec.Type, relativeFilePath, *buildContext, serviceSpec.Start)
-
-			if serviceSpec.Type == "" {
-				serviceSpec.Type = "default"
-			}
-
-			services = append(services, *newService)
-		}
-	}
-
-	// TODO: DRY this up with common composition with services
-	for _, batchSpec := range projectConfig.Batches {
-		files, err := afero.Glob(fs, batchSpec.Match)
-		if err != nil {
-			return nil, fmt.Errorf("unable to match batch files for pattern %s: %w", batchSpec.Match, err)
-		}
-
-		for _, f := range files {
-			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, batchSpec.Basedir), f)
-			projectRelativeServiceFile := filepath.Join(projectConfig.Directory, f)
-
-			batchName := projectConfig.pathToNormalizedServiceName(projectRelativeServiceFile)
-
-			var buildContext *runtime.RuntimeBuildContext
-
-			otherEntryPointFiles := lo.Filter(files, func(file string, index int) bool {
-				return file != f
-			})
-
-			if batchSpec.Runtime != "" {
-				// We have a custom runtime
-				customRuntime, ok := projectConfig.Runtimes[batchSpec.Runtime]
-				if !ok {
-					return nil, fmt.Errorf("unable to find runtime %s", batchSpec.Runtime)
+			if svc, ok := baseService.(ServiceConfiguration); ok {
+				newService := Service{
+					Name:         serviceName,
+					filepath:     relativeFilePath,
+					basedir:      baseService.GetBasedir(),
+					buildContext: *buildContext,
+					Type:         svc.Type,
+					startCmd:     svc.Start,
 				}
 
-				buildContext, err = runtime.NewBuildContext(
-					relativeServiceEntrypointPath,
-					customRuntime.Dockerfile,
-					// will default to the project directory if not set
-					lo.Ternary(customRuntime.Context != "", customRuntime.Context, batchSpec.Basedir),
-					customRuntime.Args,
-					otherEntryPointFiles,
-					fs,
-				)
-				if err != nil {
-					return nil, fmt.Errorf("unable to create build context for custom service file %s: %w", f, err)
+				if svc.Type == "" {
+					svc.Type = "default"
 				}
-			} else {
-				buildContext, err = runtime.NewBuildContext(
-					relativeServiceEntrypointPath,
-					"",
-					batchSpec.Basedir,
-					map[string]string{},
-					otherEntryPointFiles,
-					fs,
-				)
-				if err != nil {
-					return nil, fmt.Errorf("unable to create build context for batch file %s: %w", f, err)
+				services = append(services, newService)
+			} else if batch, ok := baseService.(BatchConfiguration); ok {
+				newBatch := Batch{
+					Name:         serviceName,
+					basedir:      batch.Basedir,
+					filepath:     relativeFilePath,
+					buildContext: *buildContext,
+					runCmd:       batch.Start,
 				}
+
+				batches = append(batches, newBatch)
 			}
 
-			if matches[f] != "" {
-				return nil, fmt.Errorf("batch file %s matched by multiple patterns: %s and %s, batches must only be matched by a single pattern", f, matches[f], batchSpec.Match)
-			}
-
-			matches[f] = batchSpec.Match
-
-			newBatch := Batch{
-				Name:         batchName,
-				basedir:      batchSpec.Basedir,
-				filepath:     relativeServiceEntrypointPath,
-				buildContext: *buildContext,
-				runCmd:       batchSpec.Start,
-			}
-
-			batches = append(batches, newBatch)
 		}
 	}
 

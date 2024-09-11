@@ -36,7 +36,14 @@ type RuntimeConfiguration struct {
 	Args map[string]string
 }
 
-type ServiceConfiguration struct {
+type BaseService interface {
+	GetBasedir() string
+	GetMatch() string
+	GetRuntime() string
+	GetStart() string
+}
+
+type BaseServiceConfiguration struct {
 	// The base directory for source files
 	Basedir string `yaml:"basedir"`
 
@@ -46,25 +53,35 @@ type ServiceConfiguration struct {
 	// This is the custom runtime version (is custom if not nil, we auto-detect a standard language runtime)
 	Runtime string `yaml:"runtime,omitempty"`
 
-	// This allows specifying a particular service type (e.g. "Job"), this is optional and custom service types can be defined for each stack
-	Type string `yaml:"type,omitempty"`
-
 	// This is a command that will be use to run these services when using nitric start
 	Start string `yaml:"start"`
 }
 
+func (b BaseServiceConfiguration) GetBasedir() string {
+	return b.Basedir
+}
+
+func (b BaseServiceConfiguration) GetMatch() string {
+	return b.Match
+}
+
+func (b BaseServiceConfiguration) GetRuntime() string {
+	return b.Runtime
+}
+
+func (b BaseServiceConfiguration) GetStart() string {
+	return b.Start
+}
+
+type ServiceConfiguration struct {
+	BaseServiceConfiguration `yaml:",inline"`
+
+	// This allows specifying a particular service type (e.g. "Job"), this is optional and custom service types can be defined for each stack
+	Type string `yaml:"type,omitempty"`
+}
+
 type BatchConfiguration struct {
-	// The base directory for source files
-	Basedir string `yaml:"basedir"`
-
-	// This is the string version
-	Match string `yaml:"match"`
-
-	// This is the custom runtime version (is custom if not nil, we auto-detect a standard language runtime)
-	Runtime string `yaml:"runtime"`
-
-	// This is a command that will be use to run this job locally when using nitric start
-	Start string `yaml:"start"`
+	BaseServiceConfiguration `yaml:",inline"`
 }
 
 type ProjectConfiguration struct {

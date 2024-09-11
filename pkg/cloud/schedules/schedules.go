@@ -49,6 +49,7 @@ type ActionState struct {
 	ScheduleName string
 	Success      bool
 }
+
 type LocalSchedulesService struct {
 	*schedules.ScheduleWorkerManager
 	cron *cron.Cron

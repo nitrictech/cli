@@ -60,6 +60,10 @@ func (p *Project) GetServices() []Service {
 	return p.services
 }
 
+func (p *Project) GetBatchServices() []Batch {
+	return p.batches
+}
+
 // TODO: Reduce duplicate code
 // BuildBatches - Builds all the batches in the project
 func (p *Project) BuildBatches(fs afero.Fs) (chan ServiceBuildUpdate, error) {

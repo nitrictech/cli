@@ -119,6 +119,12 @@ type SubscriberSpec struct {
 	Target string `json:"target"`
 }
 
+type BatchJobSpec struct {
+	*BaseResourceSpec
+
+	Target string `json:"target"`
+}
+
 type PolicyResource struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -132,6 +138,12 @@ type PolicySpec struct {
 }
 
 type ServiceSpec struct {
+	*BaseResourceSpec
+
+	FilePath string `json:"filePath"`
+}
+
+type BatchSpec struct {
 	*BaseResourceSpec
 
 	FilePath string `json:"filePath"`
@@ -155,6 +167,7 @@ type Dashboard struct {
 	apiSecurityDefinitions map[string]map[string]*resourcespb.ApiSecurityDefinitionResource
 	schedules              []ScheduleSpec
 	topics                 []*TopicSpec
+	batchJobs              []*BatchJobSpec
 	buckets                []*BucketSpec
 	stores                 []*KeyValueSpec
 	secrets                []*SecretSpec
@@ -181,6 +194,8 @@ type Dashboard struct {
 type DashboardResponse struct {
 	Apis          []ApiSpec          `json:"apis"`
 	ApisUseHttps  bool               `json:"apisUseHttps"`
+	Batches       []*BatchSpec       `json:"batchServices"`
+	BatchJobs     []*BatchJobSpec    `json:"jobs"`
 	Buckets       []*BucketSpec      `json:"buckets"`
 	Schedules     []ScheduleSpec     `json:"schedules"`
 	Topics        []*TopicSpec       `json:"topics"`
@@ -235,11 +250,32 @@ func (d *Dashboard) getServices() ([]*ServiceSpec, error) {
 	return serviceSpecs, nil
 }
 
+func (d *Dashboard) getBatchServices() ([]*BatchSpec, error) {
+	batchSpecs := []*BatchSpec{}
+
+	for _, batch := range d.project.GetBatchServices() {
+		absPath, err := batch.GetAbsoluteFilePath()
+		if err != nil {
+			return nil, err
+		}
+
+		batchSpecs = append(batchSpecs, &BatchSpec{
+			BaseResourceSpec: &BaseResourceSpec{
+				Name: batch.GetFilePath(),
+			},
+			FilePath: absPath,
+		})
+	}
+
+	return batchSpecs, nil
+}
+
 func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.resourcesLock.Lock()
 	defer d.resourcesLock.Unlock()
 
 	d.buckets = []*BucketSpec{}
+	d.batchJobs = []*BatchJobSpec{}
 	d.topics = []*TopicSpec{}
 	d.stores = []*KeyValueSpec{}
 	d.queues = []*QueueSpec{}
@@ -336,6 +372,57 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 
 	if len(d.secrets) > 0 {
 		slices.SortFunc(d.secrets, func(a, b *SecretSpec) int {
+			return compare(a.Name, b.Name)
+		})
+	}
+
+	for dbName, resource := range lrs.SqlDatabases.GetAll() {
+		exists := lo.ContainsBy(d.sqlDatabases, func(item *SQLDatabaseSpec) bool {
+			return item.Name == dbName
+		})
+
+		if !exists {
+			connectionString, err := d.databaseService.ConnectionString(context.TODO(), &sqlpb.SqlConnectionStringRequest{
+				DatabaseName: dbName,
+			})
+			if err != nil {
+				fmt.Printf("Error getting connection string for database %s: %v\n", dbName, err)
+				continue
+			}
+
+			d.sqlDatabases = append(d.sqlDatabases, &SQLDatabaseSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               dbName,
+					RequestingServices: resource.RequestingServices,
+				},
+				ConnectionString: connectionString.GetConnectionString(),
+			})
+		}
+	}
+
+	if len(d.sqlDatabases) > 0 {
+		slices.SortFunc(d.sqlDatabases, func(a, b *SQLDatabaseSpec) int {
+			return compare(a.Name, b.Name)
+		})
+	}
+
+	for jobName, resource := range lrs.BatchJobs.GetAll() {
+		exists := lo.ContainsBy(d.batchJobs, func(item *BatchJobSpec) bool {
+			return item.Name == jobName
+		})
+
+		if !exists {
+			d.batchJobs = append(d.batchJobs, &BatchJobSpec{
+				BaseResourceSpec: &BaseResourceSpec{
+					Name:               jobName,
+					RequestingServices: resource.RequestingServices,
+				},
+			})
+		}
+	}
+
+	if len(d.batchJobs) > 0 {
+		slices.SortFunc(d.batchJobs, func(a, b *BatchJobSpec) int {
 			return compare(a.Name, b.Name)
 		})
 	}
@@ -577,6 +664,7 @@ func (d *Dashboard) refresh() {
 
 func (d *Dashboard) isConnected() bool {
 	apisRegistered := len(d.apis) > 0
+	batchServicesRegistered := len(d.batchJobs) > 0
 	websocketsRegistered := len(d.websockets) > 0
 	topicsRegistered := len(d.topics) > 0
 	schedulesRegistered := len(d.schedules) > 0
@@ -586,7 +674,7 @@ func (d *Dashboard) isConnected() bool {
 	sqlRegistered := len(d.sqlDatabases) > 0
 	secretsRegistered := len(d.secrets) > 0
 
-	return apisRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered || sqlRegistered || secretsRegistered
+	return apisRegistered || batchServicesRegistered || websocketsRegistered || topicsRegistered || schedulesRegistered || notificationsRegistered || proxiesRegistered || storesRegistered || sqlRegistered || secretsRegistered
 }
 
 func (d *Dashboard) Start() error {
@@ -745,9 +833,16 @@ func (d *Dashboard) sendStackUpdate() error {
 		return err
 	}
 
+	batchServices, err := d.getBatchServices()
+	if err != nil {
+		return err
+	}
+
 	response := &DashboardResponse{
 		Apis:                d.apis,
 		Topics:              d.topics,
+		Batches:             batchServices,
+		BatchJobs:           d.batchJobs,
 		Buckets:             d.buckets,
 		Stores:              d.stores,
 		SQLDatabases:        d.sqlDatabases,
@@ -833,6 +928,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		stackWebSocket:         stackWebSocket,
 		historyWebSocket:       historyWebSocket,
 		wsWebSocket:            wsWebSocket,
+		batchJobs:              []*BatchJobSpec{},
 		buckets:                []*BucketSpec{},
 		schedules:              []ScheduleSpec{},
 		topics:                 []*TopicSpec{},
@@ -874,6 +970,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	localCloud.Apis.SubscribeToAction(dash.handleApiHistory)
 	localCloud.Topics.SubscribeToAction(dash.handleTopicsHistory)
 	localCloud.Schedules.SubscribeToAction(dash.handleSchedulesHistory)
+	localCloud.Batch.SubscribeToAction(dash.handleBatchJobsHistory)
 	localCloud.Websockets.SubscribeToAction(dash.handleWebsocketEvents)
 
 	return dash, nil

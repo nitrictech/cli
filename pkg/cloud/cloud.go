@@ -128,6 +128,7 @@ func (lc *LocalCloud) AddBatch(batchName string) (int, error) {
 		Websockets: lc.Websockets,
 		Topics:     lc.Topics,
 		Storage:    lc.Storage,
+		BatchJobs:  lc.Batch,
 	})
 	if err != nil {
 		return 0, err
@@ -200,6 +201,7 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 		Websockets: lc.Websockets,
 		Topics:     lc.Topics,
 		Storage:    lc.Storage,
+		BatchJobs:  lc.Batch,
 	})
 	if err != nil {
 		return 0, err
@@ -272,6 +274,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		TLSCredentials: opts.TLSCredentials,
 		LogWriter:      opts.LogWriter,
 		LocalConfig:    opts.LocalConfig,
+		BatchPlugin:    localBatch,
 	})
 	if err != nil {
 		return nil, err

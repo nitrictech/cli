@@ -33,6 +33,7 @@ type ResourceName = string
 
 type LocalResourcesState struct {
 	Buckets                *ResourceRegistrar[resourcespb.BucketResource]
+	BatchJobs              *ResourceRegistrar[resourcespb.JobResource]
 	KeyValueStores         *ResourceRegistrar[resourcespb.KeyValueStoreResource]
 	Policies               *ResourceRegistrar[resourcespb.PolicyResource]
 	Secrets                *ResourceRegistrar[resourcespb.SecretResource]
@@ -98,6 +99,9 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 		}
 
 		err = l.state.Policies.Register(policyName, serviceName, req.GetPolicy())
+
+	case resourcespb.ResourceType_Job:
+		err = l.state.BatchJobs.Register(req.Id.Name, serviceName, req.GetJob())
 	case resourcespb.ResourceType_Secret:
 		err = l.state.Secrets.Register(req.Id.Name, serviceName, req.GetSecret())
 	case resourcespb.ResourceType_Topic:
@@ -128,11 +132,14 @@ func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
 	l.state.Topics.ClearRequestingService(serviceName)
 	l.state.Queues.ClearRequestingService(serviceName)
 	l.state.ApiSecurityDefinitions.ClearRequestingService(serviceName)
+	l.state.SqlDatabases.ClearRequestingService(serviceName)
+	l.state.BatchJobs.ClearRequestingService(serviceName)
 }
 
 func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService {
 	return &LocalResourcesService{
 		state: LocalResourcesState{
+			BatchJobs:              NewResourceRegistrar[resourcespb.JobResource](),
 			Buckets:                NewResourceRegistrar[resourcespb.BucketResource](),
 			KeyValueStores:         NewResourceRegistrar[resourcespb.KeyValueStoreResource](),
 			Policies:               NewResourceRegistrar[resourcespb.PolicyResource](),

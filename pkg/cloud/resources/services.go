@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
+	"github.com/nitrictech/cli/pkg/cloud/batch"
 	"github.com/nitrictech/cli/pkg/cloud/http"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
 	"github.com/nitrictech/cli/pkg/cloud/storage"
@@ -36,6 +37,7 @@ type ServiceResourceRefresher struct {
 
 	lock              sync.RWMutex
 	apiWorkers        int
+	batchWorkers      int
 	scheduleWorkers   int
 	httpWorkers       int
 	listenerWorkers   int
@@ -45,6 +47,7 @@ type ServiceResourceRefresher struct {
 
 type UpdateArgs struct {
 	apiState             apis.State
+	batchState           batch.State
 	schedulesState       schedules.State
 	websocketState       websockets.State
 	bucketListenersState storage.State
@@ -53,7 +56,7 @@ type UpdateArgs struct {
 }
 
 func (s *ServiceResourceRefresher) allWorkerCount() int {
-	return s.apiWorkers + s.scheduleWorkers + s.httpWorkers + s.listenerWorkers + s.subscriberWorkers + s.websocketWorkers
+	return s.apiWorkers + s.scheduleWorkers + s.httpWorkers + s.listenerWorkers + s.subscriberWorkers + s.websocketWorkers + s.batchWorkers
 }
 
 func (s *ServiceResourceRefresher) updatesWorkers(update UpdateArgs) {
@@ -107,6 +110,13 @@ func (s *ServiceResourceRefresher) updatesWorkers(update UpdateArgs) {
 		}
 	}
 
+	if update.batchState != nil {
+		s.batchWorkers = 0
+		for _, batch := range update.batchState {
+			s.batchWorkers += batch[s.serviceName]
+		}
+	}
+
 	// When the worker count for a service is 0, we can assume that the service is not running.
 	// Typically this happens during a hot-reload/restarting a service and means the policies should be reset, since new policy requests will be coming in.
 	if previous > 0 && s.allWorkerCount() == 0 {
@@ -124,10 +134,11 @@ type NewServiceResourceRefresherArgs struct {
 	Websockets *websockets.LocalWebsocketService
 	Topics     *topics.LocalTopicsAndSubscribersService
 	Storage    *storage.LocalStorageService
+	BatchJobs  *batch.LocalBatchService
 }
 
 func NewServiceResourceRefresher(serviceName string, args NewServiceResourceRefresherArgs) (*ServiceResourceRefresher, error) {
-	if args.Resources == nil || args.Apis == nil || args.Schedules == nil || args.Http == nil || args.Listeners == nil || args.Websockets == nil {
+	if args.Resources == nil || args.Apis == nil || args.Schedules == nil || args.Http == nil || args.Listeners == nil || args.Websockets == nil || args.BatchJobs == nil {
 		return nil, fmt.Errorf("all service plugins are required")
 	}
 
@@ -141,6 +152,12 @@ func NewServiceResourceRefresher(serviceName string, args NewServiceResourceRefr
 	args.Apis.SubscribeToState(func(s apis.State) {
 		serviceState.updatesWorkers(UpdateArgs{
 			apiState: s,
+		})
+	})
+
+	args.BatchJobs.SubscribeToState(func(s batch.State) {
+		serviceState.updatesWorkers(UpdateArgs{
+			batchState: s,
 		})
 	})
 

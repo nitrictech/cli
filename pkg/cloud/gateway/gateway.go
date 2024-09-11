@@ -38,6 +38,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
+	"github.com/nitrictech/cli/pkg/cloud/batch"
 	"github.com/nitrictech/cli/pkg/cloud/http"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
@@ -51,6 +52,7 @@ import (
 
 	"github.com/nitrictech/nitric/core/pkg/gateway"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	batchpb "github.com/nitrictech/nitric/core/pkg/proto/batch/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
@@ -91,6 +93,7 @@ type LocalGatewayService struct {
 	websocketPlugin  *websockets.LocalWebsocketService
 	topicsPlugin     *topics.LocalTopicsAndSubscribersService
 	schedulesPlugin  *schedules.LocalSchedulesService
+	batchPlugin      *batch.LocalBatchService
 	serviceListener  net.Listener
 
 	localConfig localconfig.LocalConfiguration
@@ -456,6 +459,38 @@ func (s *LocalGatewayService) handleSchedulesTrigger(ctx *fasthttp.RequestCtx) {
 	ctx.SuccessString("text/plain", "Successfully triggered schedule")
 }
 
+func (s *LocalGatewayService) handleBatchJobTrigger(ctx *fasthttp.RequestCtx) {
+	jobName := ctx.UserValue("name").(string)
+
+	// Get the incoming data as JobData_Struct
+	payload := map[string]interface{}{}
+
+	err := json.Unmarshal(ctx.Request.Body(), &payload)
+	if err != nil {
+		ctx.Error(fmt.Sprintf("Error parsing JSON: %v", err), 400)
+		return
+	}
+
+	st, err := structpb.NewStruct(payload)
+	if err != nil {
+		ctx.Error(fmt.Sprintf("Error serializing job message from payload: %v", err), 400)
+		return
+	}
+
+	jobSubmitRequest := &batchpb.JobSubmitRequest{
+		JobName: jobName,
+		Data:    &batchpb.JobData{Data: &batchpb.JobData_Struct{Struct: st}},
+	}
+
+	_, err = s.batchPlugin.SubmitJob(context.Background(), jobSubmitRequest)
+	if err != nil {
+		ctx.Error(fmt.Sprintf("Error handling batch job trigger: %v", err), 500)
+		return
+	}
+
+	ctx.SuccessString("text/plain", "Successfully triggered job")
+}
+
 func (s *LocalGatewayService) refreshApis(apiState apis.State) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -704,6 +739,7 @@ const nameParam = "{name}"
 const (
 	topicPath    = "/topics/" + nameParam
 	schedulePath = "/schedules/" + nameParam
+	batchPath    = "/jobs/" + nameParam
 )
 
 func (s *LocalGatewayService) GetTopicTriggerUrl(topicName string) string {
@@ -714,6 +750,11 @@ func (s *LocalGatewayService) GetTopicTriggerUrl(topicName string) string {
 
 func (s *LocalGatewayService) GetScheduleManualTriggerUrl(scheduleName string) string {
 	endpoint, _ := url.JoinPath("http://"+s.GetTriggerAddress(), strings.Replace(schedulePath, nameParam, scheduleName, 1))
+	return endpoint
+}
+
+func (s *LocalGatewayService) GetBatchTriggerUrl(jobName string) string {
+	endpoint, _ := url.JoinPath("http://"+s.GetTriggerAddress(), strings.Replace(batchPath, nameParam, jobName, 1))
 	return endpoint
 }
 
@@ -728,6 +769,7 @@ func (s *LocalGatewayService) Start(opts *gateway.GatewayStartOpts) error {
 	// Publish to a topic
 	r.POST(topicPath, s.handleTopicRequest)
 	r.POST(schedulePath, s.handleSchedulesTrigger)
+	r.POST(batchPath, s.handleBatchJobTrigger)
 
 	s.serviceServer = &fasthttp.Server{
 		ReadTimeout:     time.Second * 1,
@@ -811,6 +853,7 @@ type NewGatewayOpts struct {
 	TLSCredentials *TLSCredentials
 	LogWriter      io.Writer
 	LocalConfig    localconfig.LocalConfiguration
+	BatchPlugin    *batch.LocalBatchService
 }
 
 // Create new HTTP gateway
@@ -821,5 +864,6 @@ func NewGateway(opts NewGatewayOpts) (*LocalGatewayService, error) {
 		bus:               EventBus.New(),
 		logWriter:         opts.LogWriter,
 		localConfig:       opts.LocalConfig,
+		batchPlugin:       opts.BatchPlugin,
 	}, nil
 }

@@ -632,6 +632,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				if svc.Type == "" {
 					svc.Type = "default"
 				}
+
 				services = append(services, newService)
 			} else if batch, ok := baseService.(BatchConfiguration); ok {
 				newBatch := Batch{
@@ -644,7 +645,6 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 
 				batches = append(batches, newBatch)
 			}
-
 		}
 	}
 

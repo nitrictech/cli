@@ -29,6 +29,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/http"
 	"github.com/nitrictech/cli/pkg/cloud/resources"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
+	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/view/tui"
@@ -66,6 +67,11 @@ type ScheduleSummary struct {
 	url  string
 }
 
+type DatabaseSummary struct {
+	name   string
+	status string
+}
+
 type TuiModel struct {
 	localCloud  *cloud.LocalCloud
 	apis        []ApiSummary
@@ -73,6 +79,7 @@ type TuiModel struct {
 	httpProxies []HttpProxySummary
 	topics      []TopicSummary
 	schedules   []ScheduleSummary
+	databases   []DatabaseSummary
 
 	resources *resources.LocalResourcesState
 
@@ -86,6 +93,7 @@ var _ tea.Model = &TuiModel{}
 func (t *TuiModel) Init() tea.Cmd {
 	t.reactiveSub = reactive.NewSubscriber()
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Apis.SubscribeToState)
+	reactive.ListenFor(t.reactiveSub, t.localCloud.Databases.SubscribeToState)
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Websockets.SubscribeToState)
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Http.SubscribeToState)
 
@@ -124,6 +132,22 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 
 		t.apis = newApiSummary
+	case sql.State:
+		newDatabaseSummary := []DatabaseSummary{}
+
+		for database, db := range state {
+			newDatabaseSummary = append(newDatabaseSummary, DatabaseSummary{
+				name:   database,
+				status: db.Status,
+			})
+		}
+
+		// sort the databases by name
+		sort.Slice(newDatabaseSummary, func(i, j int) bool {
+			return newDatabaseSummary[i].name < newDatabaseSummary[j].name
+		})
+
+		t.databases = newDatabaseSummary
 	case websockets.State:
 		// update the api state by getting the latest API addresses
 		newWebsocketsSummary := []WebsocketSummary{}
@@ -254,6 +278,11 @@ func (t *TuiModel) View() string {
 	for _, websocket := range t.websockets {
 		v.Add("ws:%s - ", websocket.name)
 		v.Addln(websocket.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+	}
+
+	for _, database := range t.databases {
+		v.Add("db:%s - ", database.name)
+		v.Addln(database.status).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
 	return v.Render()

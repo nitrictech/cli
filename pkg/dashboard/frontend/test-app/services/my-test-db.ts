@@ -2,8 +2,13 @@ import { api, sql } from '@nitric/sdk'
 import pg from 'pg'
 const { Client } = pg
 
-const myDb = sql('my-db')
-const mySecondDb = sql('my-second-db')
+const myDb = sql('my-db', {
+  migrations: 'file://migrations/my-db',
+})
+const mySecondDb = sql('my-second-db', {
+  migrations: 'file://migrations/my-second-db',
+})
+
 const dbApi = api('my-db-api')
 
 const getClient = async () => {

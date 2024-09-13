@@ -57,8 +57,6 @@ import (
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 )
 
-const tempBuildDir = "./.nitric/build"
-
 type Project struct {
 	Name        string
 	Directory   string
@@ -87,10 +85,7 @@ func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 	for _, service := range p.services {
 		waitGroup.Add(1)
 		// Create writer
-		serviceBuildUpdateWriter := &serviceBuildUpdateWriter{
-			buildUpdateChan: updatesChan,
-			serviceName:     service.Name,
-		}
+		serviceBuildUpdateWriter := NewBuildUpdateWriter(service.Name, updatesChan)
 
 		go func(svc Service, writer io.Writer) {
 			// Acquire a token by filling the maxConcurrentBuilds channel
@@ -216,7 +211,7 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	}
 
 	if serviceRequirements.HasDatabases() && !slices.Contains(p.Preview, preview.Feature_SqlDatabases) {
-		return nil, fmt.Errorf("service %s requires a database, but the project does not have the 'sql-databases' preview feature enabled. Please add sql-databases to the preview field of your nitric.yaml file to enable this feature", service.filepath)
+		return nil, fmt.Errorf("service %s requires a database, but the project does not have the 'sql-databases' preview feature enabled. Please add sql-databases to the preview field of your nitric.yaml file to enable this feature", service.GetFilePath())
 	}
 
 	return serviceRequirements, nil
@@ -416,20 +411,13 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				return nil, fmt.Errorf("unable to get relative file path for service %s: %w", f, err)
 			}
 
-			newService := Service{
-				Name:         serviceName,
-				filepath:     relativeFilePath,
-				basedir:      serviceSpec.Basedir,
-				buildContext: *buildContext,
-				Type:         serviceSpec.Type,
-				startCmd:     serviceSpec.Start,
-			}
+			newService := NewService(serviceName, serviceSpec.Type, relativeFilePath, *buildContext, serviceSpec.Start)
 
 			if serviceSpec.Type == "" {
 				serviceSpec.Type = "default"
 			}
 
-			services = append(services, newService)
+			services = append(services, *newService)
 		}
 	}
 

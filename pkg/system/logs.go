@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exit
+package system
 
 import (
 	"sync"
@@ -22,21 +22,22 @@ import (
 	"github.com/asaskevich/EventBus"
 )
 
-// ExitService - Service for handling application exit events
-type ExitService struct {
+// SystemLogsService - An EventBus service for handling logging of events and exceptions
+// So they can be subscribed to and displayed in the CLI
+type SystemLogsService struct {
 	bus EventBus.Bus
 }
 
-const exitTopic = "local_exit_cli"
+const logTopic = "system_logs"
 
 var (
-	instance *ExitService
+	instance *SystemLogsService
 	once     sync.Once
 )
 
-func GetExitService() *ExitService {
+func getInstance() *SystemLogsService {
 	once.Do(func() {
-		instance = &ExitService{
+		instance = &SystemLogsService{
 			bus: EventBus.New(),
 		}
 	})
@@ -44,10 +45,12 @@ func GetExitService() *ExitService {
 	return instance
 }
 
-func (s *ExitService) Exit(err error) {
-	s.bus.Publish(exitTopic, err)
+func Log(msg string) {
+	s := getInstance()
+	s.bus.Publish(logTopic, msg)
 }
 
-func (s *ExitService) SubscribeToExit(subscription func(err error)) {
-	_ = s.bus.SubscribeOnce(exitTopic, subscription)
+func SubscribeToLogs(subscription func(string)) {
+	s := getInstance()
+	_ = s.bus.Subscribe(logTopic, subscription)
 }

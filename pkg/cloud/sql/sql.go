@@ -20,12 +20,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"log"
+	"maps"
 	"net"
 	"net/netip"
 	"strings"
 	"time"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -34,30 +35,76 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/spf13/afero"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
+	"github.com/nitrictech/cli/pkg/cloud/resources"
 	"github.com/nitrictech/cli/pkg/docker"
-	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/netx"
 	"github.com/nitrictech/nitric/core/pkg/logger"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
+)
+
+type DatabaseStatus string
+
+const (
+	DatabaseStatusStarting           DatabaseStatus = "starting"
+	DatabaseStatusBuildingMigrations DatabaseStatus = "building migrations"
+	DatabaseStatusApplyingMigrations DatabaseStatus = "applying migrations"
+	DatabaseStatusActive             DatabaseStatus = "active"
+	DatabaseStatusError              DatabaseStatus = "error"
+)
+
+type DatabaseServer struct {
+	DatabaseName     string
+	Status           string
+	ResourceRegister *resources.ResourceRegister[resourcespb.SqlDatabaseResource]
+	ConnectionString string
+}
+
+type (
+	DatabaseName = string
+	State        = map[DatabaseName]*DatabaseServer
 )
 
 type LocalSqlServer struct {
 	projectName string
 	containerId string
 	port        int
+	State       State
 	sqlpb.UnimplementedSqlServer
+
+	migrationRunner MigrationRunner
+
+	bus EventBus.Bus
 }
 
+type MigrationRunner = func(fs afero.Fs, servers map[string]*DatabaseServer, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource) error
+
 var _ sqlpb.SqlServer = (*LocalSqlServer)(nil)
+
+const localDatabaseTopic = "local_database"
+
+func (l *LocalSqlServer) SubscribeToState(subscriberFunction func(State)) {
+	// ignore the error, it's only returned if the fn param isn't a function
+	_ = l.bus.Subscribe(localDatabaseTopic, subscriberFunction)
+}
+
+func (l *LocalSqlServer) Publish(state State) {
+	l.bus.Publish(localDatabaseTopic, maps.Clone(state))
+}
+
+func (l *LocalSqlServer) GetState() State {
+	return maps.Clone(l.State)
+}
 
 func (l *LocalSqlServer) ensureDatabaseExists(databaseName string) (string, error) {
 	// Ensure the database exists
 	// Connect to the PostgreSQL instance
 	conn, err := pgx.Connect(context.Background(), fmt.Sprintf("user=postgres password=localsecret host=localhost port=%d dbname=postgres sslmode=disable", l.port))
 	if err != nil {
-		exit.GetExitService().Exit(err)
+		return "", err
 	}
 	defer conn.Close(context.Background())
 
@@ -71,8 +118,6 @@ func (l *LocalSqlServer) ensureDatabaseExists(databaseName string) (string, erro
 			return "", err
 		}
 	}
-
-	// TODO: Run migrations/seeds if necessary
 
 	// Return the connection string of the new database
 	return fmt.Sprintf("postgresql://postgres:localsecret@localhost:%d/%s?sslmode=disable", l.port, databaseName), nil
@@ -103,10 +148,7 @@ func (l *LocalSqlServer) start() error {
 		Name:   fmt.Sprintf("%s-local-sql", l.projectName),
 	})
 	if err != nil {
-		// FIXME: Use error container type to validate here
-		if !strings.Contains(err.Error(), "name already in use") {
-			log.Fatalf("Failed to create volume: %v", err)
-		}
+		return err
 	}
 
 	newLis, err := netx.GetNextListener(netx.MinPort(5432))
@@ -236,15 +278,71 @@ func (l *LocalSqlServer) Query(ctx context.Context, connectionString string, que
 	return results, nil
 }
 
-func NewLocalSqlServer(projectName string) (*LocalSqlServer, error) {
+func (l *LocalSqlServer) BuildAndRunMigrations(fs afero.Fs, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource) error {
+	// Update the migration status
+	for dbName := range databasesToMigrate {
+		l.State[dbName].Status = string(DatabaseStatusApplyingMigrations)
+	}
+
+	l.Publish(l.State)
+
+	err := l.migrationRunner(fs, l.State, databasesToMigrate)
+	if err != nil {
+		return err
+	}
+
+	// Update the status to running
+	for dbName := range databasesToMigrate {
+		l.State[dbName].Status = string(DatabaseStatusActive)
+	}
+
+	l.Publish(l.State)
+
+	return err
+}
+
+func (l *LocalSqlServer) RegisterDatabases(lrs resources.LocalResourcesState) {
+	// Check for new databases to migrate
+	for dbName, r := range lrs.SqlDatabases.GetAll() {
+		_, ok := l.State[dbName]
+
+		if !ok {
+			l.State[dbName] = &DatabaseServer{
+				Status:           string(DatabaseStatusStarting),
+				ResourceRegister: r,
+				ConnectionString: "",
+			}
+
+			connectionString, err := l.ensureDatabaseExists(dbName)
+			if err != nil {
+				// Mark database as errored
+				l.State[dbName].Status = string(DatabaseStatusError)
+			}
+
+			// Update the connection string
+			l.State[dbName].ConnectionString = connectionString
+			l.State[dbName].Status = string(DatabaseStatusActive)
+		}
+	}
+
+	l.Publish(l.State)
+}
+
+func NewLocalSqlServer(projectName string, localResources *resources.LocalResourcesService, migrationRunner MigrationRunner) (*LocalSqlServer, error) {
 	localSql := &LocalSqlServer{
-		projectName: projectName,
+		projectName:     projectName,
+		State:           make(State),
+		bus:             EventBus.New(),
+		migrationRunner: migrationRunner,
 	}
 
 	err := localSql.start()
 	if err != nil {
 		return nil, err
 	}
+
+	// subscribe to local resources for migrations
+	localResources.SubscribeToState(localSql.RegisterDatabases)
 
 	return localSql, nil
 }

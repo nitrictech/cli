@@ -159,6 +159,21 @@ func parseMigrationsScheme(migrationsPath string) (string, string, error) {
 	return result["Scheme"], result["Path"], nil
 }
 
+// sqlDatabases to requirements
+func MakeDatabaseServiceRequirements(sqlDatabases map[string]*resourcespb.SqlDatabaseResource) []*ServiceRequirements {
+	serviceRequirements := []*ServiceRequirements{}
+
+	for databaseName, databaseConfig := range sqlDatabases {
+		serviceRequirements = append(serviceRequirements, &ServiceRequirements{
+			sqlDatabases: map[string]*resourcespb.SqlDatabaseResource{
+				databaseName: databaseConfig,
+			},
+		})
+	}
+
+	return serviceRequirements
+}
+
 // Collect a list of migration images that need to be built
 // these requirements need to be supplied to the deployment serviceS
 func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirements, fs afero.Fs) (map[string]*runtime.RuntimeBuildContext, error) {

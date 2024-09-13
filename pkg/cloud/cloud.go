@@ -159,9 +159,10 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 }
 
 type LocalCloudOptions struct {
-	TLSCredentials *gateway.TLSCredentials
-	LogWriter      io.Writer
-	LocalConfig    localconfig.LocalConfiguration
+	TLSCredentials  *gateway.TLSCredentials
+	LogWriter       io.Writer
+	LocalConfig     localconfig.LocalConfiguration
+	MigrationRunner sql.MigrationRunner
 }
 
 func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
@@ -220,7 +221,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localDatabaseService, err := sql.NewLocalSqlServer(projectName)
+	localDatabaseService, err := sql.NewLocalSqlServer(projectName, localResources, opts.MigrationRunner)
 	if err != nil {
 		return nil, err
 	}

@@ -2,3 +2,6 @@ name: test-app
 services:
   - match: ./services/*.ts
     start: yarn dev:functions $SERVICE_PATH
+
+preview:
+  - sql-databases

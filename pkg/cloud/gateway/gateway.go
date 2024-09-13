@@ -42,9 +42,9 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
-	"github.com/nitrictech/cli/pkg/exit"
 	"github.com/nitrictech/cli/pkg/netx"
 	"github.com/nitrictech/cli/pkg/project/localconfig"
+	"github.com/nitrictech/cli/pkg/system"
 	"github.com/nitrictech/cli/pkg/view/tui"
 
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
@@ -477,7 +477,7 @@ func (s *LocalGatewayService) refreshApis(apiState apis.State) {
 
 	err := s.createApiServers()
 	if err != nil {
-		exit.GetExitService().Exit(fmt.Errorf("error creating api servers: %s", err.Error()))
+		system.Log(fmt.Sprintf("error creating api servers: %s", err.Error()))
 	}
 }
 
@@ -502,7 +502,7 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 
 	err := s.createHttpServers()
 	if err != nil {
-		exit.GetExitService().Exit(fmt.Errorf("error creating http servers: %s", err.Error()))
+		system.Log(fmt.Sprintf("error creating http servers: %s", err.Error()))
 	}
 }
 
@@ -529,7 +529,7 @@ func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 
 	err := s.createWebsocketServers()
 	if err != nil {
-		exit.GetExitService().Exit(fmt.Errorf("error creating websocket servers: %s", err.Error()))
+		system.Log(fmt.Sprintf("error creating websocket servers: %s", err.Error()))
 	}
 }
 

@@ -287,6 +287,20 @@ func (t *TuiModel) View() string {
 		v.Addln(database.status).WithStyle(textHighlight)
 	}
 
+	if t.resources != nil {
+		if len(t.resources.ServiceErrors) > 0 {
+			v.Break()
+			v.Addln("Project Errors:").WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
+		}
+
+		for svcName, errs := range t.resources.ServiceErrors {
+			v.Addln("%s:", svcName).WithStyle(lipgloss.NewStyle().Bold(true))
+			for _, err := range errs {
+				v.Addln(" - " + err.Error()).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
+			}
+		}
+	}
+
 	return v.Render()
 }
 

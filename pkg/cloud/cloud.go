@@ -237,6 +237,19 @@ type LocalCloudOptions struct {
 }
 
 func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
+	localGateway, err := gateway.NewGateway(gateway.NewGatewayOpts{
+		TLSCredentials: opts.TLSCredentials,
+		LogWriter:      opts.LogWriter,
+		LocalConfig:    opts.LocalConfig,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	localResources := resources.NewLocalResourcesService(resources.LocalResourcesOptions{
+		Gateway: localGateway,
+	})
+
 	localTopics, err := topics.NewLocalTopicsService()
 	if err != nil {
 		return nil, err
@@ -257,7 +270,6 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 
 	localApis := apis.NewLocalApiGatewayService()
 	localBatch := batch.NewLocalBatchService()
-
 	localSchedules := schedules.NewLocalSchedulesService()
 	localHttpProxy := http.NewLocalHttpProxyService()
 

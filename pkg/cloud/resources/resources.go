@@ -21,11 +21,13 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"github.com/asaskevich/EventBus"
 
 	"github.com/nitrictech/cli/pkg/cloud/gateway"
 	"github.com/nitrictech/cli/pkg/grpcx"
+	"github.com/nitrictech/cli/pkg/validation"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
 
@@ -41,6 +43,7 @@ type LocalResourcesState struct {
 	Queues                 *ResourceRegistrar[resourcespb.QueueResource]
 	SqlDatabases           *ResourceRegistrar[resourcespb.SqlDatabaseResource]
 	ApiSecurityDefinitions *ResourceRegistrar[resourcespb.ApiSecurityDefinitionResource]
+	Errors                 *ResourceRegistrar[error]
 }
 
 type LocalResourcesService struct {
@@ -78,6 +81,12 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 	serviceName, err := grpcx.GetServiceNameFromIncomingContext(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	if !validation.IsValidResourceName(req.Id.Name) {
+		err := fmt.Errorf("Invalid resource name: %s", req.Id.Name)
+		// register as an error against the service
+		l.state.Errors.Register(req.Id.Name, serviceName, &err)
 	}
 
 	switch req.Id.Type {
@@ -134,6 +143,7 @@ func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
 	l.state.ApiSecurityDefinitions.ClearRequestingService(serviceName)
 	l.state.SqlDatabases.ClearRequestingService(serviceName)
 	l.state.BatchJobs.ClearRequestingService(serviceName)
+	l.state.Errors.ClearRequestingService(serviceName)
 }
 
 func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService {
@@ -148,6 +158,7 @@ func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService
 			Queues:                 NewResourceRegistrar[resourcespb.QueueResource](),
 			ApiSecurityDefinitions: NewResourceRegistrar[resourcespb.ApiSecurityDefinitionResource](),
 			SqlDatabases:           NewResourceRegistrar[resourcespb.SqlDatabaseResource](),
+			Errors:                 []error{},
 		},
 		gateway: opts.Gateway,
 		bus:     EventBus.New(),

@@ -638,5 +638,7 @@ func init() {
 	rootCmd.AddCommand(stackCmd)
 
 	addAlias("stack update", "up", true)
+	// nitric apply is an alias for stack update, due to intuition with that command from other tools
+	addAlias("stack update", "apply", true)
 	addAlias("stack down", "down", true)
 }

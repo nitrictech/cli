@@ -17,6 +17,7 @@
 package dashboard
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -40,6 +41,7 @@ import (
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/netx"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
+	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"

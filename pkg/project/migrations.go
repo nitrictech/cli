@@ -53,7 +53,7 @@ func migrationImageName(dbName string) string {
 func BuildAndRunMigrations(fs afero.Fs, servers map[string]*sql.DatabaseServer, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource) error {
 	serviceRequirements := collector.MakeDatabaseServiceRequirements(databasesToMigrate)
 
-	migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, fs)
+	migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, []*collector.BatchRequirements{}, fs)
 	if err != nil {
 		return fmt.Errorf("failed to get migration image build contexts: %w", err)
 	}

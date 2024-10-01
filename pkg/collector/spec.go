@@ -538,6 +538,10 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 						projectErrors.Add(fmt.Errorf("service %s attempted to register an OIDC security scheme with an empty issuer", serviceRequirements.serviceName))
 					}
 
+					if !strings.Contains(issuerUrl, "/.well-known/openid-configuration") {
+						projectErrors.Add(fmt.Errorf("service %s attempted to register an OIDC security policy with an invalid OIDC URL", serviceRequirements.serviceName))
+					}
+
 					if len(securityScheme.GetOidc().GetAudiences()) == 0 {
 						projectErrors.Add(fmt.Errorf("service %s attempted to register an OIDC security scheme with no audiences", serviceRequirements.serviceName))
 					}

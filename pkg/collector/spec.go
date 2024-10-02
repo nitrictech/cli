@@ -540,7 +540,7 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 
 					err := validateOpenIdConnectConfig(issuerUrl)
 					if err != nil {
-						projectErrors.Add(fmt.Errorf("service %s attempted to use an OIDC URL pointing to an invalid OIDC config", serviceRequirements.serviceName))
+						projectErrors.Add(fmt.Errorf("service %s attempted to use an OIDC URL pointing to an invalid OIDC config: %w", serviceRequirements.serviceName, err))
 					}
 
 					if len(securityScheme.GetOidc().GetAudiences()) == 0 {

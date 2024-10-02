@@ -16,11 +16,13 @@
 package collector
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -32,16 +34,25 @@ type OpenIdConfig struct {
 	AuthEndpoint  string `json:"authorization_endpoint"`
 }
 
-func validateOpenIdConnectConfig(openIdConnectUrl string) error {
+func validateOpenIdConnectConfig(rawUrl string) error {
 	// append well-known configuration to issuer
-	url, err := url.Parse(openIdConnectUrl)
+	openIdConnectUrl, err := url.Parse(rawUrl)
 	if err != nil {
 		return err
 	}
 
+	timeout := 10 * time.Second
+	client := http.Client{
+		Timeout: timeout,
+	}
+
 	// get the configuration document
-	resp, err := http.Get(url.String())
+	resp, err := client.Get(openIdConnectUrl.String())
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("OIDC provider failed to respond with config within %s", timeout.String())
+		}
+
 		return err
 	}
 
@@ -58,6 +69,23 @@ func validateOpenIdConnectConfig(openIdConnectUrl string) error {
 
 	if err := json.Unmarshal(body, oidConf); err != nil {
 		return errors.WithMessage(err, "error unmarshalling open id config")
+	}
+
+	// Validate that all endpoints are valid
+	if _, err = url.ParseRequestURI(oidConf.AuthEndpoint); err != nil {
+		return errors.WithMessage(err, "invalid auth endpoint")
+	}
+
+	if _, err = url.ParseRequestURI(oidConf.Issuer); err != nil {
+		return errors.WithMessage(err, "invalid issuer")
+	}
+
+	if _, err = url.ParseRequestURI(oidConf.JwksUri); err != nil {
+		return errors.WithMessage(err, "invalid jwks uri")
+	}
+
+	if _, err = url.ParseRequestURI(oidConf.TokenEndpoint); err != nil {
+		return errors.WithMessage(err, "invalid token endpoint")
 	}
 
 	return nil

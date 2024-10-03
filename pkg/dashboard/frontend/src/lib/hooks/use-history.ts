@@ -24,9 +24,12 @@ export function useHistory(recordType: string) {
   )
 
   const deleteHistory = useCallback(async () => {
-    const resp = await fetch(`http://${host}/api/history?type=${recordType}`, {
-      method: 'DELETE',
-    })
+    const resp = await fetch(
+      `http://${host}/api/history?type=${recordType.toLowerCase()}`,
+      {
+        method: 'DELETE',
+      },
+    )
 
     if (resp.ok) {
       toast.success('Cleared History')

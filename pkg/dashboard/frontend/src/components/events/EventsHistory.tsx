@@ -1,7 +1,6 @@
 import type {
   EventHistoryItem,
-  Schedule,
-  Topic,
+  EventResource,
   TopicHistoryItem,
 } from '../../types'
 import { formatJSON } from '@/lib/utils'
@@ -10,8 +9,8 @@ import HistoryAccordion from '../shared/HistoryAccordion'
 
 interface Props {
   history: EventHistoryItem[]
-  selectedWorker: Schedule | Topic
-  workerType: 'schedules' | 'topics'
+  selectedWorker: EventResource
+  workerType: 'schedules' | 'topics' | 'jobs'
 }
 
 const EventsHistory: React.FC<Props> = ({
@@ -34,7 +33,7 @@ const EventsHistory: React.FC<Props> = ({
         items={requestHistory.map((h) => {
           let payload = ''
 
-          if (workerType === 'topics') {
+          if (workerType === 'topics' || workerType === 'jobs') {
             payload = (h.event as TopicHistoryItem['event']).payload
           }
 

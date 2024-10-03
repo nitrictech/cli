@@ -18,6 +18,7 @@ import {
   ArrowsRightLeftIcon,
   QueueListIcon,
   LockClosedIcon,
+  CogIcon,
 } from '@heroicons/react/24/outline'
 import {
   MarkerType,
@@ -56,9 +57,16 @@ import { SQLNode } from '@/components/architecture/nodes/SQLNode'
 import { SiPostgresql } from 'react-icons/si'
 import { unique } from 'radash'
 import { SecretNode } from '@/components/architecture/nodes/SecretNode'
+import { JobNode } from '@/components/architecture/nodes/JobNode'
+import {
+  BatchNode,
+  type BatchNodeData,
+} from '@/components/architecture/nodes/BatchNode'
 
 export const nodeTypes = {
   api: APINode,
+  batch: BatchNode,
+  job: JobNode,
   bucket: BucketNode,
   schedule: ScheduleNode,
   topic: TopicNode,
@@ -182,6 +190,7 @@ const actionVerbs = [
   'Enqueue',
   'Dequeue',
   'Access',
+  'Submit',
 ]
 
 function verbFromNitricAction(action: string) {
@@ -244,6 +253,40 @@ export function generateArchitectureData(data: WebSocketResponse): {
     })
 
     nodes.push(node)
+  })
+
+  // Generate nodes from batch jobs
+  data.jobs.forEach((job) => {
+    const node = createNode(job, 'job', {
+      title: job.name,
+      resource: job,
+      icon: CogIcon,
+      description: '',
+      address: `${data.triggerAddress}/batches/${job.name}`,
+    })
+
+    nodes.push(node)
+
+    const target = data.batchServices.find((b) =>
+      job.requestingServices.includes(b.name),
+    )
+
+    if (target) {
+      edges.push({
+        id: `e-${job.name}-${target.name}`,
+        source: node.id,
+        target: target.name,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: 'Runs on',
+      })
+    }
   })
 
   // Generate nodes from websockets
@@ -514,6 +557,32 @@ export function generateArchitectureData(data: WebSocketResponse): {
         connectedEdges: [],
       },
       type: 'service',
+    }
+
+    const connectedEdges = getConnectedEdges([node], edges)
+    node.data.connectedEdges = connectedEdges
+    node.data.description =
+      connectedEdges.length === 1
+        ? `${connectedEdges.length} connection`
+        : `${connectedEdges.length} connections`
+
+    nodes.push(node)
+  })
+
+  data.batchServices.forEach((batch) => {
+    const node: Node<BatchNodeData> = {
+      id: batch.name,
+      position: { x: 0, y: 0 },
+      data: {
+        title: batch.name,
+        description: '',
+        resource: {
+          filePath: batch.filePath,
+        },
+        icon: CpuChipIcon,
+        connectedEdges: [],
+      },
+      type: 'batch',
     }
 
     const connectedEdges = getConnectedEdges([node], edges)

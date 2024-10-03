@@ -44,17 +44,6 @@ import (
 	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/nitric/core/pkg/logger"
-	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
-	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
-	kvstorepb "github.com/nitrictech/nitric/core/pkg/proto/kvstore/v1"
-	queuespb "github.com/nitrictech/nitric/core/pkg/proto/queues/v1"
-	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
-	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
-	secretspb "github.com/nitrictech/nitric/core/pkg/proto/secrets/v1"
-	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
-	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
-	topicspb "github.com/nitrictech/nitric/core/pkg/proto/topics/v1"
-	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 )
 
 type Project struct {
@@ -64,10 +53,77 @@ type Project struct {
 	LocalConfig localconfig.LocalConfiguration
 
 	services []Service
+	batches  []Batch
 }
 
 func (p *Project) GetServices() []Service {
 	return p.services
+}
+
+func (p *Project) GetBatchServices() []Batch {
+	return p.batches
+}
+
+// TODO: Reduce duplicate code
+// BuildBatches - Builds all the batches in the project
+func (p *Project) BuildBatches(fs afero.Fs) (chan ServiceBuildUpdate, error) {
+	updatesChan := make(chan ServiceBuildUpdate)
+
+	if len(p.services) == 0 {
+		return nil, fmt.Errorf("no services found in project, nothing to build. This may indicate misconfigured `match` patterns in your nitric.yaml file")
+	}
+
+	maxConcurrentBuilds := make(chan struct{}, min(goruntime.NumCPU(), goruntime.GOMAXPROCS(0)))
+
+	waitGroup := sync.WaitGroup{}
+
+	for _, batch := range p.batches {
+		waitGroup.Add(1)
+		// Create writer
+		serviceBuildUpdateWriter := &serviceBuildUpdateWriter{
+			buildUpdateChan: updatesChan,
+			serviceName:     batch.Name,
+		}
+
+		go func(svc Batch, writer io.Writer) {
+			// Acquire a token by filling the maxConcurrentBuilds channel
+			// this will block once the buffer is full
+			maxConcurrentBuilds <- struct{}{}
+
+			// Start goroutine
+			if err := svc.BuildImage(fs, writer); err != nil {
+				updatesChan <- ServiceBuildUpdate{
+					ServiceName: svc.Name,
+					Err:         err,
+					Message:     err.Error(),
+					Status:      ServiceBuildStatus_Error,
+				}
+			} else {
+				updatesChan <- ServiceBuildUpdate{
+					ServiceName: svc.Name,
+					Message:     "Build Complete",
+					Status:      ServiceBuildStatus_Complete,
+				}
+			}
+
+			// release our lock
+			<-maxConcurrentBuilds
+
+			waitGroup.Done()
+		}(batch, serviceBuildUpdateWriter)
+	}
+
+	go func() {
+		waitGroup.Wait()
+		// Drain the semaphore to make sure all goroutines have finished
+		for i := 0; i < cap(maxConcurrentBuilds); i++ {
+			maxConcurrentBuilds <- struct{}{}
+		}
+
+		close(updatesChan)
+	}()
+
+	return updatesChan, nil
 }
 
 // BuildServices - Builds all the services in the project
@@ -134,19 +190,7 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	// start a grpc service with this registered
 	grpcServer := grpc.NewServer()
 
-	resourcespb.RegisterResourcesServer(grpcServer, serviceRequirements)
-	apispb.RegisterApiServer(grpcServer, serviceRequirements.ApiServer)
-	schedulespb.RegisterSchedulesServer(grpcServer, serviceRequirements)
-	topicspb.RegisterTopicsServer(grpcServer, serviceRequirements)
-	topicspb.RegisterSubscriberServer(grpcServer, serviceRequirements)
-	websocketspb.RegisterWebsocketHandlerServer(grpcServer, serviceRequirements)
-	storagepb.RegisterStorageListenerServer(grpcServer, serviceRequirements)
-	httppb.RegisterHttpServer(grpcServer, serviceRequirements)
-	storagepb.RegisterStorageServer(grpcServer, serviceRequirements)
-	queuespb.RegisterQueuesServer(grpcServer, serviceRequirements)
-	kvstorepb.RegisterKvStoreServer(grpcServer, serviceRequirements)
-	sqlpb.RegisterSqlServer(grpcServer, serviceRequirements)
-	secretspb.RegisterSecretManagerServer(grpcServer, serviceRequirements)
+	serviceRequirements.RegisterServices(grpcServer)
 
 	listener, err := net.Listen("tcp", ":")
 	if err != nil {
@@ -217,6 +261,59 @@ func (p *Project) collectServiceRequirements(service Service) (*collector.Servic
 	return serviceRequirements, nil
 }
 
+func (p *Project) collectBatchRequirements(service Batch) (*collector.BatchRequirements, error) {
+	serviceRequirements := collector.NewBatchRequirements(service.Name, service.GetFilePath())
+
+	// start a grpc service with this registered
+	grpcServer := grpc.NewServer()
+
+	serviceRequirements.RegisterServices(grpcServer)
+
+	listener, err := net.Listen("tcp", ":")
+	if err != nil {
+		return nil, err
+	}
+
+	// register non-blocking
+	go func() {
+		err := grpcServer.Serve(listener)
+		if err != nil {
+			logger.Errorf("unable to start local Nitric collection server: %s", err)
+		}
+	}()
+
+	defer grpcServer.Stop()
+
+	// run the service we want to collect for targeting the grpc server
+	// TODO: load and run .env files, etc.
+	stopChannel := make(chan bool)
+	updatesChannel := make(chan ServiceRunUpdate)
+
+	go func() {
+		for range updatesChannel {
+			// TODO: Provide some updates - bubbletea nice output
+			// fmt.Println("container update:", update)
+			continue
+		}
+	}()
+
+	_, port, err := net.SplitHostPort(listener.Addr().String())
+	if err != nil {
+		return nil, fmt.Errorf("unable to split host and port for local Nitric collection server: %w", err)
+	}
+
+	err = service.RunContainer(stopChannel, updatesChannel, WithNitricPort(port), WithNitricEnvironment("build"))
+	if err != nil {
+		return nil, err
+	}
+
+	if serviceRequirements.HasDatabases() && !slices.Contains(p.Preview, preview.Feature_SqlDatabases) {
+		return nil, fmt.Errorf("service %s requires a database, but the project does not have the 'sql-databases' preview feature enabled. Please add sql-databases to the preview field of your nitric.yaml file to enable this feature", service.filepath)
+	}
+
+	return serviceRequirements, nil
+}
+
 func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirements, error) {
 	allServiceRequirements := []*collector.ServiceRequirements{}
 	serviceErrors := []error{}
@@ -259,6 +356,48 @@ func (p *Project) CollectServicesRequirements() ([]*collector.ServiceRequirement
 	return allServiceRequirements, nil
 }
 
+func (p *Project) CollectBatchRequirements() ([]*collector.BatchRequirements, error) {
+	allBatchRequirements := []*collector.BatchRequirements{}
+	batchErrors := []error{}
+
+	reqLock := sync.Mutex{}
+	errorLock := sync.Mutex{}
+	wg := sync.WaitGroup{}
+
+	for _, batch := range p.batches {
+		b := batch
+
+		wg.Add(1)
+
+		go func(s Batch) {
+			defer wg.Done()
+
+			batchRequirements, err := p.collectBatchRequirements(s)
+			if err != nil {
+				errorLock.Lock()
+				defer errorLock.Unlock()
+
+				batchErrors = append(batchErrors, err)
+
+				return
+			}
+
+			reqLock.Lock()
+			defer reqLock.Unlock()
+
+			allBatchRequirements = append(allBatchRequirements, batchRequirements)
+		}(b)
+	}
+
+	wg.Wait()
+
+	if len(batchErrors) > 0 {
+		return nil, errors.Join(batchErrors...)
+	}
+
+	return allBatchRequirements, nil
+}
+
 // DefaultMigrationImage - Returns the default migration image name for the project
 // Also returns ok if image is required or not
 func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
@@ -296,6 +435,65 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 			}
 
 			return svc.Run(stopChannels[idx], updates, envVariables)
+		})
+	}
+
+	return group.Wait()
+}
+
+// RunBatchesWithCommand - Runs all the batches locally using a startup command
+// use the stop channel to stop all running batches
+func (p *Project) RunBatchesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
+	stopChannels := lo.FanOut[bool](len(p.batches), 1, stop)
+
+	group, _ := errgroup.WithContext(context.TODO())
+
+	for i, service := range p.batches {
+		idx := i
+		svc := service
+
+		// start the service with the given file reference from its projects CWD
+		group.Go(func() error {
+			port, err := localCloud.AddBatch(svc.GetFilePath())
+			if err != nil {
+				return err
+			}
+
+			envVariables := map[string]string{
+				"PYTHONUNBUFFERED":   "TRUE", // ensure all print statements print immediately for python
+				"NITRIC_ENVIRONMENT": "run",
+				"SERVICE_ADDRESS":    "localhost:" + strconv.Itoa(port),
+			}
+
+			for key, value := range env {
+				envVariables[key] = value
+			}
+
+			return svc.Run(stopChannels[idx], updates, envVariables)
+		})
+	}
+
+	return group.Wait()
+}
+
+// RunBatches - Runs all the batches as containers
+// use the stop channel to stop all running batches
+func (p *Project) RunBatches(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
+	stopChannels := lo.FanOut[bool](len(p.batches), 1, stop)
+
+	group, _ := errgroup.WithContext(context.TODO())
+
+	for i, service := range p.batches {
+		idx := i
+		svc := service
+
+		group.Go(func() error {
+			port, err := localCloud.AddBatch(svc.GetFilePath())
+			if err != nil {
+				return err
+			}
+
+			return svc.RunContainer(stopChannels[idx], updates, WithNitricPort(strconv.Itoa(port)), WithEnvVars(env))
 		})
 	}
 
@@ -344,11 +542,21 @@ func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) 
 // fromProjectConfiguration creates a new Instance of a nitric Project from a configuration files contents
 func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *localconfig.LocalConfiguration, fs afero.Fs) (*Project, error) {
 	services := []Service{}
+	batches := []Batch{}
 
 	matches := map[string]string{}
 
+	baseServices := []BaseService{}
 	for _, serviceSpec := range projectConfig.Services {
-		serviceMatch := filepath.Join(serviceSpec.Basedir, serviceSpec.Match)
+		baseServices = append(baseServices, serviceSpec)
+	}
+
+	for _, batchSpec := range projectConfig.Batches {
+		baseServices = append(baseServices, batchSpec)
+	}
+
+	for _, baseService := range baseServices {
+		serviceMatch := filepath.Join(baseService.GetBasedir(), baseService.GetMatch())
 
 		files, err := afero.Glob(fs, serviceMatch)
 		if err != nil {
@@ -356,7 +564,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		}
 
 		for _, f := range files {
-			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, serviceSpec.Basedir), f)
+			relativeServiceEntrypointPath, _ := filepath.Rel(filepath.Join(projectConfig.Directory, baseService.GetBasedir()), f)
 			projectRelativeServiceFile := filepath.Join(projectConfig.Directory, f)
 
 			serviceName := projectConfig.pathToNormalizedServiceName(projectRelativeServiceFile)
@@ -367,18 +575,18 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				return file != f
 			})
 
-			if serviceSpec.Runtime != "" {
+			if baseService.GetRuntime() != "" {
 				// We have a custom runtime
-				customRuntime, ok := projectConfig.Runtimes[serviceSpec.Runtime]
+				customRuntime, ok := projectConfig.Runtimes[baseService.GetRuntime()]
 				if !ok {
-					return nil, fmt.Errorf("unable to find runtime %s", serviceSpec.Runtime)
+					return nil, fmt.Errorf("unable to find runtime %s", baseService.GetRuntime())
 				}
 
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					customRuntime.Dockerfile,
 					// will default to the project directory if not set
-					lo.Ternary(customRuntime.Context != "", customRuntime.Context, serviceSpec.Basedir),
+					lo.Ternary(customRuntime.Context != "", customRuntime.Context, baseService.GetBasedir()),
 					customRuntime.Args,
 					otherEntryPointFiles,
 					fs,
@@ -390,7 +598,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 				buildContext, err = runtime.NewBuildContext(
 					relativeServiceEntrypointPath,
 					"",
-					serviceSpec.Basedir,
+					baseService.GetBasedir(),
 					map[string]string{},
 					otherEntryPointFiles,
 					fs,
@@ -401,23 +609,42 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			}
 
 			if matches[f] != "" {
-				return nil, fmt.Errorf("service file %s matched by multiple patterns: %s and %s, services must only be matched by a single pattern", f, matches[f], serviceSpec.Match)
+				return nil, fmt.Errorf("service file %s matched by multiple patterns: %s and %s, services must only be matched by a single pattern", f, matches[f], baseService.GetMatch())
 			}
 
-			matches[f] = serviceSpec.Match
+			matches[f] = baseService.GetMatch()
 
-			relativeFilePath, err := filepath.Rel(serviceSpec.Basedir, f)
+			relativeFilePath, err := filepath.Rel(baseService.GetBasedir(), f)
 			if err != nil {
 				return nil, fmt.Errorf("unable to get relative file path for service %s: %w", f, err)
 			}
 
-			newService := NewService(serviceName, serviceSpec.Type, relativeFilePath, *buildContext, serviceSpec.Start)
+			if svc, ok := baseService.(ServiceConfiguration); ok {
+				newService := Service{
+					Name:         serviceName,
+					filepath:     relativeFilePath,
+					basedir:      baseService.GetBasedir(),
+					buildContext: *buildContext,
+					Type:         svc.Type,
+					startCmd:     svc.Start,
+				}
 
-			if serviceSpec.Type == "" {
-				serviceSpec.Type = "default"
+				if svc.Type == "" {
+					svc.Type = "default"
+				}
+
+				services = append(services, newService)
+			} else if batch, ok := baseService.(BatchConfiguration); ok {
+				newBatch := Batch{
+					Name:         serviceName,
+					basedir:      batch.Basedir,
+					filepath:     relativeFilePath,
+					buildContext: *buildContext,
+					runCmd:       batch.Start,
+				}
+
+				batches = append(batches, newBatch)
 			}
-
-			services = append(services, *newService)
 		}
 	}
 
@@ -426,13 +653,20 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		localConfig = &localconfig.LocalConfiguration{}
 	}
 
-	return &Project{
+	project := &Project{
 		Name:        projectConfig.Name,
 		Directory:   projectConfig.Directory,
 		Preview:     projectConfig.Preview,
 		LocalConfig: *localConfig,
 		services:    services,
-	}, nil
+		batches:     batches,
+	}
+
+	if len(project.batches) > 0 && !slices.Contains(project.Preview, preview.Feature_BatchServices) {
+		return nil, fmt.Errorf("project contains batch services, but the project does not have the 'batch-services' preview feature enabled. Please add batch-services to the preview field of your nitric.yaml file to enable this feature")
+	}
+
+	return project, nil
 }
 
 // FromFile - Loads a nitric project from a nitric.yaml file

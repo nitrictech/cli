@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -64,6 +65,11 @@ var specCmd = &cobra.Command{
 		buildUpdates, err := proj.BuildServices(fs)
 		tui.CheckErr(err)
 
+		batchBuildUpdates, err := proj.BuildBatches(fs)
+		tui.CheckErr(err)
+
+		allBuildUpdates := lo.FanIn(10, buildUpdates, batchBuildUpdates)
+
 		if isNonInteractive() {
 			fmt.Println("building project services")
 			for _, service := range proj.GetServices() {
@@ -77,7 +83,7 @@ var specCmd = &cobra.Command{
 				}
 			}
 		} else {
-			prog := teax.NewProgram(build.NewModel(buildUpdates, "Building Services"))
+			prog := teax.NewProgram(build.NewModel(allBuildUpdates, "Building Services"))
 			// blocks but quits once the above updates channel is closed by the build process
 			buildModel, err := prog.Run()
 			tui.CheckErr(err)
@@ -89,6 +95,9 @@ var specCmd = &cobra.Command{
 		// Step 2. Start the collectors and containers (respectively in pairs)
 		// Step 3. Merge requirements from collectors into a specification
 		serviceRequirements, err := proj.CollectServicesRequirements()
+		tui.CheckErr(err)
+
+		batchRequirements, err := proj.CollectBatchRequirements()
 		tui.CheckErr(err)
 
 		additionalEnvFiles := []string{}
@@ -106,12 +115,7 @@ var specCmd = &cobra.Command{
 			envVariables = map[string]string{}
 		}
 
-		defaultImageName, ok := proj.DefaultMigrationImage(fs)
-		if !ok {
-			defaultImageName = ""
-		}
-
-		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, fs)
+		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, batchRequirements, fs)
 		tui.CheckErr(err)
 		// Build images from contexts and provide updates on the builds
 
@@ -143,7 +147,7 @@ var specCmd = &cobra.Command{
 			outputFile = "./nitric-spec.json"
 		}
 
-		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, defaultImageName)
+		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements)
 		tui.CheckErr(err)
 
 		marshaler := protojson.MarshalOptions{

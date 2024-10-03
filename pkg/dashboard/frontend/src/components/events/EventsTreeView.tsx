@@ -1,5 +1,11 @@
 import { type FC, useMemo } from 'react'
-import type { Schedule, Subscriber, Topic } from '../../types'
+import type {
+  BatchJob,
+  EventResource,
+  Schedule,
+  Subscriber,
+  Topic,
+} from '../../types'
 import TreeView, { type TreeItemType } from '../shared/TreeView'
 import type { TreeItem, TreeItemIndex } from 'react-complex-tree'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
@@ -10,10 +16,10 @@ import { getTopicSubscriptions } from '@/lib/utils/get-topic-subscriptions'
 export type EventsTreeItemType = TreeItemType<Schedule | Topic>
 
 interface Props {
-  resources: (Schedule | Topic)[]
-  onSelect: (resource: Schedule | Topic) => void
-  initialItem: Schedule | Topic
-  type: 'schedules' | 'topics'
+  resources: EventResource[]
+  onSelect: (resource: EventResource) => void
+  initialItem: EventResource
+  type: 'schedules' | 'topics' | 'jobs'
   subscriptions: Subscriber[]
 }
 

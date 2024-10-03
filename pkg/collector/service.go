@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/samber/lo"
+	"google.golang.org/grpc"
 
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
@@ -58,11 +59,15 @@ type ServiceRequirements struct {
 	topics                map[string]*resourcespb.TopicResource
 	queues                map[string]*resourcespb.QueueResource
 	sqlDatabases          map[string]*resourcespb.SqlDatabaseResource
+	jobs                  map[string]*resourcespb.JobResource
 
 	policies []*resourcespb.PolicyResource
 	secrets  map[string]*resourcespb.SecretResource
 
 	errors []error
+	topicspb.UnimplementedTopicsServer
+	storagepb.UnimplementedStorageListenerServer
+	websocketspb.UnimplementedWebsocketServer
 
 	ApiServer apispb.ApiServer
 }
@@ -164,6 +169,9 @@ func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.Reso
 	case resourcespb.ResourceType_Queue:
 		// add a queue
 		s.queues[req.Id.GetName()] = req.GetQueue()
+	case resourcespb.ResourceType_Job:
+		// add a job
+		s.jobs[req.Id.GetName()] = req.GetJob()
 	}
 
 	return &resourcespb.ResourceDeclareResponse{}, nil
@@ -315,6 +323,17 @@ func (s *ServiceRequirements) Listen(stream storagepb.StorageListener_ListenServ
 	})
 }
 
+func (s *ServiceRequirements) RegisterServices(grpcServer *grpc.Server) {
+	resourcespb.RegisterResourcesServer(grpcServer, s)
+	apispb.RegisterApiServer(grpcServer, s.ApiServer)
+	schedulespb.RegisterSchedulesServer(grpcServer, s)
+	topicspb.RegisterTopicsServer(grpcServer, s)
+	topicspb.RegisterSubscriberServer(grpcServer, s)
+	websocketspb.RegisterWebsocketHandlerServer(grpcServer, s)
+	storagepb.RegisterStorageListenerServer(grpcServer, s)
+	httppb.RegisterHttpServer(grpcServer, s)
+}
+
 func (s *ServiceRequirements) HandleEvents(stream websocketspb.WebsocketHandler_HandleEventsServer) error {
 	s.resourceLock.Lock()
 	defer s.resourceLock.Unlock()
@@ -371,6 +390,7 @@ func NewServiceRequirements(serviceName string, serviceFile string, serviceType 
 		sqlDatabases:          make(map[string]*resourcespb.SqlDatabaseResource),
 		apiSecurityDefinition: make(map[string]map[string]*resourcespb.ApiSecurityDefinitionResource),
 		queues:                make(map[string]*resourcespb.QueueResource),
+		jobs:                  make(map[string]*resourcespb.JobResource),
 		errors:                []error{},
 	}
 	requirements.ApiServer = &ApiCollectorServer{

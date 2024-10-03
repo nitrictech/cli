@@ -14,6 +14,7 @@ import {
   HeartIcon,
   CircleStackIcon,
   LockClosedIcon,
+  CpuChipIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import { useWebSocket } from '../../../lib/hooks/use-web-socket'
@@ -110,6 +111,11 @@ const AppLayout: React.FC<Props> = ({
       name: 'APIs',
       href: '/',
       icon: GlobeAltIcon,
+    },
+    {
+      name: 'Batch Jobs',
+      href: '/jobs',
+      icon: CpuChipIcon,
     },
     {
       name: 'Databases',

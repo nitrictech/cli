@@ -33,6 +33,7 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
+	"github.com/nitrictech/cli/pkg/cloud/batch"
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
@@ -580,6 +581,21 @@ func (d *Dashboard) handleSchedulesHistory(action schedules.ActionState) {
 		RecordType: SCHEDULE,
 		Event: ScheduleHistoryItem{
 			Name:    action.ScheduleName,
+			Success: action.Success,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (d *Dashboard) handleBatchJobsHistory(action batch.ActionState) {
+	err := d.writeHistoryRecord(&HistoryEvent[any]{
+		Time:       time.Now().UnixMilli(),
+		RecordType: BATCHJOBS,
+		Event: BatchHistoryItem{
+			Name:    action.JobName,
+			Payload: action.Payload,
 			Success: action.Success,
 		},
 	})

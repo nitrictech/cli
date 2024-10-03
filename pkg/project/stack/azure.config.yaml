@@ -1,7 +1,7 @@
 # The provider to use and it's published version
 # See releases:
 # https://github.com/nitrictech/nitric/tags
-provider: nitric/azure@1.11.6
+provider: nitric/azure@1.14.0
 # The target Azure region to deploy to
 # See available regions:
 # https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=container-apps

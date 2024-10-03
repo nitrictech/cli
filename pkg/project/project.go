@@ -454,7 +454,7 @@ func (p *Project) RunBatchesWithCommand(localCloud *cloud.LocalCloud, stop <-cha
 
 		// start the service with the given file reference from its projects CWD
 		group.Go(func() error {
-			port, err := localCloud.AddBatch(svc.filepath)
+			port, err := localCloud.AddBatch(svc.GetFilePath())
 			if err != nil {
 				return err
 			}
@@ -488,7 +488,7 @@ func (p *Project) RunBatches(localCloud *cloud.LocalCloud, stop <-chan bool, upd
 		svc := service
 
 		group.Go(func() error {
-			port, err := localCloud.AddBatch(svc.filepath)
+			port, err := localCloud.AddBatch(svc.GetFilePath())
 			if err != nil {
 				return err
 			}

@@ -289,6 +289,18 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 		}
 
 		err = cmd.Wait()
+		if err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				if commandParts[0] == "go" {
+					// go run often returns 1, even when the program would have exited normally, so we ignore this error
+					// see: https://github.com/golang/go/issues/13440
+					if exitErr.ExitCode() == 1 {
+						err = nil
+					}
+				}
+			}
+		}
+
 		errChan <- err
 	}()
 

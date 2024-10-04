@@ -160,7 +160,7 @@ func (m Model) View() string {
 				statusColor = tui.Colors.Red
 			}
 
-			serviceUpdates.Add("%s ", serviceName)
+			serviceUpdates.Addf("%s ", serviceName)
 			serviceUpdates.Addln(strings.ToLower(string(latestUpdate.Status))).WithStyle(lipgloss.NewStyle().Foreground(statusColor))
 		}
 

@@ -189,7 +189,7 @@ func (m Model) View() string {
 	v.Break()
 
 	v.Add(fragments.Tag("down"))
-	v.Add("  tearing down with %s", m.provider)
+	v.Addf("  tearing down with %s", m.provider)
 
 	if m.done {
 		v.Break()

@@ -85,7 +85,7 @@ func (t *LocalCloudStartModel) View() string {
 		if t.isNonInteractive {
 			v.Add("Starting Local Cloud, if this is your first run this may take a few minutes")
 		} else {
-			v.Add("%s Starting Local Cloud, if this is your first run this may take a few minutes", t.spinner.View())
+			v.Addf("%s Starting Local Cloud, if this is your first run this may take a few minutes", t.spinner.View())
 		}
 	} else {
 		v.Add("Local cloud started successfully")

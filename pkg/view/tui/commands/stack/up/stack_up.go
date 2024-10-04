@@ -178,7 +178,7 @@ func (m Model) View() string {
 	v := view.New(view.WithStyle(lipgloss.NewStyle().Width(m.windowSize.Width)))
 	v.Break()
 	v.Add(fragments.Tag("up"))
-	v.Add("  Deploying with %s", m.provider)
+	v.Addf("  Deploying with %s", m.provider)
 
 	if m.done {
 		v.Break()

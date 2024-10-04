@@ -190,7 +190,7 @@ func (m Model) View() string {
 	if len(m.serviceStatus) == 0 {
 		lv.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
 	} else {
-		lv.Add("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		lv.Addf("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 		lv.Addln(" services registered with local nitric server")
 	}
 
@@ -209,7 +209,7 @@ func (m Model) View() string {
 			statusColor = tui.Colors.Red
 		}
 
-		rv.Add("%s: ", update.Label).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
+		rv.Addf("%s: ", update.Label).WithStyle(lipgloss.NewStyle().Foreground(svcColors[update.ServiceName]))
 
 		// Break the message into multiple lines so the foreground colour can be maintained
 

@@ -278,7 +278,7 @@ func (s *Service) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map
 	go func() {
 		err := cmd.Start()
 		if err != nil {
-			errChan <- err
+			errChan <- fmt.Errorf("error starting service %s: %w", s.Name, err)
 		} else {
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,

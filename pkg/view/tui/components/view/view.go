@@ -29,8 +29,16 @@ type View struct {
 	newline   string
 }
 
+// Add the fragment to the view
+func (v *View) Add(contents string) *Fragment {
+	f := NewFragment(contents)
+	v.fragments = append(v.fragments, f)
+
+	return f
+}
+
 // Add formats according to a format specifier and appends the resulting string to the view.
-func (v *View) Add(format string, a ...any) *Fragment {
+func (v *View) Addf(format string, a ...any) *Fragment {
 	f := NewFragment(fmt.Sprintf(format, a...))
 	v.fragments = append(v.fragments, f)
 
@@ -44,7 +52,7 @@ func (v *View) Break() {
 
 // Addln formats according to a format specifier and appends the resulting string to the view, followed by a new line.
 func (v *View) Addln(format string, a ...any) *Fragment {
-	fragment := v.Add(format, a...)
+	fragment := v.Addf(format, a...)
 
 	v.Break()
 

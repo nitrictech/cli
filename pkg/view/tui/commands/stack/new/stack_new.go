@@ -242,7 +242,7 @@ func (m Model) View() string {
 		v.Add(indent.Render())
 	} else {
 		v.Break()
-		v.Addln("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+		v.Addln("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted))
 	}
 
 	return v.Render()

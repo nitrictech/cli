@@ -245,6 +245,10 @@ func (t *TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return t, tea.Batch(cmds...)
 }
 
+var (
+	textHighlight = lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.TextHighlight)
+)
+
 func (t *TuiModel) View() string {
 	v := viewr.New()
 
@@ -258,8 +262,8 @@ func (t *TuiModel) View() string {
 
 	if t.dashboardUrl != "" && !noWorkersRegistered {
 		v.Break()
-		v.Add("dashboard: ").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Purple))
-		v.Addln(t.dashboardUrl).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Add("dashboard: ")
+		v.Addln(t.dashboardUrl).WithStyle(textHighlight)
 		v.Break()
 	} else {
 		v.Break()
@@ -267,22 +271,22 @@ func (t *TuiModel) View() string {
 
 	for _, api := range t.apis {
 		v.Addf("api:%s - ", api.Name)
-		v.Addln(api.Url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Addln(api.Url).WithStyle(textHighlight)
 	}
 
 	for _, httpProxy := range t.httpProxies {
 		v.Addf("http:%s - ", httpProxy.name)
-		v.Addln(httpProxy.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Addln(httpProxy.url).WithStyle(textHighlight)
 	}
 
 	for _, websocket := range t.websockets {
 		v.Addf("ws:%s - ", websocket.name)
-		v.Addln(websocket.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Addln(websocket.url).WithStyle(textHighlight)
 	}
 
 	for _, database := range t.databases {
 		v.Addf("db:%s - ", database.name)
-		v.Addln(database.status).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		v.Addln(database.status).WithStyle(textHighlight)
 	}
 
 	return v.Render()

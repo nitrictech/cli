@@ -107,7 +107,7 @@ func (n StatusNode) render(omitSelf bool, width int, depth int) string {
 	if !omitSelf {
 		nameWidth := width - statusWidth
 		nameParts := wrap(n.name, nameWidth-((depth-1)*(indent+linkWidth)), indent)
-		nameStyle := lipgloss.NewStyle().Foreground(tui.Colors.Gray)
+		nameStyle := lipgloss.NewStyle().Foreground(tui.Colors.TextMuted)
 
 		if depth == 0 {
 			nameStyle = lipgloss.NewStyle().Foreground(tui.Colors.Blue)

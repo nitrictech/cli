@@ -27,8 +27,8 @@ import (
 
 // Hotkey renders a hotkey fragment e.g. q: quit
 func Hotkey(key string, description string) string {
-	keyView := view.NewFragment(fmt.Sprintf("%s:", key)).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.White)).Render()
-	descriptionView := view.NewFragment(description).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray)).Render()
+	keyView := view.NewFragment(fmt.Sprintf("%s:", key)).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Text)).Render()
+	descriptionView := view.NewFragment(description).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted)).Render()
 
 	return fmt.Sprintf("%s %s", keyView, descriptionView)
 }

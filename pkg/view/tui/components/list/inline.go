@@ -79,12 +79,12 @@ func (m InlineList) Init() tea.Cmd {
 var (
 	bullet                   = "•"
 	cursorIconOffset         = lipgloss.NewStyle().MarginLeft(2)
-	selected                 = lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Blue)
-	unselected               = cursorIconOffset.Copy().Foreground(tui.Colors.White)
-	descriptionStyle         = cursorIconOffset.Copy().Foreground(tui.Colors.Gray)
-	descriptionSelectedStyle = cursorIconOffset.Copy().Foreground(tui.Colors.Blue)
-	inactivePaginationDot    = cursorIconOffset.Copy().Foreground(tui.Colors.Gray).SetString(bullet)
-	activePaginationDot      = cursorIconOffset.Copy().Foreground(tui.Colors.White).SetString(bullet)
+	selected                 = lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.TextActive)
+	unselected               = cursorIconOffset.Copy().Foreground(tui.Colors.Text)
+	descriptionStyle         = cursorIconOffset.Copy().Foreground(tui.Colors.TextMuted)
+	descriptionSelectedStyle = cursorIconOffset.Copy().Foreground(tui.Colors.TextActive)
+	inactivePaginationDot    = cursorIconOffset.Copy().Foreground(tui.Colors.TextMuted).SetString(bullet)
+	activePaginationDot      = cursorIconOffset.Copy().Foreground(tui.Colors.Text).SetString(bullet)
 )
 
 func (m InlineList) View() string {

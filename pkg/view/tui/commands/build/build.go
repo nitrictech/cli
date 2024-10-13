@@ -151,7 +151,7 @@ func (m Model) View() string {
 		latestUpdate := service[len(service)-1]
 
 		if latestUpdate.Status != project.ServiceBuildStatus_Skipped {
-			statusColor := tui.Colors.Gray
+			statusColor := tui.Colors.TextMuted
 			if latestUpdate.Status == project.ServiceBuildStatus_Complete {
 				statusColor = tui.Colors.Green
 			} else if latestUpdate.Status == project.ServiceBuildStatus_InProgress {
@@ -168,13 +168,13 @@ func (m Model) View() string {
 			for _, update := range service {
 				messageLines := strings.Split(strings.TrimSpace(update.Message), "\n")
 				if len(messageLines) > 0 && update.Status != project.ServiceBuildStatus_Complete && latestUpdate.Status != project.ServiceBuildStatus_Skipped {
-					serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+					serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted))
 				}
 			}
 		} else {
 			messageLines := strings.Split(strings.TrimSpace(latestUpdate.Message), "\n")
 			if len(messageLines) > 0 && latestUpdate.Status != project.ServiceBuildStatus_Complete && latestUpdate.Status != project.ServiceBuildStatus_Skipped {
-				serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+				serviceUpdates.Addln("  %s", messageLines[len(messageLines)-1]).WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted))
 			}
 		}
 	}

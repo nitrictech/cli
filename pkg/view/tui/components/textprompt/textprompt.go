@@ -114,7 +114,7 @@ var (
 	tagStyle        = lipgloss.NewStyle().Background(tui.Colors.Purple).Foreground(tui.Colors.White).Width(8).Align(lipgloss.Center)
 	promptStyle     = lipgloss.NewStyle().MarginLeft(2)
 	shiftRightStyle = lipgloss.NewStyle().MarginLeft(10)
-	textStyle       = lipgloss.NewStyle().Foreground(tui.Colors.Gray)
+	textStyle       = lipgloss.NewStyle().Foreground(tui.Colors.TextMuted)
 	errorStyle      = lipgloss.NewStyle().Foreground(tui.Colors.Red).Italic(true).MarginTop(1)
 )
 

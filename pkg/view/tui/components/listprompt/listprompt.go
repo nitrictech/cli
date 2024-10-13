@@ -77,9 +77,9 @@ func (m *ListPrompt) SetChoice(choice string) {
 }
 
 var (
-	promptStyle = lipgloss.NewStyle().MarginLeft(2)
-	inputStyle  = lipgloss.NewStyle().MarginLeft(8)
-	textStyle   = lipgloss.NewStyle().Foreground(tui.Colors.Gray).MarginLeft(10)
+	promptStyle      = lipgloss.NewStyle().MarginLeft(2)
+	inputStyle       = lipgloss.NewStyle().MarginLeft(8)
+	historyTextStyle = lipgloss.NewStyle().Foreground(tui.Colors.TextMuted).MarginLeft(10)
 )
 
 func (m ListPrompt) View() string {
@@ -94,7 +94,7 @@ func (m ListPrompt) View() string {
 	if m.Choice() == "" {
 		listView.Addln(m.listInput.View()).WithStyle(inputStyle)
 	} else {
-		listView.Addln(m.Choice()).WithStyle(textStyle)
+		listView.Addln(m.Choice()).WithStyle(historyTextStyle)
 	}
 
 	return listView.Render()

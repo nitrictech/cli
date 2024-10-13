@@ -30,7 +30,7 @@ var width = 0
 // CustomTag renders a tag with the given text, foreground, background and width
 // e.g. CustomTag("hello", tui.Colors.White, tui.Colors.Purple, 8)
 // Use Tag() for a standard tag.
-func CustomTag(text string, foreground lipgloss.CompleteColor, background lipgloss.CompleteColor) string {
+func CustomTag(text string, foreground lipgloss.CompleteAdaptiveColor, background lipgloss.CompleteAdaptiveColor) string {
 	if utf8.RuneCountInString(text)+2 > width {
 		width = utf8.RuneCountInString(text) + 2
 	}

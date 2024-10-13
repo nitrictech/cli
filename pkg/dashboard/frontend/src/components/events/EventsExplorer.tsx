@@ -46,7 +46,7 @@ interface Props {
 
 const docsPathMap = {
   schedules: 'schedules',
-  topics: 'topics',
+  topics: 'messaging',
   jobs: 'batch',
 }
 

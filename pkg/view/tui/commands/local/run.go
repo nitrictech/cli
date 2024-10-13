@@ -245,9 +245,7 @@ func (t *TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return t, tea.Batch(cmds...)
 }
 
-var (
-	textHighlight = lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.TextHighlight)
-)
+var textHighlight = lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.TextHighlight)
 
 func (t *TuiModel) View() string {
 	v := viewr.New()

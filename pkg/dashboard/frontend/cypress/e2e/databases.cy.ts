@@ -268,6 +268,8 @@ describe('Databases Spec', () => {
     })
 
     it(`should of applied migrations for ${db}`, () => {
+      cy.wait(1000)
+
       cy.get(`[data-rct-item-id="${db}"]`).click()
 
       cy.wait(1000)
@@ -277,6 +279,14 @@ describe('Databases Spec', () => {
       cy.getTestEl('migrate-btn').click()
 
       cy.wait('@migrate')
+
+      cy.get('#sql-editor .cm-content', {
+        timeout: 5000,
+      })
+        .clear({
+          force: true,
+        })
+        .invoke('html', 'select * from my_migration_table;')
 
       cy.intercept('POST', '/api/sql', (req) => {
         let body = req.body
@@ -293,13 +303,7 @@ describe('Databases Spec', () => {
         }
       })
 
-      cy.get('#sql-editor .cm-content', {
-        timeout: 5000,
-      })
-        .clear({
-          force: true,
-        })
-        .invoke('html', 'select * from my_migration_table;')
+      cy.wait(1000)
 
       cy.getTestEl('run-btn').click()
 

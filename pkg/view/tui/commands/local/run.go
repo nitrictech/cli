@@ -266,22 +266,22 @@ func (t *TuiModel) View() string {
 	}
 
 	for _, api := range t.apis {
-		v.Add("api:%s - ", api.Name)
+		v.Addf("api:%s - ", api.Name)
 		v.Addln(api.Url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
 	for _, httpProxy := range t.httpProxies {
-		v.Add("http:%s - ", httpProxy.name)
+		v.Addf("http:%s - ", httpProxy.name)
 		v.Addln(httpProxy.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
 	for _, websocket := range t.websockets {
-		v.Add("ws:%s - ", websocket.name)
+		v.Addf("ws:%s - ", websocket.name)
 		v.Addln(websocket.url).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 
 	for _, database := range t.databases {
-		v.Add("db:%s - ", database.name)
+		v.Addf("db:%s - ", database.name)
 		v.Addln(database.status).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
 	}
 

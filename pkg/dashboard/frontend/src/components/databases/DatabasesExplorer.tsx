@@ -186,7 +186,8 @@ const DatabasesExplorer: React.FC = () => {
     if (res.ok) {
       toast.success('Migration successful', { id: loadingId })
     } else {
-      toast.error('Migration failed', { id: loadingId })
+      const text = await res.text()
+      toast.error('Migration failed: ' + text, { id: loadingId })
     }
 
     setMigrationLoading(false)

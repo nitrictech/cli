@@ -261,7 +261,7 @@ describe('Databases Spec', () => {
     it(`should of applied migrations for ${db}`, () => {
       cy.get(`[data-rct-item-id="${db}"]`).click()
 
-      cy.wait(1000)
+      cy.wait(3000)
 
       cy.intercept('POST', '/api/sql/migrate').as('migrate')
 

@@ -286,7 +286,14 @@ func (l *LocalSqlServer) BuildAndRunMigrations(fs afero.Fs, databasesToMigrate m
 
 	l.Publish(l.State)
 
-	err := l.migrationRunner(fs, l.State, databasesToMigrate)
+	servers := map[string]*DatabaseServer{}
+
+	// only run migrations for databases that are keys in databasesToMigrate
+	for dbName := range databasesToMigrate {
+		servers[dbName] = l.State[dbName]
+	}
+
+	err := l.migrationRunner(fs, servers, databasesToMigrate)
 	if err != nil {
 		return err
 	}

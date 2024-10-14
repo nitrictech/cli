@@ -236,10 +236,19 @@ describe('Databases Spec', () => {
       cy.getTestEl('run-btn').click()
 
       cy.intercept('POST', '/api/sql', (req) => {
-        if (req.body && req.body.query === 'select * from test_table;') {
+        let body = req.body
+
+        if (typeof req.body === 'string') {
+          body = JSON.parse(req.body)
+        }
+
+        if (body && body.query.trim() === `select * from test_table;`) {
+          req.alias = 'query'
+          req.continue()
+        } else {
           req.continue()
         }
-      }).as('query')
+      })
 
       cy.get('#sql-editor .cm-content', {
         timeout: 5000,
@@ -259,6 +268,8 @@ describe('Databases Spec', () => {
     })
 
     it(`should of applied migrations for ${db}`, () => {
+      cy.wait(1000)
+
       cy.get(`[data-rct-item-id="${db}"]`).click()
 
       cy.wait(1000)
@@ -268,6 +279,14 @@ describe('Databases Spec', () => {
       cy.getTestEl('migrate-btn').click()
 
       cy.wait('@migrate')
+
+      cy.get('#sql-editor .cm-content', {
+        timeout: 5000,
+      })
+        .clear({
+          force: true,
+        })
+        .invoke('html', 'select * from my_migration_table;')
 
       cy.intercept('POST', '/api/sql', (req) => {
         let body = req.body
@@ -284,13 +303,7 @@ describe('Databases Spec', () => {
         }
       })
 
-      cy.get('#sql-editor .cm-content', {
-        timeout: 5000,
-      })
-        .clear({
-          force: true,
-        })
-        .invoke('html', 'select * from my_migration_table;')
+      cy.wait(1000)
 
       cy.getTestEl('run-btn').click()
 

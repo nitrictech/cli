@@ -118,7 +118,6 @@ func (s *Batch) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[s
 		}
 
 		err = cmd.Wait()
-
 		if err != nil {
 			// provide runtime errors as a run update rather than as a fatal error
 			updates <- ServiceRunUpdate{

@@ -99,7 +99,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-var serviceColors = []lipgloss.CompleteColor{
+var serviceColors = []lipgloss.CompleteAdaptiveColor{
 	tui.Colors.Blue,
 	tui.Colors.Purple,
 	tui.Colors.Teal,
@@ -190,11 +190,11 @@ func (m Model) View() string {
 	if len(m.serviceStatus) == 0 {
 		lv.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
 	} else {
-		lv.Addf("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		lv.Addf("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.TextHighlight))
 		lv.Addln(" services registered with local nitric server")
 	}
 
-	svcColors := map[string]lipgloss.CompleteColor{}
+	svcColors := map[string]lipgloss.CompleteAdaptiveColor{}
 	serviceNames := lo.Keys(m.serviceStatus)
 
 	slices.Sort(serviceNames)
@@ -204,7 +204,7 @@ func (m Model) View() string {
 	}
 
 	for _, update := range m.serviceRunUpdates {
-		statusColor := tui.Colors.Gray
+		statusColor := tui.Colors.TextMuted
 		if update.Status == project.ServiceRunStatus(project.ServiceBuildStatus_Error) {
 			statusColor = tui.Colors.Red
 		}

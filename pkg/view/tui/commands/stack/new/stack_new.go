@@ -162,8 +162,8 @@ var (
 			Foreground(tui.Colors.White).
 			Background(tui.Colors.Blue).
 			MarginRight(2)
-	spinnerStyle   = lipgloss.NewStyle().Foreground(tui.Colors.Purple)
-	highlightStyle = lipgloss.NewStyle().Foreground(tui.Colors.Purple)
+	spinnerStyle   = lipgloss.NewStyle().Foreground(tui.Colors.TextHighlight)
+	highlightStyle = lipgloss.NewStyle().Foreground(tui.Colors.TextHighlight)
 )
 
 var (
@@ -242,7 +242,7 @@ func (m Model) View() string {
 		v.Add(indent.Render())
 	} else {
 		v.Break()
-		v.Addln("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.Gray))
+		v.Addln("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted))
 	}
 
 	return v.Render()

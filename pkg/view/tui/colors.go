@@ -26,30 +26,63 @@ import (
 
 // ColorPalette of standard CLI UI colors
 type ColorPalette struct {
-	White  lipgloss.CompleteColor
-	Gray   lipgloss.CompleteColor
-	Black  lipgloss.CompleteColor
-	Red    lipgloss.CompleteColor
-	Orange lipgloss.CompleteColor
-	Yellow lipgloss.CompleteColor
-	Green  lipgloss.CompleteColor
-	Teal   lipgloss.CompleteColor
-	Blue   lipgloss.CompleteColor
-	Purple lipgloss.CompleteColor
+	White         lipgloss.CompleteAdaptiveColor
+	Gray          lipgloss.CompleteAdaptiveColor
+	Black         lipgloss.CompleteAdaptiveColor
+	Red           lipgloss.CompleteAdaptiveColor
+	Orange        lipgloss.CompleteAdaptiveColor
+	Yellow        lipgloss.CompleteAdaptiveColor
+	Green         lipgloss.CompleteAdaptiveColor
+	Teal          lipgloss.CompleteAdaptiveColor
+	Blue          lipgloss.CompleteAdaptiveColor
+	Purple        lipgloss.CompleteAdaptiveColor
+	Text          lipgloss.CompleteAdaptiveColor
+	TextMuted     lipgloss.CompleteAdaptiveColor
+	TextHighlight lipgloss.CompleteAdaptiveColor
+	TextActive    lipgloss.CompleteAdaptiveColor
 }
+
+var (
+	white  = lipgloss.CompleteColor{TrueColor: "#FFFFFF", ANSI256: "255", ANSI: "15"}
+	gray   = lipgloss.CompleteColor{TrueColor: "#696969", ANSI256: "250", ANSI: "7"}
+	black  = lipgloss.CompleteColor{TrueColor: "#000000", ANSI256: "16", ANSI: "0"}
+	red    = lipgloss.CompleteColor{TrueColor: "#E91E63", ANSI256: "197", ANSI: "1"}
+	orange = lipgloss.CompleteColor{TrueColor: "#F97316", ANSI256: "208", ANSI: "3"}
+	yellow = lipgloss.CompleteColor{TrueColor: "#FDE047", ANSI256: "220", ANSI: "11"}
+	green  = lipgloss.CompleteColor{TrueColor: "#22C55E", ANSI256: "47", ANSI: "10"}
+	teal   = lipgloss.CompleteColor{TrueColor: "#32D0D1", ANSI256: "51", ANSI: "14"}
+	blue   = lipgloss.CompleteColor{TrueColor: "#2563EB", ANSI256: "21", ANSI: "4"}
+	purple = lipgloss.CompleteColor{TrueColor: "#C27AFA", ANSI256: "99", ANSI: "13"}
+)
 
 // Colors contains our standard UI colors for CLI output
 var Colors *ColorPalette = &ColorPalette{
-	White:  lipgloss.CompleteColor{TrueColor: "#FFFFFF", ANSI256: "255", ANSI: "15"},
-	Gray:   lipgloss.CompleteColor{TrueColor: "#696969", ANSI256: "250", ANSI: "7"},
-	Black:  lipgloss.CompleteColor{TrueColor: "#000000", ANSI256: "16", ANSI: "0"},
-	Red:    lipgloss.CompleteColor{TrueColor: "#E91E63", ANSI256: "197", ANSI: "1"},
-	Orange: lipgloss.CompleteColor{TrueColor: "#F97316", ANSI256: "208", ANSI: "3"},
-	Yellow: lipgloss.CompleteColor{TrueColor: "#FDE047", ANSI256: "220", ANSI: "11"},
-	Green:  lipgloss.CompleteColor{TrueColor: "#22C55E", ANSI256: "47", ANSI: "10"},
-	Teal:   lipgloss.CompleteColor{TrueColor: "#32D0D1", ANSI256: "51", ANSI: "14"},
-	Blue:   lipgloss.CompleteColor{TrueColor: "#2563EB", ANSI256: "21", ANSI: "4"},
-	Purple: lipgloss.CompleteColor{TrueColor: "#C27AFA", ANSI256: "99", ANSI: "13"},
+	White:  lipgloss.CompleteAdaptiveColor{Light: white, Dark: white},
+	Gray:   lipgloss.CompleteAdaptiveColor{Light: gray, Dark: gray},
+	Black:  lipgloss.CompleteAdaptiveColor{Light: black, Dark: black},
+	Red:    lipgloss.CompleteAdaptiveColor{Light: red, Dark: red},
+	Orange: lipgloss.CompleteAdaptiveColor{Light: orange, Dark: orange},
+	Yellow: lipgloss.CompleteAdaptiveColor{Light: yellow, Dark: yellow},
+	Green:  lipgloss.CompleteAdaptiveColor{Light: green, Dark: green},
+	Teal:   lipgloss.CompleteAdaptiveColor{Light: teal, Dark: teal},
+	Blue:   lipgloss.CompleteAdaptiveColor{Light: blue, Dark: blue},
+	Purple: lipgloss.CompleteAdaptiveColor{Light: purple, Dark: purple},
+	Text: lipgloss.CompleteAdaptiveColor{
+		Light: black,
+		Dark:  white,
+	},
+	TextMuted: lipgloss.CompleteAdaptiveColor{
+		Light: lipgloss.CompleteColor{TrueColor: "#4E4E4E", ANSI256: "242", ANSI: "8"},
+		Dark:  lipgloss.CompleteColor{TrueColor: "#9E9E9E", ANSI256: "249", ANSI: "7"},
+	},
+	TextHighlight: lipgloss.CompleteAdaptiveColor{
+		Light: blue,
+		Dark:  purple,
+	},
+	TextActive: lipgloss.CompleteAdaptiveColor{
+		Light: blue,
+		Dark:  blue,
+	},
 }
 
 // DebugColors returns the entire color palette as a string

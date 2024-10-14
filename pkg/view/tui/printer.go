@@ -27,7 +27,7 @@ import (
 
 var (
 	Debug = TagPrinter{
-		Prefix: addPrefix("debug", Colors.White, Colors.Gray),
+		Prefix: addPrefix("debug", Colors.White, Colors.TextMuted),
 	}
 	Error = TagPrinter{
 		Prefix: addPrefix("error", Colors.White, Colors.Red),
@@ -51,7 +51,7 @@ func (t *TagPrinter) Printfln(message string, a ...interface{}) {
 	fmt.Println(t.Prefix, fmt.Sprintf(message, a...))
 }
 
-func addPrefix(text string, foreground lipgloss.CompleteColor, background lipgloss.CompleteColor) string {
+func addPrefix(text string, foreground lipgloss.CompleteAdaptiveColor, background lipgloss.CompleteAdaptiveColor) string {
 	if utf8.RuneCountInString(text)+2 > width {
 		width = utf8.RuneCountInString(text) + 2
 	}

@@ -421,7 +421,7 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 		group.Go(func() error {
 			port, err := localCloud.AddService(svc.GetFilePath())
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to add service %s: %w", svc.GetFilePath(), err)
 			}
 
 			envVariables := map[string]string{
@@ -434,7 +434,12 @@ func (p *Project) RunServicesWithCommand(localCloud *cloud.LocalCloud, stop <-ch
 				envVariables[key] = value
 			}
 
-			return svc.Run(stopChannels[idx], updates, envVariables)
+			err = svc.Run(stopChannels[idx], updates, envVariables)
+			if err != nil {
+				return fmt.Errorf("%s: %w", svc.GetFilePath(), err)
+			}
+
+			return nil
 		})
 	}
 
@@ -456,7 +461,7 @@ func (p *Project) RunBatchesWithCommand(localCloud *cloud.LocalCloud, stop <-cha
 		group.Go(func() error {
 			port, err := localCloud.AddBatch(svc.GetFilePath())
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to add batch %s: %w", svc.GetFilePath(), err)
 			}
 
 			envVariables := map[string]string{
@@ -469,7 +474,12 @@ func (p *Project) RunBatchesWithCommand(localCloud *cloud.LocalCloud, stop <-cha
 				envVariables[key] = value
 			}
 
-			return svc.Run(stopChannels[idx], updates, envVariables)
+			err = svc.Run(stopChannels[idx], updates, envVariables)
+			if err != nil {
+				return fmt.Errorf("%s: %w", svc.GetFilePath(), err)
+			}
+
+			return nil
 		})
 	}
 

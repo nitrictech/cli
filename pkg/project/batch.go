@@ -107,7 +107,7 @@ func (s *Batch) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[s
 	go func() {
 		err := cmd.Start()
 		if err != nil {
-			errChan <- err
+			errChan <- fmt.Errorf("error starting service %s: %w", s.Name, err)
 		} else {
 			updates <- ServiceRunUpdate{
 				ServiceName: s.Name,
@@ -118,7 +118,17 @@ func (s *Batch) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[s
 		}
 
 		err = cmd.Wait()
-		errChan <- err
+		if err != nil {
+			// provide runtime errors as a run update rather than as a fatal error
+			updates <- ServiceRunUpdate{
+				ServiceName: s.Name,
+				Label:       "nitric",
+				Status:      ServiceRunStatus_Error,
+				Err:         err,
+			}
+		}
+
+		errChan <- nil
 	}()
 
 	go func(cmd *exec.Cmd) {

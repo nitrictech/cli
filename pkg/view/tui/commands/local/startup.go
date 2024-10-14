@@ -44,7 +44,7 @@ type LocalCloudStartStatusMsg struct {
 	Status CloudStartupStatus
 }
 
-var spinnerStyle = lipgloss.NewStyle().Foreground(tui.Colors.Purple)
+var spinnerStyle = lipgloss.NewStyle().Foreground(tui.Colors.TextHighlight)
 
 var _ tea.Model = &TuiModel{}
 

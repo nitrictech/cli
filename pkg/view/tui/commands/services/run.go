@@ -190,7 +190,7 @@ func (m Model) View() string {
 	if len(m.serviceStatus) == 0 {
 		lv.Addln("No service found in project, check your nitric.yaml file contains at least one valid 'match' pattern.")
 	} else {
-		lv.Addf("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Purple))
+		lv.Addf("%d", len(m.serviceStatus)).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.TextHighlight))
 		lv.Addln(" services registered with local nitric server")
 	}
 

@@ -162,8 +162,8 @@ var (
 			Foreground(tui.Colors.White).
 			Background(tui.Colors.Blue).
 			MarginRight(2)
-	spinnerStyle   = lipgloss.NewStyle().Foreground(tui.Colors.Purple)
-	highlightStyle = lipgloss.NewStyle().Foreground(tui.Colors.Purple)
+	spinnerStyle   = lipgloss.NewStyle().Foreground(tui.Colors.TextHighlight)
+	highlightStyle = lipgloss.NewStyle().Foreground(tui.Colors.TextHighlight)
 )
 
 var (

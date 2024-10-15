@@ -44,6 +44,12 @@ interface Props {
   workerType: 'schedules' | 'topics' | 'jobs'
 }
 
+const docsPathMap = {
+  schedules: 'schedules',
+  topics: 'messaging',
+  jobs: 'batch',
+}
+
 type Worker = Schedule | Topic | BatchJob
 
 const EventsExplorer: React.FC<Props> = ({ workerType }) => {
@@ -430,7 +436,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
             <a
               className="underline"
               target="_blank"
-              href="https://nitric.io/docs/messaging"
+              href={`https://nitric.io/docs/${docsPathMap[workerType]}`}
               rel="noreferrer"
             >
               creating {title(workerType)}

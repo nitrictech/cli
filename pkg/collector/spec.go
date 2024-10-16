@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -532,17 +533,23 @@ func buildApiRequirements(allServiceRequirements []*ServiceRequirements, project
 			for schemeName, securityScheme := range serviceRequirements.apiSecurityDefinition[apiName] {
 				switch securityScheme.GetDefinition().(type) {
 				case *resourcespb.ApiSecurityDefinitionResource_Oidc:
-					issuerUrl := securityScheme.GetOidc().GetIssuer()
+					rawIssuerUrl := securityScheme.GetOidc().GetIssuer()
+					issuerUrl, err := url.Parse(rawIssuerUrl)
 
-					if issuerUrl == "" {
+					if issuerUrl.String() == "" || err != nil {
 						projectErrors.Add(fmt.Errorf("service %s attempted to register an OIDC security scheme with an empty issuer", serviceRequirements.serviceName))
+					}
+
+					err = validateOpenIdConnectConfig(issuerUrl)
+					if err != nil {
+						projectErrors.Add(fmt.Errorf("service %s attempted to use an OIDC URL pointing to an invalid OIDC config: %w", serviceRequirements.serviceName, err))
 					}
 
 					if len(securityScheme.GetOidc().GetAudiences()) == 0 {
 						projectErrors.Add(fmt.Errorf("service %s attempted to register an OIDC security scheme with no audiences", serviceRequirements.serviceName))
 					}
 
-					oidSec := openapi3.NewOIDCSecurityScheme(issuerUrl)
+					oidSec := openapi3.NewOIDCSecurityScheme(issuerUrl.String())
 					oidSec.Extensions = map[string]interface{}{
 						"x-nitric-audiences": securityScheme.GetOidc().GetAudiences(),
 					}

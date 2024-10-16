@@ -35,13 +35,7 @@ type OpenIdConfig struct {
 	AuthEndpoint  string `json:"authorization_endpoint"`
 }
 
-func validateOpenIdConnectConfig(rawUrl string) error {
-	// append well-known configuration to issuer
-	openIdConnectUrl, err := url.Parse(rawUrl)
-	if err != nil {
-		return err
-	}
-
+func validateOpenIdConnectConfig(openIdConnectUrl *url.URL) error {
 	timeout := 10 * time.Second
 	client := http.Client{
 		Timeout: timeout,
@@ -57,35 +51,35 @@ func validateOpenIdConnectConfig(rawUrl string) error {
 		return err
 	}
 
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("received non 200 status retrieving openid-configuration: %d", resp.StatusCode)
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
-	oidConf := &OpenIdConfig{}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("received %d status retrieving openid-configuration: %s", resp.StatusCode, body)
+	}
 
-	if err := json.Unmarshal(body, oidConf); err != nil {
+	var oidcConfig *OpenIdConfig
+
+	if err := json.Unmarshal(body, oidcConfig); err != nil {
 		return errors.WithMessage(err, "error unmarshalling open id config")
 	}
 
 	// Validate that all endpoints are valid
-	if _, err = url.ParseRequestURI(oidConf.AuthEndpoint); err != nil {
+	if _, err = url.ParseRequestURI(oidcConfig.AuthEndpoint); err != nil {
 		return errors.WithMessage(err, "invalid auth endpoint")
 	}
 
-	if _, err = url.ParseRequestURI(oidConf.Issuer); err != nil {
+	if _, err = url.ParseRequestURI(oidcConfig.Issuer); err != nil {
 		return errors.WithMessage(err, "invalid issuer")
 	}
 
-	if _, err = url.ParseRequestURI(oidConf.JwksUri); err != nil {
+	if _, err = url.ParseRequestURI(oidcConfig.JwksUri); err != nil {
 		return errors.WithMessage(err, "invalid jwks uri")
 	}
 
-	if _, err = url.ParseRequestURI(oidConf.TokenEndpoint); err != nil {
+	if _, err = url.ParseRequestURI(oidcConfig.TokenEndpoint); err != nil {
 		return errors.WithMessage(err, "invalid token endpoint")
 	}
 

@@ -84,11 +84,10 @@ const requestDefault = {
   ],
 }
 
-const bodyTabs = [
-  {
-    name: 'JSON',
-  },
-  { name: 'Binary' },
+const reqBodyTypes = [
+  { name: 'JSON', contentType: 'application/json' },
+  { name: 'Text', contentType: 'text/plain' },
+  { name: 'Binary', contentType: 'application/octet-stream' },
 ]
 
 const APIExplorer = () => {
@@ -99,6 +98,7 @@ const APIExplorer = () => {
 
   const [JSONBody, setJSONBody] = useState<string>('')
   const [fileToUpload, setFileToUpload] = useState<File>()
+  const [textBody, setTextBody] = useState<string>('')
 
   const [request, setRequest] = useState<APIRequest>(requestDefault)
   const [response, setResponse] = useState<APIResponse>()
@@ -244,8 +244,7 @@ const APIExplorer = () => {
   ]
 
   const currentTabName = tabs[currentTabIndex].name
-
-  const currentBodyTabName = bodyTabs[bodyTabIndex].name
+  const currentBodyTab = reqBodyTypes[bodyTabIndex]
 
   const refreshPathParamErrors = () => {
     const newPathParamErrors: Record<number, FieldRow> = {}
@@ -309,6 +308,15 @@ const APIExplorer = () => {
     const { path, method, headers } = request
 
     const url = `http://${getHost()}/api/call` + path
+
+    // Set a default content type if not set
+    if (!headers.find(({ key }) => key.toLowerCase() === 'content-type')) {
+      headers.push({
+        key: 'Content-Type',
+        value: currentBodyTab.contentType,
+      })
+    }
+
     const requestOptions: RequestInit = {
       method,
       headers: fieldRowArrToHeaders([
@@ -322,10 +330,12 @@ const APIExplorer = () => {
 
     if (method !== 'GET' && method !== 'HEAD') {
       // handle body in request
-      if (currentBodyTabName === 'Binary' && fileToUpload) {
+      if (currentBodyTab.name === 'Binary' && fileToUpload) {
         requestOptions.body = fileToUpload
-      } else if (currentBodyTabName === 'JSON' && JSONBody.trim()) {
+      } else if (currentBodyTab.name === 'JSON' && JSONBody.trim()) {
         requestOptions.body = JSONBody
+      } else if (currentBodyTab.name === 'Text' && textBody) {
+        requestOptions.body = textBody
       }
     }
     const startTime = window.performance.now()
@@ -582,15 +592,15 @@ const APIExplorer = () => {
                   {currentTabName === 'Body' && (
                     <div className="my-4 flex flex-col gap-4">
                       <Tabs
-                        tabs={bodyTabs}
+                        tabs={reqBodyTypes}
                         index={bodyTabIndex}
                         pill
                         setIndex={setBodyTabIndex}
                       />
-                      {currentBodyTabName === 'JSON' && (
+                      {currentBodyTab.name === 'JSON' && (
                         <CodeEditor
                           id="json-editor"
-                          contentType={'application/json'}
+                          contentType={currentBodyTab.contentType}
                           value={JSONBody}
                           includeLinters
                           onChange={(value) => {
@@ -598,7 +608,18 @@ const APIExplorer = () => {
                           }}
                         />
                       )}
-                      {currentBodyTabName === 'Binary' && (
+                      {currentBodyTab.name === 'Text' && (
+                        <CodeEditor
+                          id="text-editor"
+                          contentType={currentBodyTab.contentType}
+                          value={textBody}
+                          includeLinters
+                          onChange={(value) => {
+                            setTextBody(value)
+                          }}
+                        />
+                      )}
+                      {currentBodyTab.name === 'Binary' && (
                         <div className="mb-2 flex flex-col">
                           <h4 className="mb-2 text-lg font-medium text-gray-900">
                             Binary File

@@ -105,11 +105,11 @@ describe('APIs spec', () => {
 
     cy.getTestEl('Headers-tab-btn').first().click()
 
-    cy.getTestEl('header-2-key').type('X-First-Header')
-    cy.getTestEl('header-2-value').type('the value')
+    cy.getTestEl('header-2-key').clear().type('X-First-Header')
+    cy.getTestEl('header-2-value').clear().type('the value')
 
-    cy.getTestEl('header-3-key').type('X-Second-Header')
-    cy.getTestEl('header-3-value').type('the second value')
+    cy.getTestEl('header-3-key').clear().type('X-Second-Header')
+    cy.getTestEl('header-3-value').clear().type('the second value')
 
     cy.getTestEl('generated-request-path').should(
       'contain.text',

@@ -17,6 +17,8 @@
 package list
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
@@ -28,16 +30,15 @@ import (
 )
 
 type InlineList struct {
-	cursor             int
-	Items              []ListItem
-	MaxDisplayedItems  int
-	firstDisplayedItem int
-	choice             string
-	Paginator          paginator.Model
+	Items     SliceView[ListItem]
+	choice    string
+	minimized bool
+	Paginator paginator.Model
 }
 
 type InlineListArgs struct {
 	Items             []ListItem
+	Minimized         bool
 	MaxDisplayedItems int
 }
 
@@ -47,29 +48,14 @@ func NewInlineList(args InlineListArgs) InlineList {
 	p.ActiveDot = activePaginationDot.String()
 	p.InactiveDot = inactivePaginationDot.String()
 
+	items := NewSliceView(args.Items)
+	items.SetMaxDisplayedItems(args.MaxDisplayedItems)
+
 	return InlineList{
-		cursor:             0,
-		firstDisplayedItem: 0,
-		Paginator:          p,
-		Items:              args.Items,
-		MaxDisplayedItems:  args.MaxDisplayedItems,
+		Paginator: p,
+		Items:     items,
+		minimized: args.Minimized,
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-
-	return b
 }
 
 func (m InlineList) Init() tea.Cmd {
@@ -89,34 +75,44 @@ var (
 
 func (m InlineList) View() string {
 	listView := view.New()
-	maxDisplayedItems := min(m.MaxDisplayedItems, len(m.Items))
 
-	for i := 0; i < maxDisplayedItems; i++ {
-		if i+m.firstDisplayedItem == m.cursor {
-			listView.Addln("→ %s", m.Items[i+m.firstDisplayedItem].GetItemValue()).WithStyle(selected)
+	for i, item := range m.Items.View() {
+		isSelected := m.Items.IsChoiceRelative(i)
+
+		if isSelected {
+			listView.Addln("→ %s", item.GetItemValue()).WithStyle(selected)
 		} else {
-			listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemValue()).WithStyle(unselected)
+			listView.Addln(item.GetItemValue()).WithStyle(unselected)
 		}
 
-		if m.Items[i+m.firstDisplayedItem].GetItemDescription() != "" {
-			if i+m.firstDisplayedItem == m.cursor {
-				listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionSelectedStyle)
+		// Skip rendering the description if the list is minimized
+		if m.minimized {
+			continue
+		}
+
+		if item.GetItemDescription() != "" {
+			if isSelected {
+				listView.Addln(item.GetItemDescription()).WithStyle(descriptionSelectedStyle)
 			} else {
-				listView.Addln(m.Items[i+m.firstDisplayedItem].GetItemDescription()).WithStyle(descriptionStyle)
+				listView.Addln(item.GetItemDescription()).WithStyle(descriptionStyle)
 			}
 
 			listView.Break()
 		}
 	}
 
-	if maxDisplayedItems < len(m.Items) {
-		m.Paginator.TotalPages = (len(m.Items) + maxDisplayedItems - 1) / maxDisplayedItems
-		m.Paginator.Page = max(0, m.cursor/maxDisplayedItems)
+	if m.IsPaginationVisible() {
+		m.Paginator.TotalPages = (len(m.Items.All()) + m.Items.NumDisplayed() - 1) / m.Items.NumDisplayed()
+		m.Paginator.Page = max(0, m.Items.Cursor()/m.Items.NumDisplayed())
 
 		listView.Addln(m.Paginator.View())
 	}
 
-	return listView.Render()
+	return strings.TrimSuffix(listView.Render(), "\n")
+}
+
+func (m InlineList) IsPaginationVisible() bool {
+	return m.Items.NumDisplayed() < len(m.Items.All())
 }
 
 type UpdateListItemsMsg []ListItem
@@ -131,11 +127,13 @@ func (m InlineList) UpdateInlineList(msg tea.Msg) (InlineList, tea.Cmd) {
 		case key.Matches(msg, tui.KeyMap.Quit):
 			return m, teax.Quit
 		case key.Matches(msg, tui.KeyMap.Enter):
-			m.choice = m.Items[m.cursor].GetItemValue()
+			m.choice = m.Items.Choice().GetItemValue()
 		case key.Matches(msg, tui.KeyMap.Down):
-			return m.CursorDown(), nil
+			m.Items.CursorNext()
+			return m, nil
 		case key.Matches(msg, tui.KeyMap.Up):
-			return m.CursorUp(), nil
+			m.Items.CursorBack()
+			return m, nil
 		}
 	}
 
@@ -146,50 +144,18 @@ func (m InlineList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.UpdateInlineList(msg)
 }
 
-func (m InlineList) UpdateItems(items []ListItem) InlineList {
-	m.Items = items
-	m.cursor = 0
-	m.firstDisplayedItem = 0
-
-	return m
-}
-
-func (m InlineList) CursorUp() InlineList {
-	m.cursor--
-	if m.cursor < 0 {
-		m.cursor = len(m.Items) - 1
-	}
-
-	return m.refreshViewCursor()
-}
-
-func (m InlineList) CursorDown() InlineList {
-	m.cursor = (m.cursor + 1) % len(m.Items)
-
-	return m.refreshViewCursor()
-}
-
-// lastDisplayedItem returns the index of the last item currently visible in the list
-func (m InlineList) lastDisplayedItem() int {
-	return m.firstDisplayedItem + (m.MaxDisplayedItems - 1)
-}
-
-func (m InlineList) refreshViewCursor() InlineList {
-	for m.cursor > m.lastDisplayedItem() {
-		m.firstDisplayedItem++
-	}
-
-	for m.cursor < m.firstDisplayedItem {
-		m.firstDisplayedItem--
-	}
-
-	return m
-}
-
 func (m InlineList) Choice() string {
 	return m.choice
 }
 
 func (m *InlineList) SetChoice(choice string) {
 	m.choice = choice
+}
+
+func (m *InlineList) SetMaxDisplayedItems(maxDisplayedItems int) {
+	m.Items.SetMaxDisplayedItems(maxDisplayedItems)
+}
+
+func (m *InlineList) SetMinimized(minimized bool) {
+	m.minimized = minimized
 }

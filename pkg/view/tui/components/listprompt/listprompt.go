@@ -17,6 +17,8 @@
 package listprompt
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -38,10 +40,8 @@ func (m ListPrompt) Init() tea.Cmd {
 	return nil
 }
 
-func (m ListPrompt) UpdateItems(items []list.ListItem) ListPrompt {
-	m.listInput = m.listInput.UpdateItems(items)
-
-	return m
+func (m ListPrompt) IsPaginationVisible() bool {
+	return m.listInput.IsPaginationVisible()
 }
 
 func (m ListPrompt) UpdateListPrompt(msg tea.Msg) (ListPrompt, tea.Cmd) {
@@ -76,6 +76,14 @@ func (m *ListPrompt) SetChoice(choice string) {
 	m.listInput.SetChoice(choice)
 }
 
+func (m *ListPrompt) SetMaxDisplayedItems(maxDisplayedItems int) {
+	m.listInput.SetMaxDisplayedItems(maxDisplayedItems)
+}
+
+func (m *ListPrompt) SetMinimized(minimized bool) {
+	m.listInput.SetMinimized(minimized)
+}
+
 var (
 	promptStyle      = lipgloss.NewStyle().MarginLeft(2)
 	inputStyle       = lipgloss.NewStyle().MarginLeft(8)
@@ -83,7 +91,7 @@ var (
 )
 
 func (m ListPrompt) View() string {
-	listView := view.New()
+	listView := view.New(view.WithStyle(lipgloss.NewStyle()))
 
 	// render the list header
 	listView.Add(fragments.Tag(m.Tag))
@@ -97,7 +105,7 @@ func (m ListPrompt) View() string {
 		listView.Addln(m.Choice()).WithStyle(historyTextStyle)
 	}
 
-	return listView.Render()
+	return strings.TrimSuffix(listView.Render(), "\n")
 }
 
 type ListPromptArgs struct {

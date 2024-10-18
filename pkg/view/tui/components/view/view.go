@@ -64,6 +64,14 @@ func (v *View) Render() string {
 	builder := strings.Builder{}
 
 	for _, fragment := range v.fragments {
+		if fragment == nil {
+			continue
+		}
+
+		if fragment.content == "" {
+			continue
+		}
+
 		builder.WriteString(fragment.Render())
 	}
 

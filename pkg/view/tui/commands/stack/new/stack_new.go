@@ -59,6 +59,8 @@ const (
 
 // Model - represents the state of the new stack creation operation
 type Model struct {
+	windowSize tea.WindowSizeMsg
+
 	namePrompt     textprompt.TextPrompt
 	providerPrompt listprompt.ListPrompt
 	spinner        spinner.Model
@@ -102,6 +104,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowSize = msg
+
+		if m.windowSize.Height < 15 {
+			m.providerPrompt.SetMinimized(true)
+			m.providerPrompt.SetMaxDisplayedItems(m.windowSize.Height - 1)
+		} else {
+			m.providerPrompt.SetMinimized(false)
+			maxItems := ((m.windowSize.Height - 3) / 3) // make room for the exit message
+			m.providerPrompt.SetMaxDisplayedItems(maxItems)
+		}
+
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -194,7 +209,7 @@ func (m Model) View() string {
 
 		// Cloud selection input
 		if m.status >= ProviderInput {
-			v.Addln(m.providerPrompt.View())
+			v.Add(m.providerPrompt.View())
 		}
 	}
 
@@ -240,9 +255,10 @@ func (m Model) View() string {
 		indent.Addln("https://nitric.io/chat 💬").WithStyle(highlightStyle)
 
 		v.Add(indent.Render())
-	} else {
+	} else if m.windowSize.Height > 10 {
 		v.Break()
-		v.Addln("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted))
+		v.Break()
+		v.Add("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted))
 	}
 
 	return v.Render()
@@ -254,16 +270,16 @@ type Args struct {
 	Force        bool
 }
 
-type RegionItem struct {
+type ListItem struct {
 	Value       string
 	Description string
 }
 
-func (m *RegionItem) GetItemValue() string {
+func (m *ListItem) GetItemValue() string {
 	return m.Value
 }
 
-func (m *RegionItem) GetItemDescription() string {
+func (m *ListItem) GetItemDescription() string {
 	return ""
 }
 
@@ -279,11 +295,11 @@ func stackNameExistsValidator(projectDir string) validation.StringValidator {
 }
 
 const (
-	Aws   = "AWS"
-	Azure = "Azure"
-	Gcp   = "GCP"
-	AwsTf = "AWS - Terraform (Preview)"
-	GcpTf = "GCP - Terraform (Preview)"
+	Aws   = "Pulumi AWS"
+	Azure = "Pulumi Azure"
+	Gcp   = "Pulumi Google Cloud"
+	AwsTf = "Terraform AWS (Preview)"
+	GcpTf = "Terraform Google Cloud (Preview)"
 )
 
 var availableProviders = []string{Aws, Gcp, Azure, AwsTf, GcpTf}
@@ -308,6 +324,12 @@ func New(fs afero.Fs, args Args) Model {
 		InFlightValidator: nameInFlightValidator,
 	})
 	namePrompt.Focus()
+
+	listItems := []list.ListItem{}
+
+	for _, provider := range availableProviders {
+		listItems = append(listItems, &ListItem{Value: provider})
+	}
 
 	providerPrompt := listprompt.NewListPrompt(listprompt.ListPromptArgs{
 		Prompt: "Which provider do you want to deploy with?",

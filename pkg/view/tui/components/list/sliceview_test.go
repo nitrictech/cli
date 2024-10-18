@@ -19,8 +19,9 @@ package list_test
 import (
 	"testing"
 
-	"github.com/nitrictech/cli/pkg/view/tui/components/list"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nitrictech/cli/pkg/view/tui/components/list"
 )
 
 func TestNewSliceView(t *testing.T) {

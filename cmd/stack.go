@@ -70,25 +70,6 @@ nitric stack list
 		if cmd.Root().PersistentPreRun != nil {
 			cmd.Root().PersistentPreRun(cmd, args)
 		}
-
-		// Respect existing pulumi configuration if one already exists
-		// currPass := os.Getenv("PULUMI_CONFIG_PASSPHRASE")
-		// currPassFile := os.Getenv("PULUMI_CONFIG_PASSPHRASE_FILE")
-		// if currPass == "" && currPassFile == "" {
-		// 	p, err := preferences.GetLocalPassPhraseFile()
-		// 	// In non-CI environments we can generate the file to save a step.
-		// 	// in CI environments this file would typically be lost, so it shouldn't auto-generate
-		// 	if err != nil && !output.CI {
-		// 		p, err = preferences.GenerateLocalPassPhraseFile()
-		// 	}
-		// 	if err != nil {
-		// 		err = fmt.Errorf("unable to determine configured passphrase. See https://nitric.io/docs/guides/github-actions#configuring-environment-variables")
-		// 	}
-		// 	utils.CheckErr(err)
-
-		// 	// Set the default
-		// 	os.Setenv("PULUMI_CONFIG_PASSPHRASE_FILE", p)
-		// }
 	},
 }
 

@@ -56,6 +56,7 @@ const (
 
 // Model - represents the state of the new project creation operation
 type Model struct {
+	windowSize     tea.WindowSizeMsg
 	namePrompt     textprompt.TextPrompt
 	templatePrompt listprompt.ListPrompt
 	spinner        spinner.Model
@@ -100,6 +101,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowSize = msg
+
+		if m.windowSize.Height < 15 {
+			m.templatePrompt.SetMinimized(true)
+			m.templatePrompt.SetMaxDisplayedItems(m.windowSize.Height - 1)
+		} else {
+			m.templatePrompt.SetMinimized(false)
+			maxItems := ((m.windowSize.Height - 3) / 3) // make room for the exit message
+			m.templatePrompt.SetMaxDisplayedItems(maxItems)
+		}
+
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -167,7 +181,7 @@ var (
 )
 
 func (m Model) View() string {
-	v := view.New()
+	v := view.New(view.WithStyle(lipgloss.NewStyle()))
 
 	if m.err != nil {
 		v.Add("error").WithStyle(errorTagStyle)
@@ -188,7 +202,7 @@ func (m Model) View() string {
 
 		// Template selection input
 		if m.status >= TemplateInput {
-			v.Addln(m.templatePrompt.View())
+			v.Add(m.templatePrompt.View())
 		}
 	}
 
@@ -220,9 +234,10 @@ func (m Model) View() string {
 		indent.Addln("https://nitric.io/chat").WithStyle(highlightStyle)
 
 		v.Addln(indent.Render())
-	} else {
+	} else if m.windowSize.Height > 10 {
 		v.Break()
-		v.Addln("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted))
+		v.Break()
+		v.Add("(esc to quit)").WithStyle(lipgloss.NewStyle().Foreground(tui.Colors.TextMuted))
 	}
 
 	return v.Render()
@@ -278,10 +293,9 @@ func New(fs afero.Fs, args Args) (Model, error) {
 	}
 
 	templatePrompt := listprompt.NewListPrompt(listprompt.ListPromptArgs{
-		Prompt:            "Which template should we start with?",
-		Tag:               "tmpl",
-		Items:             templateItems,
-		MaxDisplayedItems: len(templates),
+		Prompt: "Which template should we start with?",
+		Tag:    "tmpl",
+		Items:  templateItems,
 	})
 
 	s := spinner.New()

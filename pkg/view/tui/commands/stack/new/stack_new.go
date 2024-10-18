@@ -325,12 +325,6 @@ func New(fs afero.Fs, args Args) Model {
 	})
 	namePrompt.Focus()
 
-	listItems := []list.ListItem{}
-
-	for _, provider := range availableProviders {
-		listItems = append(listItems, &ListItem{Value: provider})
-	}
-
 	providerPrompt := listprompt.NewListPrompt(listprompt.ListPromptArgs{
 		Prompt: "Which provider do you want to deploy with?",
 		Tag:    "prov",

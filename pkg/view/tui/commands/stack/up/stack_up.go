@@ -36,6 +36,8 @@ import (
 )
 
 type Model struct {
+	windowSize tea.WindowSizeMsg
+
 	provider           string
 	stack              *stack.Resource
 	defaultParent      *stack.Resource
@@ -48,8 +50,6 @@ type Model struct {
 	resultOutput       string
 
 	done bool
-
-	windowSize tea.WindowSizeMsg
 
 	spinner spinner.Model
 }
@@ -71,6 +71,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.windowSize = msg
+
+		return m, nil
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, tui.KeyMap.Quit):

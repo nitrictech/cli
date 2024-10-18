@@ -28,7 +28,9 @@ import (
 
 // Model - represents the state of the stack selection list
 type Model struct {
-	listModel tea.Model
+	windowSize tea.WindowSizeMsg
+
+	stackPrompt listprompt.ListPrompt
 }
 
 // Init initializes the model, used by Bubbletea
@@ -41,6 +43,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowSize = msg
+
+		if m.windowSize.Height < 7 {
+			m.stackPrompt.SetMinimized(true)
+			m.stackPrompt.SetMaxDisplayedItems(m.windowSize.Height - 1)
+		} else {
+			m.stackPrompt.SetMinimized(false)
+			maxItems := ((m.windowSize.Height - 1) / 3) // make room for the exit message
+			m.stackPrompt.SetMaxDisplayedItems(maxItems)
+		}
+
+		return m, nil
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, tui.KeyMap.Quit):
@@ -48,8 +63,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	m.listModel, cmd = m.listModel.Update(msg)
-	if m.listModel.(listprompt.ListPrompt).IsComplete() {
+	m.stackPrompt, cmd = m.stackPrompt.UpdateListPrompt(msg)
+	if m.stackPrompt.IsComplete() {
 		return m, teax.Quit
 	}
 
@@ -57,11 +72,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	return m.listModel.View()
+	return m.stackPrompt.View()
 }
 
 func (m Model) Choice() string {
-	return m.listModel.(listprompt.ListPrompt).Choice()
+	return m.stackPrompt.Choice()
 }
 
 type Args struct {
@@ -90,13 +105,13 @@ func New(args Args) Model {
 		prompt = "Select a stack"
 	}
 
-	listModel := listprompt.NewListPrompt(listprompt.ListPromptArgs{
+	stackPrompt := listprompt.NewListPrompt(listprompt.ListPromptArgs{
 		Items:  args.StackList,
 		Tag:    "stack",
 		Prompt: prompt,
 	})
 
 	return Model{
-		listModel: listModel,
+		stackPrompt: stackPrompt,
 	}
 }

@@ -27,7 +27,6 @@ import (
 
 	"github.com/asaskevich/EventBus"
 
-	"github.com/nitrictech/cli/pkg/cloud/gateway"
 	"github.com/nitrictech/cli/pkg/grpcx"
 	"github.com/nitrictech/cli/pkg/validation"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
@@ -50,17 +49,11 @@ type LocalResourcesState struct {
 }
 
 type LocalResourcesService struct {
-	gateway *gateway.LocalGatewayService
-
 	state         LocalResourcesState
 	errLock       sync.RWMutex
 	serviceErrors map[string][]error
 
 	bus EventBus.Bus
-}
-
-type LocalResourcesOptions struct {
-	Gateway *gateway.LocalGatewayService
 }
 
 const localResourcesTopic = "local_resources"
@@ -164,7 +157,7 @@ func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
 	delete(l.serviceErrors, serviceName)
 }
 
-func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService {
+func NewLocalResourcesService() *LocalResourcesService {
 	return &LocalResourcesService{
 		state: LocalResourcesState{
 			BatchJobs:              NewResourceRegistrar[resourcespb.JobResource](),
@@ -179,7 +172,6 @@ func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService
 			ServiceErrors:          map[string][]error{},
 		},
 		serviceErrors: map[string][]error{},
-		gateway:       opts.Gateway,
 		bus:           EventBus.New(),
 	}
 }

@@ -100,8 +100,10 @@ func (l *LocalSchedulesService) registerSchedule(serviceName string, registratio
 	defer l.schedulesLock.Unlock()
 
 	if !validation.IsValidResourceName(registrationRequest.ScheduleName) {
-		l.errorLogger(serviceName,
-			fmt.Errorf("invalid name: \"%s\" for %s resource", registrationRequest.ScheduleName, resourcespb.ResourceType_Schedule))
+		l.errorLogger(
+			serviceName,
+			fmt.Errorf("invalid name: \"%s\" for %s resource", registrationRequest.ScheduleName, resourcespb.ResourceType_Schedule),
+		)
 		return nil
 	}
 

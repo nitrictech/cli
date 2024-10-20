@@ -24,9 +24,12 @@ import (
 
 	"github.com/asaskevich/EventBus"
 
+	"github.com/nitrictech/cli/pkg/cloud/errorsx"
 	"github.com/nitrictech/cli/pkg/grpcx"
+	"github.com/nitrictech/cli/pkg/validation"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	batchpb "github.com/nitrictech/nitric/core/pkg/proto/batch/v1"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/jobs"
 )
 
@@ -49,8 +52,9 @@ type (
 		*jobs.JobManager
 		batchpb.UnimplementedBatchServer
 
-		state     State
-		batchLock sync.RWMutex
+		errorLogger errorsx.ServiceErrorLogger
+		state       State
+		batchLock   sync.RWMutex
 
 		bus EventBus.Bus
 	}
@@ -91,6 +95,14 @@ func (l *LocalBatchService) SubscribeToAction(subscription func(ActionState)) {
 func (l *LocalBatchService) registerJob(serviceName string, registration *batchpb.RegistrationRequest) {
 	l.batchLock.Lock()
 	defer l.batchLock.Unlock()
+
+	if !validation.IsValidResourceName(registration.JobName) {
+		l.errorLogger(
+			serviceName,
+			fmt.Errorf("invalid name: \"%s\" for %s resource", registration.JobName, resourcespb.ResourceType_Job),
+		)
+		return
+	}
 
 	if l.state[registration.JobName] == nil {
 		l.state[registration.JobName] = make(map[string]int)
@@ -189,10 +201,11 @@ func (l *LocalBatchService) SubmitJob(ctx context.Context, req *batchpb.JobSubmi
 	return &batchpb.JobSubmitResponse{}, nil
 }
 
-func NewLocalBatchService() *LocalBatchService {
+func NewLocalBatchService(errorLogger errorsx.ServiceErrorLogger) *LocalBatchService {
 	return &LocalBatchService{
-		JobManager: jobs.New(),
-		state:      make(map[string]map[string]int),
-		bus:        EventBus.New(),
+		errorLogger: errorLogger,
+		JobManager:  jobs.New(),
+		state:       make(map[string]map[string]int),
+		bus:         EventBus.New(),
 	}
 }

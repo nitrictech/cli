@@ -18,6 +18,7 @@ package local
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -32,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
+	"github.com/nitrictech/cli/pkg/validation"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	viewr "github.com/nitrictech/cli/pkg/view/tui/components/view"
 	"github.com/nitrictech/cli/pkg/view/tui/reactive"
@@ -293,12 +295,26 @@ func (t *TuiModel) View() string {
 			v.Addln("Project Errors:").WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
 		}
 
+		violatedRules := []*validation.Rule{}
 		for svcName, errs := range t.resources.ServiceErrors {
 			v.Addln("%s:", svcName).WithStyle(lipgloss.NewStyle().Bold(true))
 			for _, err := range errs {
 				v.Addln(" - " + err.Error()).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
+				violation := validation.GetRuleViolation(err)
+				if violation != nil && !slices.Contains(violatedRules, violation) {
+					violatedRules = append(violatedRules, violation)
+				}
 			}
 		}
+
+		if len(violatedRules) > 0 {
+			v.Break()
+			v.Addln("See Rules:").WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
+			for _, rule := range violatedRules {
+				v.Addln(" - %s", rule).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
+			}
+		}
+
 	}
 
 	return v.Render()

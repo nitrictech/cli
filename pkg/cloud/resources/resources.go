@@ -21,7 +21,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"maps"
 	"sync"
 
@@ -83,7 +82,7 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 
 	if !validation.IsValidResourceName(req.Id.Name) && req.Id.Type != resourcespb.ResourceType_Policy {
 		// register as an error against the service
-		l.LogServiceError(serviceName, fmt.Errorf("invalid name: \"%s\" for %s resource", req.Id.Name, req.Id.Type.String()))
+		l.LogServiceError(serviceName, validation.NewResourceNameViolationError(req.Id.Name, req.Id.Type.String()))
 	}
 
 	switch req.Id.Type {

@@ -24,6 +24,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/nitrictech/cli/pkg/validation"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	batchpb "github.com/nitrictech/nitric/core/pkg/proto/batch/v1"
@@ -97,6 +98,10 @@ func (s *BatchRequirements) RegisterServices(grpcServer *grpc.Server) {
 func (s *BatchRequirements) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {
 	s.resourceLock.Lock()
 	defer s.resourceLock.Unlock()
+
+	if !validation.IsValidResourceName(req.Id.GetName()) {
+		s.errors = append(s.errors, fmt.Errorf("invalid resource name '%s' for resource %s", req.Id.Name, req.Id.Type))
+	}
 
 	switch req.Id.Type {
 	case resourcespb.ResourceType_Bucket:

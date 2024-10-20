@@ -257,7 +257,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 
 	localResources := resources.NewLocalResourcesService()
 	localApis := apis.NewLocalApiGatewayService()
-	localBatch := batch.NewLocalBatchService(localResources.LogServiceError)
+	localBatch := batch.NewLocalBatchService()
 	localSchedules := schedules.NewLocalSchedulesService(localResources.LogServiceError)
 	localHttpProxy := http.NewLocalHttpProxyService()
 	localGateway, err := gateway.NewGateway(gateway.NewGatewayOpts{

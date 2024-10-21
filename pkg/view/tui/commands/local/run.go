@@ -307,13 +307,14 @@ func (t *TuiModel) View() string {
 			}
 		}
 
-		if len(violatedRules) > 0 {
-			v.Break()
-			v.Addln("See Rules:").WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
-			for _, rule := range violatedRules {
-				v.Addln(" - %s", rule).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
-			}
-		}
+		// TODO: Add when documentation links are ready
+		// if len(violatedRules) > 0 {
+		// 	v.Break()
+		// 	v.Addln("See Rules:").WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
+		// 	for _, rule := range violatedRules {
+		// 		v.Addln(" - %s", rule).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
+		// 	}
+		// }
 
 	}
 

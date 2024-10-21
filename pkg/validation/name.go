@@ -3,11 +3,14 @@ package validation
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/iancoleman/strcase"
 )
 
 var ResourceName_Rule = &Rule{
-	name:    "Invalid Resource Name",
-	docsUrl: "https://docs.example.com/validation/resource-name",
+	name: "Invalid Name",
+	// TODO: Add docs link for rule when available
+	docsUrl: "",
 }
 
 // create a lower kebab case only regex
@@ -18,5 +21,5 @@ func IsValidResourceName(name string) bool {
 }
 
 func NewResourceNameViolationError(resourceName string, resourceType string) *RuleViolationError {
-	return ResourceName_Rule.newError(fmt.Sprintf("'%s' for resource %s", resourceName, resourceType))
+	return ResourceName_Rule.newError(fmt.Sprintf("'%s' for %s try '%s'", resourceName, resourceType, strcase.ToKebab(resourceName)))
 }

@@ -100,7 +100,7 @@ func (s *BatchRequirements) Declare(ctx context.Context, req *resourcespb.Resour
 	defer s.resourceLock.Unlock()
 
 	if !validation.IsValidResourceName(req.Id.GetName()) {
-		s.errors = append(s.errors, fmt.Errorf("invalid resource name '%s' for resource %s", req.Id.Name, req.Id.Type))
+		s.errors = append(s.errors, validation.NewResourceNameViolationError(req.Id.Name, req.Id.Type.String()))
 	}
 
 	switch req.Id.Type {

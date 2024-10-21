@@ -497,7 +497,7 @@ func (s *LocalGatewayService) refreshApis(apiState apis.State) {
 
 	// api has been removed
 	if len(apiState) < len(s.apiServers) {
-		// shutdown the apis that has been removed
+		// shutdown the apis that have been removed
 		s.apiServers = lo.Filter(s.apiServers, func(item *apiServer, index int) bool {
 			_, exists := apiState[item.name]
 
@@ -507,7 +507,6 @@ func (s *LocalGatewayService) refreshApis(apiState apis.State) {
 
 			return exists
 		})
-
 	}
 
 	s.apis = make([]string, 0)
@@ -539,7 +538,7 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 
 	// http server has been removed
 	if len(state) < len(s.httpServers) {
-		// shutdown the http servers that has been removed
+		// shutdown the http servers that have been removed
 		s.httpServers = lo.Filter(s.httpServers, func(item *apiServer, index int) bool {
 			_, exists := state[item.name]
 
@@ -549,7 +548,6 @@ func (s *LocalGatewayService) refreshHttpWorkers(state http.State) {
 
 			return exists
 		})
-
 	}
 
 	uniqHttpWorkers := lo.Reduce(lo.Keys(state), func(agg []string, host string, idx int) []string {

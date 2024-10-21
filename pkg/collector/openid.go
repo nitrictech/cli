@@ -50,6 +50,7 @@ func validateOpenIdConnectConfig(openIdConnectUrl *url.URL) error {
 
 		return err
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -60,9 +61,9 @@ func validateOpenIdConnectConfig(openIdConnectUrl *url.URL) error {
 		return fmt.Errorf("received %d status retrieving openid-configuration: %s", resp.StatusCode, body)
 	}
 
-	var oidcConfig *OpenIdConfig
+	var oidcConfig OpenIdConfig
 
-	if err := json.Unmarshal(body, oidcConfig); err != nil {
+	if err := json.Unmarshal(body, &oidcConfig); err != nil {
 		return errors.WithMessage(err, "error unmarshalling open id config")
 	}
 

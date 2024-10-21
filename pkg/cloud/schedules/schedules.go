@@ -104,6 +104,7 @@ func (l *LocalSchedulesService) registerSchedule(serviceName string, registratio
 			serviceName,
 			fmt.Errorf("invalid name: \"%s\" for %s resource", registrationRequest.ScheduleName, resourcespb.ResourceType_Schedule),
 		)
+
 		return nil
 	}
 

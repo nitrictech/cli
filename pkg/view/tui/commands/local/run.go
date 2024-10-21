@@ -296,26 +296,19 @@ func (t *TuiModel) View() string {
 		}
 
 		violatedRules := []*validation.Rule{}
+
 		for svcName, errs := range t.resources.ServiceErrors {
 			v.Addln("%s:", svcName).WithStyle(lipgloss.NewStyle().Bold(true))
+
 			for _, err := range errs {
 				v.Addln(" - " + err.Error()).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
+
 				violation := validation.GetRuleViolation(err)
 				if violation != nil && !slices.Contains(violatedRules, violation) {
 					violatedRules = append(violatedRules, violation)
 				}
 			}
 		}
-
-		// TODO: Add when documentation links are ready
-		// if len(violatedRules) > 0 {
-		// 	v.Break()
-		// 	v.Addln("See Rules:").WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
-		// 	for _, rule := range violatedRules {
-		// 		v.Addln(" - %s", rule).WithStyle(lipgloss.NewStyle().Bold(true).Foreground(tui.Colors.Red))
-		// 	}
-		// }
-
 	}
 
 	return v.Render()

@@ -151,7 +151,7 @@ func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
 	l.state.ApiSecurityDefinitions.ClearRequestingService(serviceName)
 	l.state.SqlDatabases.ClearRequestingService(serviceName)
 	l.state.BatchJobs.ClearRequestingService(serviceName)
-	// TODO: lock
+
 	delete(l.state.ServiceErrors, serviceName)
 	delete(l.serviceErrors, serviceName)
 }

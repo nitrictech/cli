@@ -198,7 +198,7 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 
 		initialRate, err := strconv.Atoi(parts[0])
 		if err != nil {
-			l.errorLogger(serviceName, fmt.Errorf("invalid rate: %s for schedule %s", t.Every.Rate, scheduleName))
+			l.errorLogger(serviceName, fmt.Errorf("invalid rate: %s for schedule %s, must start with integer", t.Every.Rate, scheduleName))
 			return nil
 		}
 

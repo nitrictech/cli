@@ -142,6 +142,10 @@ func (r *LocalWebsocketService) unRegisterWebsocketWorker(serviceName string, re
 		}
 	}
 
+	if len(r.state[registration.SocketName][serviceName]) == 0 {
+		delete(r.state[registration.SocketName], serviceName)
+	}
+
 	if len(r.state[registration.SocketName]) == 0 {
 		delete(r.state, registration.SocketName)
 	}

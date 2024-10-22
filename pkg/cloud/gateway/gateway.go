@@ -574,6 +574,28 @@ func (s *LocalGatewayService) refreshWebsocketWorkers(state websockets.State) {
 
 	s.websocketWorkers = make([]string, 0)
 
+	// socket server has been removed
+	if len(state) < len(s.socketServer) {
+		// Collect servers to be removed
+		var toRemove []string
+
+		// shutdown the socket servers that have been removed
+		for socketName, server := range s.socketServer {
+			_, exists := state[socketName]
+
+			if !exists {
+				shutdownServer(server.srv)
+
+				toRemove = append(toRemove, socketName)
+			}
+		}
+
+		// remove the servers from the collection
+		for _, socketName := range toRemove {
+			delete(s.socketServer, socketName)
+		}
+	}
+
 	websockets := lo.Reduce(lo.Keys(state), func(agg []string, socketName string, idx int) []string {
 		if !lo.Contains(agg, socketName) {
 			agg = append(agg, socketName)

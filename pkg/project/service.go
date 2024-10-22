@@ -350,7 +350,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	if goruntime.GOOS == "linux" {
 		dockerHost := env.GetEnv("NITRIC_DOCKER_HOST", "172.17.0.1")
 
-		// FIXME: Skip dns resolution for now to work around for deno runtime
+		// FIXME: Skip dns resolution for now to allow nitric apps using deno to work on linux
 		// https://github.com/denoland/deno/issues/25927
 		runtimeOptions.nitricHost = dockerHost.String()
 		// setup host.docker.internal to route to host gateway

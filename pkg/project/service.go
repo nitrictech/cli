@@ -353,7 +353,6 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		// FIXME: Skip dns resolution for now to work around for deno runtime
 		// https://github.com/denoland/deno/issues/25927
 		runtimeOptions.nitricHost = dockerHost.String()
-
 		// setup host.docker.internal to route to host gateway
 		// to access rpc server hosted by local CLI run
 		hostConfig.ExtraHosts = []string{"host.docker.internal:" + dockerHost.String()}

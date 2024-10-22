@@ -69,6 +69,7 @@ const FieldRows: React.FC<Props> = ({
                   data-testid={`${testId}-${i}-key`}
                   readOnly={lockKeys || readOnly}
                   placeholder="Key"
+                  className="read-only:opacity-100"
                   onChange={(e) => {
                     const updatedRow: FieldRow = { ...r, key: e.target.value }
                     const newArr = [...rows]

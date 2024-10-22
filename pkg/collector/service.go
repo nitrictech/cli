@@ -25,6 +25,7 @@ import (
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
 
+	"github.com/nitrictech/cli/pkg/validation"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
@@ -121,6 +122,10 @@ func (s *ServiceRequirements) WorkerCount() int {
 func (s *ServiceRequirements) Declare(ctx context.Context, req *resourcespb.ResourceDeclareRequest) (*resourcespb.ResourceDeclareResponse, error) {
 	s.resourceLock.Lock()
 	defer s.resourceLock.Unlock()
+
+	if !validation.IsValidResourceName(req.Id.GetName()) {
+		s.errors = append(s.errors, validation.NewResourceNameViolationError(req.Id.Name, req.Id.Type.String()))
+	}
 
 	switch req.Id.Type {
 	case resourcespb.ResourceType_Bucket:

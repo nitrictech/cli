@@ -982,11 +982,18 @@ func buildPolicyRequirements(allServiceRequirements []*ServiceRequirements, allB
 	return resources, nil
 }
 
-func checkServiceRequirementErrors(allServiceRequirements []*ServiceRequirements) error {
+func checkServiceRequirementErrors(allServiceRequirements []*ServiceRequirements, allBatchServiceRequirements []*BatchRequirements) error {
 	allServiceErrors := []error{}
 
 	for _, serviceRequirements := range allServiceRequirements {
 		serviceRequirementsErrors := serviceRequirements.Error()
+		if serviceRequirementsErrors != nil {
+			allServiceErrors = append(allServiceErrors, serviceRequirementsErrors)
+		}
+	}
+
+	for _, batchServiceRequirements := range allBatchServiceRequirements {
+		serviceRequirementsErrors := batchServiceRequirements.Error()
 		if serviceRequirementsErrors != nil {
 			allServiceErrors = append(allServiceErrors, serviceRequirementsErrors)
 		}
@@ -1001,7 +1008,7 @@ func checkServiceRequirementErrors(allServiceRequirements []*ServiceRequirements
 
 // convert service requirements to a cloud bill of materials
 func ServiceRequirementsToSpec(projectName string, environmentVariables map[string]string, allServiceRequirements []*ServiceRequirements, allBatchRequirements []*BatchRequirements) (*deploymentspb.Spec, error) {
-	if err := checkServiceRequirementErrors(allServiceRequirements); err != nil {
+	if err := checkServiceRequirementErrors(allServiceRequirements, allBatchRequirements); err != nil {
 		return nil, err
 	}
 

@@ -21,11 +21,13 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"maps"
+	"sync"
 
 	"github.com/asaskevich/EventBus"
 
-	"github.com/nitrictech/cli/pkg/cloud/gateway"
 	"github.com/nitrictech/cli/pkg/grpcx"
+	"github.com/nitrictech/cli/pkg/validation"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
 
@@ -41,18 +43,16 @@ type LocalResourcesState struct {
 	Queues                 *ResourceRegistrar[resourcespb.QueueResource]
 	SqlDatabases           *ResourceRegistrar[resourcespb.SqlDatabaseResource]
 	ApiSecurityDefinitions *ResourceRegistrar[resourcespb.ApiSecurityDefinitionResource]
+
+	ServiceErrors map[string][]error
 }
 
 type LocalResourcesService struct {
-	gateway *gateway.LocalGatewayService
-
-	state LocalResourcesState
+	state         LocalResourcesState
+	errLock       sync.RWMutex
+	serviceErrors map[string][]error
 
 	bus EventBus.Bus
-}
-
-type LocalResourcesOptions struct {
-	Gateway *gateway.LocalGatewayService
 }
 
 const localResourcesTopic = "local_resources"
@@ -78,6 +78,11 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 	serviceName, err := grpcx.GetServiceNameFromIncomingContext(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	if !validation.IsValidResourceName(req.Id.Name) && req.Id.Type != resourcespb.ResourceType_Policy {
+		// register as an error against the service
+		l.LogServiceError(serviceName, validation.NewResourceNameViolationError(req.Id.Name, req.Id.Type.String()))
 	}
 
 	switch req.Id.Type {
@@ -123,8 +128,20 @@ func (l *LocalResourcesService) Declare(ctx context.Context, req *resourcespb.Re
 	return &resourcespb.ResourceDeclareResponse{}, nil
 }
 
+func (l *LocalResourcesService) LogServiceError(serviceName string, err error) {
+	l.errLock.Lock()
+	defer l.errLock.Unlock()
+
+	l.serviceErrors[serviceName] = append(l.state.ServiceErrors[serviceName], err)
+
+	l.state.ServiceErrors = maps.Clone(l.serviceErrors)
+}
+
 // ClearServiceResources - Clear all resources registered by a service, typically done when the service terminates or is restarted
 func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
+	l.errLock.Lock()
+	defer l.errLock.Unlock()
+
 	l.state.Buckets.ClearRequestingService(serviceName)
 	l.state.KeyValueStores.ClearRequestingService(serviceName)
 	l.state.Policies.ClearRequestingService(serviceName)
@@ -134,9 +151,12 @@ func (l *LocalResourcesService) ClearServiceResources(serviceName string) {
 	l.state.ApiSecurityDefinitions.ClearRequestingService(serviceName)
 	l.state.SqlDatabases.ClearRequestingService(serviceName)
 	l.state.BatchJobs.ClearRequestingService(serviceName)
+
+	delete(l.state.ServiceErrors, serviceName)
+	delete(l.serviceErrors, serviceName)
 }
 
-func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService {
+func NewLocalResourcesService() *LocalResourcesService {
 	return &LocalResourcesService{
 		state: LocalResourcesState{
 			BatchJobs:              NewResourceRegistrar[resourcespb.JobResource](),
@@ -148,8 +168,9 @@ func NewLocalResourcesService(opts LocalResourcesOptions) *LocalResourcesService
 			Queues:                 NewResourceRegistrar[resourcespb.QueueResource](),
 			ApiSecurityDefinitions: NewResourceRegistrar[resourcespb.ApiSecurityDefinitionResource](),
 			SqlDatabases:           NewResourceRegistrar[resourcespb.SqlDatabaseResource](),
+			ServiceErrors:          map[string][]error{},
 		},
-		gateway: opts.Gateway,
-		bus:     EventBus.New(),
+		serviceErrors: map[string][]error{},
+		bus:           EventBus.New(),
 	}
 }

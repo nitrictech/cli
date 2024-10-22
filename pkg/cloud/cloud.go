@@ -255,20 +255,11 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
+	localResources := resources.NewLocalResourcesService()
 	localApis := apis.NewLocalApiGatewayService()
 	localBatch := batch.NewLocalBatchService()
-
-	localSchedules := schedules.NewLocalSchedulesService()
+	localSchedules := schedules.NewLocalSchedulesService(localResources.LogServiceError)
 	localHttpProxy := http.NewLocalHttpProxyService()
-
-	localSecrets, err := secrets.NewSecretService()
-	if err != nil {
-		return nil, err
-	}
-
-	if opts.LogWriter == nil {
-		opts.LogWriter = io.Discard
-	}
 
 	localGateway, err := gateway.NewGateway(gateway.NewGatewayOpts{
 		TLSCredentials: opts.TLSCredentials,
@@ -280,9 +271,14 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localResources := resources.NewLocalResourcesService(resources.LocalResourcesOptions{
-		Gateway: localGateway,
-	})
+	localSecrets, err := secrets.NewSecretService()
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.LogWriter == nil {
+		opts.LogWriter = io.Discard
+	}
 
 	keyvalueService, err := keyvalue.NewBoltService()
 	if err != nil {

@@ -18,7 +18,6 @@ package schedules
 
 import (
 	"fmt"
-	"log"
 	"maps"
 	"strconv"
 	"strings"
@@ -27,8 +26,11 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/robfig/cron/v3"
 
+	"github.com/nitrictech/cli/pkg/cloud/errorsx"
 	"github.com/nitrictech/cli/pkg/grpcx"
+	"github.com/nitrictech/cli/pkg/validation"
 	"github.com/nitrictech/nitric/core/pkg/logger"
+	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	schedulespb "github.com/nitrictech/nitric/core/pkg/proto/schedules/v1"
 	"github.com/nitrictech/nitric/core/pkg/workers/schedules"
 )
@@ -55,6 +57,8 @@ type LocalSchedulesService struct {
 	cron *cron.Cron
 
 	schedulesLock sync.RWMutex
+
+	errorLogger errorsx.ServiceErrorLogger
 
 	schedules State
 	bus       EventBus.Bus
@@ -95,9 +99,19 @@ func (l *LocalSchedulesService) registerSchedule(serviceName string, registratio
 	l.schedulesLock.Lock()
 	defer l.schedulesLock.Unlock()
 
+	if !validation.IsValidResourceName(registrationRequest.ScheduleName) {
+		l.errorLogger(
+			serviceName,
+			fmt.Errorf("invalid name: \"%s\" for %s resource", registrationRequest.ScheduleName, resourcespb.ResourceType_Schedule),
+		)
+
+		return nil
+	}
+
 	if l.schedules[registrationRequest.ScheduleName] != nil {
 		existing := l.schedules[registrationRequest.ScheduleName]
-		return fmt.Errorf("failed to register schedule for %s, service %s has already registered a schedule named %s", serviceName, existing.ServiceName, existing.Schedule.ScheduleName)
+
+		return fmt.Errorf("conflict: schedule \"%s\" already taken by service %s", existing.Schedule.ScheduleName, existing.ServiceName)
 	}
 
 	l.schedules[registrationRequest.ScheduleName] = &ScheduledService{
@@ -150,7 +164,7 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 		return err
 	}
 
-	peekableStream := grpcx.NewPeekableStreamServer[*schedulespb.ServerMessage, *schedulespb.ClientMessage](stream)
+	peekableStream := grpcx.NewPeekableStreamServer(stream)
 
 	firstRequest, err := peekableStream.Peek()
 	if err != nil {
@@ -163,7 +177,8 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 
 	err = l.registerSchedule(serviceName, firstRequest.GetRegistrationRequest())
 	if err != nil {
-		return fmt.Errorf("error registering schedule: %s", err.Error())
+		l.errorLogger(serviceName, err)
+		return nil
 	}
 
 	defer l.unregisterSchedule(serviceName, firstRequest.GetRegistrationRequest())
@@ -177,12 +192,14 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 	case *schedulespb.RegistrationRequest_Every:
 		parts := strings.Split(strings.TrimSpace(t.Every.Rate), " ")
 		if len(parts) != 2 {
-			return fmt.Errorf("invalid schedule rate: %s", t.Every.Rate)
+			l.errorLogger(serviceName, fmt.Errorf("invalid rate: %s for schedule %s", t.Every.Rate, scheduleName))
+			return nil
 		}
 
 		initialRate, err := strconv.Atoi(parts[0])
 		if err != nil {
-			return fmt.Errorf("invalid schedule rate, must start with an integer")
+			l.errorLogger(serviceName, fmt.Errorf("invalid rate: %s for schedule %s, must start with integer", t.Every.Rate, scheduleName))
+			return nil
 		}
 
 		// Dapr cron bindings only support hours, minutes and seconds. Convert days to hours
@@ -203,18 +220,15 @@ func (l *LocalSchedulesService) Schedule(stream schedulespb.Schedules_ScheduleSe
 
 	defer l.cron.Remove(cronEntryId)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Start the cron scheduler
 	l.cron.Start()
 
 	return l.ScheduleWorkerManager.Schedule(peekableStream)
 }
 
-func NewLocalSchedulesService() *LocalSchedulesService {
+func NewLocalSchedulesService(errorLogger errorsx.ServiceErrorLogger) *LocalSchedulesService {
 	return &LocalSchedulesService{
+		errorLogger:           errorLogger,
 		ScheduleWorkerManager: schedules.New(),
 		cron:                  cron.New(),
 		bus:                   EventBus.New(),

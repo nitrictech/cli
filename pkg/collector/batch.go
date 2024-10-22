@@ -99,7 +99,7 @@ func (s *BatchRequirements) Declare(ctx context.Context, req *resourcespb.Resour
 	s.resourceLock.Lock()
 	defer s.resourceLock.Unlock()
 
-	if !validation.IsValidResourceName(req.Id.GetName()) {
+	if req.Id.Type != resourcespb.ResourceType_Policy && !validation.IsValidResourceName(req.Id.GetName()) {
 		s.errors = append(s.errors, validation.NewResourceNameViolationError(req.Id.Name, req.Id.Type.String()))
 	}
 

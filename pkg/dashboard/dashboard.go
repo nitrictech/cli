@@ -282,6 +282,7 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 	d.stores = []*KeyValueSpec{}
 	d.queues = []*QueueSpec{}
 	d.apiSecurityDefinitions = map[string]map[string]*resourcespb.ApiSecurityDefinitionResource{}
+	d.secrets = []*SecretSpec{}
 
 	d.policies = map[string]PolicySpec{}
 

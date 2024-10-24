@@ -13,10 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
-import { useEffect, useState } from 'react'
-import { useSecret } from '@/lib/hooks/use-secret'
+import { useEffect } from 'react'
 import SecretVersionsTable from './SecretVersionsTable'
 import { SecretsProvider, useSecretsContext } from './SecretsContext'
+import NotFoundAlert from '../shared/NotFoundAlert'
 
 const SecretsExplorer: React.FC = () => {
   const { data, loading } = useWebSocket()
@@ -24,7 +24,7 @@ const SecretsExplorer: React.FC = () => {
   const { selectedSecret, setSelectedSecret } = useSecretsContext()
 
   useEffect(() => {
-    if (data && data.secrets.length) {
+    if (!selectedSecret && data && data.secrets.length) {
       setSelectedSecret(data.secrets[0])
     }
   }, [data])
@@ -82,13 +82,21 @@ const SecretsExplorer: React.FC = () => {
                   </Select>
                 )}
               </div>
-              <div className="hidden items-center gap-4 lg:flex">
-                <BreadCrumbs className="text-lg">
-                  <span>Secrets</span>
-                  <h2 className="font-body text-lg font-semibold">
-                    {selectedSecret.name}
-                  </h2>
-                </BreadCrumbs>
+              <div className="space-y-4">
+                <div className="hidden items-center gap-4 lg:flex">
+                  <BreadCrumbs className="text-lg">
+                    <span>Secrets</span>
+                    <h2 className="font-body text-lg font-semibold">
+                      {selectedSecret.name}
+                    </h2>
+                  </BreadCrumbs>
+                </div>
+                {!data?.secrets.some((s) => s.name === selectedSecret.name) && (
+                  <NotFoundAlert>
+                    Secret not found. It might have been updated or removed.
+                    Select another secret.
+                  </NotFoundAlert>
+                )}
               </div>
               <SecretVersionsTable />
             </div>

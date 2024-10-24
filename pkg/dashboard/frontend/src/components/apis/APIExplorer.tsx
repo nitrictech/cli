@@ -757,6 +757,8 @@ const APIExplorer = () => {
                   path: selectedApiEndpoint.path,
                   method: request.method,
                 }}
+                api={selectedApiEndpoint.api}
+                apiAddress={apiAddress || 'localhost:4001'}
               />
             </SectionCard>
           </div>

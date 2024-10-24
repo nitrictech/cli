@@ -13,6 +13,8 @@ interface Props {
     method: string
     path: string
   }
+  api: string
+  apiAddress: string
 }
 
 const checkEquivalentPaths = (matcher: string, path: string): boolean => {
@@ -25,7 +27,12 @@ const checkEquivalentPaths = (matcher: string, path: string): boolean => {
   return path.match(regex) !== null
 }
 
-const APIHistory: React.FC<Props> = ({ history, selectedRequest }) => {
+const APIHistory: React.FC<Props> = ({
+  history,
+  selectedRequest,
+  api,
+  apiAddress,
+}) => {
   const requestHistory = history
     .sort((a, b) => b.time - a.time)
     .filter(({ event }) => event.request && event.response)
@@ -35,7 +42,14 @@ const APIHistory: React.FC<Props> = ({ history, selectedRequest }) => {
         event.request.path ?? '',
       ),
     )
-    .filter(({ event }) => event.request.method === selectedRequest.method)
+    .filter(({ event }) => {
+      // backwards compatibility
+      if (!event.api.startsWith('http://') && event.api !== api) {
+        return false
+      }
+
+      return event.request.method === selectedRequest.method
+    })
 
   if (!requestHistory.length) {
     return <p>There is no history.</p>
@@ -44,7 +58,10 @@ const APIHistory: React.FC<Props> = ({ history, selectedRequest }) => {
   return (
     <HistoryAccordion
       items={requestHistory.map((h) => ({
-        label: h.event.api + h.event.request.path,
+        // backwards compatibility
+        label: h.event.api.startsWith('http://')
+          ? h.event.api + h.event.request.path
+          : apiAddress + h.event.request.path,
         time: h.time,
         status: h.event?.response?.status,
         content: <ApiHistoryAccordionContent {...h} />,

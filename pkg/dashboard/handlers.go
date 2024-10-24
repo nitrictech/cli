@@ -517,7 +517,7 @@ func (d *Dashboard) handleApiHistory(state apis.ApiRequestState) {
 		Time:       time.Now().UnixMilli(),
 		RecordType: API,
 		Event: ApiHistoryItem{
-			Api: d.gatewayService.GetApiAddresses()[state.Api],
+			Api: state.Api,
 			Request: &RequestHistory{
 				Method:      string(state.ReqCtx.Request.Header.Method()),
 				Path:        string(state.ReqCtx.URI().PathOriginal()),

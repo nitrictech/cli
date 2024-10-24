@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import SectionCard from '../shared/SectionCard'
+import NotFoundAlert from '../shared/NotFoundAlert'
 
 interface Props {
   workerType: 'schedules' | 'topics' | 'jobs'
@@ -281,7 +282,15 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                   </Button>
                 )}
               </div>
-
+              {!data![workerType].some(
+                (s) => s.name === selectedWorker.name,
+              ) && (
+                <NotFoundAlert className="mb-4">
+                  {title(workerType).replace(/[s]$/, '')} not found. It might
+                  have been updated or removed. Select another{' '}
+                  {workerType.replace(/[s]$/, '')}.
+                </NotFoundAlert>
+              )}
               {['jobs', 'topics'].includes(workerType) && (
                 <SectionCard title="Payload">
                   <div>

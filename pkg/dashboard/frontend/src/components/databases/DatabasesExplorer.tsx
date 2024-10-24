@@ -24,6 +24,7 @@ import CodeEditor from '../apis/CodeEditor'
 import QueryResults from './QueryResults'
 import { useSqlMeta } from '@/lib/hooks/use-sql-meta'
 import SectionCard from '../shared/SectionCard'
+import NotFoundAlert from '../shared/NotFoundAlert'
 
 interface QueryHistoryItem {
   query: string
@@ -247,78 +248,89 @@ const DatabasesExplorer: React.FC = () => {
         {selectedDb && hasData ? (
           <div className="flex max-w-[2000px] flex-col gap-8 md:pr-8">
             <div className="flex w-full flex-col gap-8">
-              <div className="lg:hidden">
-                {hasData && (
-                  <Select
-                    value={selectedDb.name}
-                    onValueChange={(name) => {
-                      setSelectedDb(
-                        data?.sqlDatabases.find((b) => b.name === name),
-                      )
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={`Select Database`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {data?.sqlDatabases.map((db) => (
-                          <SelectItem key={db.name} value={db.name}>
-                            {db.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                )}
-                {selectedDb.migrationsPath && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        disabled={migrationLoading}
-                        onClick={handleMigrate}
-                        className="ml-auto mt-2 flex"
-                      >
-                        Run Migrations
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        Run migrations from{' '}
-                        <strong>{selectedDb.migrationsPath}</strong>
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
+              <div>
+                <div className="lg:hidden">
+                  {hasData && (
+                    <Select
+                      value={selectedDb.name}
+                      onValueChange={(name) => {
+                        setSelectedDb(
+                          data?.sqlDatabases.find((b) => b.name === name),
+                        )
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={`Select Database`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {data?.sqlDatabases.map((db) => (
+                            <SelectItem key={db.name} value={db.name}>
+                              {db.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {selectedDb.migrationsPath && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          disabled={migrationLoading}
+                          onClick={handleMigrate}
+                          className="ml-auto mt-2 flex"
+                        >
+                          Run Migrations
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Run migrations from{' '}
+                          <strong>{selectedDb.migrationsPath}</strong>
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+                <div className="hidden items-center gap-4 lg:flex">
+                  <BreadCrumbs className="text-lg">
+                    <span>Databases</span>
+                    <h2 className="font-body text-lg font-semibold">
+                      {selectedDb.name}
+                    </h2>
+                  </BreadCrumbs>
+                  {selectedDb.migrationsPath && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          data-testid="migrate-btn"
+                          disabled={migrationLoading}
+                          onClick={handleMigrate}
+                          className="ml-auto"
+                        >
+                          Run Migrations
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Run migrations from{' '}
+                          <strong>{selectedDb.migrationsPath}</strong>
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+                {!data?.sqlDatabases.some(
+                  (s) => s.name === selectedDb.name,
+                ) && (
+                  <NotFoundAlert className="mt-4">
+                    Database not found. It might have been updated or removed.
+                    Select another database.
+                  </NotFoundAlert>
                 )}
               </div>
-              <div className="hidden items-center gap-4 lg:flex">
-                <BreadCrumbs className="text-lg">
-                  <span>Databases</span>
-                  <h2 className="font-body text-lg font-semibold">
-                    {selectedDb.name}
-                  </h2>
-                </BreadCrumbs>
-                {selectedDb.migrationsPath && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        data-testid="migrate-btn"
-                        disabled={migrationLoading}
-                        onClick={handleMigrate}
-                        className="ml-auto"
-                      >
-                        Run Migrations
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        Run migrations from{' '}
-                        <strong>{selectedDb.migrationsPath}</strong>
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
+
               <SectionCard title="Connect">
                 <div className="mb-4 flex max-w-full gap-x-2 text-sm">
                   <span

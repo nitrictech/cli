@@ -17,7 +17,6 @@
 package dashboard
 
 import (
-	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -41,7 +40,6 @@ import (
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/netx"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
-	sqlpb "github.com/nitrictech/nitric/core/pkg/proto/sql/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
 	"github.com/nitrictech/cli/pkg/cloud/apis"
@@ -375,36 +373,6 @@ func (d *Dashboard) updateResources(lrs resources.LocalResourcesState) {
 
 	if len(d.secrets) > 0 {
 		slices.SortFunc(d.secrets, func(a, b *SecretSpec) int {
-			return compare(a.Name, b.Name)
-		})
-	}
-
-	for dbName, resource := range lrs.SqlDatabases.GetAll() {
-		exists := lo.ContainsBy(d.sqlDatabases, func(item *SQLDatabaseSpec) bool {
-			return item.Name == dbName
-		})
-
-		if !exists {
-			connectionString, err := d.databaseService.ConnectionString(context.TODO(), &sqlpb.SqlConnectionStringRequest{
-				DatabaseName: dbName,
-			})
-			if err != nil {
-				fmt.Printf("Error getting connection string for database %s: %v\n", dbName, err)
-				continue
-			}
-
-			d.sqlDatabases = append(d.sqlDatabases, &SQLDatabaseSpec{
-				BaseResourceSpec: &BaseResourceSpec{
-					Name:               dbName,
-					RequestingServices: resource.RequestingServices,
-				},
-				ConnectionString: connectionString.GetConnectionString(),
-			})
-		}
-	}
-
-	if len(d.sqlDatabases) > 0 {
-		slices.SortFunc(d.sqlDatabases, func(a, b *SQLDatabaseSpec) int {
 			return compare(a.Name, b.Name)
 		})
 	}

@@ -44,6 +44,7 @@ import { Badge } from '../ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import BreadCrumbs from '../layout/BreadCrumbs'
 import SectionCard from '../shared/SectionCard'
+import NotFoundAlert from '../shared/NotFoundAlert'
 
 export const LOCAL_STORAGE_KEY = 'nitric-local-dash-api-history'
 
@@ -396,6 +397,14 @@ const WSExplorer = () => {
                     </div>
                   )}
                 </div>
+                {!data?.websockets.some(
+                  (s) => s.name === selectedWebsocket.name,
+                ) && (
+                  <NotFoundAlert className="mt-4">
+                    WebSocket not found. It might have been updated or removed.
+                    Select another WebSocket.
+                  </NotFoundAlert>
+                )}
               </div>
               <Tabs value={tab} onValueChange={setTab}>
                 <TabsList>

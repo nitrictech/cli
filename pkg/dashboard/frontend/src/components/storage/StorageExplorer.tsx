@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import SectionCard from '../shared/SectionCard'
+import NotFoundAlert from '../shared/NotFoundAlert'
 
 const LOCAL_STORAGE_KEY = 'nitric-local-dash-storage-history'
 
@@ -75,12 +76,21 @@ const StorageExplorer = () => {
         {buckets && selectedBucket ? (
           <div className="flex max-w-7xl flex-col gap-8 md:flex-row md:pr-8">
             <div className="flex w-full flex-col gap-8">
-              <BreadCrumbs className="hidden text-lg lg:block">
-                Buckets
-                <h2 className="font-body text-lg font-semibold">
-                  {selectedBucket.name}
-                </h2>
-              </BreadCrumbs>
+              <div className="space-y-4">
+                <BreadCrumbs className="hidden text-lg lg:block">
+                  Buckets
+                  <h2 className="font-body text-lg font-semibold">
+                    {selectedBucket.name}
+                  </h2>
+                </BreadCrumbs>
+
+                {!data?.buckets.some((s) => s.name === selectedBucket.name) && (
+                  <NotFoundAlert>
+                    Bucket not found. It might have been updated or removed.
+                    Select another bucket.
+                  </NotFoundAlert>
+                )}
+              </div>
 
               <div className="lg:hidden">
                 <Select

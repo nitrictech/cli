@@ -309,6 +309,9 @@ func (l *LocalSqlServer) BuildAndRunMigrations(fs afero.Fs, databasesToMigrate m
 }
 
 func (l *LocalSqlServer) RegisterDatabases(lrs resources.LocalResourcesState) {
+	// reset the state
+	l.State = make(State)
+
 	// Check for new databases to migrate
 	for dbName, r := range lrs.SqlDatabases.GetAll() {
 		_, ok := l.State[dbName]

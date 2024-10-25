@@ -55,6 +55,7 @@ import {
 } from '../ui/select'
 import { Alert } from '../ui/alert'
 import SectionCard from '../shared/SectionCard'
+import NotFoundAlert from '../shared/NotFoundAlert'
 
 const getTabCount = (rows: FieldRow[]) => {
   if (!rows) return 0
@@ -117,6 +118,13 @@ const APIExplorer = () => {
         .map((api) => flattenPaths(api.spec))
         .flat(),
     [data],
+  )
+
+  const selectedDoesNotExist = useMemo(
+    () =>
+      !selectedApiEndpoint ||
+      !paths?.find((p) => p.id === selectedApiEndpoint.id),
+    [selectedApiEndpoint, data],
   )
 
   // Load single history from localStorage on mount
@@ -497,6 +505,12 @@ const APIExplorer = () => {
                     </Button>
                   </div>
                 </div>
+                {selectedDoesNotExist && (
+                  <NotFoundAlert>
+                    Endpoint not found. It might have been updated or removed.
+                    Select another endpoint.
+                  </NotFoundAlert>
+                )}
                 {selectedApiEndpoint.doc.components?.securitySchemes && (
                   <Alert variant="info">
                     <div className="flex">

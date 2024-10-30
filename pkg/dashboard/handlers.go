@@ -89,6 +89,8 @@ func (d *Dashboard) handleStorage() func(http.ResponseWriter, *http.Request) {
 			}
 
 			handleResponseWriter(w, resp.Body)
+
+			return
 		case "list-files":
 			fileList, err := d.storageService.ListBlobs(ctx, &storagepb.StorageListBlobsRequest{
 				BucketName: bucketName,
@@ -104,6 +106,8 @@ func (d *Dashboard) handleStorage() func(http.ResponseWriter, *http.Request) {
 			}
 
 			handleResponseWriter(w, jsonResponse)
+
+			return
 		case "write-file":
 			fileKey := r.URL.Query().Get("fileKey")
 			if fileKey == "" {
@@ -133,6 +137,8 @@ func (d *Dashboard) handleStorage() func(http.ResponseWriter, *http.Request) {
 			}
 
 			handleResponseWriter(w, []byte(`{"success": true}`))
+
+			return
 		case "delete-file":
 			fileKey := r.URL.Query().Get("fileKey")
 			if fileKey == "" {
@@ -152,6 +158,8 @@ func (d *Dashboard) handleStorage() func(http.ResponseWriter, *http.Request) {
 			}
 
 			handleResponseWriter(w, []byte(`{"success": true}`))
+
+			return
 		default:
 			handleResponseWriter(w, []byte(`{"error": "Invalid action"}`))
 		}

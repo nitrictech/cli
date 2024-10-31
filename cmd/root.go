@@ -66,10 +66,11 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		update.FetchLatestVersion()
+		update.FetchLatestCLIVersion()
+		update.FetchLatestProviderVersion()
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		update.PrintOutdatedWarning()
+		update.PrintOutdatedCLIWarning()
 		// an unstyled \n is always needed at the end of the view to ensure the last line renders
 		fmt.Println()
 	},

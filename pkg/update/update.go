@@ -33,13 +33,37 @@ import (
 	"github.com/nitrictech/cli/pkg/view/tui"
 )
 
-func FetchLatestVersion() string {
-	latestVersionContents, err := os.ReadFile(cachePath())
+func FetchLatestCLIVersion() string {
+	return fetchLatestVersion("cli", cacheCLIPath())
+}
+
+func FetchLatestProviderVersion() string {
+	return fetchLatestVersion("nitric", cacheProviderPath())
+}
+
+func PrintOutdatedCLIWarning() {
+	currentVersion := strings.TrimPrefix(version.Version, "v")
+	latestVersion := FetchLatestCLIVersion()
+
+	// don't generate warning for non-production versions
+	if strings.Contains(currentVersion, "-") {
+		return
+	}
+
+	if currentVersion < latestVersion {
+		msg := fmt.Sprintf(`A new version of Nitric is available. To upgrade from version '%s' to '%s'`, currentVersion, latestVersion)
+		msg += ", visit https://nitric.io/docs/installation for instructions and release notes."
+
+		tui.Warning.Println(msg)
+	}
+}
+
+func fetchLatestVersion(repo string, cachePath string) string {
+	latestVersionContents, err := os.ReadFile(cachePath)
 	latestVersion := string(latestVersionContents)
 	// if file does not exist or cache is expired, fetch and save latest version
-	if err != nil || cacheExpired() {
+	if err != nil || cacheExpired(cachePath) {
 		owner := "nitrictech"
-		repo := "cli"
 		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 
 		response, err := http.Get(apiURL)
@@ -65,7 +89,7 @@ func FetchLatestVersion() string {
 
 		latestVersion := strings.TrimPrefix(releaseInfo.TagName, "v")
 
-		err = updateFile(latestVersion)
+		err = updateFile(latestVersion, cachePath)
 		if err != nil {
 			cobra.CheckErr(err)
 		}
@@ -74,25 +98,8 @@ func FetchLatestVersion() string {
 	return latestVersion
 }
 
-func PrintOutdatedWarning() {
-	currentVersion := strings.TrimPrefix(version.Version, "v")
-	latestVersion := FetchLatestVersion()
-
-	// don't generate warning for non-production versions
-	if strings.Contains(currentVersion, "-") {
-		return
-	}
-
-	if currentVersion < latestVersion {
-		msg := fmt.Sprintf(`A new version of Nitric is available. To upgrade from version '%s' to '%s'`, currentVersion, latestVersion)
-		msg += ", visit https://nitric.io/docs/installation for instructions and release notes."
-
-		tui.Warning.Println(msg)
-	}
-}
-
-func cacheExpired() bool {
-	catchFileInfo, err := os.Stat(cachePath())
+func cacheExpired(cachePath string) bool {
+	catchFileInfo, err := os.Stat(cachePath)
 	if err != nil {
 		return true
 	}
@@ -100,14 +107,18 @@ func cacheExpired() bool {
 	return time.Now().After(catchFileInfo.ModTime().Add(24 * time.Hour))
 }
 
-func cachePath() string {
+func cacheCLIPath() string {
 	return filepath.Join(paths.NitricHomeDir(), ".cached-last-version-check")
 }
 
-func updateFile(latestVersion string) error {
-	file, err := os.Create(cachePath())
+func cacheProviderPath() string {
+	return filepath.Join(paths.NitricHomeDir(), ".cached-last-provider-version-check")
+}
+
+func updateFile(latestVersion string, cachePath string) error {
+	file, err := os.Create(cachePath)
 	if err != nil {
-		return fmt.Errorf("failed to create/update .cached-last-version-check file")
+		return fmt.Errorf("failed to create/update %s file", cachePath)
 	}
 	defer file.Close()
 

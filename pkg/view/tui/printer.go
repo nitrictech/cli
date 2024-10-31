@@ -32,6 +32,9 @@ var (
 	Error = TagPrinter{
 		Prefix: addPrefix("error", Colors.White, Colors.Red),
 	}
+	Info = TagPrinter{
+		Prefix: addPrefix("info", Colors.White, Colors.TextMuted),
+	}
 	Warning = TagPrinter{
 		Prefix: addPrefix("warning", Colors.Black, Colors.Yellow),
 	}

@@ -36,6 +36,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project/stack"
 	"github.com/nitrictech/cli/pkg/provider"
 	"github.com/nitrictech/cli/pkg/provider/pulumi"
+	"github.com/nitrictech/cli/pkg/update"
 	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
 	stack_down "github.com/nitrictech/cli/pkg/view/tui/commands/stack/down"
@@ -165,6 +166,9 @@ var stackUpdateCmd = &cobra.Command{
 		if !isNonInteractive() {
 			_ = pulumi.EnsurePulumiPassphrase(fs)
 		}
+
+		// print provider version check
+		update.PrintOutdatedProviderWarning(stackConfig.Provider)
 
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)

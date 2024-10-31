@@ -58,6 +58,24 @@ func PrintOutdatedCLIWarning() {
 	}
 }
 
+func PrintOutdatedProviderWarning(providerName string) {
+	latestVersion := FetchLatestProviderVersion()
+
+	var currentVersion string
+
+	providerParts := strings.SplitN(providerName, "@", 2)
+	if len(providerParts) == 2 {
+		providerName = providerParts[0]
+		currentVersion = providerParts[1]
+	}
+
+	if currentVersion < latestVersion {
+		tui.Info.Println(fmt.Sprintf(`Update available for %s: '%s' → '%s'.`, providerName, currentVersion, latestVersion))
+		tui.Info.Println(fmt.Sprintf("Visit https://github.com/nitrictech/nitric/releases/tag/v%s for release notes.", latestVersion))
+		fmt.Println("")
+	}
+}
+
 func fetchLatestVersion(repo string, cachePath string) string {
 	latestVersionContents, err := os.ReadFile(cachePath)
 	latestVersion := string(latestVersionContents)

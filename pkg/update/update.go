@@ -51,11 +51,7 @@ func PrintOutdatedCLIWarning() {
 		return
 	}
 
-	updateAvailable, err := isOutdated(currentVersion, latestVersion)
-	if err != nil {
-		tui.Error.Println(fmt.Sprintf("Failed to check for updates for CLI: %s", err))
-		return
-	}
+	updateAvailable := isOutdated(currentVersion, latestVersion)
 
 	if updateAvailable {
 		msg := fmt.Sprintf(`A new version of Nitric is available. To upgrade from version '%s' to '%s'`, currentVersion, latestVersion)
@@ -79,11 +75,7 @@ func PrintOutdatedProviderWarning(providerName string) {
 		return
 	}
 
-	updateAvailable, err := isOutdated(currentVersion, latestVersion)
-	if err != nil {
-		tui.Error.Println(fmt.Sprintf("Failed to check for updates for %s: %s", providerName, err))
-		return
-	}
+	updateAvailable := isOutdated(currentVersion, latestVersion)
 
 	if updateAvailable {
 		tui.Info.Println(fmt.Sprintf(`Update available for %s: '%s' → '%s'.`, providerName, currentVersion, latestVersion))
@@ -164,23 +156,21 @@ func updateFile(latestVersion string, cachePath string) error {
 	return nil
 }
 
-func isOutdated(currentVersion string, latestVersion string) (bool, error) {
+func isOutdated(currentVersion string, latestVersion string) bool {
 	// if current version is latest, no need to update
 	if currentVersion == "latest" {
-		return false, nil
+		return false
 	}
 
 	latestVer, err := semver.NewVersion(latestVersion)
 	if err != nil {
-		tui.Error.Println(fmt.Sprintf("Failed to parse latest version: %s", latestVersion))
-		return false, err
+		return false
 	}
 
 	currentVer, err := semver.NewVersion(currentVersion)
 	if err != nil {
-		tui.Error.Println(fmt.Sprintf("Failed to parse current version: %s", currentVersion))
-		return false, err
+		return false
 	}
 
-	return currentVer.LessThan(latestVer), nil
+	return currentVer.LessThan(latestVer)
 }

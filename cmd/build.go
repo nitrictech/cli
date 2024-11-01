@@ -48,5 +48,5 @@ var buildCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(tui.AddDependencyCheck(buildCmd, tui.Docker, tui.DockerBuildx))
+	rootCmd.AddCommand(tui.AddDependencyCheck(buildCmd, &tui.ContainerToolDependency{}))
 }

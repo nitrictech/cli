@@ -17,84 +17,95 @@
 package tui
 
 import (
-	"fmt"
-	"os"
+	"errors"
 	"os/exec"
-	"runtime"
-	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 )
 
-type Dependency struct {
-	// The display name of the Prerequisite
-	name string
+var dockerAvailable bool
+var dockerBuildxAvailable bool
+var podmanAvailable bool
 
-	// The command to run for the prequisite
-	command string
+func DockerAvailable() (bool, error) {
+	if dockerAvailable {
+		return true, nil
+	}
 
-	// The function to run to help out
-	assist func() error
+	err := exec.Command("docker", "version").Run()
+	if err == nil {
+		dockerAvailable = true
+	}
+
+	return dockerAvailable, err
 }
 
-var Pulumi = &Dependency{
-	name:    "Pulumi",
-	command: "pulumi version",
-	assist: func() error {
-		var resp bool
-		_ = survey.AskOne(&survey.Confirm{
-			Message: fmt.Sprintf("Pulumi is required by %s but is not installed, would you like to install it?", "command"),
-			Default: false,
-		}, &resp)
+func DockerBuildxAvailable() (bool, error) {
+	if dockerBuildxAvailable {
+		return true, nil
+	}
 
-		if !resp {
-			return fmt.Errorf("pulumi is required to run this command. For installation instructions see: https://www.pulumi.com/docs/get-started/install/")
+	err := exec.Command("docker", "buildx", "version").Run()
+	if err == nil {
+		dockerBuildxAvailable = true
+	}
+
+	return dockerBuildxAvailable, err
+}
+
+func PodmanAvailable() (bool, error) {
+	if podmanAvailable {
+		return true, nil
+	}
+
+	err := exec.Command("podman", "version").Run()
+	if err == nil {
+		podmanAvailable = true
+	}
+
+	return podmanAvailable, err
+}
+
+type Dependency interface {
+	// Check if the dependency is met
+	Check() error
+	// If the dependency is not met, provide a message to the user to assist in installing it
+	Assist() string
+}
+
+type ContainerToolDependency struct {
+	message string
+}
+
+func (c *ContainerToolDependency) Check() error {
+	_, err := DockerAvailable()
+	if err != nil {
+		_, podErr := PodmanAvailable()
+		if podErr != nil {
+			c.message = "Docker or Podman is required, see https://docs.docker.com/engine/install/ for docker installation instructions"
+			return err
+		} else {
+			// Use podman
+			return nil
 		}
+	}
 
-		var installErr error
-		platform := runtime.GOOS
-		switch platform {
-		case "darwin", "linux":
-			cmd := exec.Command("sh", "-c", "curl -fsSL https://get.pulumi.com | sh")
-			cmd.Stdout = os.Stdout
-			installErr = cmd.Run()
-		case "windows":
-			cmd := exec.Command("powershell", "-NoProfile", "-InputFormat", "None", "-ExecutionPolicy", "Bypass", "-Command", "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iex ((New-Object System.Net.WebClient).DownloadString('https://get.pulumi.com/install.ps1'))")
-			cmd.Stdout = os.Stdout
-			installErr = cmd.Run()
-			if installErr == nil {
-				cmd := exec.Command("powershell", "SET", "PATH='%PATH%;%USERPROFILE%\\.pulumi\\bin'")
-				cmd.Stdout = os.Stdout
-				installErr = cmd.Run()
-			}
-		default:
-			installErr = fmt.Errorf("platform %s not supported", platform)
-		}
+	_, err = DockerBuildxAvailable()
+	if err != nil {
+		c.message = "docker buildx is required to run this command. For installation instructions see: https://github.com/docker/buildx"
+		return err
+	}
 
-		return installErr
-	},
+	return nil
 }
 
-var Docker = &Dependency{
-	name:    "Docker",
-	command: "docker version",
-	assist: func() error {
-		return fmt.Errorf("docker is required to run this command. For installation instructions see: https://docs.docker.com/engine/install/")
-	},
-}
-
-var DockerBuildx = &Dependency{
-	name:    "Docker Buildx",
-	command: "docker buildx version",
-	assist: func() error {
-		return fmt.Errorf("docker buildx is required to run this command. For installation instructions see: https://github.com/docker/buildx")
-	},
+func (c *ContainerToolDependency) Assist() string {
+	return c.message
 }
 
 // AddDependencyCheck - Wraps a cobra command with a pre-run that
 // will check for dependencies
-func AddDependencyCheck(cmd *cobra.Command, deps ...*Dependency) *cobra.Command {
+func AddDependencyCheck(cmd *cobra.Command, deps ...Dependency) *cobra.Command {
 	cmd.PreRun = func(cmd *cobra.Command, args []string) {
 		err := checkDependencies(deps...)
 		CheckErr(err)
@@ -103,29 +114,23 @@ func AddDependencyCheck(cmd *cobra.Command, deps ...*Dependency) *cobra.Command 
 	return cmd
 }
 
-func checkDependencies(deps ...*Dependency) error {
+func checkDependencies(deps ...Dependency) error {
 	if len(deps) == 0 {
 		return nil
 	}
 
-	missing := make([]*Dependency, 0)
+	missing := make([]Dependency, 0)
 
 	for _, p := range deps {
-		cmdParts := strings.Split(p.command, " ")
-		cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
-
-		err := cmd.Run()
+		err := p.Check()
 		if err != nil {
 			missing = append(missing, p)
 		}
 	}
 
 	if len(missing) > 0 {
-		// need to do some prompts for install
 		for _, p := range missing {
-			// TODO: We may want to do dependency install prompts in batches
-			// rather than one at a time
-			err := p.assist()
+			err := errors.New(p.Assist())
 			if err != nil {
 				return err
 			}

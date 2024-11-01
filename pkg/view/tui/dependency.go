@@ -23,9 +23,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var dockerAvailable bool
-var dockerBuildxAvailable bool
-var podmanAvailable bool
+var (
+	dockerAvailable       bool
+	dockerBuildxAvailable bool
+	podmanAvailable       bool
+)
 
 func DockerAvailable() (bool, error) {
 	if dockerAvailable {

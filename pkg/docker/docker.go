@@ -35,9 +35,10 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/nitrictech/cli/pkg/view/tui"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+
+	"github.com/nitrictech/cli/pkg/view/tui"
 )
 
 type Docker struct {
@@ -105,13 +106,16 @@ func (d *Docker) createBuildxBuilder() (*BuildxBuilder, error) {
 func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string, buildLogger io.Writer) error {
 	// If docker is available, create a buildx builder
 	var builder *BuildxBuilder
+
 	if a, _ := tui.DockerAvailable(); a {
 		var err error
+
 		builder, err = d.createBuildxBuilder()
 		if err != nil {
 			return err
 		}
 	}
+
 	// write a temporary dockerignore file
 	ignoreFile, err := os.Create(fmt.Sprintf("%s.dockerignore", dockerfile))
 	if err != nil {
@@ -144,6 +148,7 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	if builder != nil {
 		args = append(args, fmt.Sprintf("--builder=%s", builder.Name))
 	}
+
 	args = append(args, buildArgsCmd...)
 
 	cacheTo := ""
@@ -181,6 +186,7 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 
 	// The args should be compatible with either docker or podman
 	baseCommand := "docker"
+
 	if a, _ := tui.DockerAvailable(); !a {
 		if b, _ := tui.PodmanAvailable(); b {
 			baseCommand = "podman"

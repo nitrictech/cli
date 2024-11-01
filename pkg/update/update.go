@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/paths"
@@ -50,7 +51,13 @@ func PrintOutdatedCLIWarning() {
 		return
 	}
 
-	if currentVersion < latestVersion {
+	updateAvailable, err := isOutdated(currentVersion, latestVersion)
+	if err != nil {
+		tui.Error.Println(fmt.Sprintf("Failed to check for updates for CLI: %s", err))
+		return
+	}
+
+	if updateAvailable {
 		msg := fmt.Sprintf(`A new version of Nitric is available. To upgrade from version '%s' to '%s'`, currentVersion, latestVersion)
 		msg += ", visit https://nitric.io/docs/installation for instructions and release notes."
 
@@ -67,9 +74,18 @@ func PrintOutdatedProviderWarning(providerName string) {
 	if len(providerParts) == 2 {
 		providerName = providerParts[0]
 		currentVersion = providerParts[1]
+	} else {
+		// the format of the provider name is checked elsewhere, so no need to print an error here
+		return
 	}
 
-	if currentVersion < latestVersion {
+	updateAvailable, err := isOutdated(currentVersion, latestVersion)
+	if err != nil {
+		tui.Error.Println(fmt.Sprintf("Failed to check for updates for %s: %s", providerName, err))
+		return
+	}
+
+	if updateAvailable {
 		tui.Info.Println(fmt.Sprintf(`Update available for %s: '%s' → '%s'.`, providerName, currentVersion, latestVersion))
 		tui.Info.Println(fmt.Sprintf("Visit https://github.com/nitrictech/nitric/releases/tag/v%s for release notes.", latestVersion))
 		fmt.Println("")
@@ -146,4 +162,25 @@ func updateFile(latestVersion string, cachePath string) error {
 	}
 
 	return nil
+}
+
+func isOutdated(currentVersion string, latestVersion string) (bool, error) {
+	// if current version is latest, no need to update
+	if currentVersion == "latest" {
+		return false, nil
+	}
+
+	latestVer, err := semver.NewVersion(latestVersion)
+	if err != nil {
+		tui.Error.Println(fmt.Sprintf("Failed to parse latest version: %s", latestVersion))
+		return false, err
+	}
+
+	currentVer, err := semver.NewVersion(currentVersion)
+	if err != nil {
+		tui.Error.Println(fmt.Sprintf("Failed to parse current version: %s", currentVersion))
+		return false, err
+	}
+
+	return currentVer.LessThan(latestVer), nil
 }

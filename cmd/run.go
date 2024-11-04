@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -124,10 +125,24 @@ var runCmd = &cobra.Command{
 
 		allBuildUpdates := lo.FanIn(10, updates, batchBuildUpdates)
 
-		prog := teax.NewProgram(build.NewModel(allBuildUpdates, "Building Services"))
-		// blocks but quits once the above updates channel is closed by the build process
-		_, err = prog.Run()
-		tui.CheckErr(err)
+		if isNonInteractive() {
+			fmt.Println("building project services")
+			for _, service := range proj.GetServices() {
+				fmt.Printf("service matched '%s', auto-naming this service '%s'\n", service.GetFilePath(), service.Name)
+			}
+
+			// non-interactive environment
+			for update := range allBuildUpdates {
+				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+				}
+			}
+		} else {
+			prog := teax.NewProgram(build.NewModel(allBuildUpdates, "Building Services"))
+			// blocks but quits once the above updates channel is closed by the build process
+			_, err = prog.Run()
+			tui.CheckErr(err)
+		}
 
 		// Run the app code (project services)
 		stopChan := make(chan bool)

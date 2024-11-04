@@ -1,5 +1,5 @@
 # The nitric provider to use
-provider: nitric/aws@1.14.0
+provider: nitric/aws@{{.Version}}
 # The target aws region to deploy to
 # See available regions:
 # https://docs.aws.amazon.com/general/latest/gr/lambda-service.html

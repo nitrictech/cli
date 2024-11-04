@@ -797,7 +797,7 @@ func handleResponseWriter(w http.ResponseWriter, data []byte) {
 
 func (d *Dashboard) sendStackUpdate() error {
 	currentVersion := strings.TrimPrefix(version.Version, "v")
-	latestVersion := update.FetchLatestVersion()
+	latestVersion := update.FetchLatestCLIVersion()
 
 	services, err := d.getServices()
 	if err != nil {

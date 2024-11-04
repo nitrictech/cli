@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
 
 	"github.com/nitrictech/cli/pkg/paths"
@@ -33,13 +34,62 @@ import (
 	"github.com/nitrictech/cli/pkg/view/tui"
 )
 
-func FetchLatestVersion() string {
-	latestVersionContents, err := os.ReadFile(cachePath())
+func FetchLatestCLIVersion() string {
+	return fetchLatestVersion("cli", cacheCLIPath())
+}
+
+func FetchLatestProviderVersion() string {
+	return fetchLatestVersion("nitric", cacheProviderPath())
+}
+
+func PrintOutdatedCLIWarning() {
+	currentVersion := strings.TrimPrefix(version.Version, "v")
+	latestVersion := FetchLatestCLIVersion()
+
+	// don't generate warning for non-production versions
+	if strings.Contains(currentVersion, "-") {
+		return
+	}
+
+	updateAvailable := isOutdated(currentVersion, latestVersion)
+
+	if updateAvailable {
+		msg := fmt.Sprintf(`A new version of Nitric is available. To upgrade from version '%s' to '%s'`, currentVersion, latestVersion)
+		msg += ", visit https://nitric.io/docs/installation for instructions and release notes."
+
+		tui.Warning.Println(msg)
+	}
+}
+
+func PrintOutdatedProviderWarning(providerName string) {
+	latestVersion := FetchLatestProviderVersion()
+
+	var currentVersion string
+
+	providerParts := strings.SplitN(providerName, "@", 2)
+	if len(providerParts) == 2 {
+		providerName = providerParts[0]
+		currentVersion = providerParts[1]
+	} else {
+		// the format of the provider name is checked elsewhere, so no need to print an error here
+		return
+	}
+
+	updateAvailable := isOutdated(currentVersion, latestVersion)
+
+	if updateAvailable {
+		tui.Info.Println(fmt.Sprintf(`Update available for %s: '%s' → '%s'.`, providerName, currentVersion, latestVersion))
+		tui.Info.Println(fmt.Sprintf("Visit https://github.com/nitrictech/nitric/releases/tag/v%s for release notes.", latestVersion))
+		fmt.Println("")
+	}
+}
+
+func fetchLatestVersion(repo string, cachePath string) string {
+	latestVersionContents, err := os.ReadFile(cachePath)
 	latestVersion := string(latestVersionContents)
 	// if file does not exist or cache is expired, fetch and save latest version
-	if err != nil || cacheExpired() {
+	if err != nil || cacheExpired(cachePath) {
 		owner := "nitrictech"
-		repo := "cli"
 		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 
 		response, err := http.Get(apiURL)
@@ -65,7 +115,7 @@ func FetchLatestVersion() string {
 
 		latestVersion := strings.TrimPrefix(releaseInfo.TagName, "v")
 
-		err = updateFile(latestVersion)
+		err = updateFile(latestVersion, cachePath)
 		if err != nil {
 			cobra.CheckErr(err)
 		}
@@ -74,25 +124,8 @@ func FetchLatestVersion() string {
 	return latestVersion
 }
 
-func PrintOutdatedWarning() {
-	currentVersion := strings.TrimPrefix(version.Version, "v")
-	latestVersion := FetchLatestVersion()
-
-	// don't generate warning for non-production versions
-	if strings.Contains(currentVersion, "-") {
-		return
-	}
-
-	if currentVersion < latestVersion {
-		msg := fmt.Sprintf(`A new version of Nitric is available. To upgrade from version '%s' to '%s'`, currentVersion, latestVersion)
-		msg += ", visit https://nitric.io/docs/installation for instructions and release notes."
-
-		tui.Warning.Println(msg)
-	}
-}
-
-func cacheExpired() bool {
-	catchFileInfo, err := os.Stat(cachePath())
+func cacheExpired(cachePath string) bool {
+	catchFileInfo, err := os.Stat(cachePath)
 	if err != nil {
 		return true
 	}
@@ -100,14 +133,18 @@ func cacheExpired() bool {
 	return time.Now().After(catchFileInfo.ModTime().Add(24 * time.Hour))
 }
 
-func cachePath() string {
+func cacheCLIPath() string {
 	return filepath.Join(paths.NitricHomeDir(), ".cached-last-version-check")
 }
 
-func updateFile(latestVersion string) error {
-	file, err := os.Create(cachePath())
+func cacheProviderPath() string {
+	return filepath.Join(paths.NitricHomeDir(), ".cached-last-provider-version-check")
+}
+
+func updateFile(latestVersion string, cachePath string) error {
+	file, err := os.Create(cachePath)
 	if err != nil {
-		return fmt.Errorf("failed to create/update .cached-last-version-check file")
+		return fmt.Errorf("failed to create/update %s file", cachePath)
 	}
 	defer file.Close()
 
@@ -117,4 +154,23 @@ func updateFile(latestVersion string) error {
 	}
 
 	return nil
+}
+
+func isOutdated(currentVersion string, latestVersion string) bool {
+	// if current version is latest, no need to update
+	if currentVersion == "latest" {
+		return false
+	}
+
+	latestVer, err := semver.NewVersion(latestVersion)
+	if err != nil {
+		return false
+	}
+
+	currentVer, err := semver.NewVersion(currentVersion)
+	if err != nil {
+		return false
+	}
+
+	return currentVer.LessThan(latestVer)
 }

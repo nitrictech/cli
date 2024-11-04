@@ -17,14 +17,18 @@
 package stack
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"text/template"
 
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
+
+	"github.com/nitrictech/cli/pkg/update"
 )
 
 type StackConfig[T any] struct {
@@ -59,20 +63,39 @@ func NewStackFile(fs afero.Fs, providerName string, stackName string, dir string
 		dir = "./"
 	}
 
-	var template string = ""
+	latestVersion := update.FetchLatestProviderVersion()
+
+	var templateStr string = ""
 
 	switch providerName {
 	case "aws":
-		template = awsConfigTemplate
+		templateStr = awsConfigTemplate
 	case "gcp":
-		template = gcpConfigTemplate
+		templateStr = gcpConfigTemplate
 	case "azure":
-		template = azureConfigTemplate
+		templateStr = azureConfigTemplate
 	case "aws-tf":
-		template = awsTfConfigTemplate
+		templateStr = awsTfConfigTemplate
 	case "gcp-tf":
-		template = gcpTfConfigTemplate
+		templateStr = gcpTfConfigTemplate
 	}
+
+	// Parse and execute the template with the version injected
+	tmpl, err := template.New("config").Parse(templateStr)
+	if err != nil {
+		return "", err
+	}
+
+	var result bytes.Buffer
+
+	err = tmpl.Execute(&result, map[string]string{
+		"Version": latestVersion,
+	})
+	if err != nil {
+		return "", fmt.Errorf("unable to execute provider config template: %w", err)
+	}
+
+	templateStr = result.String()
 
 	fileName := StackFileName(stackName)
 
@@ -83,7 +106,7 @@ func NewStackFile(fs afero.Fs, providerName string, stackName string, dir string
 	stackFilePath := filepath.Join(dir, fileName)
 	relativePath, _ := filepath.Rel(".", stackFilePath)
 
-	return fmt.Sprintf(".%s%s", string(os.PathSeparator), relativePath), afero.WriteFile(fs, stackFilePath, []byte(template), os.ModePerm)
+	return fmt.Sprintf(".%s%s", string(os.PathSeparator), relativePath), afero.WriteFile(fs, stackFilePath, []byte(templateStr), os.ModePerm)
 }
 
 // StackFileName returns the stack file name for a given stack name

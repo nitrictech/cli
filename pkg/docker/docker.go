@@ -107,7 +107,7 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	// If docker is available, create a buildx builder
 	var builder *BuildxBuilder
 
-	if a, _ := tui.DockerAvailable(); a {
+	if err := tui.DockerAvailable(); err == nil {
 		var err error
 
 		builder, err = d.createBuildxBuilder()
@@ -187,8 +187,8 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	// The args should be compatible with either docker or podman
 	baseCommand := "docker"
 
-	if a, _ := tui.DockerAvailable(); !a {
-		if b, _ := tui.PodmanAvailable(); b {
+	if err := tui.DockerAvailable(); err != nil {
+		if err := tui.PodmanAvailable(); err == nil {
 			baseCommand = "podman"
 		} else {
 			return errors.New("Docker or Podman is required, see https://docs.docker.com/engine/install/ for docker installation instructions")

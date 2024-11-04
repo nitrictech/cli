@@ -17,11 +17,48 @@
 package tui
 
 import (
-	"errors"
 	"os/exec"
 
 	"github.com/spf13/cobra"
 )
+
+type DependencyError struct {
+	details string
+	assist  string
+}
+
+func (d *DependencyError) Error() string {
+	return d.details
+}
+
+func (d *DependencyError) Assist() string {
+	return d.assist
+}
+
+type Dependency = func() *DependencyError
+
+func atLeastOne(d ...Dependency) Dependency {
+	return func() *DependencyError {
+		if len(d) == 0 {
+			return nil
+		}
+
+		// Extract the preference dependency
+		primary := d[0]()
+		if primary == nil {
+			return nil
+		}
+
+		// Check the rest of the dependencies
+		for _, dep := range d[1:] {
+			if dep() == nil {
+				return nil
+			}
+		}
+
+		return primary
+	}
+}
 
 var (
 	dockerAvailable       bool
@@ -29,81 +66,102 @@ var (
 	podmanAvailable       bool
 )
 
-func DockerAvailable() (bool, error) {
+func DockerAvailable() error {
 	if dockerAvailable {
-		return true, nil
+		return nil
 	}
 
 	err := exec.Command("docker", "version").Run()
-	if err == nil {
-		dockerAvailable = true
-	}
-
-	return dockerAvailable, err
-}
-
-func DockerBuildxAvailable() (bool, error) {
-	if dockerBuildxAvailable {
-		return true, nil
-	}
-
-	err := exec.Command("docker", "buildx", "version").Run()
-	if err == nil {
-		dockerBuildxAvailable = true
-	}
-
-	return dockerBuildxAvailable, err
-}
-
-func PodmanAvailable() (bool, error) {
-	if podmanAvailable {
-		return true, nil
-	}
-
-	err := exec.Command("podman", "version").Run()
-	if err == nil {
-		podmanAvailable = true
-	}
-
-	return podmanAvailable, err
-}
-
-type Dependency interface {
-	// Check if the dependency is met
-	Check() error
-	// If the dependency is not met, provide a message to the user to assist in installing it
-	Assist() string
-}
-
-type ContainerToolDependency struct {
-	message string
-}
-
-func (c *ContainerToolDependency) Check() error {
-	_, err := DockerAvailable()
 	if err != nil {
-		_, podErr := PodmanAvailable()
-		if podErr != nil {
-			c.message = "Docker or Podman is required, see https://docs.docker.com/engine/install/ for docker installation instructions"
-			return err
-		} else {
-			// Use podman
-			return nil
-		}
-	}
-
-	_, err = DockerBuildxAvailable()
-	if err != nil {
-		c.message = "docker buildx is required to run this command. For installation instructions see: https://github.com/docker/buildx"
 		return err
 	}
+
+	dockerAvailable = true
 
 	return nil
 }
 
-func (c *ContainerToolDependency) Assist() string {
-	return c.message
+func DockerBuildxAvailable() error {
+	if dockerBuildxAvailable {
+		return nil
+	}
+
+	err := exec.Command("docker", "buildx", "version").Run()
+	if err != nil {
+		return err
+	}
+
+	dockerBuildxAvailable = true
+
+	return nil
 }
+
+func PodmanAvailable() error {
+	if podmanAvailable {
+		return nil
+	}
+
+	err := exec.Command("podman", "version").Run()
+	if err != nil {
+		return err
+	}
+
+	podmanAvailable = true
+
+	return nil
+}
+
+func RequireDocker() *DependencyError {
+	if dockerAvailable {
+		return nil
+	}
+
+	err := DockerAvailable()
+	if err != nil {
+		depErr := DependencyError{
+			details: err.Error(),
+			assist:  "Docker is required, see https://docs.docker.com/engine/install/ for docker installation instructions",
+		}
+
+		return &depErr
+	}
+
+	err = DockerBuildxAvailable()
+	if err != nil {
+		depErr := DependencyError{
+			details: err.Error(),
+			assist:  "docker buildx is required to run this command. For installation instructions see: https://github.com/docker/buildx",
+		}
+
+		return &depErr
+	}
+
+	dockerBuildxAvailable = true
+
+	return nil
+}
+
+func RequirePodman() *DependencyError {
+	if podmanAvailable {
+		return nil
+	}
+
+	err := PodmanAvailable()
+	if err != nil {
+		depErr := DependencyError{
+			details: err.Error(),
+			assist:  "Podman is required, see https://docs.docker.com/engine/install/ for docker installation instructions",
+		}
+
+		return &depErr
+	}
+
+	podmanAvailable = true
+
+	return nil
+}
+
+var RequireContainerBuilder = atLeastOne(RequireDocker, RequirePodman)
 
 // AddDependencyCheck - Wraps a cobra command with a pre-run that
 // will check for dependencies
@@ -121,21 +179,10 @@ func checkDependencies(deps ...Dependency) error {
 		return nil
 	}
 
-	missing := make([]Dependency, 0)
-
 	for _, p := range deps {
-		err := p.Check()
+		err := p()
 		if err != nil {
-			missing = append(missing, p)
-		}
-	}
-
-	if len(missing) > 0 {
-		for _, p := range missing {
-			err := errors.New(p.Assist())
-			if err != nil {
-				return err
-			}
+			return err
 		}
 	}
 

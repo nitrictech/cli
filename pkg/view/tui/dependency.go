@@ -121,7 +121,7 @@ func RequireDocker() *DependencyError {
 	if err != nil {
 		depErr := DependencyError{
 			details: err.Error(),
-			assist:  "Docker is required, see https://docs.docker.com/engine/install/ for docker installation instructions",
+			assist:  "Docker or Podman are required and must be running, see https://docs.docker.com/engine/install/ for docker installation instructions",
 		}
 
 		return &depErr
@@ -151,7 +151,7 @@ func RequirePodman() *DependencyError {
 	if err != nil {
 		depErr := DependencyError{
 			details: err.Error(),
-			assist:  "Podman is required, see https://docs.docker.com/engine/install/ for docker installation instructions",
+			assist:  "Docker or Podman are required and must be running, see https://docs.docker.com/engine/install/ for docker installation instructions",
 		}
 
 		return &depErr

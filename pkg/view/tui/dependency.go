@@ -17,6 +17,7 @@
 package tui
 
 import (
+	"errors"
 	"os/exec"
 
 	"github.com/spf13/cobra"
@@ -182,7 +183,7 @@ func checkDependencies(deps ...Dependency) error {
 	for _, p := range deps {
 		err := p()
 		if err != nil {
-			return err
+			return errors.New(err.Assist())
 		}
 	}
 

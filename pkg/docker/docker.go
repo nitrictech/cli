@@ -37,6 +37,8 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+
+	"github.com/nitrictech/cli/pkg/view/tui"
 )
 
 type Docker struct {
@@ -81,21 +83,39 @@ func New() (*Docker, error) {
 
 var builderLock = sync.Mutex{}
 
+type BuildxBuilder struct {
+	Name string
+}
+
 // Create a known nitric container builder to allow custom cache configuration
-func (d *Docker) createBuider() error {
+func (d *Docker) createBuildxBuilder() (*BuildxBuilder, error) {
 	builderLock.Lock()
 	defer builderLock.Unlock() // Create a known fixed nitric builder to allow caching
 
-	cmd := exec.Command("docker", "buildx", "create", "--name", "nitric", "--bootstrap", "--driver=docker-container", "--node", "nitric0")
+	builderName := "nitric"
 
-	return cmd.Run()
+	cmd := exec.Command("docker", "buildx", "create", "--name", builderName, "--bootstrap", "--driver=docker-container", "--node", "nitric0")
+
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+
+	return &BuildxBuilder{Name: builderName}, nil
 }
 
 func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string, buildLogger io.Writer) error {
-	err := d.createBuider()
-	if err != nil {
-		return err
+	// If docker is available, create a buildx builder
+	var builder *BuildxBuilder
+
+	if err := tui.DockerAvailable(); err == nil {
+		var err error
+
+		builder, err = d.createBuildxBuilder()
+		if err != nil {
+			return err
+		}
 	}
+
 	// write a temporary dockerignore file
 	ignoreFile, err := os.Create(fmt.Sprintf("%s.dockerignore", dockerfile))
 	if err != nil {
@@ -122,8 +142,13 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	}
 
 	args := []string{
-		"buildx", "build", srcPath, "-f", dockerfile, "-t", imageTag, "--load", "--builder=nitric", "--platform", "linux/amd64",
+		"buildx", "build", srcPath, "-f", dockerfile, "-t", imageTag, "--load", "--platform", "linux/amd64",
 	}
+	// Podman doesn't support builder containers
+	if builder != nil {
+		args = append(args, fmt.Sprintf("--builder=%s", builder.Name))
+	}
+
 	args = append(args, buildArgsCmd...)
 
 	cacheTo := ""
@@ -159,7 +184,18 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 		args = append(args, cacheFrom)
 	}
 
-	cmd := exec.Command("docker", args...)
+	// The args should be compatible with either docker or podman
+	baseCommand := "docker"
+
+	if err := tui.DockerAvailable(); err != nil {
+		if err := tui.PodmanAvailable(); err == nil {
+			baseCommand = "podman"
+		} else {
+			return errors.New("Docker or Podman is required, see https://docs.docker.com/engine/install/ for docker installation instructions")
+		}
+	}
+
+	cmd := exec.Command(baseCommand, args...)
 
 	if buildLogger == nil {
 		buildLogger = io.Discard

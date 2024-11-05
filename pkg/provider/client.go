@@ -40,7 +40,7 @@ func (p *DeploymentClient) dialConnection() (*grpc.ClientConn, error) {
 		p.address = "127.0.0.1:50051"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	// TODO DialContext is deprecated, migrate to NewClient if required
@@ -62,7 +62,7 @@ func (p *DeploymentClient) Up(deploymentRequest *deploy.DeploymentUpRequest) (<-
 
 		conn, err := p.dialConnection()
 		if err != nil {
-			errorChan <- fmt.Errorf("failed to connect to provider: %w", err)
+			errorChan <- fmt.Errorf("failed to connect to provider at %s: %w", p.address, err)
 			return
 		}
 		defer conn.Close()

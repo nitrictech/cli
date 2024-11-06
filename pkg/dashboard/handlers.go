@@ -59,15 +59,17 @@ func (d *Dashboard) handleStorage() func(http.ResponseWriter, *http.Request) {
 		bucketName := r.URL.Query().Get("bucket")
 		action := r.URL.Query().Get("action")
 
+		// Set the content type to JSON for all actions except read-file, to prevent it being set to text/plain
+		if action != "read-file" {
+			w.Header().Set("Content-Type", "application/json")
+		}
+
 		if bucketName == "" && action != "list-buckets" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Header().Set("Content-Type", "application/json")
 			handleResponseWriter(w, []byte(`{"error": "Bucket is required"}`))
 
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
 
 		switch action {
 		case "read-file":

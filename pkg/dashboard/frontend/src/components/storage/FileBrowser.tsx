@@ -29,6 +29,11 @@ setChonkyDefaults({
   iconComponent: ChonkyIconFA,
 })
 
+// covers most image types, could detect from the file itself in the future
+const isImage = (file: FileData) => {
+  return /\.(jpe?g|png|gif|bmp|webp|tiff?|heic|heif|ico|svg)$/i.test(file.name)
+}
+
 function generateTree(data: { key: string }[]): FileData[] {
   const tree: FileData[] = []
 
@@ -258,7 +263,7 @@ const FileBrowser: FC<Props> = ({ bucket }) => {
             folderChain={folderChain}
             onFileAction={handleFileAction}
             thumbnailGenerator={(file) =>
-              !file.isDir
+              !file.isDir && isImage(file)
                 ? `${STORAGE_API}?action=read-file&bucket=${bucket}&fileKey=${encodeURI(
                     file.id,
                   )}`

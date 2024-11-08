@@ -79,7 +79,8 @@ func PrintOutdatedProviderWarning(providerName string) {
 
 	if updateAvailable {
 		tui.Info.Println(fmt.Sprintf(`Update available for %s: '%s' → '%s'.`, providerName, currentVersion, latestVersion))
-		tui.Info.Println(fmt.Sprintf("Visit https://github.com/nitrictech/nitric/releases/tag/v%s for release notes.", latestVersion))
+		tui.Info.Println(fmt.Sprintf("Visit https://github.com/nitrictech/nitric/compare/v%s...v%s for full changelog.", currentVersion, latestVersion))
+
 		fmt.Println("")
 	}
 }

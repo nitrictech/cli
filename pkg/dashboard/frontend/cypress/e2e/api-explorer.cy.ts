@@ -2,7 +2,7 @@ describe('APIs spec', () => {
   beforeEach(() => {
     cy.viewport('macbook-16')
     cy.visit('/')
-    cy.wait(500)
+    cy.wait(1000)
   })
 
   it('should retrieve correct apis and endpoints', () => {

@@ -15,7 +15,6 @@ concurrency:
 env:
   GOPROXY: https://proxy.golang.org
   FATHOM_SITE: FAKE1234
-  NITRIC_HTTP_PROXY_PORT: 8000
 
 jobs:
   nitric-dashboard:
@@ -40,7 +39,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: 1.22
 
       - name: Build Nitric
         run: |
@@ -64,13 +63,13 @@ jobs:
           working-directory: cli/pkg/dashboard/frontend
           browser: chrome
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: cypress-screenshots
           path: cli/pkg/dashboard/frontend/cypress/screenshots
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: cypress-videos

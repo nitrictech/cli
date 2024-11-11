@@ -358,19 +358,33 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 		hostConfig.ExtraHosts = []string{"host.docker.internal:" + dockerHost.String()}
 	}
 
-	randomPort, _ := netx.TakePort(1)
-	hostProxyPort := fmt.Sprint(randomPort[0])
 	env := []string{
 		fmt.Sprintf("NITRIC_ENVIRONMENT=%s", runtimeOptions.nitricEnvironment),
 		// FIXME: Ensure environment variable consistency in all SDKs, then remove duplicates here.
 		fmt.Sprintf("SERVICE_ADDRESS=%s", fmt.Sprintf("%s:%s", runtimeOptions.nitricHost, runtimeOptions.nitricPort)),
 		fmt.Sprintf("NITRIC_SERVICE_PORT=%s", runtimeOptions.nitricPort),
 		fmt.Sprintf("NITRIC_SERVICE_HOST=%s", runtimeOptions.nitricHost),
-		fmt.Sprintf("NITRIC_HTTP_PROXY_PORT=%d", randomPort[0]),
 	}
 
 	for k, v := range runtimeOptions.envVars {
 		env = append(env, k+"="+v)
+	}
+
+	// Get or generate NITRIC_HTTP_PROXY_PORT
+	hostProxyPort := ""
+
+	for _, e := range env {
+		if strings.HasPrefix(e, "NITRIC_HTTP_PROXY_PORT=") {
+			hostProxyPort = strings.Split(e, "=")[1]
+			break
+		}
+	}
+
+	// Generate a random http proxy port if not provided
+	if hostProxyPort == "" {
+		randomPort, _ := netx.TakePort(1)
+		hostProxyPort = fmt.Sprint(randomPort[0])
+		env = append(env, fmt.Sprintf("NITRIC_HTTP_PROXY_PORT=%s", hostProxyPort))
 	}
 
 	hostConfig.PortBindings = nat.PortMap{

@@ -370,6 +370,22 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 	}
 
 	for k, v := range runtimeOptions.envVars {
+		// detect blacklisted env vars set by nitric in env vars
+		_, isBlacklisted := lo.Find(env, func(e string) bool {
+			return strings.HasPrefix(e, k)
+		})
+
+		if isBlacklisted {
+			updates <- ServiceRunUpdate{
+				ServiceName: s.Name,
+				Label:       s.GetFilePath(),
+				Message:     fmt.Sprintf("Skipping blacklisted env var: %s", k),
+				Status:      ServiceRunStatus_Running,
+			}
+
+			continue
+		}
+
 		env = append(env, k+"="+v)
 	}
 

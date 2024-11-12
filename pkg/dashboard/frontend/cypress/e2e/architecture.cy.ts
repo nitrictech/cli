@@ -11,7 +11,7 @@ const expectedNodes = [
   'test-bucket',
   'subscribe-tests',
   'subscribe-tests-2',
-  ':8000',
+  ':',
   'my-db',
   'my-second-db',
   'services/my-test-service.ts',

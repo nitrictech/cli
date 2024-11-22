@@ -108,9 +108,15 @@ func (s *ServiceRequirements) HasDatabases() bool {
 func (s *ServiceRequirements) WorkerCount() int {
 	workerCount := len(lo.Values(s.routes)) +
 		len(s.listeners) +
-		len(s.schedules) +
-		len(lo.Values(s.subscriptions)) +
-		len(lo.Values(s.websockets))
+		len(s.schedules)
+
+	for _, sub := range s.subscriptions {
+		workerCount += len(sub)
+	}
+
+	for _, ws := range s.websockets {
+		workerCount += len(ws)
+	}
 
 	if s.proxy != nil {
 		workerCount++

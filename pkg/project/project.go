@@ -66,7 +66,7 @@ func (p *Project) GetBatchServices() []Batch {
 
 // TODO: Reduce duplicate code
 // BuildBatches - Builds all the batches in the project
-func (p *Project) BuildBatches(fs afero.Fs) (chan ServiceBuildUpdate, error) {
+func (p *Project) BuildBatches(fs afero.Fs, useBuilder bool) (chan ServiceBuildUpdate, error) {
 	updatesChan := make(chan ServiceBuildUpdate)
 
 	if len(p.services) == 0 {
@@ -91,7 +91,7 @@ func (p *Project) BuildBatches(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 			maxConcurrentBuilds <- struct{}{}
 
 			// Start goroutine
-			if err := svc.BuildImage(fs, writer); err != nil {
+			if err := svc.BuildImage(fs, writer, useBuilder); err != nil {
 				updatesChan <- ServiceBuildUpdate{
 					ServiceName: svc.Name,
 					Err:         err,
@@ -127,7 +127,7 @@ func (p *Project) BuildBatches(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 }
 
 // BuildServices - Builds all the services in the project
-func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
+func (p *Project) BuildServices(fs afero.Fs, useBuilder bool) (chan ServiceBuildUpdate, error) {
 	updatesChan := make(chan ServiceBuildUpdate)
 
 	if len(p.services) == 0 {
@@ -149,7 +149,7 @@ func (p *Project) BuildServices(fs afero.Fs) (chan ServiceBuildUpdate, error) {
 			maxConcurrentBuilds <- struct{}{}
 
 			// Start goroutine
-			if err := svc.BuildImage(fs, writer); err != nil {
+			if err := svc.BuildImage(fs, writer, useBuilder); err != nil {
 				updatesChan <- ServiceBuildUpdate{
 					ServiceName: svc.Name,
 					Err:         err,

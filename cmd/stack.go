@@ -53,6 +53,7 @@ var (
 	stackFlag     string // stack flag value
 	confirmDown   bool
 	forceStack    bool
+	noBuilder     bool
 	forceNewStack bool
 	envFile       string
 )
@@ -181,10 +182,10 @@ var stackUpdateCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		// Build the Project's Services (Containers)
-		buildUpdates, err := proj.BuildServices(fs)
+		buildUpdates, err := proj.BuildServices(fs, !noBuilder)
 		tui.CheckErr(err)
 
-		batchBuildUpdates, err := proj.BuildBatches(fs)
+		batchBuildUpdates, err := proj.BuildBatches(fs, !noBuilder)
 		tui.CheckErr(err)
 
 		allBuildUpdates := lo.FanIn(10, buildUpdates, batchBuildUpdates)
@@ -244,7 +245,7 @@ var stackUpdateCmd = &cobra.Command{
 		// Build images from contexts and provide updates on the builds
 
 		if len(migrationImageContexts) > 0 {
-			migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts)
+			migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts, !noBuilder)
 			tui.CheckErr(err)
 
 			if isNonInteractive() {
@@ -611,6 +612,7 @@ func init() {
 
 	// Update Stack (Up)
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackUpdateCmd, tui.RequireContainerBuilder))
+	stackUpdateCmd.Flags().BoolVarP(&noBuilder, "no-builder", "", false, "don't create a buildx container")
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
 	tui.CheckErr(AddOptions(stackUpdateCmd, false))

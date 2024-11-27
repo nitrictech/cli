@@ -117,10 +117,10 @@ var runCmd = &cobra.Command{
 		err = dash.Start()
 		tui.CheckErr(err)
 
-		updates, err := proj.BuildServices(fs)
+		updates, err := proj.BuildServices(fs, !noBuilder)
 		tui.CheckErr(err)
 
-		batchBuildUpdates, err := proj.BuildBatches(fs)
+		batchBuildUpdates, err := proj.BuildBatches(fs, !noBuilder)
 		tui.CheckErr(err)
 
 		allBuildUpdates := lo.FanIn(10, updates, batchBuildUpdates)
@@ -231,6 +231,7 @@ var runCmd = &cobra.Command{
 func init() {
 	runCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	runCmd.Flags().BoolVar(&enableHttps, "https-preview", false, "enable https support for local APIs (preview feature)")
+	runCmd.Flags().BoolVar(&noBuilder, "no-builder", false, "don't create a buildx container")
 	runCmd.PersistentFlags().BoolVar(
 		&runNoBrowser,
 		"no-browser",

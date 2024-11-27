@@ -80,7 +80,7 @@ type LocalSqlServer struct {
 	bus EventBus.Bus
 }
 
-type MigrationRunner = func(fs afero.Fs, servers map[string]*DatabaseServer, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource) error
+type MigrationRunner = func(fs afero.Fs, servers map[string]*DatabaseServer, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource, useBuilder bool) error
 
 var _ sqlpb.SqlServer = (*LocalSqlServer)(nil)
 
@@ -278,7 +278,7 @@ func (l *LocalSqlServer) Query(ctx context.Context, connectionString string, que
 	return results, nil
 }
 
-func (l *LocalSqlServer) BuildAndRunMigrations(fs afero.Fs, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource) error {
+func (l *LocalSqlServer) BuildAndRunMigrations(fs afero.Fs, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource, useBuilder bool) error {
 	// Update the migration status
 	for dbName := range databasesToMigrate {
 		l.State[dbName].Status = string(DatabaseStatusApplyingMigrations)
@@ -293,7 +293,7 @@ func (l *LocalSqlServer) BuildAndRunMigrations(fs afero.Fs, databasesToMigrate m
 		servers[dbName] = l.State[dbName]
 	}
 
-	err := l.migrationRunner(fs, servers, databasesToMigrate)
+	err := l.migrationRunner(fs, servers, databasesToMigrate, useBuilder)
 	if err != nil {
 		return err
 	}

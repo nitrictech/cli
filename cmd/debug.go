@@ -62,10 +62,10 @@ var specCmd = &cobra.Command{
 		tui.CheckErr(err)
 
 		// Build the Project's Services (Containers)
-		buildUpdates, err := proj.BuildServices(fs)
+		buildUpdates, err := proj.BuildServices(fs, !noBuilder)
 		tui.CheckErr(err)
 
-		batchBuildUpdates, err := proj.BuildBatches(fs)
+		batchBuildUpdates, err := proj.BuildBatches(fs, !noBuilder)
 		tui.CheckErr(err)
 
 		allBuildUpdates := lo.FanIn(10, buildUpdates, batchBuildUpdates)
@@ -120,7 +120,7 @@ var specCmd = &cobra.Command{
 		// Build images from contexts and provide updates on the builds
 
 		if len(migrationImageContexts) > 0 {
-			migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts)
+			migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts, !noBuilder)
 			tui.CheckErr(err)
 
 			if isNonInteractive() {
@@ -170,6 +170,7 @@ var specCmd = &cobra.Command{
 func init() {
 	specCmd.Flags().StringVarP(&debugEnvFile, "env-file", "e", "", "--env-file config/.my-env")
 	specCmd.Flags().StringVarP(&debugFile, "output", "o", "", "--file my-example-spec.json")
+	specCmd.Flags().BoolVar(&noBuilder, "no-builder", false, "don't create a buildx container")
 
 	// Debug spec
 	debugCmd.AddCommand(specCmd)

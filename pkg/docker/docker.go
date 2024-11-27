@@ -62,7 +62,7 @@ func VerifyDockerIsAvailable() error {
 
 	// Perform a Docker operation to verify availability
 	if _, pingErr := cli.Ping(context.Background()); pingErr != nil {
-		return fmt.Errorf("Docker daemon is not running, please start the docker daemon and try again")
+		return fmt.Errorf("failed to connect to Docker: %w", pingErr)
 	}
 
 	return nil

@@ -50,7 +50,7 @@ func migrationImageName(dbName string) string {
 	return fmt.Sprintf("%s-migrations", dbName)
 }
 
-func BuildAndRunMigrations(fs afero.Fs, servers map[string]*sql.DatabaseServer, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource) error {
+func BuildAndRunMigrations(fs afero.Fs, servers map[string]*sql.DatabaseServer, databasesToMigrate map[string]*resourcespb.SqlDatabaseResource, useBuilder bool) error {
 	serviceRequirements := collector.MakeDatabaseServiceRequirements(databasesToMigrate)
 
 	migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, []*collector.BatchRequirements{}, fs)
@@ -59,7 +59,7 @@ func BuildAndRunMigrations(fs afero.Fs, servers map[string]*sql.DatabaseServer, 
 	}
 
 	if len(migrationImageContexts) > 0 {
-		updates, err := BuildMigrationImages(fs, migrationImageContexts)
+		updates, err := BuildMigrationImages(fs, migrationImageContexts, useBuilder)
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func BuildAndRunMigrations(fs afero.Fs, servers map[string]*sql.DatabaseServer, 
 	return nil
 }
 
-func BuildMigrationImage(fs afero.Fs, dbName string, buildContext *runtime.RuntimeBuildContext, logs io.Writer) error {
+func BuildMigrationImage(fs afero.Fs, dbName string, buildContext *runtime.RuntimeBuildContext, logs io.Writer, useBuilder bool) error {
 	tempBuildDir := GetTempBuildDir()
 	svcName := migrationImageName(dbName)
 
@@ -117,9 +117,10 @@ func BuildMigrationImage(fs afero.Fs, dbName string, buildContext *runtime.Runti
 		tmpDockerFile.Name(),
 		buildContext.BaseDirectory,
 		svcName,
-		buildContext.BuildArguments,
-		strings.Split(buildContext.IgnoreFileContents, "\n"),
-		logs,
+		docker.WithBuildArgs(buildContext.BuildArguments),
+		docker.WithExcludes(strings.Split(buildContext.IgnoreFileContents, "\n")),
+		docker.WithLogger(logs),
+		docker.WithBuilder(useBuilder),
 	)
 	if err != nil {
 		return err
@@ -129,7 +130,7 @@ func BuildMigrationImage(fs afero.Fs, dbName string, buildContext *runtime.Runti
 }
 
 // FIXME: This is essentially a copy of the project.BuildServiceImages function
-func BuildMigrationImages(fs afero.Fs, migrationBuildContexts map[string]*runtime.RuntimeBuildContext) (chan ServiceBuildUpdate, error) {
+func BuildMigrationImages(fs afero.Fs, migrationBuildContexts map[string]*runtime.RuntimeBuildContext, useBuilder bool) (chan ServiceBuildUpdate, error) {
 	updatesChan := make(chan ServiceBuildUpdate)
 
 	maxConcurrentBuilds := make(chan struct{}, min(goruntime.NumCPU(), goruntime.GOMAXPROCS(0)))
@@ -149,7 +150,7 @@ func BuildMigrationImages(fs afero.Fs, migrationBuildContexts map[string]*runtim
 			svcName := migrationImageName(dbName)
 
 			// Start goroutine
-			if err := BuildMigrationImage(fs, dbName, buildContext, writer); err != nil {
+			if err := BuildMigrationImage(fs, dbName, buildContext, writer, useBuilder); err != nil {
 				updatesChan <- ServiceBuildUpdate{
 					ServiceName: svcName,
 					Err:         err,

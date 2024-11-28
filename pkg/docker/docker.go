@@ -103,11 +103,60 @@ func (d *Docker) createBuildxBuilder() (*BuildxBuilder, error) {
 	return &BuildxBuilder{Name: builderName}, nil
 }
 
-func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[string]string, excludes []string, buildLogger io.Writer) error {
+type dockerBuildOptions struct {
+	// Whether or not to use a builder container
+	useBuilder bool
+	excludes   []string
+	logger     io.Writer
+	args       map[string]string
+}
+
+func defaultBuildOptions() *dockerBuildOptions {
+	return &dockerBuildOptions{
+		useBuilder: true,
+		excludes:   []string{},
+		logger:     io.Discard,
+		args:       map[string]string{},
+	}
+}
+
+type DockerBuildOption func(*dockerBuildOptions)
+
+func WithBuilder(builder bool) DockerBuildOption {
+	return func(o *dockerBuildOptions) {
+		o.useBuilder = builder
+	}
+}
+
+func WithExcludes(excludes []string) DockerBuildOption {
+	return func(o *dockerBuildOptions) {
+		o.excludes = excludes
+	}
+}
+
+func WithLogger(logger io.Writer) DockerBuildOption {
+	return func(o *dockerBuildOptions) {
+		o.logger = logger
+	}
+}
+
+func WithBuildArgs(args map[string]string) DockerBuildOption {
+	return func(o *dockerBuildOptions) {
+		o.args = args
+	}
+}
+
+func (d *Docker) Build(dockerfile, srcPath, imageTag string, options ...DockerBuildOption) error {
+	opts := defaultBuildOptions()
+
+	for _, o := range options {
+		o(opts)
+	}
+
 	// If docker is available, create a buildx builder
 	var builder *BuildxBuilder
 
-	if err := tui.DockerAvailable(); err == nil {
+	if err := tui.DockerAvailable(); err == nil && opts.useBuilder {
 		var err error
 
 		builder, err = d.createBuildxBuilder()
@@ -122,7 +171,7 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 		return err
 	}
 
-	_, err = ignoreFile.Write([]byte(strings.Join(excludes, "\n")))
+	_, err = ignoreFile.Write([]byte(strings.Join(opts.excludes, "\n")))
 	if err != nil {
 		return err
 	}
@@ -137,7 +186,7 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 	}()
 
 	buildArgsCmd := make([]string, 0)
-	for k, v := range buildArgs {
+	for k, v := range opts.args {
 		buildArgsCmd = append(buildArgsCmd, "--build-arg", fmt.Sprintf("%s=%s", k, v))
 	}
 
@@ -145,7 +194,7 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 		"buildx", "build", srcPath, "-f", dockerfile, "-t", imageTag, "--load", "--platform", "linux/amd64",
 	}
 	// Podman doesn't support builder containers
-	if builder != nil {
+	if builder != nil && opts.useBuilder {
 		args = append(args, fmt.Sprintf("--builder=%s", builder.Name))
 	}
 
@@ -197,12 +246,8 @@ func (d *Docker) Build(dockerfile, srcPath, imageTag string, buildArgs map[strin
 
 	cmd := exec.Command(baseCommand, args...)
 
-	if buildLogger == nil {
-		buildLogger = io.Discard
-	}
-
-	cmd.Stdout = buildLogger
-	cmd.Stderr = buildLogger
+	cmd.Stdout = opts.logger
+	cmd.Stderr = opts.logger
 
 	return cmd.Run()
 }

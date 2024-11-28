@@ -721,7 +721,7 @@ func (d *Dashboard) Start() error {
 
 	http.HandleFunc("/api/secrets", d.createSecretsHandler())
 
-	http.HandleFunc("/api/sql/migrate", d.createApplySqlMigrationsHandler(aferoFs))
+	http.HandleFunc("/api/sql/migrate", d.createApplySqlMigrationsHandler(aferoFs, false))
 
 	// handle websockets
 	http.HandleFunc("/ws-info", func(w http.ResponseWriter, r *http.Request) {

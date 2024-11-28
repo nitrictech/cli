@@ -371,7 +371,7 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 }
 
 // FIXME: Duplicate code from service.go
-func (s *Batch) BuildImage(fs afero.Fs, logs io.Writer) error {
+func (s *Batch) BuildImage(fs afero.Fs, logs io.Writer, useBuilder bool) error {
 	dockerClient, err := docker.New()
 	if err != nil {
 		return err
@@ -405,9 +405,10 @@ func (s *Batch) BuildImage(fs afero.Fs, logs io.Writer) error {
 		tmpDockerFile.Name(),
 		s.buildContext.BaseDirectory,
 		s.Name,
-		s.buildContext.BuildArguments,
-		strings.Split(s.buildContext.IgnoreFileContents, "\n"),
-		logs,
+		docker.WithBuildArgs(s.buildContext.BuildArguments),
+		docker.WithExcludes(strings.Split(s.buildContext.IgnoreFileContents, "\n")),
+		docker.WithLogger(logs),
+		docker.WithBuilder(useBuilder),
 	)
 	if err != nil {
 		return err

@@ -299,7 +299,7 @@ func (d *Dashboard) createSqlQueryHandler() func(http.ResponseWriter, *http.Requ
 	}
 }
 
-func (d *Dashboard) createApplySqlMigrationsHandler(fs afero.Fs) func(http.ResponseWriter, *http.Request) {
+func (d *Dashboard) createApplySqlMigrationsHandler(fs afero.Fs, useBuilder bool) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set CORs headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -339,7 +339,7 @@ func (d *Dashboard) createApplySqlMigrationsHandler(fs afero.Fs) func(http.Respo
 
 		databasesToMigrate[requestBody.DatabaseName] = dbState[requestBody.DatabaseName].ResourceRegister.Resource
 
-		err = d.databaseService.BuildAndRunMigrations(fs, databasesToMigrate)
+		err = d.databaseService.BuildAndRunMigrations(fs, databasesToMigrate, useBuilder)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

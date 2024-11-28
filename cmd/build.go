@@ -37,7 +37,7 @@ var buildCmd = &cobra.Command{
 		proj, err := project.FromFile(fs, "")
 		tui.CheckErr(err)
 
-		updates, err := proj.BuildServices(fs)
+		updates, err := proj.BuildServices(fs, !noBuilder)
 		tui.CheckErr(err)
 
 		prog := teax.NewProgram(build.NewModel(updates, "Building Services"))
@@ -48,5 +48,6 @@ var buildCmd = &cobra.Command{
 }
 
 func init() {
+	buildCmd.Flags().BoolVar(&noBuilder, "no-builder", false, "don't create a buildx container")
 	rootCmd.AddCommand(tui.AddDependencyCheck(buildCmd, tui.RequireContainerBuilder))
 }

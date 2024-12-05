@@ -75,6 +75,16 @@ func PrintOutdatedProviderWarning(providerName string) {
 		return
 	}
 
+	// don't generate warning for non nitric provider versions
+	if !strings.HasPrefix(providerName, "nitric/") {
+		return
+	}
+
+	// don't generate warning for 0.0.1 versions (local builds)
+	if currentVersion == "0.0.1" {
+		return
+	}
+
 	updateAvailable := isOutdated(currentVersion, latestVersion)
 
 	if updateAvailable {

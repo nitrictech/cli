@@ -144,6 +144,19 @@ func (s *LocalGatewayService) GetApiAddresses() map[string]string {
 	return addresses
 }
 
+func (s *LocalGatewayService) GetApiAddress(apiName string) string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	addresses := s.GetApiAddresses()
+
+	if address, ok := addresses[apiName]; ok {
+		return address
+	}
+
+	return ""
+}
+
 func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()

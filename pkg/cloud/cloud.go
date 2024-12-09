@@ -256,7 +256,6 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	}
 
 	localResources := resources.NewLocalResourcesService()
-	localApis := apis.NewLocalApiGatewayService()
 	localBatch := batch.NewLocalBatchService()
 	localSchedules := schedules.NewLocalSchedulesService(localResources.LogServiceError)
 	localHttpProxy := http.NewLocalHttpProxyService()
@@ -270,6 +269,8 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	localApis := apis.NewLocalApiGatewayService(localGateway.GetApiAddress)
 
 	localSecrets, err := secrets.NewSecretService()
 	if err != nil {

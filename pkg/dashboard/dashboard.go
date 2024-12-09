@@ -39,6 +39,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud"
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/netx"
+	"github.com/nitrictech/cli/pkg/project/dockerhost"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 	websocketspb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 
@@ -603,12 +604,16 @@ func (d *Dashboard) updateSqlDatabases(state sql.State) {
 	sqlDatabases := []*SQLDatabaseSpec{}
 
 	for dbName, db := range state {
+		// connection strings should always use localhost for dashboard
+		strToReplace := dockerhost.GetInternalDockerHost()
+		connectionString := strings.Replace(db.ConnectionString, strToReplace, "localhost", 1)
+
 		sqlDatabases = append(sqlDatabases, &SQLDatabaseSpec{
 			BaseResourceSpec: &BaseResourceSpec{
 				Name:               dbName,
 				RequestingServices: db.ResourceRegister.RequestingServices,
 			},
-			ConnectionString: db.ConnectionString,
+			ConnectionString: connectionString,
 			Status:           db.Status,
 			MigrationsPath:   db.ResourceRegister.Resource.Migrations.GetMigrationsPath(),
 		})

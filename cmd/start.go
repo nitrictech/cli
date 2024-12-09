@@ -182,6 +182,7 @@ var startCmd = &cobra.Command{
 				LogWriter:       logWriter,
 				LocalConfig:     proj.LocalConfig,
 				MigrationRunner: project.BuildAndRunMigrations,
+				LocalCloudMode:  cloud.LocalCloudModeStart,
 			})
 			tui.CheckErr(err)
 			runView.Send(local.LocalCloudStartStatusMsg{Status: local.Done})

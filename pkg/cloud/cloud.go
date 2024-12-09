@@ -39,6 +39,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/grpcx"
 	"github.com/nitrictech/cli/pkg/netx"
+	"github.com/nitrictech/cli/pkg/project/dockerhost"
 	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	"github.com/nitrictech/nitric/core/pkg/server"
@@ -229,11 +230,22 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	return ports[0], nil
 }
 
+// LocalCloudMode type run or start
+type LocalCloudMode string
+
+const (
+	// LocalCloudModeRun - run mode
+	LocalCloudModeRun LocalCloudMode = "run"
+	// LocalCloudModeStart - start mode
+	LocalCloudModeStart LocalCloudMode = "start"
+)
+
 type LocalCloudOptions struct {
 	TLSCredentials  *gateway.TLSCredentials
 	LogWriter       io.Writer
 	LocalConfig     localconfig.LocalConfiguration
 	MigrationRunner sql.MigrationRunner
+	LocalCloudMode  LocalCloudMode
 }
 
 func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
@@ -291,7 +303,14 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localDatabaseService, err := sql.NewLocalSqlServer(projectName, localResources, opts.MigrationRunner)
+	connectionStringHost := "localhost"
+
+	// Use the host.docker.internal address for connection strings with local cloud run mode
+	if opts.LocalCloudMode == LocalCloudModeRun {
+		connectionStringHost = dockerhost.GetInternalDockerHost()
+	}
+
+	localDatabaseService, err := sql.NewLocalSqlServer(projectName, localResources, opts.MigrationRunner, connectionStringHost)
 	if err != nil {
 		return nil, err
 	}

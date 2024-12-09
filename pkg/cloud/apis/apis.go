@@ -17,6 +17,7 @@
 package apis
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -36,6 +37,8 @@ type (
 	State       = map[ApiName]map[ServiceName][]*apispb.RegistrationRequest
 )
 
+type GetApiAddress = func(apiName string) string
+
 type ApiRequestState struct {
 	Api      string
 	ReqCtx   *fasthttp.RequestCtx
@@ -44,8 +47,9 @@ type ApiRequestState struct {
 type LocalApiGatewayService struct {
 	*apis.RouteWorkerManager
 
-	apiRegLock sync.RWMutex
-	state      State
+	apiRegLock    sync.RWMutex
+	state         State
+	getApiAddress GetApiAddress
 
 	bus EventBus.Bus
 }
@@ -166,10 +170,17 @@ func (l *LocalApiGatewayService) Serve(stream apispb.Api_ServeServer) error {
 	return l.RouteWorkerManager.Serve(peekableStream)
 }
 
-func NewLocalApiGatewayService() *LocalApiGatewayService {
+func (a *LocalApiGatewayService) ApiDetails(ctx context.Context, req *apispb.ApiDetailsRequest) (*apispb.ApiDetailsResponse, error) {
+	return &apispb.ApiDetailsResponse{
+		Url: a.getApiAddress(req.ApiName),
+	}, nil
+}
+
+func NewLocalApiGatewayService(getApiAddress GetApiAddress) *LocalApiGatewayService {
 	return &LocalApiGatewayService{
 		RouteWorkerManager: apis.New(),
 		state:              State{},
 		bus:                EventBus.New(),
+		getApiAddress:      getApiAddress,
 	}
 }

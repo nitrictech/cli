@@ -31,8 +31,8 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/docker"
+	"github.com/nitrictech/cli/pkg/project/dockerhost"
 	"github.com/nitrictech/cli/pkg/project/runtime"
-	"github.com/nitrictech/nitric/core/pkg/env"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	resourcespb "github.com/nitrictech/nitric/core/pkg/proto/resources/v1"
 )
@@ -196,13 +196,7 @@ func RunMigration(databaseName string, connectionString string) error {
 	imageName := migrationImageName(databaseName)
 
 	// Update connection string for docker host...
-	dockerHost := "host.docker.internal"
-
-	if goruntime.GOOS == "linux" {
-		host := env.GetEnv("NITRIC_DOCKER_HOST", "172.17.0.1")
-
-		dockerHost = host.String()
-	}
+	dockerHost := dockerhost.GetInternalDockerHost()
 
 	dockerConnectionString := strings.Replace(connectionString, "localhost", dockerHost, 1)
 

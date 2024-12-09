@@ -69,10 +69,11 @@ type (
 )
 
 type LocalSqlServer struct {
-	projectName string
-	containerId string
-	port        int
-	State       State
+	projectName          string
+	containerId          string
+	connectionStringHost string
+	port                 int
+	State                State
 	sqlpb.UnimplementedSqlServer
 
 	migrationRunner MigrationRunner
@@ -120,7 +121,7 @@ func (l *LocalSqlServer) ensureDatabaseExists(databaseName string) (string, erro
 	}
 
 	// Return the connection string of the new database
-	return fmt.Sprintf("postgresql://postgres:localsecret@localhost:%d/%s?sslmode=disable", l.port, databaseName), nil
+	return fmt.Sprintf("postgresql://postgres:localsecret@%s:%d/%s?sslmode=disable", l.connectionStringHost, l.port, databaseName), nil
 }
 
 func (l *LocalSqlServer) start() error {
@@ -338,12 +339,18 @@ func (l *LocalSqlServer) RegisterDatabases(lrs resources.LocalResourcesState) {
 	l.Publish(l.State)
 }
 
-func NewLocalSqlServer(projectName string, localResources *resources.LocalResourcesService, migrationRunner MigrationRunner) (*LocalSqlServer, error) {
+func NewLocalSqlServer(projectName string, localResources *resources.LocalResourcesService, migrationRunner MigrationRunner, connectionStringHost string) (*LocalSqlServer, error) {
+	if connectionStringHost == "" {
+		// default to localhost
+		connectionStringHost = "localhost"
+	}
+
 	localSql := &LocalSqlServer{
-		projectName:     projectName,
-		State:           make(State),
-		bus:             EventBus.New(),
-		migrationRunner: migrationRunner,
+		projectName:          projectName,
+		State:                make(State),
+		bus:                  EventBus.New(),
+		migrationRunner:      migrationRunner,
+		connectionStringHost: connectionStringHost,
 	}
 
 	err := localSql.start()

@@ -164,8 +164,6 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 	}
 
 	hostConfig := &container.HostConfig{
-		// TODO: make this configurable through an cmd param
-		AutoRemove: true,
 		// LogConfig:  *f.ce.Logger(f.runCtx).Config(),
 		LogConfig: container.LogConfig{
 			Type: "json-file",
@@ -251,6 +249,19 @@ func (s *Batch) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate, 
 
 		return nil
 	}
+
+	// defer removing container so logs can be retrieved, used instead of AutoRemove
+	defer func() {
+		err = dockerClient.ContainerRemove(context.Background(), containerId, container.RemoveOptions{})
+		if err != nil {
+			updates <- ServiceRunUpdate{
+				ServiceName: s.Name,
+				Label:       s.GetFilePath(),
+				Status:      ServiceRunStatus_Error,
+				Err:         err,
+			}
+		}
+	}()
 
 	err = dockerClient.ContainerStart(context.TODO(), containerId, container.StartOptions{})
 	if err != nil {

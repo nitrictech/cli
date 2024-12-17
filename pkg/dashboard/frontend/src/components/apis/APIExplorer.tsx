@@ -505,6 +505,31 @@ const APIExplorer = () => {
                     </Button>
                   </div>
                 </div>
+                {selectedApiEndpoint.requestingService ? (
+                  <div className={'flex items-center gap-1'}>
+                    <span className="font-semibold">Referenced by:</span>
+                    <div className={'flex items-start gap-1'}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            asChild
+                            variant="link"
+                            className="text-md h-auto p-0 hover:underline"
+                          >
+                            <a
+                              href={`vscode://file/${data?.services.find((svc) => svc.name === selectedApiEndpoint.requestingService)?.filePath}`}
+                            >
+                              {selectedApiEndpoint.requestingService}
+                            </a>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Open in VSCode</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                ) : null}
                 {selectedDoesNotExist && (
                   <NotFoundAlert>
                     Endpoint not found. It might have been updated or removed.

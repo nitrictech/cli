@@ -74,3 +74,11 @@ GROUP BY
     tbl.quoted_name,
     tbl.is_table;
 `
+// translate permission names to sdk permission names
+export const PERMISSION_TO_SDK_LABELS: Record<string, string> = {
+  BucketFileGet: 'Read',
+  BucketFileList: 'Read',
+  BucketFilePut: 'Write',
+  KeyValueStoreRead: 'Set',
+  KeyValueStoreWrite: 'Get',
+}

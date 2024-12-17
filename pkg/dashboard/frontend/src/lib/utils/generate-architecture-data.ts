@@ -62,6 +62,7 @@ import {
   BatchNode,
   type BatchNodeData,
 } from '@/components/architecture/nodes/BatchNode'
+import { PERMISSION_TO_SDK_LABELS } from '../constants'
 
 export const nodeTypes = {
   api: APINode,
@@ -196,7 +197,7 @@ const actionVerbs = [
 function verbFromNitricAction(action: string) {
   for (const verb of actionVerbs) {
     if (action.endsWith(verb)) {
-      return verb
+      return PERMISSION_TO_SDK_LABELS[action] || verb
     }
   }
 
@@ -538,7 +539,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
           type: MarkerType.ArrowClosed,
           orient: 'auto-start-reverse',
         },
-        label: policy.actions.map(verbFromNitricAction).join(', '),
+        label: unique(policy.actions.map(verbFromNitricAction)).join(', '),
       } as Edge
     }),
   )

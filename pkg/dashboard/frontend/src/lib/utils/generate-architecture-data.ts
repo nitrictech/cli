@@ -224,13 +224,15 @@ export function generateArchitectureData(data: WebSocketResponse): {
       resource: api,
       icon: GlobeAltIcon,
       address: apiAddress,
-      description: `${routes.length} ${
-        routes.length === 1 ? 'Route' : 'Routes'
+      description: `${allEndpoints.length} ${
+        allEndpoints.length === 1 ? 'Route' : 'Routes'
       }`,
       endpoints: allEndpoints,
     })
 
     const specEntries = (api.spec && api.spec.paths) || []
+
+    const uniqueMap = new Map<string, string>()
 
     Object.entries(specEntries).forEach(([path, operations]) => {
       AllHttpMethods.forEach((m) => {
@@ -242,12 +244,20 @@ export function generateArchitectureData(data: WebSocketResponse): {
 
         const target = method['x-nitric-target']['name']
 
+        // we only need one api edge per service target
+        if (uniqueMap.has(target)) {
+          return
+        }
+
+        // mark the target as unique
+        uniqueMap.set(target, target)
+
         const endpoints = allEndpoints.filter(
           (endpoint) => endpoint.requestingService === target,
         )
 
         edges.push({
-          id: `e-${api.name}-${method.operationId}-${target}`,
+          id: `e-${api.name}-${target}`,
           source: node.id,
           target,
           animated: true,

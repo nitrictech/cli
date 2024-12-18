@@ -514,6 +514,7 @@ const APIExplorer = () => {
                           <Button
                             asChild
                             variant="link"
+                            data-testid="requesting-service"
                             className="text-md h-auto p-0 hover:underline"
                           >
                             <a

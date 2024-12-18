@@ -88,6 +88,7 @@ export default function NitricEdge({
       {label && (
         <EdgeLabelRenderer>
           <div
+            data-testid={`edge-label-${id}`}
             className={cn(
               'nodrag absolute rounded-sm border bg-white p-1 text-[9px] font-semibold tracking-normal transition-all',
               selected ? 'border-primary' : 'border-gray-500',

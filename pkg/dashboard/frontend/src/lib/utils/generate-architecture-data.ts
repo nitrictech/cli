@@ -63,6 +63,7 @@ import {
   type BatchNodeData,
 } from '@/components/architecture/nodes/BatchNode'
 import { PERMISSION_TO_SDK_LABELS } from '../constants'
+import { flattenPaths } from './flatten-paths'
 
 export const nodeTypes = {
   api: APINode,
@@ -216,6 +217,8 @@ export function generateArchitectureData(data: WebSocketResponse): {
     const apiAddress = data.apiAddresses[api.name]
     const routes = (api.spec && Object.keys(api.spec.paths)) || []
 
+    const allEndpoints = flattenPaths(api.spec)
+
     const node = createNode<ApiNodeData>(api, 'api', {
       title: api.name,
       resource: api,
@@ -224,6 +227,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
       description: `${routes.length} ${
         routes.length === 1 ? 'Route' : 'Routes'
       }`,
+      endpoints: allEndpoints,
     })
 
     const specEntries = (api.spec && api.spec.paths) || []
@@ -236,10 +240,16 @@ export function generateArchitectureData(data: WebSocketResponse): {
           return
         }
 
+        const target = method['x-nitric-target']['name']
+
+        const endpoints = allEndpoints.filter(
+          (endpoint) => endpoint.requestingService === target,
+        )
+
         edges.push({
-          id: `e-${api.name}-${method.operationId}-${method['x-nitric-target']['name']}`,
+          id: `e-${api.name}-${method.operationId}-${target}`,
           source: node.id,
-          target: method['x-nitric-target']['name'],
+          target,
           animated: true,
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -248,7 +258,12 @@ export function generateArchitectureData(data: WebSocketResponse): {
             type: MarkerType.ArrowClosed,
             orient: 'auto-start-reverse',
           },
-          label: 'routes',
+          label: `${endpoints.length} ${endpoints.length === 1 ? 'Route' : 'Routes'}`,
+          data: {
+            type: 'api',
+            endpoints,
+            apiAddress,
+          },
         })
       })
     })

@@ -307,10 +307,13 @@ var stackUpdateCmd = &cobra.Command{
 
 		// Step 5b. Communicate with server to share progress of ...
 		if isNonInteractive() {
+			providerErrorDetected := false
+
 			fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
 			go func() {
 				for update := range errorChan {
 					fmt.Printf("Error: %s\n", update)
+					providerErrorDetected = true
 				}
 			}()
 
@@ -347,6 +350,11 @@ var stackUpdateCmd = &cobra.Command{
 				case *deploymentspb.DeploymentUpEvent_Result:
 					fmt.Printf("\nResult: %s\n", content.Result.GetText())
 				}
+			}
+
+			// ensure the process exits with a non-zero status code after all messages are processed
+			if providerErrorDetected {
+				os.Exit(1)
 			}
 		} else {
 			// interactive environment
@@ -491,10 +499,13 @@ nitric stack down -s aws -y`,
 		})
 
 		if isNonInteractive() {
+			providerErrorDetected := false
+
 			fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
 			go func() {
 				for update := range errorChan {
 					fmt.Printf("Error: %s\n", update)
+					providerErrorDetected = true
 				}
 			}()
 
@@ -531,6 +542,11 @@ nitric stack down -s aws -y`,
 				case *deploymentspb.DeploymentDownEvent_Result:
 					fmt.Println("\nStack down complete")
 				}
+			}
+
+			// ensure the process exits with a non-zero status code after all messages are processed
+			if providerErrorDetected {
+				os.Exit(1)
 			}
 		} else {
 			stackDown := stack_down.New(stackConfig.Provider, stackConfig.Name, eventChannel, providerStdout, errorChan)

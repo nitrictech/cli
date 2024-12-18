@@ -511,18 +511,13 @@ const APIExplorer = () => {
                     <div className={'flex items-start gap-1'}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            asChild
-                            variant="link"
+                          <a
                             data-testid="requesting-service"
                             className="text-md h-auto p-0 hover:underline"
+                            href={`vscode://file/${data?.services.find((svc) => svc.name === selectedApiEndpoint.requestingService)?.filePath}`}
                           >
-                            <a
-                              href={`vscode://file/${data?.services.find((svc) => svc.name === selectedApiEndpoint.requestingService)?.filePath}`}
-                            >
-                              {selectedApiEndpoint.requestingService}
-                            </a>
-                          </Button>
+                            {selectedApiEndpoint.requestingService}
+                          </a>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Open in VSCode</p>

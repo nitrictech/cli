@@ -11,10 +11,6 @@ import ReactFlow, {
   ReactFlowProvider,
   Position,
   Panel,
-  useOnSelectionChange,
-  getConnectedEdges,
-  applyEdgeChanges,
-  type EdgeSelectionChange,
 } from 'reactflow'
 import Dagre from '@dagrejs/dagre'
 import 'reactflow/dist/style.css'
@@ -80,10 +76,10 @@ const edgeTypes = {
 const LOCAL_STORAGE_KEY = 'nitric-local-dash-arch-options'
 
 interface ArchOptions {
-  horizonal: boolean
+  isHorizontal: boolean
 }
 
-const defaultOptions: ArchOptions = { horizonal: false }
+const defaultOptions: ArchOptions = { isHorizontal: false }
 
 const getOptions = (): ArchOptions => {
   try {
@@ -100,7 +96,7 @@ const setOptions = (options: ArchOptions) => {
 }
 
 function ReactFlowLayout() {
-  const [horizonal, setHorizonal] = useState(getOptions().horizonal)
+  const [isHorizontal, setIsHorizontal] = useState(getOptions().isHorizontal)
   const { fitView } = useReactFlow()
   const { data } = useWebSocket()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
@@ -111,40 +107,21 @@ function ReactFlowLayout() {
     [setEdges],
   )
 
-  useOnSelectionChange({
-    onChange: ({ nodes: nodesChanged }) => {
-      const connectedEdges = getConnectedEdges(nodesChanged, edges)
-
-      // select all connected edges if node is selected
-      if (connectedEdges.length) {
-        setEdges(
-          applyEdgeChanges(
-            connectedEdges.map(
-              (edge) =>
-                ({
-                  id: edge.id,
-                  type: 'select',
-                  selected: true,
-                }) as EdgeSelectionChange,
-            ),
-            edges,
-          ),
-        )
-      }
-    },
-  })
-
   useEffect(() => {
     if (!data) return
 
     const { nodes, edges } = generateArchitectureData(data)
 
-    const layouted = getLayoutedElements(nodes, edges, horizonal ? 'LR' : 'TB')
+    const layouted = getLayoutedElements(
+      nodes,
+      edges,
+      isHorizontal ? 'LR' : 'TB',
+    )
 
     setNodes([...layouted.nodes])
     setEdges([...layouted.edges])
 
-    setOptions({ horizonal })
+    setOptions({ isHorizontal })
 
     window.requestAnimationFrame(() => {
       setTimeout(
@@ -157,7 +134,7 @@ function ReactFlowLayout() {
         100, // ensure the diagram is 100% ready before re-fitting
       )
     })
-  }, [data, horizonal])
+  }, [data, isHorizontal])
 
   return (
     <AppLayout
@@ -194,8 +171,8 @@ function ReactFlowLayout() {
                     <Switch
                       id="horizontal-mode"
                       aria-label="Toggle Horizontal Mode"
-                      checked={horizonal}
-                      onCheckedChange={setHorizonal}
+                      checked={isHorizontal}
+                      onCheckedChange={setIsHorizontal}
                     />
                     <Label htmlFor="horizontal-mode">Horizontal</Label>
                   </div>
@@ -203,6 +180,19 @@ function ReactFlowLayout() {
                 </div>
               </Panel>
             )}
+            <Panel position="bottom-left" className="flex flex-col gap-y-1">
+              <div className="rounded-md border bg-white p-2">
+                <div className="mb-2 text-center text-xs font-semibold">
+                  Connector Types
+                </div>
+                <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2 text-xs font-semibold">
+                  <span className="h-1 border-b-2 border-dashed border-black" />
+                  <span>Triggers</span>
+                  <span className="h-1 border-b-2 border-black" />
+                  <span>Dependencies</span>
+                </div>
+              </div>
+            </Panel>
           </ReactFlow>
         </div>
       </div>

@@ -8,7 +8,14 @@ import {
 } from '../ui/drawer'
 import { Button } from '../ui/button'
 import { useCallback, type PropsWithChildren } from 'react'
-import { applyNodeChanges, useNodes, useNodeId, useReactFlow } from 'reactflow'
+import {
+  applyNodeChanges,
+  useNodes,
+  useNodeId,
+  useReactFlow,
+  applyEdgeChanges,
+  useEdges,
+} from 'reactflow'
 import type { NodeBaseData } from './nodes/NodeBase'
 import type { nodeTypes } from '@/lib/utils/generate-architecture-data'
 export interface DetailsDrawerProps extends PropsWithChildren {
@@ -17,10 +24,14 @@ export interface DetailsDrawerProps extends PropsWithChildren {
   open: boolean
   testHref?: string
   footerChildren?: React.ReactNode
+  // children that are rendered after the services reference
+  trailingChildren?: React.ReactNode
   nodeType: keyof typeof nodeTypes
   icon: NodeBaseData['icon']
   address?: string
   services?: string[]
+  type?: 'node' | 'edge'
+  edgeId?: string
 }
 
 export const DetailsDrawer = ({
@@ -28,16 +39,20 @@ export const DetailsDrawer = ({
   description,
   children,
   footerChildren,
+  trailingChildren,
   open,
   testHref,
   icon: Icon,
   nodeType,
   address,
   services,
+  type = 'node',
+  edgeId,
 }: DetailsDrawerProps) => {
   const nodeId = useNodeId()
-  const { setNodes } = useReactFlow()
+  const { setNodes, setEdges } = useReactFlow()
   const nodes = useNodes()
+  const edges = useEdges()
 
   const selectServiceNode = useCallback(
     (serviceNodeId: string) => {
@@ -63,6 +78,23 @@ export const DetailsDrawer = ({
   )
 
   const close = () => {
+    if (type === 'edge') {
+      setEdges(
+        applyEdgeChanges(
+          [
+            {
+              id: edgeId || '',
+              type: 'select',
+              selected: false,
+            },
+          ],
+          edges,
+        ),
+      )
+
+      return
+    }
+
     setNodes(
       applyNodeChanges(
         [
@@ -130,6 +162,7 @@ export const DetailsDrawer = ({
                 </div>
               </div>
             ) : null}
+            {trailingChildren}
           </div>
           <DrawerFooter className="px-0">
             {footerChildren}

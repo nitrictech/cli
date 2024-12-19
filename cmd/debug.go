@@ -115,6 +115,9 @@ var specCmd = &cobra.Command{
 			envVariables = map[string]string{}
 		}
 
+		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements)
+		tui.CheckErr(err)
+
 		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, batchRequirements, fs)
 		tui.CheckErr(err)
 		// Build images from contexts and provide updates on the builds
@@ -146,9 +149,6 @@ var specCmd = &cobra.Command{
 		if outputFile == "" {
 			outputFile = "./nitric-spec.json"
 		}
-
-		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements)
-		tui.CheckErr(err)
 
 		marshaler := protojson.MarshalOptions{
 			Multiline: true,

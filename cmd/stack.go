@@ -240,6 +240,9 @@ var stackUpdateCmd = &cobra.Command{
 			envVariables["NITRIC_BETA_PROVIDERS"] = "true"
 		}
 
+		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements)
+		tui.CheckErr(err)
+
 		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, batchRequirements, fs)
 		tui.CheckErr(err)
 		// Build images from contexts and provide updates on the builds
@@ -266,9 +269,6 @@ var stackUpdateCmd = &cobra.Command{
 				}
 			}
 		}
-
-		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements)
-		tui.CheckErr(err)
 
 		providerStdout := make(chan string)
 

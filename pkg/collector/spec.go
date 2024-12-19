@@ -271,16 +271,40 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 	return imageBuildContexts, nil
 }
 
+func checkConflictingMigrations(allDatabases []map[string]*resourcespb.SqlDatabaseResource, resource map[string]*resourcespb.SqlDatabaseResource) error {
+	for _, dbs := range allDatabases {
+		for databaseName, dbConfig := range resource {
+			if existing, exists := dbs[databaseName]; exists {
+				if existing.Migrations.GetMigrationsPath() != dbConfig.Migrations.GetMigrationsPath() {
+					return fmt.Errorf("database '%s' has conflicting migrations paths; they must be identical", databaseName)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func buildDatabaseRequirements(allServiceRequirements []*ServiceRequirements, allBatchRequirements []*BatchRequirements, projectErrors *ProjectErrors) ([]*deploymentspb.Resource, error) {
 	resources := []*deploymentspb.Resource{}
 
 	allDatabases := []map[string]*resourcespb.SqlDatabaseResource{}
 
 	for _, serviceRequirements := range allServiceRequirements {
+		err := checkConflictingMigrations(allDatabases, serviceRequirements.sqlDatabases)
+		if err != nil {
+			return nil, err
+		}
+
 		allDatabases = append(allDatabases, serviceRequirements.sqlDatabases)
 	}
 
 	for _, batchRequirements := range allBatchRequirements {
+		err := checkConflictingMigrations(allDatabases, batchRequirements.sqlDatabases)
+		if err != nil {
+			return nil, err
+		}
+
 		allDatabases = append(allDatabases, batchRequirements.sqlDatabases)
 	}
 

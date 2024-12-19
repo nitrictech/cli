@@ -212,12 +212,32 @@ func GetMigrationImageBuildContexts(allServiceRequirements []*ServiceRequirement
 
 	for _, serviceRequirements := range allServiceRequirements {
 		for databaseName, databaseConfig := range serviceRequirements.sqlDatabases {
+			// check if the db has already been declared
+			if existing, exists := sqlDbs[databaseName]; exists {
+				// check if the migrations path is the same or empty and skip, if not error
+				if databaseConfig.Migrations.GetMigrationsPath() == "" || existing.Migrations.GetMigrationsPath() == databaseConfig.Migrations.GetMigrationsPath() {
+					continue
+				} else {
+					return nil, fmt.Errorf("multiple migrations paths for database '%s' must be identical", databaseName)
+				}
+			}
+
 			sqlDbs[databaseName] = databaseConfig
 		}
 	}
 
 	for _, batchRequirements := range allBatchRequirements {
 		for databaseName, databaseConfig := range batchRequirements.sqlDatabases {
+			// check if the db has already been declared
+			if existing, exists := sqlDbs[databaseName]; exists {
+				// check if the migrations path is the same or empty and skip, if not error
+				if databaseConfig.Migrations.GetMigrationsPath() == "" || existing.Migrations.GetMigrationsPath() == databaseConfig.Migrations.GetMigrationsPath() {
+					continue
+				} else {
+					return nil, fmt.Errorf("multiple migrations paths for database '%s' must be identical", databaseName)
+				}
+			}
+
 			sqlDbs[databaseName] = databaseConfig
 		}
 	}

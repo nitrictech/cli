@@ -275,6 +275,10 @@ func checkConflictingMigrations(allDatabases []map[string]*resourcespb.SqlDataba
 	for _, dbs := range allDatabases {
 		for databaseName, dbConfig := range resource {
 			if existing, exists := dbs[databaseName]; exists {
+				if dbConfig.Migrations == nil {
+					continue
+				}
+
 				if existing.Migrations.GetMigrationsPath() != dbConfig.Migrations.GetMigrationsPath() {
 					return fmt.Errorf("database '%s' has conflicting migrations paths; they must be identical", databaseName)
 				}

@@ -16,6 +16,11 @@ export function flattenPaths(doc: OpenAPIV3.Document): Endpoint[] {
         return
       }
 
+      // Get the service that is requesting this endpoint
+      const requestingService = (doc.paths[path] as any)?.[method]?.[
+        'x-nitric-target'
+      ]?.['name']
+
       method = method.toUpperCase()
       const key = `${doc.info.title}-${path}-${method}`
       const endpoint: Endpoint = {
@@ -24,6 +29,7 @@ export function flattenPaths(doc: OpenAPIV3.Document): Endpoint[] {
         path,
         method: method as Method,
         doc,
+        requestingService,
       }
 
       uniquePaths[key] = endpoint

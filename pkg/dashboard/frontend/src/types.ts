@@ -152,6 +152,7 @@ export interface Endpoint {
   method: Method
   params?: Param[]
   doc: Api['spec']
+  requestingService: string
 }
 
 export interface APIRequest {

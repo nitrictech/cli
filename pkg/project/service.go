@@ -419,7 +419,8 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			Err:         err,
 		}
 
-		return nil
+		// Failing to create the container is a fatal error so we will return here
+		return err
 	}
 
 	// defer removing container so logs can be retrieved, used instead of AutoRemove
@@ -444,7 +445,8 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 			Err:         err,
 		}
 
-		return nil
+		// Failing to create the container is a fatal error so we will return here
+		return err
 	}
 
 	updates <- ServiceRunUpdate{

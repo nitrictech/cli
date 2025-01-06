@@ -1,3 +1,31 @@
+const expectedEndpoints = [
+  'first-api-/all-methods-DELETE',
+  'first-api-/all-methods-GET',
+  'first-api-/all-methods-OPTIONS',
+  'first-api-/all-methods-PATCH',
+  'first-api-/all-methods-POST',
+  'first-api-/all-methods-PUT',
+  'first-api-/header-test-GET',
+  'first-api-/json-test-POST',
+  'first-api-/path-test/{name}-GET',
+  'first-api-/query-test-GET',
+  'first-api-/schedule-count-GET',
+  'first-api-/topic-count-GET',
+  'second-api-/content-type-binary-GET',
+  'second-api-/content-type-css-GET',
+  'second-api-/content-type-html-GET',
+  'second-api-/content-type-image-GET',
+  'second-api-/content-type-xml-GET',
+  'second-api-/image-from-bucket-DELETE',
+  'second-api-/image-from-bucket-GET',
+  'second-api-/image-from-bucket-PUT',
+  'second-api-/very-nested-files-PUT',
+  'my-db-api-/get-GET',
+  'my-secret-api-/get-GET',
+  'my-secret-api-/set-POST',
+  'my-secret-api-/set-binary-POST',
+]
+
 describe('APIs spec', () => {
   beforeEach(() => {
     cy.viewport('macbook-16')
@@ -6,35 +34,37 @@ describe('APIs spec', () => {
   })
 
   it('should retrieve correct apis and endpoints', () => {
+    // open api routes for testing
     cy.get('[data-rct-item-id="second-api"]').click()
-
-    const expectedEndpoints = [
-      'first-api',
-      'first-api-/all-methods-DELETE',
-      'first-api-/all-methods-GET',
-      'first-api-/all-methods-OPTIONS',
-      'first-api-/all-methods-PATCH',
-      'first-api-/all-methods-POST',
-      'first-api-/all-methods-PUT',
-      'first-api-/header-test-GET',
-      'first-api-/json-test-POST',
-      'first-api-/path-test/{name}-GET',
-      'first-api-/query-test-GET',
-      'first-api-/schedule-count-GET',
-      'first-api-/topic-count-GET',
-      'second-api-/content-type-binary-GET',
-      'second-api-/content-type-css-GET',
-      'second-api-/content-type-html-GET',
-      'second-api-/content-type-image-GET',
-      'second-api-/content-type-xml-GET',
-      'second-api-/image-from-bucket-DELETE',
-      'second-api-/image-from-bucket-GET',
-      'second-api-/image-from-bucket-PUT',
-      'second-api-/very-nested-files-PUT',
-    ]
+    cy.get('[data-rct-item-id="my-db-api"]').click()
+    cy.get('[data-rct-item-id="my-secret-api"]').click()
 
     expectedEndpoints.forEach((id) => {
       cy.get(`[data-rct-item-id="${id}"]`).should('exist')
+    })
+  })
+
+  it('should have correct service reference', () => {
+    // open api routes for testing
+    cy.get('[data-rct-item-id="second-api"]').click()
+    cy.get('[data-rct-item-id="my-db-api"]').click()
+    cy.get('[data-rct-item-id="my-secret-api"]').click()
+
+    expectedEndpoints.forEach((id) => {
+      cy.get(`[data-rct-item-id="${id}"]`).click()
+
+      let expectedServiceFile = 'my-test-service.ts'
+
+      if (id.includes('my-db-api')) {
+        expectedServiceFile = 'my-test-db.ts'
+      } else if (id.includes('my-secret-api')) {
+        expectedServiceFile = 'my-test-secret.ts'
+      }
+
+      cy.getTestEl('requesting-service').should(
+        'contain.text',
+        expectedServiceFile,
+      )
     })
   })
 

@@ -11,10 +11,6 @@ import ReactFlow, {
   ReactFlowProvider,
   Position,
   Panel,
-  useOnSelectionChange,
-  getConnectedEdges,
-  applyEdgeChanges,
-  type EdgeSelectionChange,
 } from 'reactflow'
 import Dagre from '@dagrejs/dagre'
 import 'reactflow/dist/style.css'
@@ -110,29 +106,6 @@ function ReactFlowLayout() {
     (params: any) => setEdges((eds) => addEdge(params, eds)),
     [setEdges],
   )
-
-  useOnSelectionChange({
-    onChange: ({ nodes: nodesChanged }) => {
-      const connectedEdges = getConnectedEdges(nodesChanged, edges)
-
-      // select all connected edges if node is selected
-      if (connectedEdges.length) {
-        setEdges(
-          applyEdgeChanges(
-            connectedEdges.map(
-              (edge) =>
-                ({
-                  id: edge.id,
-                  type: 'select',
-                  selected: true,
-                }) as EdgeSelectionChange,
-            ),
-            edges,
-          ),
-        )
-      }
-    },
-  })
 
   useEffect(() => {
     if (!data) return

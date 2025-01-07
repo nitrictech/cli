@@ -27,7 +27,7 @@ const checkEquivalentPaths = (matcher: string, path: string): boolean => {
     return matcherBase === pathBase
   }
 
-  const regex = new RegExp(`^${matcherBase.replace(/{[^/]+}/, '[^/]+')}$`)
+  const regex = new RegExp(`^${matcherBase.replace(/{[^/]+}/g, '[^/]+')}$`)
 
   return regex.test(pathBase)
 }

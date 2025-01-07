@@ -123,7 +123,7 @@ func (d *downloader) GetByLabel(label string) *TemplateInfo {
 	return nil
 }
 
-func (d *downloader) readTemplatesConfig() ([]TemplateInfo, error) {
+func (d *downloader) readTemplatesConfig(client GetterClient, retryCount int) ([]TemplateInfo, error) {
 	file, err := os.Open(d.configPath)
 	if err != nil {
 		return nil, err
@@ -135,6 +135,24 @@ func (d *downloader) readTemplatesConfig() ([]TemplateInfo, error) {
 	repo := repository{}
 
 	if err := decoder.Decode(&repo); err != nil {
+		// if an error occurs while decoding the yaml file, delete the file and try again based on the retry count
+		if retryCount > 0 {
+			// close the file before deleting it
+			file.Close()
+
+			err = os.Remove(d.configPath)
+			if err != nil {
+				return nil, errors.WithMessage(err, "repository file "+d.configPath)
+			}
+
+			err = client.Get()
+			if err != nil {
+				return nil, errors.WithMessage(err, "repository file "+d.configPath)
+			}
+
+			return d.readTemplatesConfig(client, retryCount-1)
+		}
+
 		return nil, errors.WithMessage(err, "repository file "+d.configPath)
 	}
 
@@ -166,7 +184,7 @@ func (d *downloader) repository() error {
 		return err
 	}
 
-	list, err := d.readTemplatesConfig()
+	list, err := d.readTemplatesConfig(client, 1)
 	if err != nil {
 		return err
 	}

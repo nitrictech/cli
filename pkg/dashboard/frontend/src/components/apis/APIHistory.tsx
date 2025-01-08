@@ -18,13 +18,18 @@ interface Props {
 }
 
 const checkEquivalentPaths = (matcher: string, path: string): boolean => {
-  // If the paths are equal regardless of query params
-  if (path.split('?').length > 1 && matcher.split('?').length > 1) {
-    return path.split('?')[0] === matcher.split('?')[0]
+  // Split both the matcher and path by "?" to separate query parameters
+  const [matcherBase] = matcher.split('?')
+  const [pathBase] = path.split('?')
+
+  // If both have query parameters, compare only the base paths
+  if (matcher.includes('?') && path.includes('?')) {
+    return matcherBase === pathBase
   }
 
-  const regex = matcher.replace(/{(.*)}/, '(.*)')
-  return path.match(regex) !== null
+  const regex = new RegExp(`^${matcherBase.replace(/{[^/]+}/g, '[^/]+')}$`)
+
+  return regex.test(pathBase)
 }
 
 const APIHistory: React.FC<Props> = ({

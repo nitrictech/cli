@@ -367,8 +367,11 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 				// Need to create a unique ID for this connection and store in a central location
 				// This will allow connected clients to message eachother and broadcast to all clients as well
 				// We'll only read new messages on this connection here, writing will be done by a separate runtime API
+				// Won't print errors that arise if the socket is closed and are "going away" or "no status" errors
 				_, message, err := ws.ReadMessage()
-				if err != nil {
+				if err != nil && websocket.IsCloseError(err, 1001, 1005) {
+					break
+				} else if err != nil {
 					log.Println("read:", err)
 					break
 				}

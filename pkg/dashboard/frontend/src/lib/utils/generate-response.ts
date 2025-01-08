@@ -6,7 +6,7 @@ export const generateResponse = async (res: Response, startTime: number) => {
   let data
 
   if (contentType === 'application/json') {
-    data = formatJSON(await res.json())
+    data = formatJSON(await res.text())
   } else if (
     contentType?.startsWith('image/') ||
     contentType?.startsWith('video/') ||

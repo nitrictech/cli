@@ -230,3 +230,10 @@ export interface RequestHistory {
 }
 
 export type SchemaObj = { [key: string]: Completion[] }
+
+export interface LogEntry {
+  msg: string
+  level: string
+  time: string
+  serviceName: string
+}

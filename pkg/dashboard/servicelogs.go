@@ -35,16 +35,29 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 			return
 		}
 
-		logs, err := system.ReadLogs(project.Directory)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+		if r.Method == "GET" {
+			logs, err := system.ReadLogs(project.Directory)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			// Send logs as JSON response
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(logs); err != nil {
+				http.Error(w, "Failed to encode logs: "+err.Error(), http.StatusInternalServerError)
+			}
+
 			return
 		}
 
-		// Send logs as JSON response
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(logs); err != nil {
-			http.Error(w, "Failed to encode logs: "+err.Error(), http.StatusInternalServerError)
+		if r.Method == "DELETE" {
+			err := system.PurgeLogs(project.Directory)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
 		}
 	}
 }

@@ -94,3 +94,14 @@ func ReadLogs(stackFilePath string) ([]LogEntry, error) {
 
 	return logs, nil
 }
+
+// PurgeLogs deletes the log file from the service's log file path
+func PurgeLogs(stackFilePath string) error {
+	// Remove the log file
+	err := os.Remove(paths.NitricServiceLogFile(stackFilePath))
+	if err != nil {
+		return fmt.Errorf("could not remove log file: %v", err)
+	}
+
+	return nil
+}

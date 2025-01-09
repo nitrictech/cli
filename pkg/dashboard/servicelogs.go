@@ -36,7 +36,7 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 		}
 
 		if r.Method == "GET" {
-			logs, err := system.ReadLogs(project.Directory)
+			logs, err := system.ReadLogs()
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -52,7 +52,7 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 		}
 
 		if r.Method == "DELETE" {
-			err := system.PurgeLogs(project.Directory)
+			err := system.PurgeLogs()
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

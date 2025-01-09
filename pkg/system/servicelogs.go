@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/sirupsen/logrus"
@@ -38,23 +39,42 @@ type ServiceLogger struct {
 	LogFilePath string
 }
 
-// NewServiceLogger creates a new instance of ServiceLogger with the specified log file path
-func NewServiceLogger(stackFilePath string) *ServiceLogger {
-	logger := logrus.New()
-	logger.SetFormatter(&logrus.JSONFormatter{})
+var (
+	serviceLogsInstance *ServiceLogger
+	serviceLogsOnce     sync.Once
+	logFilePath         string
+)
 
-	return &ServiceLogger{
-		Logger:      logger,
-		LogFilePath: paths.NitricServiceLogFile(stackFilePath),
-	}
+// InitializeLogger sets the file path for the singleton instance
+// This must be called before the singleton is accessed.
+func InitializeServiceLogger(stackFilePath string) {
+	logFilePath = paths.NitricServiceLogFile(stackFilePath)
+}
+
+// GetServiceLogger retrieves the singleton instance of the ServiceLogger
+func GetServiceLogger() *ServiceLogger {
+	serviceLogsOnce.Do(func() {
+		if logFilePath == "" {
+			panic("InitializeLogger must be called before accessing the logger")
+		}
+		logger := logrus.New()
+		logger.SetFormatter(&logrus.JSONFormatter{
+			TimestampFormat: "2006-01-02T15:04:05.000Z07:00", // Format with milliseconds
+		})
+		serviceLogsInstance = &ServiceLogger{
+			Logger:      logger,
+			LogFilePath: logFilePath,
+		}
+	})
+	return serviceLogsInstance
 }
 
 // WriteLog writes a log entry with the specified level and message
-func (s *ServiceLogger) WriteLog(level logrus.Level, message, serviceName string) error {
+func (s *ServiceLogger) WriteLog(level logrus.Level, message, serviceName string) {
 	// Open the log file when writing a log entry
 	file, err := os.OpenFile(s.LogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("could not open log file: %v", err)
+		fmt.Printf("Error writing log for service '%s': %v\n", serviceName, err)
 	}
 	defer file.Close() // Ensure the file is closed after writing
 
@@ -64,14 +84,12 @@ func (s *ServiceLogger) WriteLog(level logrus.Level, message, serviceName string
 	s.Logger.WithFields(logrus.Fields{
 		"serviceName": serviceName,
 	}).Log(level, message)
-
-	return nil
 }
 
 // ReadLogs reads the log file from the service's log file path and returns a slice of LogEntry objects
-func ReadLogs(stackFilePath string) ([]LogEntry, error) {
+func ReadLogs() ([]LogEntry, error) {
 	// Open the log file for reading
-	file, err := os.Open(paths.NitricServiceLogFile(stackFilePath))
+	file, err := os.Open(GetServiceLogger().LogFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("could not open log file: %v", err)
 	}
@@ -96,8 +114,8 @@ func ReadLogs(stackFilePath string) ([]LogEntry, error) {
 }
 
 // PurgeLogs truncates the log file to remove all log entries
-func PurgeLogs(stackFilePath string) error {
-	file, err := os.OpenFile(paths.NitricServiceLogFile(stackFilePath), os.O_TRUNC|os.O_WRONLY, 0644)
+func PurgeLogs() error {
+	file, err := os.OpenFile(GetServiceLogger().LogFilePath, os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("could not purge log file: %v", err)
 	}

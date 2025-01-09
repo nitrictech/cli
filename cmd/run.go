@@ -88,8 +88,8 @@ var runCmd = &cobra.Command{
 		tui.CheckErr(err)
 		defer logWriter.Close()
 
-		// Start the system logs service
-		serviceLogger := system.NewServiceLogger(proj.Directory)
+		// Initialize the system service log logger
+		system.InitializeServiceLogger(proj.Directory)
 
 		teaOptions := []tea.ProgramOption{}
 		if isNonInteractive() {
@@ -194,16 +194,6 @@ var runCmd = &cobra.Command{
 
 		allUpdates := lo.FanIn(10, updatesChan, systemChan)
 
-		// handle service logs
-		go func() {
-			for update := range allUpdates {
-				// Write log to file and handle any errors
-				if err := serviceLogger.WriteLog(logrus.InfoLevel, update.Message, update.ServiceName); err != nil {
-					fmt.Printf("Error writing log for service '%s': %v\n", update.ServiceName, err)
-				}
-			}
-		}()
-
 		// non-interactive environment
 		if isNonInteractive() {
 			go func() {
@@ -221,10 +211,14 @@ var runCmd = &cobra.Command{
 				close(stopChan)
 			}()
 
+			logger := system.GetServiceLogger()
+
 			for {
 				select {
 				case update := <-allUpdates:
 					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
+					// Write log to file
+					logger.WriteLog(logrus.InfoLevel, update.Message, update.ServiceName)
 				case <-stopChan:
 					fmt.Println("Shutting down services - exiting")
 					return nil

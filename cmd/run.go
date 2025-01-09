@@ -25,6 +25,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -86,6 +87,9 @@ var runCmd = &cobra.Command{
 		logWriter, err := fs.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 		tui.CheckErr(err)
 		defer logWriter.Close()
+
+		// Start the system logs service
+		serviceLogger := system.NewServiceLogger(proj.Directory)
 
 		teaOptions := []tea.ProgramOption{}
 		if isNonInteractive() {
@@ -189,6 +193,16 @@ var runCmd = &cobra.Command{
 		})
 
 		allUpdates := lo.FanIn(10, updatesChan, systemChan)
+
+		// handle service logs
+		go func() {
+			for update := range allUpdates {
+				// Write log to file and handle any errors
+				if err := serviceLogger.WriteLog(logrus.InfoLevel, update.Message, update.ServiceName); err != nil {
+					fmt.Printf("Error writing log for service '%s': %v\n", update.ServiceName, err)
+				}
+			}
+		}()
 
 		// non-interactive environment
 		if isNonInteractive() {

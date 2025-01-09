@@ -9,7 +9,7 @@ export const useLogs = (serviceName?: string) => {
     `${LOGS_API}?service=${serviceName}`,
     fetcher(),
     {
-      refreshInterval: 500,
+      refreshInterval: 250,
     },
   )
 

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
 import { useLogs } from '@/lib/hooks/use-logs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
+import { format } from 'date-fns/format'
 
 const Logs: React.FC = () => {
   const { data: logs, purgeLogs } = useLogs('/api/logs')
@@ -34,7 +35,7 @@ const Logs: React.FC = () => {
               <div
                 key={i}
                 className={cn(
-                  'mt-0.5 flex cursor-pointer gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] hover:bg-gray-100 dark:hover:bg-gray-700',
+                  'mt-0.5 flex cursor-pointer items-start gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] hover:bg-gray-100 dark:hover:bg-gray-700',
                   {
                     'bg-red-100 hover:bg-red-200 dark:bg-red-800/70 dark:hover:bg-red-800/90':
                       msg.toLowerCase().includes('error'),
@@ -44,14 +45,7 @@ const Logs: React.FC = () => {
                 )}
               >
                 <span className="w-[200px] truncate">
-                  {new Date(time).toLocaleString('en-US', {
-                    month: 'short',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    fractionalSecondDigits: 2,
-                  })}
+                  {format(new Date(time), 'MMM dd, HH:mm:ss.SS')}
                 </span>
                 <Tooltip>
                   <TooltipTrigger className="w-[150px] truncate">
@@ -61,7 +55,7 @@ const Logs: React.FC = () => {
                     <p>{serviceName}</p>
                   </TooltipContent>
                 </Tooltip>
-                <span className="truncate border-l pl-2">{formattedLine}</span>
+                <span className="border-l pl-2">{formattedLine}</span>
               </div>
             )
           })}

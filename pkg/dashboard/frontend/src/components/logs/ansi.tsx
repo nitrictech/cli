@@ -16,7 +16,7 @@ export const ansiToReact = (msg: string): React.ReactNode[] => {
   }
 
   const parts: React.ReactNode[] = []
-  const regex = /\u001b\[([0-9]+)m/g
+  const regex = new RegExp(`${String.fromCharCode(27)}\\[([0-9]+)m`, 'g')
   let lastIndex = 0
   let currentClass = ''
 

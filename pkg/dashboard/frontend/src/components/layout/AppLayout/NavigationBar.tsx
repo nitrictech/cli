@@ -3,11 +3,7 @@ import React, { useState } from 'react'
 import type { NavigationItemProps } from './NavigationItem'
 import NavigationItem from './NavigationItem'
 import { Separator } from '@/components/ui/separator'
-import {
-  CommandLineIcon,
-  HeartIcon,
-  MapIcon,
-} from '@heroicons/react/24/outline'
+import { ListBulletIcon, HeartIcon, MapIcon } from '@heroicons/react/24/outline'
 
 interface NavigationBarProps {
   navigation: Omit<NavigationItemProps, 'routePath'>[]
@@ -52,7 +48,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
           />
           <NavigationItem
             routePath={routePath}
-            icon={CommandLineIcon}
+            icon={ListBulletIcon}
             name="Logs"
             href="/logs"
             onClick={closeNavigation}

@@ -44,6 +44,7 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 
 			// Send logs as JSON response
 			w.Header().Set("Content-Type", "application/json")
+
 			if err := json.NewEncoder(w).Encode(logs); err != nil {
 				http.Error(w, "Failed to encode logs: "+err.Error(), http.StatusInternalServerError)
 			}
@@ -57,6 +58,7 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+
 			w.WriteHeader(http.StatusOK)
 		}
 	}

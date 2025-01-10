@@ -22,8 +22,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/nitrictech/cli/pkg/paths"
 	"github.com/sirupsen/logrus"
+
+	"github.com/nitrictech/cli/pkg/paths"
 )
 
 type LogEntry struct {
@@ -57,22 +58,25 @@ func GetServiceLogger() *ServiceLogger {
 		if logFilePath == "" {
 			panic("InitializeLogger must be called before accessing the logger")
 		}
+
 		logger := logrus.New()
 		logger.SetFormatter(&logrus.JSONFormatter{
 			TimestampFormat: "2006-01-02T15:04:05.000Z07:00", // Format with milliseconds
 		})
+
 		serviceLogsInstance = &ServiceLogger{
 			Logger:      logger,
 			LogFilePath: logFilePath,
 		}
 	})
+
 	return serviceLogsInstance
 }
 
 // WriteLog writes a log entry with the specified level and message
 func (s *ServiceLogger) WriteLog(level logrus.Level, message, serviceName string) {
 	// Open the log file when writing a log entry
-	file, err := os.OpenFile(s.LogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(s.LogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		fmt.Printf("Error writing log for service '%s': %v\n", serviceName, err)
 	}
@@ -91,7 +95,7 @@ func ReadLogs() ([]LogEntry, error) {
 	// Open the log file for reading
 	file, err := os.Open(GetServiceLogger().LogFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("could not open log file: %v", err)
+		return nil, fmt.Errorf("could not open log file: %w", err)
 	}
 	defer file.Close() // Ensure the file is closed when the function finishes
 
@@ -99,14 +103,17 @@ func ReadLogs() ([]LogEntry, error) {
 
 	// Read the file line by line
 	decoder := json.NewDecoder(file)
+
 	for {
 		var log LogEntry
 		if err := decoder.Decode(&log); err != nil {
 			if err.Error() == "EOF" {
 				break // End of file reached
 			}
-			return nil, fmt.Errorf("error decoding log entry: %v", err)
+
+			return nil, fmt.Errorf("error decoding log entry: %w", err)
 		}
+
 		logs = append(logs, log)
 	}
 
@@ -115,9 +122,9 @@ func ReadLogs() ([]LogEntry, error) {
 
 // PurgeLogs truncates the log file to remove all log entries
 func PurgeLogs() error {
-	file, err := os.OpenFile(GetServiceLogger().LogFilePath, os.O_TRUNC|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(GetServiceLogger().LogFilePath, os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
-		return fmt.Errorf("could not purge log file: %v", err)
+		return fmt.Errorf("could not purge log file: %w", err)
 	}
 	defer file.Close()
 

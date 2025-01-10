@@ -26,9 +26,9 @@ const Logs: React.FC = () => {
             Purge Logs
           </Button>
         </div>
-        <div className="grid grid-cols-[200px_150px_1fr] gap-x-3 border-b pb-2 text-lg font-semibold">
+        <div className="mx-1 grid grid-cols-[200px_150px_1fr] gap-x-2 border-b pb-2 text-lg font-semibold">
           <span>Time</span>
-          <span>Source</span>
+          <span>Origin</span>
           <span>Message</span>
         </div>
         <div

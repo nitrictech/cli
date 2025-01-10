@@ -88,7 +88,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		logger := system.GetServiceLogger()
 		// Write log to file and handle any errors
-		logger.WriteLog(logrus.InfoLevel, msg.Value.Message, msg.Value.ServiceName)
+		logger.WriteLog(logrus.InfoLevel, msg.Value.Message, msg.Value.Label)
 
 		return m, reactive.AwaitChannel(msg.Source)
 	default:

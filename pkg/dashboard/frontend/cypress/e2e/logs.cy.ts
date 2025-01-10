@@ -9,18 +9,18 @@ describe('logs test suite', () => {
 
   it(`Should create logs for started service`, () => {
     const expectedServices = [
-      'test-app_services-my-test-secret',
-      'test-app_services-my-test-service',
-      'test-app_services-my-test-db',
+      'services/my-test-secret.ts',
+      'services/my-test-service.ts',
+      'services/my-test-db.ts',
     ]
 
-    cy.getTestEl('test-row0-service').should(($el) => {
+    cy.getTestEl('test-row0-origin').should(($el) => {
       expect($el.text()).to.be.oneOf(expectedServices)
     })
-    cy.getTestEl('test-row1-service').should(($el) => {
+    cy.getTestEl('test-row1-origin').should(($el) => {
       expect($el.text()).to.be.oneOf(expectedServices)
     })
-    cy.getTestEl('test-row2-service').should(($el) => {
+    cy.getTestEl('test-row2-origin').should(($el) => {
       expect($el.text()).to.be.oneOf(expectedServices)
     })
   })

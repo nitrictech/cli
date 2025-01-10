@@ -28,10 +28,10 @@ import (
 )
 
 type LogEntry struct {
-	Timestamp   string       `json:"time"`
-	Level       logrus.Level `json:"level"`
-	Message     string       `json:"msg"`
-	ServiceName string       `json:"serviceName"`
+	Timestamp string       `json:"time"`
+	Level     logrus.Level `json:"level"`
+	Message   string       `json:"msg"`
+	Origin    string       `json:"origin"`
 }
 
 // ServiceLogger struct to encapsulate the logger and file path
@@ -74,11 +74,11 @@ func GetServiceLogger() *ServiceLogger {
 }
 
 // WriteLog writes a log entry with the specified level and message
-func (s *ServiceLogger) WriteLog(level logrus.Level, message, serviceName string) {
+func (s *ServiceLogger) WriteLog(level logrus.Level, message, origin string) {
 	// Open the log file when writing a log entry
 	file, err := os.OpenFile(s.LogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		fmt.Printf("Error writing log for service '%s': %v\n", serviceName, err)
+		fmt.Printf("Error writing log for origin '%s': %v\n", origin, err)
 	}
 	defer file.Close() // Ensure the file is closed after writing
 
@@ -86,7 +86,7 @@ func (s *ServiceLogger) WriteLog(level logrus.Level, message, serviceName string
 	s.Logger.SetOutput(file)
 
 	s.Logger.WithFields(logrus.Fields{
-		"serviceName": serviceName,
+		"origin": origin,
 	}).Log(level, message)
 }
 

@@ -235,5 +235,5 @@ export interface LogEntry {
   msg: string
   level: string
   time: string
-  serviceName: string
+  origin: string
 }

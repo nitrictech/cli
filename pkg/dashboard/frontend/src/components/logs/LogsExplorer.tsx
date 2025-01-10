@@ -27,7 +27,7 @@ const Logs: React.FC = () => {
         </div>
         <div className="grid grid-cols-[200px_150px_1fr] gap-x-3 border-b pb-2 text-lg font-semibold">
           <span>Time</span>
-          <span>Service</span>
+          <span>Source</span>
           <span>Message</span>
         </div>
         <div
@@ -35,7 +35,7 @@ const Logs: React.FC = () => {
           data-testid="logs"
         >
           {logs.length > 0 ? (
-            logs.map(({ msg, time, serviceName }, i) => {
+            logs.map(({ msg, time, origin }, i) => {
               const formattedLine = msg.trim()
               return (
                 <div
@@ -50,21 +50,19 @@ const Logs: React.FC = () => {
                     },
                   )}
                 >
-                  <span className="w-[200px] truncate">
+                  <span className="w-[200px] truncate text-left">
                     {format(new Date(time), 'MMM dd, HH:mm:ss.SS')}
                   </span>
                   <Tooltip>
-                    <TooltipTrigger className="w-[150px] truncate">
-                      <span data-testid={`test-row${i}-service`}>
-                        {serviceName}
-                      </span>
+                    <TooltipTrigger className="w-[150px] truncate text-left">
+                      <span data-testid={`test-row${i}-origin`}>{origin}</span>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{serviceName}</p>
+                      <p>{origin}</p>
                     </TooltipContent>
                   </Tooltip>
                   <span
-                    className="border-l pl-2"
+                    className="border-l pl-2 text-left"
                     data-testid={`test-row${i}-msg`}
                   >
                     {ansiToReact(formattedLine)}

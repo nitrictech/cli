@@ -4,9 +4,9 @@ import { fetcher } from './fetcher'
 import type { LogEntry } from '@/types'
 import { LOGS_API } from '../constants'
 
-export const useLogs = (serviceName?: string) => {
+export const useLogs = (origin?: string) => {
   const { data, mutate } = useSWR<LogEntry[]>(
-    `${LOGS_API}?service=${serviceName}`,
+    `${LOGS_API}?origin=${origin}`,
     fetcher(),
     {
       refreshInterval: 250,

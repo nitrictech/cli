@@ -14,13 +14,13 @@ describe('logs test suite', () => {
       'started service services/my-test-db.ts',
     ]
 
-    cy.getTestEl('test-row0-origin').should(($el) => {
+    cy.getTestEl('test-row0-msg').should(($el) => {
       expect($el.text()).to.be.oneOf(expectedMessages)
     })
-    cy.getTestEl('test-row1-origin').should(($el) => {
+    cy.getTestEl('test-row1-msg').should(($el) => {
       expect($el.text()).to.be.oneOf(expectedMessages)
     })
-    cy.getTestEl('test-row2-origin').should(($el) => {
+    cy.getTestEl('test-row2-msg').should(($el) => {
       expect($el.text()).to.be.oneOf(expectedMessages)
     })
   })

@@ -451,7 +451,7 @@ func (s *Service) RunContainer(stop <-chan bool, updates chan<- ServiceRunUpdate
 
 	updates <- ServiceRunUpdate{
 		ServiceName: s.Name,
-		Label:       s.GetFilePath(),
+		Label:       "nitric",
 		Message:     fmt.Sprintf("started service %s", s.GetFilePath()),
 		Status:      ServiceRunStatus_Running,
 	}

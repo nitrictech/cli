@@ -5,6 +5,7 @@ import { Button } from '../ui/button'
 import { useLogs } from '@/lib/hooks/use-logs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { format } from 'date-fns/format'
+import { ansiToReact } from './ansi'
 
 const Logs: React.FC = () => {
   const { data: logs, purgeLogs } = useLogs('/api/logs')
@@ -23,9 +24,9 @@ const Logs: React.FC = () => {
             Purge Logs
           </Button>
         </div>
-        <div className="flex gap-3 border-b pb-2 text-lg font-semibold">
-          <span className="w-[200px]">Time</span>
-          <span className="w-[150px]">Service</span>
+        <div className="grid grid-cols-[200px_150px_1fr] gap-x-3 border-b pb-2 text-lg font-semibold">
+          <span>Time</span>
+          <span>Service</span>
           <span>Message</span>
         </div>
         <div className="mt-1 flex flex-col font-mono text-sm">
@@ -35,7 +36,7 @@ const Logs: React.FC = () => {
               <div
                 key={i}
                 className={cn(
-                  'mt-0.5 flex cursor-pointer items-start gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] hover:bg-gray-100 dark:hover:bg-gray-700',
+                  'mt-0.5 grid cursor-pointer grid-cols-[200px_150px_1fr] items-start gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] hover:bg-gray-100 dark:hover:bg-gray-700',
                   {
                     'bg-red-100 hover:bg-red-200 dark:bg-red-800/70 dark:hover:bg-red-800/90':
                       msg.toLowerCase().includes('error'),
@@ -55,7 +56,9 @@ const Logs: React.FC = () => {
                     <p>{serviceName}</p>
                   </TooltipContent>
                 </Tooltip>
-                <span className="border-l pl-2">{formattedLine}</span>
+                <span className="border-l pl-2">
+                  {ansiToReact(formattedLine)}
+                </span>
               </div>
             )
           })}

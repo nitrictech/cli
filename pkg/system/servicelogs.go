@@ -75,6 +75,11 @@ func GetServiceLogger() *ServiceLogger {
 
 // WriteLog writes a log entry with the specified level and message
 func (s *ServiceLogger) WriteLog(level logrus.Level, message, origin string) {
+	// Do not write empty log messages
+	if message == "" {
+		return
+	}
+
 	// Open the log file when writing a log entry
 	file, err := os.OpenFile(s.LogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {

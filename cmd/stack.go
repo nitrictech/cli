@@ -256,6 +256,10 @@ var stackUpdateCmd = &cobra.Command{
 				// non-interactive environment
 				for update := range migrationBuildUpdates {
 					for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+						if update.Status == project.ServiceBuildStatus_Error {
+							tui.CheckErr(fmt.Errorf("error building migration images %s", update.Message))
+						}
+
 						fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 					}
 				}

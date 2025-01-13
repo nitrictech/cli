@@ -276,7 +276,13 @@ var startCmd = &cobra.Command{
 				case update := <-allUpdates:
 					fmt.Printf("%s [%s]: %s", update.ServiceName, update.Status, update.Message)
 					// Write log to file
-					logger.WriteLog(logrus.InfoLevel, update.Message, update.Label)
+					level := logrus.InfoLevel
+
+					if update.Status == project.ServiceRunStatus_Error {
+						level = logrus.ErrorLevel
+					}
+
+					logger.WriteLog(level, update.Message, update.Label)
 				case <-stopChan:
 					fmt.Println("Shutting down services - exiting")
 					return nil

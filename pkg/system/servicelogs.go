@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -28,7 +29,7 @@ import (
 )
 
 type LogEntry struct {
-	Timestamp string       `json:"time"`
+	Timestamp time.Time    `json:"time"`
 	Level     logrus.Level `json:"level"`
 	Message   string       `json:"msg"`
 	Origin    string       `json:"origin"`

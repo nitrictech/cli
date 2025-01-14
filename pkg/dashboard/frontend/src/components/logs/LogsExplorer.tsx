@@ -82,7 +82,12 @@ const Logs: React.FC = () => {
               />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="icon" variant="outline" className="ml-auto">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="ml-auto"
+                    data-testid="log-options-btn"
+                  >
                     <span className="sr-only">Open log options</span>
                     <EllipsisVerticalIcon
                       className="size-6"
@@ -96,7 +101,10 @@ const Logs: React.FC = () => {
                       <ArrowDownOnSquareIcon className="mr-2 h-4 w-4" />
                       <span>Export as JSON</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={purgeLogs}>
+                    <DropdownMenuItem
+                      onClick={purgeLogs}
+                      data-testid="purge-logs-btn"
+                    >
                       <TrashIcon className="mr-2 h-4 w-4" />
                       <span>Clear Logs</span>
                     </DropdownMenuItem>

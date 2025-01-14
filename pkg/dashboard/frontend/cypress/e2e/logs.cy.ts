@@ -8,20 +8,16 @@ describe('logs test suite', () => {
   })
 
   it(`Should create logs`, () => {
+    cy.getTestEl('logs').children().should('have.length.above', 2)
+
     const expectedMessages = [
       'started service services/my-test-secret.ts',
       'started service services/my-test-service.ts',
       'started service services/my-test-db.ts',
     ]
 
-    cy.getTestEl('test-row0-msg').should(($el) => {
-      expect($el.text()).to.be.oneOf(expectedMessages)
-    })
-    cy.getTestEl('test-row1-msg').should(($el) => {
-      expect($el.text()).to.be.oneOf(expectedMessages)
-    })
-    cy.getTestEl('test-row2-msg').should(($el) => {
-      expect($el.text()).to.be.oneOf(expectedMessages)
+    expectedMessages.forEach((message) => {
+      cy.getTestEl('logs').should('contain.text', message)
     })
   })
 
@@ -29,6 +25,8 @@ describe('logs test suite', () => {
     cy.getTestEl('logs').children().should('have.length.above', 2)
 
     cy.intercept('DELETE', '/api/logs').as('purge')
+
+    cy.getTestEl('log-options-btn').click()
 
     cy.getTestEl('purge-logs-btn').click()
 

@@ -23,9 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/system"
-	"github.com/samber/lo"
 )
 
 func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http.ResponseWriter, *http.Request) {
@@ -89,6 +90,7 @@ func filterLogs(logs []system.LogEntry, originFilter, levelFilter, searchFilter,
 
 	// Parse startDate and endDate
 	var startDate, endDate time.Time
+
 	var err error
 
 	if startDateFilter != "" {
@@ -117,6 +119,7 @@ func filterLogs(logs []system.LogEntry, originFilter, levelFilter, searchFilter,
 		if !startDate.IsZero() {
 			matchesDate = matchesDate && log.Timestamp.After(startDate)
 		}
+
 		if !endDate.IsZero() {
 			matchesDate = matchesDate && log.Timestamp.Before(endDate)
 		}

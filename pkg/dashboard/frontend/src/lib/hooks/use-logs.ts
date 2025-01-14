@@ -4,9 +4,31 @@ import { fetcher } from './fetcher'
 import type { LogEntry } from '@/types'
 import { LOGS_API } from '../constants'
 
-export const useLogs = (origin?: string) => {
+interface LogQueryParams {
+  origin?: string
+  startDate?: number
+  endDate?: number
+  level?: LogEntry['level']
+  search?: string
+}
+
+const buildQueryString = (params: LogQueryParams) => {
+  const searchParams = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      searchParams.append(key, String(value))
+    }
+  })
+  return searchParams.toString()
+}
+
+export const useLogs = (query: LogQueryParams) => {
+  // Build query string dynamically
+  const queryString = buildQueryString(query)
+
+  // build query string
   const { data, mutate } = useSWR<LogEntry[]>(
-    `${LOGS_API}?origin=${origin}`,
+    `${LOGS_API}?${queryString}`,
     fetcher(),
     {
       refreshInterval: 250,

@@ -29,6 +29,14 @@ import (
 	"github.com/nitrictech/cli/pkg/system"
 )
 
+type TimelineFilter string
+
+const (
+	PastHour     TimelineFilter = "pastHour"
+	PastHalfHour TimelineFilter = "pastHalfHour"
+	PastWeek     TimelineFilter = "pastWeek"
+)
+
 func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -50,9 +58,9 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 			originFilter := r.URL.Query().Get("origin")
 			levelFilter := r.URL.Query().Get("level")
 			searchFilter := r.URL.Query().Get("search")
-			startDate := r.URL.Query().Get("startDate")
-			endDate := r.URL.Query().Get("endDate")
-			filteredLogs := filterLogs(logs, originFilter, levelFilter, searchFilter, startDate, endDate)
+			timelineFilter := r.URL.Query().Get("timeline")
+
+			filteredLogs := filterLogs(logs, originFilter, levelFilter, searchFilter, timelineFilter)
 
 			// Send logs as JSON response
 			w.Header().Set("Content-Type", "application/json")
@@ -77,7 +85,7 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 }
 
 // Helper function to filter logs using lo.Filter
-func filterLogs(logs []system.LogEntry, originFilter, levelFilter, searchFilter, startDateFilter, endDateFilter string) []system.LogEntry {
+func filterLogs(logs []system.LogEntry, originFilter, levelFilter, searchFilter, timelineFilter string) []system.LogEntry {
 	var origins, levels []string
 
 	if originFilter != "" {
@@ -88,25 +96,22 @@ func filterLogs(logs []system.LogEntry, originFilter, levelFilter, searchFilter,
 		levels = strings.Split(levelFilter, ",")
 	}
 
-	// Parse startDate and endDate
+	// Parse startDate and endDate based on the timelineFilter
 	var startDate, endDate time.Time
 
-	var err error
+	if timelineFilter != "" {
+		currentTime := time.Now()
 
-	if startDateFilter != "" {
-		startDate, err = time.Parse(time.RFC3339, startDateFilter)
-		if err != nil {
-			// Ignore invalid date filters
-			startDate = time.Time{}
+		switch TimelineFilter(timelineFilter) {
+		case PastHour:
+			startDate = currentTime.Add(-1 * time.Hour)
+		case PastHalfHour:
+			startDate = currentTime.Add(-30 * time.Minute)
+		case PastWeek:
+			startDate = currentTime.Add(-7 * 24 * time.Hour)
 		}
-	}
 
-	if endDateFilter != "" {
-		endDate, err = time.Parse(time.RFC3339, endDateFilter)
-		if err != nil {
-			// Ignore invalid date filters
-			endDate = time.Time{}
-		}
+		endDate = currentTime
 	}
 
 	filteredLogs := lo.Filter(logs, func(log system.LogEntry, _ int) bool {
@@ -114,14 +119,11 @@ func filterLogs(logs []system.LogEntry, originFilter, levelFilter, searchFilter,
 		matchesLevel := len(levels) == 0 || lo.Contains(levels, log.Level.String())
 		matchesSearch := searchFilter == "" || strings.Contains(strings.ToLower(log.Message), strings.ToLower(searchFilter))
 
-		// Check timestamp range
+		// Check if the log's timestamp is within the timeline range
 		matchesDate := true
-		if !startDate.IsZero() {
-			matchesDate = matchesDate && log.Timestamp.After(startDate)
-		}
 
-		if !endDate.IsZero() {
-			matchesDate = matchesDate && log.Timestamp.Before(endDate)
+		if !startDate.IsZero() && !endDate.IsZero() {
+			matchesDate = log.Timestamp.Local().After(startDate) && log.Timestamp.Local().Before(endDate)
 		}
 
 		return matchesOrigin && matchesLevel && matchesSearch && matchesDate

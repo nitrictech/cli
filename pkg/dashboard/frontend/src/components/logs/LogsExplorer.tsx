@@ -10,27 +10,24 @@ import { ansiToReact } from './ansi'
 import {
   ArrowDownOnSquareIcon,
   EllipsisVerticalIcon,
-  FunnelIcon,
   MagnifyingGlassIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
 
 import TextField from '../shared/TextField'
 import { debounce } from 'radash'
-import ResourceDropdownMenu from '../shared/ResourceDropdownMenu'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
 import type { LogEntry } from '@/types'
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '../ui/sidebar'
+import { SidebarInset, SidebarProvider } from '../ui/sidebar'
 import { FilterSidebar } from './FilterSidebar'
 import FilterTrigger from './FilterTrigger'
+import { ParamsProvider, useParams } from '@/hooks/use-params'
 
 const exportJSON = async (logs: LogEntry[]) => {
   const json = JSON.stringify(logs, null, 2)
@@ -46,22 +43,26 @@ const exportJSON = async (logs: LogEntry[]) => {
 }
 
 const Logs: React.FC = () => {
-  const [searchQuery, setSearchQuery] = React.useState('')
+  const { searchParams, setParams } = useParams()
+
   const {
     data: logs,
     purgeLogs,
     mutate,
   } = useLogs({
-    search: searchQuery,
+    search: searchParams.get('search') ?? undefined,
+    origin: searchParams.get('origin') ?? undefined,
+    level: (searchParams.get('level') as LogEntry['level']) ?? undefined,
+    timeline: searchParams.get('timeline') ?? undefined,
   })
 
   const debouncedSearch = debounce({ delay: 500 }, (search: string) => {
-    setSearchQuery(search)
+    setParams('search', search)
   })
 
   useEffect(() => {
     mutate()
-  }, [searchQuery])
+  }, [searchParams])
 
   return (
     <AppLayout title="Logs" routePath="/logs" hideTitle>
@@ -75,7 +76,9 @@ const Logs: React.FC = () => {
                 id="log-search"
                 label="Search"
                 className="w-full text-lg"
+                data-testid="log-search"
                 hideLabel
+                defaultValue={searchParams.get('search') ?? ''}
                 icon={MagnifyingGlassIcon}
                 placeholder="Search"
                 onChange={(event) => debouncedSearch(event.target.value)}
@@ -90,7 +93,7 @@ const Logs: React.FC = () => {
                   >
                     <span className="sr-only">Open log options</span>
                     <EllipsisVerticalIcon
-                      className="size-6"
+                      className="size-6 text-foreground"
                       aria-hidden="true"
                     />
                   </Button>
@@ -198,4 +201,10 @@ const Logs: React.FC = () => {
   )
 }
 
-export default Logs
+export default function LogsExplorer() {
+  return (
+    <ParamsProvider>
+      <Logs />
+    </ParamsProvider>
+  )
+}

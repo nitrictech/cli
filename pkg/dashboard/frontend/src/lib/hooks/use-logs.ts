@@ -6,8 +6,7 @@ import { LOGS_API } from '../constants'
 
 interface LogQueryParams {
   origin?: string
-  startDate?: number
-  endDate?: number
+  timeline?: string
   level?: LogEntry['level']
   search?: string
 }

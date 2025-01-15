@@ -14,7 +14,7 @@ const FilterTrigger: React.FC = () => {
       size="icon"
       title="Toggle filters"
     >
-      <FunnelIcon className="h-5 w-5 text-gray-500" />
+      <FunnelIcon className="h-5 w-5 text-foreground" />
     </Button>
   )
 }

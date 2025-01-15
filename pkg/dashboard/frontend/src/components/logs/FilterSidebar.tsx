@@ -43,7 +43,9 @@ const CollapsibleGroup = ({
           asChild
           className="flex h-full w-full items-center p-2 text-base font-semibold text-foreground text-gray-600 hover:bg-gray-100 group-data-[state=open]/collapsible:text-foreground"
         >
-          <CollapsibleTrigger>
+          <CollapsibleTrigger
+            data-testid={`filter-${title.toLowerCase().replace(' ', '-')}-collapsible`}
+          >
             <ChevronRightIcon className="mr-2 !size-6 transition-transform group-data-[state=open]/collapsible:rotate-90" />
             <span className="mb-0.5">{title}</span>
           </CollapsibleTrigger>
@@ -119,7 +121,10 @@ export function FilterSidebar() {
                   setParams('timeline', v)
                 }}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger
+                  className="w-full"
+                  data-testid="timeline-select-trigger"
+                >
                   <SelectValue placeholder="select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -142,6 +147,7 @@ export function FilterSidebar() {
                 placeholder="Select severity levels"
                 variant="inverted"
                 disableSelectAll
+                data-testid="level-select"
                 maxCount={3}
               />
             </CollapsibleGroup>
@@ -152,6 +158,7 @@ export function FilterSidebar() {
                 value={origins ? origins.split(',') : []}
                 placeholder="Select origins"
                 variant="inverted"
+                data-testid="origin-select"
                 disableSelectAll
                 maxCount={3}
               />

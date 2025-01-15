@@ -19,9 +19,22 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/samber/lo"
 
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/system"
+)
+
+type TimelineFilter string
+
+const (
+	PastHour     TimelineFilter = "pastHour"
+	PastHalfHour TimelineFilter = "pastHalfHour"
+	PastWeek     TimelineFilter = "pastWeek"
 )
 
 func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http.ResponseWriter, *http.Request) {
@@ -42,10 +55,17 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 				return
 			}
 
+			originFilter := r.URL.Query().Get("origin")
+			levelFilter := r.URL.Query().Get("level")
+			searchFilter := r.URL.Query().Get("search")
+			timelineFilter := r.URL.Query().Get("timeline")
+
+			filteredLogs := filterLogs(logs, originFilter, levelFilter, searchFilter, timelineFilter)
+
 			// Send logs as JSON response
 			w.Header().Set("Content-Type", "application/json")
 
-			if err := json.NewEncoder(w).Encode(logs); err != nil {
+			if err := json.NewEncoder(w).Encode(filteredLogs); err != nil {
 				http.Error(w, "Failed to encode logs: "+err.Error(), http.StatusInternalServerError)
 			}
 
@@ -62,4 +82,57 @@ func (d *Dashboard) createServiceLogsHandler(project *project.Project) func(http
 			w.WriteHeader(http.StatusOK)
 		}
 	}
+}
+
+// Helper function to filter logs using lo.Filter
+func filterLogs(logs []system.LogEntry, originFilter, levelFilter, searchFilter, timelineFilter string) []system.LogEntry {
+	var origins, levels []string
+
+	if originFilter != "" {
+		origins = strings.Split(originFilter, ",")
+	}
+
+	if levelFilter != "" {
+		levels = strings.Split(levelFilter, ",")
+	}
+
+	// Parse startDate and endDate based on the timelineFilter
+	var startDate, endDate time.Time
+
+	if timelineFilter != "" {
+		currentTime := time.Now()
+
+		switch TimelineFilter(timelineFilter) {
+		case PastHour:
+			startDate = currentTime.Add(-1 * time.Hour)
+		case PastHalfHour:
+			startDate = currentTime.Add(-30 * time.Minute)
+		case PastWeek:
+			startDate = currentTime.Add(-7 * 24 * time.Hour)
+		}
+
+		endDate = currentTime
+	}
+
+	filteredLogs := lo.Filter(logs, func(log system.LogEntry, _ int) bool {
+		matchesOrigin := len(origins) == 0 || lo.Contains(origins, log.Origin)
+		matchesLevel := len(levels) == 0 || lo.Contains(levels, log.Level.String())
+		matchesSearch := searchFilter == "" || strings.Contains(strings.ToLower(log.Message), strings.ToLower(searchFilter))
+
+		// Check if the log's timestamp is within the timeline range
+		matchesDate := true
+
+		if !startDate.IsZero() && !endDate.IsZero() {
+			matchesDate = log.Timestamp.Local().After(startDate) && log.Timestamp.Local().Before(endDate)
+		}
+
+		return matchesOrigin && matchesLevel && matchesSearch && matchesDate
+	})
+
+	// Reverse the order to show newest logs first
+	sort.Slice(filteredLogs, func(i, j int) bool {
+		return filteredLogs[i].Timestamp.After(filteredLogs[j].Timestamp)
+	})
+
+	return filteredLogs
 }

@@ -68,8 +68,22 @@ export function FilterSidebar() {
   const { data } = useWebSocket()
   const { searchParams, setParams } = useParams()
 
-  const levels = searchParams.get('level')
-  const origins = searchParams.get('origin')
+  const levels =
+    searchParams
+      .get('level')
+      ?.split(',')
+      .filter((l) => levelsList.some((o) => o.value === l)) ?? []
+  const origins =
+    searchParams
+      .get('origin')
+      ?.split(',')
+      .filter((o) => {
+        return (
+          o === 'nitric' ||
+          data?.services.some((service) => service.name === o) ||
+          data?.batchServices.some((service) => service.name === o)
+        )
+      }) ?? []
   const timeline = searchParams.get('timeline')
 
   const originsList = useMemo(() => {
@@ -143,7 +157,7 @@ export function FilterSidebar() {
               <MultiSelect
                 options={levelsList}
                 onValueChange={(value) => setParams('level', value.join(','))}
-                value={levels ? levels.split(',') : []}
+                value={levels}
                 placeholder="Select severity levels"
                 variant="inverted"
                 disableSelectAll
@@ -155,7 +169,7 @@ export function FilterSidebar() {
               <MultiSelect
                 options={originsList}
                 onValueChange={(value) => setParams('origin', value.join(','))}
-                value={origins ? origins.split(',') : []}
+                value={origins}
                 placeholder="Select origins"
                 variant="inverted"
                 data-testid="origin-select"

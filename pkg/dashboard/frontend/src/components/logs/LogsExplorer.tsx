@@ -134,11 +134,9 @@ const Logs: React.FC = () => {
                         'mt-0.5 grid cursor-pointer grid-cols-[200px_150px_1fr] items-start gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] hover:bg-gray-100 dark:hover:bg-gray-700',
                         {
                           'bg-red-100 hover:bg-red-200 dark:bg-red-800/70 dark:hover:bg-red-800/90':
-                            level === 'error' &&
-                            !msg.toLowerCase().includes('warning'),
+                            level === 'error',
                           'bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/60 dark:hover:bg-orange-500/70':
-                            level === 'error' &&
-                            msg.toLowerCase().includes('warning'),
+                            level === 'warning',
                         },
                       )}
                     >

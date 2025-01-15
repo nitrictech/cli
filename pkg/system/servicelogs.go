@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -79,6 +80,11 @@ func (s *ServiceLogger) WriteLog(level logrus.Level, message, origin string) {
 	// Do not write empty log messages
 	if message == "" {
 		return
+	}
+
+	// Handle warnings (they will be logged as errors)
+	if level == logrus.ErrorLevel && strings.Contains(strings.ToLower(message), "warning") {
+		level = logrus.WarnLevel
 	}
 
 	// Open the log file when writing a log entry

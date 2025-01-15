@@ -233,7 +233,7 @@ export type SchemaObj = { [key: string]: Completion[] }
 
 export interface LogEntry {
   msg: string
-  level: 'info' | 'error'
+  level: 'info' | 'error' | 'warning'
   time: string
   origin: string
 }

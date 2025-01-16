@@ -814,7 +814,7 @@ const APIExplorer = () => {
               className="underline"
               target="_blank"
               href="https://nitric.io/docs/reference/nodejs/http/http"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               the Nitric HTTP Proxy
             </a>{' '}

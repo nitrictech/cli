@@ -44,6 +44,7 @@
     "@radix-ui/react-tooltip": "^1.1.6",
     "@tailwindcss/forms": "^0.5.7",
     "@tanstack/react-table": "^8.20.1",
+    "@tanstack/react-virtual": "^3.11.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@uiw/codemirror-extensions-langs": "^4.23.0",

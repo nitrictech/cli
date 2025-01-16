@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import AppLayout from '../layout/AppLayout'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
@@ -28,6 +28,9 @@ import { FilterSidebar } from './FilterSidebar'
 import FilterTrigger from './FilterTrigger'
 import { ParamsProvider, useParams } from '@/hooks/use-params'
 import { AnsiHtml } from 'fancy-ansi/react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { ScrollArea } from '../ui/scroll-area'
+import { Portal as TooltipPortal } from '@radix-ui/react-tooltip'
 
 const exportJSON = async (logs: LogEntry[]) => {
   const json = JSON.stringify(logs, null, 2)
@@ -43,6 +46,8 @@ const exportJSON = async (logs: LogEntry[]) => {
 }
 
 const Logs: React.FC = () => {
+  const parentRef = useRef<HTMLDivElement>(null)
+
   const { searchParams, setParams } = useParams()
 
   const {
@@ -63,6 +68,28 @@ const Logs: React.FC = () => {
   useEffect(() => {
     mutate()
   }, [searchParams])
+
+  const formattedLogs = useMemo(
+    () =>
+      logs.map((log) => ({
+        ...log,
+        formattedTime: format(new Date(log.time), 'MMM dd, HH:mm:ss.SS'),
+        relativeTime: formatDistanceToNow(new Date(log.time), {
+          addSuffix: true,
+        }),
+        timestamp: new Date(log.time).getTime(),
+      })),
+    [logs.length],
+  )
+
+  const virtualizer = useVirtualizer({
+    count: formattedLogs.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 21.5, // estimated height of each row
+    overscan: 50, // number of rows to render outside of the viewport
+  })
+
+  const items = virtualizer.getVirtualItems()
 
   return (
     <AppLayout title="Logs" routePath="/logs" hideTitle>
@@ -120,76 +147,99 @@ const Logs: React.FC = () => {
               <span>Origin</span>
               <span>Message</span>
             </div>
-            <div
-              className="mt-1 flex flex-col font-mono text-sm"
-              data-testid="logs"
-            >
-              {logs.length > 0 ? (
-                logs.map(({ msg, time, origin, level }, i) => {
-                  const formattedLine = msg.trim()
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        'mt-0.5 grid cursor-pointer grid-cols-[200px_150px_1fr] items-start gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] hover:bg-gray-100 dark:hover:bg-gray-700',
-                        {
-                          'bg-red-100 hover:bg-red-200 dark:bg-red-800/70 dark:hover:bg-red-800/90':
-                            level === 'error',
-                          'bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/60 dark:hover:bg-orange-500/70':
-                            level === 'warning',
-                        },
-                      )}
-                    >
-                      <Tooltip>
-                        <TooltipTrigger className="w-[150px] truncate text-left">
-                          <span className="w-[200px] truncate text-left">
-                            {format(new Date(time), 'MMM dd, HH:mm:ss.SS')}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          className="grid grid-cols-2 gap-2 text-xs"
-                          side="right"
-                        >
-                          <span>
-                            {Intl.DateTimeFormat().resolvedOptions().timeZone}:{' '}
-                          </span>
-                          <span>
-                            {format(new Date(time), 'MMM dd, HH:mm:ss.SS')}
-                          </span>
-                          <span>Relative:</span>
-                          <span>
-                            {formatDistanceToNow(new Date(time), {
-                              addSuffix: true,
-                            })}
-                          </span>
-                          <span>Timestamp:</span>
-                          <span>{new Date(time).getTime()}</span>
-                        </TooltipContent>
-                      </Tooltip>
+            <div className="mt-1 flex-col font-mono text-sm" data-testid="logs">
+              <ScrollArea type="auto" ref={parentRef} className="h-screen">
+                <div
+                  className="relative w-full"
+                  style={{
+                    height: virtualizer.getTotalSize(),
+                  }}
+                >
+                  <div
+                    className="absolute left-0 top-0 w-full"
+                    style={{
+                      transform: `translateY(${items[0]?.start ?? 0}px)`,
+                    }}
+                  >
+                    {formattedLogs.length > 0 ? (
+                      items.map(({ index: i }) => {
+                        const {
+                          msg,
+                          level,
+                          formattedTime,
+                          relativeTime,
+                          origin,
+                          timestamp,
+                        } = formattedLogs[i]
+                        const formattedLine = msg.trim()
+                        return (
+                          <div
+                            key={i}
+                            className={cn(
+                              'mt-0.5 grid cursor-pointer grid-cols-[200px_150px_1fr] items-start gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] hover:bg-gray-100 dark:hover:bg-gray-700',
+                              {
+                                'bg-red-100 hover:bg-red-200 dark:bg-red-800/70 dark:hover:bg-red-800/90':
+                                  level === 'error',
+                                'bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/60 dark:hover:bg-orange-500/70':
+                                  level === 'warning',
+                              },
+                            )}
+                          >
+                            <Tooltip>
+                              <TooltipTrigger className="w-[150px] truncate text-left">
+                                <span className="w-[200px] truncate text-left">
+                                  {formattedTime}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipPortal>
+                                <TooltipContent
+                                  className="grid grid-cols-2 gap-2 font-mono text-xs"
+                                  side="right"
+                                >
+                                  <span>
+                                    {
+                                      Intl.DateTimeFormat().resolvedOptions()
+                                        .timeZone
+                                    }
+                                    :{' '}
+                                  </span>
+                                  <span>{formattedTime}</span>
+                                  <span>Relative:</span>
+                                  <span>{relativeTime}</span>
+                                  <span>Timestamp:</span>
+                                  <span>{timestamp}</span>
+                                </TooltipContent>
+                              </TooltipPortal>
+                            </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger className="w-[150px] truncate text-left">
-                          <span data-testid={`test-row${i}-origin`}>
-                            {origin}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="text-xs">
-                          <p>{origin}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <AnsiHtml
-                        className="border-l pl-2 text-left"
-                        data-testid={`test-row${i}-msg`}
-                        text={formattedLine}
-                      />
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="mt-4 p-1 text-center font-body text-lg font-semibold tracking-wide text-gray-500 dark:text-gray-400">
-                  No logs available
+                            <Tooltip>
+                              <TooltipTrigger className="relative w-[150px] truncate text-left">
+                                <span data-testid={`test-row${i}-origin`}>
+                                  {origin}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipPortal>
+                                <TooltipContent className="font-mono text-xs">
+                                  <p>{origin}</p>
+                                </TooltipContent>
+                              </TooltipPortal>
+                            </Tooltip>
+                            <AnsiHtml
+                              className="border-l pl-2 text-left"
+                              data-testid={`test-row${i}-msg`}
+                              text={formattedLine}
+                            />
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <div className="mt-4 p-1 text-center font-body text-lg font-semibold tracking-wide text-gray-500 dark:text-gray-400">
+                        No logs available
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </ScrollArea>
             </div>
           </div>
         </SidebarInset>

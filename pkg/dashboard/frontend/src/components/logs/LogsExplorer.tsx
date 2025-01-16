@@ -6,7 +6,6 @@ import { useLogs } from '@/lib/hooks/use-logs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { format } from 'date-fns/format'
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow'
-import { ansiToReact } from './ansi'
 import {
   ArrowDownOnSquareIcon,
   EllipsisVerticalIcon,
@@ -28,6 +27,7 @@ import { SidebarInset, SidebarProvider } from '../ui/sidebar'
 import { FilterSidebar } from './FilterSidebar'
 import FilterTrigger from './FilterTrigger'
 import { ParamsProvider, useParams } from '@/hooks/use-params'
+import { AnsiHtml } from 'fancy-ansi/react'
 
 const exportJSON = async (logs: LogEntry[]) => {
   const json = JSON.stringify(logs, null, 2)
@@ -177,12 +177,11 @@ const Logs: React.FC = () => {
                           <p>{origin}</p>
                         </TooltipContent>
                       </Tooltip>
-                      <span
+                      <AnsiHtml
                         className="border-l pl-2 text-left"
                         data-testid={`test-row${i}-msg`}
-                      >
-                        {ansiToReact(formattedLine)}
-                      </span>
+                        text={formattedLine}
+                      />
                     </div>
                   )
                 })

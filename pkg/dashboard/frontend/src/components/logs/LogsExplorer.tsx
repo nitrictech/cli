@@ -147,7 +147,7 @@ const Logs: React.FC = () => {
               <span>Origin</span>
               <span>Message</span>
             </div>
-            <div className="mt-1 flex-col font-mono text-sm" data-testid="logs">
+            <div className="mt-1 flex-col font-mono text-sm">
               <ScrollArea type="auto" ref={parentRef} className="h-screen">
                 <div
                   className="relative w-full"
@@ -157,6 +157,7 @@ const Logs: React.FC = () => {
                 >
                   <div
                     className="absolute left-0 top-0 w-full"
+                    data-testid="logs"
                     style={{
                       transform: `translateY(${items[0]?.start ?? 0}px)`,
                     }}

@@ -4,6 +4,8 @@ import type {
   InputHTMLAttributes,
   SVGProps,
 } from 'react'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
 
 interface Props extends InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -20,30 +22,22 @@ const TextField = ({
   ...inputProps
 }: Props) => {
   return (
-    <div>
-      <label
-        htmlFor={id}
-        className={
-          hideLabel
-            ? 'sr-only'
-            : 'block text-sm font-medium leading-6 text-gray-900'
-        }
-      >
+    <div className="w-full">
+      <Label htmlFor={id} className={hideLabel ? 'sr-only' : undefined}>
         {label}
-      </label>
-      <div className="relative mt-2 rounded-md shadow-sm">
+      </Label>
+      <div
+        className={cn('relative rounded-md shadow-sm', !hideLabel && 'mt-2')}
+      >
         {Icon && (
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <Icon className="h-5 w-5 text-gray-400" aria-hidden="true" />
           </div>
         )}
-        <input
+        <Input
           {...inputProps}
           id={id}
-          className={cn(
-            'block w-full rounded-md border-0 px-2 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
-            Icon && 'pl-10',
-          )}
+          className={cn(Icon && 'pl-10', inputProps.className)}
         />
       </div>
     </div>

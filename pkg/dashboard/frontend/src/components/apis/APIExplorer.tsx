@@ -808,7 +808,18 @@ const APIExplorer = () => {
             >
               creating APIs
             </a>{' '}
-            as we are unable to find any existing APIs.
+            as we are unable to find any existing APIs. <br />
+            APIs built using{' '}
+            <a
+              className="underline"
+              target="_blank"
+              href="https://nitric.io/docs/reference/nodejs/http/http"
+              rel="noopener noreferrer"
+            >
+              the Nitric HTTP Proxy
+            </a>{' '}
+            will not appear in this view. You can test these using an external
+            tool such as cURL, Postman or Insomnia.
           </div>
         )}
       </Loading>

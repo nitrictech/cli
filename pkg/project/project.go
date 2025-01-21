@@ -54,6 +54,7 @@ type Project struct {
 
 	services []Service
 	batches  []Batch
+	websites []Website
 }
 
 func (p *Project) GetServices() []Service {
@@ -62,6 +63,10 @@ func (p *Project) GetServices() []Service {
 
 func (p *Project) GetBatchServices() []Batch {
 	return p.batches
+}
+
+func (p *Project) GetWebsites() []Website {
+	return p.websites
 }
 
 // TODO: Reduce duplicate code
@@ -161,6 +166,61 @@ func (p *Project) BuildServices(fs afero.Fs, useBuilder bool) (chan ServiceBuild
 
 			waitGroup.Done()
 		}(service, serviceBuildUpdateWriter)
+	}
+
+	go func() {
+		waitGroup.Wait()
+		// Drain the semaphore to make sure all goroutines have finished
+		for i := 0; i < cap(maxConcurrentBuilds); i++ {
+			maxConcurrentBuilds <- struct{}{}
+		}
+
+		close(updatesChan)
+	}()
+
+	return updatesChan, nil
+}
+
+// BuildWebsites - Builds all the websites in the project via build command
+func (p *Project) BuildWebsites(env map[string]string) (chan ServiceBuildUpdate, error) {
+	updatesChan := make(chan ServiceBuildUpdate)
+
+	maxConcurrentBuilds := make(chan struct{}, min(goruntime.NumCPU(), goruntime.GOMAXPROCS(0)))
+
+	waitGroup := sync.WaitGroup{}
+
+	for _, website := range p.websites {
+		waitGroup.Add(1)
+		// Create writer
+		serviceBuildUpdateWriter := NewBuildUpdateWriter(website.Name, updatesChan)
+
+		go func(site Website, writer io.Writer) {
+			// Acquire a token by filling the maxConcurrentBuilds channel
+			// this will block once the buffer is full
+			maxConcurrentBuilds <- struct{}{}
+
+			// Start goroutine
+			if err := site.Build(updatesChan, env); err != nil {
+				updatesChan <- ServiceBuildUpdate{
+					ServiceName: site.Name,
+					Err:         err,
+					Message:     err.Error(),
+					Status:      ServiceBuildStatus_Error,
+				}
+
+			} else {
+				updatesChan <- ServiceBuildUpdate{
+					ServiceName: site.Name,
+					Message:     "Build Complete",
+					Status:      ServiceBuildStatus_Complete,
+				}
+			}
+
+			// release our lock
+			<-maxConcurrentBuilds
+
+			waitGroup.Done()
+		}(website, serviceBuildUpdateWriter)
 	}
 
 	go func() {
@@ -526,6 +586,27 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 	return group.Wait()
 }
 
+// RunWebsites - Runs all the websites as http servers
+// use the stop channel to stop all running websites
+func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
+	group, _ := errgroup.WithContext(context.TODO())
+
+	for _, site := range p.websites {
+		s := site
+
+		group.Go(func() error {
+			absoluteOutputPath, err := s.GetAbsoluteOutputPath()
+			if err != nil {
+				return err
+			}
+
+			return localCloud.Websites.Serve(s.Name, absoluteOutputPath)
+		})
+	}
+
+	return group.Wait()
+}
+
 func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) string {
 	// Add the project name as a prefix to group service images
 	servicePath = fmt.Sprintf("%s_%s", pc.Name, servicePath)
@@ -545,6 +626,7 @@ func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) 
 func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *localconfig.LocalConfiguration, fs afero.Fs) (*Project, error) {
 	services := []Service{}
 	batches := []Batch{}
+	websites := []Website{}
 
 	matches := map[string]string{}
 
@@ -654,6 +736,33 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		}
 	}
 
+	for _, websiteSpec := range projectConfig.Websites {
+		if websiteSpec.Build.Output == "" {
+			return nil, fmt.Errorf("no build output provided for website %s", websiteSpec.GetBasedir())
+		}
+
+		if websiteSpec.IndexPage == "" {
+			websiteSpec.IndexPage = "index.html"
+		}
+
+		if websiteSpec.ErrorPage == "" {
+			websiteSpec.ErrorPage = "index.html"
+		}
+
+		projectRelativeWebsiteFolder := filepath.Join(projectConfig.Directory, websiteSpec.GetBasedir())
+
+		websiteName := fmt.Sprintf("websites_%s", strings.ToLower(projectRelativeWebsiteFolder))
+
+		websites = append(websites, Website{
+			Name:       websiteName,
+			basedir:    websiteSpec.GetBasedir(),
+			outputPath: websiteSpec.Build.Output,
+			buildCmd:   websiteSpec.Build.Command,
+			indexPage:  websiteSpec.IndexPage,
+			errorPage:  websiteSpec.ErrorPage,
+		})
+	}
+
 	// create an empty local configuration if none is provided
 	if localConfig == nil {
 		localConfig = &localconfig.LocalConfiguration{}
@@ -666,6 +775,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		LocalConfig: *localConfig,
 		services:    services,
 		batches:     batches,
+		websites:    websites,
 	}
 
 	if len(project.batches) > 0 && !slices.Contains(project.Preview, preview.Feature_BatchServices) {

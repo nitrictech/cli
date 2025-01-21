@@ -149,6 +149,23 @@ var runCmd = &cobra.Command{
 			tui.CheckErr(err)
 		}
 
+		websiteBuildUpdates, err := proj.BuildWebsites(loadEnv)
+		tui.CheckErr(err)
+
+		if isNonInteractive() {
+			fmt.Println("building project websites")
+			for update := range websiteBuildUpdates {
+				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+				}
+			}
+		} else {
+			prog := teax.NewProgram(build.NewModel(websiteBuildUpdates, "Building Websites"))
+			// blocks but quits once the above updates channel is closed by the build process
+			_, err = prog.Run()
+			tui.CheckErr(err)
+		}
+
 		// Run the app code (project services)
 		stopChan := make(chan bool)
 		updatesChan := make(chan project.ServiceRunUpdate)
@@ -172,6 +189,15 @@ var runCmd = &cobra.Command{
 
 		go func() {
 			err := proj.RunBatches(localCloud, stopChan, updatesChan, loadEnv)
+			if err != nil {
+				localCloud.Stop()
+
+				tui.CheckErr(err)
+			}
+		}()
+
+		go func() {
+			err := proj.RunWebsites(localCloud)
 			if err != nil {
 				localCloud.Stop()
 

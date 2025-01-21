@@ -84,12 +84,26 @@ type BatchConfiguration struct {
 	BaseServiceConfiguration `yaml:",inline"`
 }
 
+type Build struct {
+	Command string `yaml:"command"`
+	Output  string `yaml:"output"`
+}
+
+type WebsiteConfiguration struct {
+	BaseServiceConfiguration `yaml:",inline"`
+
+	Build     Build  `yaml:"build"`
+	IndexPage string `yaml:"index,omitempty"`
+	ErrorPage string `yaml:"error,omitempty"`
+}
+
 type ProjectConfiguration struct {
 	Name      string                          `yaml:"name"`
 	Directory string                          `yaml:"-"`
 	Services  []ServiceConfiguration          `yaml:"services"`
 	Ports     map[string]int                  `yaml:"ports,omitempty"`
 	Batches   []BatchConfiguration            `yaml:"batch-services"`
+	Websites  []WebsiteConfiguration          `yaml:"websites"`
 	Runtimes  map[string]RuntimeConfiguration `yaml:"runtimes,omitempty"`
 	Preview   []preview.Feature               `yaml:"preview,omitempty"`
 }

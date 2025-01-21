@@ -36,6 +36,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/storage"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
+	"github.com/nitrictech/cli/pkg/cloud/websites"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/grpcx"
 	"github.com/nitrictech/cli/pkg/netx"
@@ -67,6 +68,7 @@ type LocalCloud struct {
 	Storage    *storage.LocalStorageService
 	Topics     *topics.LocalTopicsAndSubscribersService
 	Websockets *websockets.LocalWebsocketService
+	Websites   *websites.LocalWebsiteService
 	Queues     *queues.LocalQueuesService
 	Databases  *sql.LocalSqlServer
 }
@@ -315,6 +317,8 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
+	localWebsites := websites.NewLocalWebsitesService()
+
 	return &LocalCloud{
 		servers:    make(map[string]*server.NitricServer),
 		Apis:       localApis,
@@ -325,6 +329,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		Storage:    localStorage,
 		Topics:     localTopics,
 		Websockets: localWebsockets,
+		Websites:   localWebsites,
 		Gateway:    localGateway,
 		Secrets:    localSecrets,
 		KeyValue:   keyvalueService,

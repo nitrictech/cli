@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 type Website struct {
@@ -32,6 +33,9 @@ type Website struct {
 
 	// the build command to build the website
 	buildCmd string
+
+	// the dev command to run the website
+	devCmd string
 
 	// the path to the website source files
 	outputPath string
@@ -51,9 +55,85 @@ func (s *Website) GetAbsoluteOutputPath() (string, error) {
 	return filepath.Abs(s.GetOutputPath())
 }
 
-// Run - runs the website using the provided command. TODO
+// Run - runs the website using the provided dev command
 func (s *Website) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
-	return nil
+	if s.devCmd == "" {
+		return fmt.Errorf("no dev command provided for website %s", s.basedir)
+	}
+
+	commandParts := strings.Split(s.devCmd, " ")
+	cmd := exec.Command(
+		commandParts[0],
+		commandParts[1:]...,
+	)
+
+	cmd.Env = append([]string{}, os.Environ()...)
+	cmd.Dir = s.basedir
+
+	for k, v := range env {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+
+	cmd.Stdout = &ServiceRunUpdateWriter{
+		updates:     updates,
+		serviceName: s.Name,
+		label:       s.Name,
+		status:      ServiceRunStatus_Running,
+	}
+
+	cmd.Stderr = &ServiceRunUpdateWriter{
+		updates:     updates,
+		serviceName: s.Name,
+		label:       s.Name,
+		status:      ServiceRunStatus_Error,
+	}
+
+	errChan := make(chan error)
+
+	go func() {
+		err := cmd.Start()
+		if err != nil {
+			errChan <- fmt.Errorf("error starting website %s: %w", s.Name, err)
+		} else {
+			updates <- ServiceRunUpdate{
+				ServiceName: s.Name,
+				Label:       "nitric",
+				Status:      ServiceRunStatus_Running,
+				Message:     fmt.Sprintf("started website %s", s.Name),
+			}
+		}
+
+		err = cmd.Wait()
+		if err != nil {
+			// provide runtime errors as a run update rather than as a fatal error
+			updates <- ServiceRunUpdate{
+				ServiceName: s.Name,
+				Label:       "nitric",
+				Status:      ServiceRunStatus_Error,
+				Err:         err,
+			}
+		}
+
+		errChan <- nil
+	}()
+
+	go func(cmd *exec.Cmd) {
+		<-stop
+
+		err := cmd.Process.Signal(syscall.SIGTERM)
+		if err != nil {
+			_ = cmd.Process.Kill()
+		}
+	}(cmd)
+
+	err := <-errChan
+	updates <- ServiceRunUpdate{
+		ServiceName: s.Name,
+		Status:      ServiceRunStatus_Error,
+		Err:         err,
+	}
+
+	return err
 }
 
 // Build - builds the website using the provided command
@@ -112,15 +192,6 @@ func (s *Website) Build(updates chan ServiceBuildUpdate, env map[string]string) 
 		errChan <- nil
 	}()
 
-	// go func(cmd *exec.Cmd) {
-	// 	<-stop
-
-	// 	err := cmd.Process.Signal(syscall.SIGTERM)
-	// 	if err != nil {
-	// 		_ = cmd.Process.Kill()
-	// 	}
-	// }(cmd)
-
 	err := <-errChan
 
 	if err != nil {
@@ -129,12 +200,6 @@ func (s *Website) Build(updates chan ServiceBuildUpdate, env map[string]string) 
 			Status:      ServiceBuildStatus_Error,
 			Err:         err,
 		}
-	} else {
-		// updates <- ServiceBuildUpdate{
-		// 	ServiceName: s.Name,
-		// 	Status:      ServiceBuildStatus_Complete,
-		// 	Message:     fmt.Sprintf("website %s built successfully", s.Name),
-		// }
 	}
 
 	return err

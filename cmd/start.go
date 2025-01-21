@@ -238,6 +238,16 @@ var startCmd = &cobra.Command{
 			}
 		}()
 
+		// FIXME: Duplicate code
+		go func() {
+			err := proj.RunWebsitesWithCommand(localCloud, stopChan, updatesChan, localEnv)
+			if err != nil {
+				localCloud.Stop()
+
+				tui.CheckErr(err)
+			}
+		}()
+
 		// FIXME: This is a hack to get labelled logs into the TUI
 		// We should refactor the system logs to be more generic
 		systemChan := make(chan project.ServiceRunUpdate)

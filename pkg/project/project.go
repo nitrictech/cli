@@ -587,7 +587,6 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 }
 
 // RunWebsites - Runs all the websites as http servers
-// use the stop channel to stop all running websites
 func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
 	group, _ := errgroup.WithContext(context.TODO())
 
@@ -601,6 +600,40 @@ func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
 			}
 
 			return localCloud.Websites.Serve(s.Name, absoluteOutputPath)
+		})
+	}
+
+	return group.Wait()
+}
+
+// RunWebsitesWithCommand - Runs all the websites using a startup command
+// use the stop channel to stop all running websites
+func (p *Project) RunWebsitesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
+	stopChannels := lo.FanOut[bool](len(p.websites), 1, stop)
+
+	group, _ := errgroup.WithContext(context.TODO())
+
+	for i, site := range p.websites {
+		idx := i
+		s := site
+
+		// start the service with the given file reference from its projects CWD
+		group.Go(func() error {
+			envVariables := map[string]string{
+				"PYTHONUNBUFFERED":   "TRUE", // ensure all print statements print immediately for python
+				"NITRIC_ENVIRONMENT": "run",
+			}
+
+			for key, value := range env {
+				envVariables[key] = value
+			}
+
+			err := s.Run(stopChannels[idx], updates, envVariables)
+			if err != nil {
+				return fmt.Errorf("%s: %w", s.Name, err)
+			}
+
+			return nil
 		})
 	}
 
@@ -758,6 +791,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			basedir:    websiteSpec.GetBasedir(),
 			outputPath: websiteSpec.Build.Output,
 			buildCmd:   websiteSpec.Build.Command,
+			devCmd:     websiteSpec.Dev.Command,
 			indexPage:  websiteSpec.IndexPage,
 			errorPage:  websiteSpec.ErrorPage,
 		})

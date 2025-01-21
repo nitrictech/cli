@@ -89,10 +89,15 @@ type Build struct {
 	Output  string `yaml:"output"`
 }
 
+type Dev struct {
+	Command string `yaml:"command"`
+}
+
 type WebsiteConfiguration struct {
 	BaseServiceConfiguration `yaml:",inline"`
 
 	Build     Build  `yaml:"build"`
+	Dev       Dev    `yaml:"dev"`
 	IndexPage string `yaml:"index,omitempty"`
 	ErrorPage string `yaml:"error,omitempty"`
 }

@@ -21,21 +21,36 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/nitrictech/cli/pkg/netx"
-	"github.com/nitrictech/nitric/core/pkg/logger"
 )
 
+type Website struct {
+	Name      string
+	BaseRoute string
+	OutputDir string
+	IndexPage string
+	ErrorPage string
+}
+
 type (
-	WebsiteName = string
-	State       = map[WebsiteName]string
+	WebsiteName   = string
+	State         = map[WebsiteName]string
+	GetApiAddress = func(apiName string) string
 )
 
 type LocalWebsiteService struct {
 	websiteRegLock sync.RWMutex
 	state          State
+	port           int
+	getApiAddress  GetApiAddress
 
 	bus EventBus.Bus
 }
@@ -52,16 +67,11 @@ func (l *LocalWebsiteService) SubscribeToState(fn func(State)) {
 }
 
 // register - Register a new website
-func (l *LocalWebsiteService) register(websiteName string, port int) {
-	if _, exists := l.state[websiteName]; exists {
-		logger.Warnf("Website %s is already registered", websiteName)
-		return
-	}
-
+func (l *LocalWebsiteService) register(website Website) {
 	l.websiteRegLock.Lock()
 	defer l.websiteRegLock.Unlock()
 
-	l.state[websiteName] = fmt.Sprintf("http://localhost:%d", port)
+	l.state[website.Name] = fmt.Sprintf("http://localhost:%d/%s", l.port, strings.TrimPrefix(website.BaseRoute, "/"))
 
 	l.publishState()
 }
@@ -76,45 +86,110 @@ func (l *LocalWebsiteService) deregister(websiteName string) {
 	l.publishState()
 }
 
+type staticSiteHandler struct {
+	website Website
+	port    int
+}
+
+// ServeHTTP - Serve a static website from the local filesystem
+func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := filepath.Join(h.website.OutputDir, r.URL.Path)
+
+	// check whether a file exists or is a directory at the given path
+	fi, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// if the file doesn't exist, serve the error page with a 404 status code
+			http.ServeFile(w, r, filepath.Join(h.website.OutputDir, h.website.ErrorPage))
+			return
+		}
+
+		// if we got an error (that wasn't that the file doesn't exist) stating the
+		// file, return a 500 internal server error and stop
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if fi.IsDir() {
+		http.ServeFile(w, r, filepath.Join(h.website.OutputDir, h.website.IndexPage))
+		return
+	}
+
+	// otherwise, use http.FileServer to serve the static file
+	http.FileServer(http.Dir(h.website.OutputDir)).ServeHTTP(w, r)
+}
+
 // Serve - Serve a website from the local filesystem
-func (l *LocalWebsiteService) Serve(websiteName string, path string) error {
-	// serve the website from path using http server
-	fs := http.FileServer(http.Dir(path))
-
-	// Create a new ServeMux to handle the request
-	mux := http.NewServeMux()
-	mux.Handle("/", fs)
-
-	// get an available port
-	ports, err := netx.TakePort(1)
+func (l *LocalWebsiteService) Start(websites []Website) error {
+	newLis, err := netx.GetNextListener(netx.MinPort(5000))
 	if err != nil {
 		return err
 	}
 
-	port := ports[0] // Take the first available port
+	l.port = newLis.Addr().(*net.TCPAddr).Port
 
-	// Start the HTTP server on the assigned port
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		l.deregister(websiteName)
-		return fmt.Errorf("failed to start server on port %d: %w", port, err)
+	_ = newLis.Close()
+
+	// Initialize the multiplexer only if websites will be served
+	mux := http.NewServeMux()
+
+	// Register the API handler
+	mux.HandleFunc("/api/{name}/", func(w http.ResponseWriter, r *http.Request) {
+		// get the api name from the request path
+		apiName := r.PathValue("name")
+
+		// get the address of the api
+		apiAddress := l.getApiAddress(apiName)
+		if apiAddress == "" {
+			http.Error(w, fmt.Sprintf("api %s not found", apiName), http.StatusNotFound)
+			return
+		}
+
+		// Strip /api/{name}/ from the URL path
+		newPath := strings.TrimPrefix(r.URL.Path, fmt.Sprintf("/api/%s", apiName))
+
+		// Target backend API server
+		target, _ := url.Parse(apiAddress)
+
+		// Reverse proxy request
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		r.URL.Path = newPath
+
+		// Forward the modified request to the backend
+		proxy.ServeHTTP(w, r)
+	})
+
+	// Register the SPA handler for each website
+	for _, website := range websites {
+		spa := staticSiteHandler{website: website, port: l.port}
+
+		if website.BaseRoute == "/" {
+			mux.Handle("/", spa)
+		} else {
+			mux.Handle(website.BaseRoute+"/", http.StripPrefix(website.BaseRoute+"/", spa))
+		}
 	}
 
+	// Start the server with the multiplexer
 	go func() {
-		if err := http.Serve(listener, mux); err != nil {
-			logger.Errorf("Error serving website %s: %s", websiteName, err.Error())
-			l.deregister(websiteName)
+		addr := fmt.Sprintf(":%d", l.port)
+		if err := http.ListenAndServe(addr, mux); err != nil {
+			fmt.Printf("Failed to start server: %s\n", err)
 		}
 	}()
 
-	l.register(websiteName, port)
+	// Register the websites
+	for _, website := range websites {
+		l.register(website)
+	}
 
 	return nil
 }
 
-func NewLocalWebsitesService() *LocalWebsiteService {
+func NewLocalWebsitesService(getApiAddress GetApiAddress) *LocalWebsiteService {
 	return &LocalWebsiteService{
-		state: State{},
-		bus:   EventBus.New(),
+		state:         State{},
+		bus:           EventBus.New(),
+		getApiAddress: getApiAddress,
 	}
 }

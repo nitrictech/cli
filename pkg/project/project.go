@@ -39,6 +39,7 @@ import (
 	goruntime "runtime"
 
 	"github.com/nitrictech/cli/pkg/cloud"
+	"github.com/nitrictech/cli/pkg/cloud/websites"
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project/localconfig"
@@ -588,22 +589,25 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 
 // RunWebsites - Runs all the websites as http servers
 func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
-	group, _ := errgroup.WithContext(context.TODO())
+	sites := []websites.Website{}
 
+	// register websites with the local cloud
 	for _, site := range p.websites {
-		s := site
+		outputDir, err := site.GetAbsoluteOutputPath()
+		if err != nil {
+			return fmt.Errorf("unable to get absolute output path for website %s: %w", site.basedir, err)
+		}
 
-		group.Go(func() error {
-			absoluteOutputPath, err := s.GetAbsoluteOutputPath()
-			if err != nil {
-				return err
-			}
-
-			return localCloud.Websites.Serve(s.Name, absoluteOutputPath)
+		sites = append(sites, websites.Website{
+			Name:      site.Name,
+			BaseRoute: site.path,
+			OutputDir: outputDir,
+			IndexPage: site.indexPage,
+			ErrorPage: site.errorPage,
 		})
 	}
 
-	return group.Wait()
+	return localCloud.Websites.Start(sites)
 }
 
 // RunWebsitesWithCommand - Runs all the websites using a startup command
@@ -774,6 +778,10 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			return nil, fmt.Errorf("no build output provided for website %s", websiteSpec.GetBasedir())
 		}
 
+		if websiteSpec.Path == "" {
+			websiteSpec.Path = "/" // default to root path
+		}
+
 		if websiteSpec.IndexPage == "" {
 			websiteSpec.IndexPage = "index.html"
 		}
@@ -789,12 +797,26 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		websites = append(websites, Website{
 			Name:       websiteName,
 			basedir:    websiteSpec.GetBasedir(),
+			path:       websiteSpec.Path,
 			outputPath: websiteSpec.Build.Output,
 			buildCmd:   websiteSpec.Build.Command,
 			devCmd:     websiteSpec.Dev.Command,
 			indexPage:  websiteSpec.IndexPage,
 			errorPage:  websiteSpec.ErrorPage,
 		})
+	}
+
+	// check for duplicate paths in websites and error
+	siteDuplicates := lo.FindDuplicatesBy(websites, func(website Website) string {
+		return website.path
+	})
+
+	if len(siteDuplicates) > 0 {
+		duplicatePaths := lo.Map(siteDuplicates, func(website Website, i int) string {
+			return website.path
+		})
+
+		return nil, fmt.Errorf("duplicate website paths found: %s", strings.Join(duplicatePaths, ", "))
 	}
 
 	// create an empty local configuration if none is provided

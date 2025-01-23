@@ -31,6 +31,9 @@ type Website struct {
 	// the base directory for the website source files
 	basedir string
 
+	// the path for the website subroutes, / is the root
+	path string
+
 	// the build command to build the website
 	buildCmd string
 

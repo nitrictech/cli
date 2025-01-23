@@ -91,6 +91,7 @@ type Build struct {
 
 type Dev struct {
 	Command string `yaml:"command"`
+	Url     string `yaml:"url,omitempty"`
 }
 
 type WebsiteConfiguration struct {
@@ -98,6 +99,7 @@ type WebsiteConfiguration struct {
 
 	Build     Build  `yaml:"build"`
 	Dev       Dev    `yaml:"dev"`
+	Path      string `yaml:"path"`
 	IndexPage string `yaml:"index,omitempty"`
 	ErrorPage string `yaml:"error,omitempty"`
 }

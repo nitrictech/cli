@@ -41,9 +41,10 @@ import (
 	"github.com/nitrictech/cli/pkg/view/tui/commands/build"
 	stack_down "github.com/nitrictech/cli/pkg/view/tui/commands/stack/down"
 	stack_new "github.com/nitrictech/cli/pkg/view/tui/commands/stack/new"
+	stack_preview "github.com/nitrictech/cli/pkg/view/tui/commands/stack/preview"
 	stack_select "github.com/nitrictech/cli/pkg/view/tui/commands/stack/select"
-	stack_up "github.com/nitrictech/cli/pkg/view/tui/commands/stack/up"
 	"github.com/nitrictech/cli/pkg/view/tui/components/list"
+	"github.com/nitrictech/cli/pkg/view/tui/components/listprompt"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
 	"github.com/nitrictech/cli/pkg/view/tui/teax"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
@@ -56,6 +57,7 @@ var (
 	noBuilder     bool
 	forceNewStack bool
 	envFile       string
+	skipPreview   bool
 )
 
 var stackCmd = &cobra.Command{
@@ -303,70 +305,161 @@ var stackUpdateCmd = &cobra.Command{
 		attributesStruct, err := structpb.NewStruct(attributes)
 		tui.CheckErr(err)
 
-		eventChan, errorChan := deploymentClient.Up(&deploymentspb.DeploymentUpRequest{
-			Spec:        spec,
-			Attributes:  attributesStruct,
-			Interactive: true,
+		if !skipPreview {
+			eventChan, errorChan := deploymentClient.Preview(&deploymentspb.DeploymentPreviewRequest{
+				Spec:        spec,
+				Attributes:  attributesStruct,
+				Interactive: true,
+			})
+
+			// Step 5b. Communicate with server to get preview
+			if isNonInteractive() {
+				providerErrorDetected := false
+
+				fmt.Printf("Previewing %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
+				go func() {
+					for update := range errorChan {
+						fmt.Printf("Error: %s\n", update)
+						providerErrorDetected = true
+					}
+				}()
+
+				go func() {
+					for outMessage := range providerStdout {
+						fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
+					}
+				}()
+
+				// non-interactive environment
+				for update := range eventChan {
+					switch content := update.Content.(type) {
+					case *deploymentspb.DeploymentPreviewEvent_Message:
+						fmt.Printf("%s\n", content.Message)
+					case *deploymentspb.DeploymentPreviewEvent_Update:
+						updateResType := ""
+						updateResName := ""
+						if content.Update.Id != nil {
+							updateResType = content.Update.Id.Type.String()
+							updateResName = content.Update.Id.Name
+						}
+
+						if updateResType == "" {
+							updateResType = "Stack"
+						}
+						if updateResName == "" {
+							updateResName = stackConfig.Name
+						}
+						if content.Update.SubResource != "" {
+							updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
+						}
+
+						fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
+					case *deploymentspb.DeploymentPreviewEvent_Result:
+						fmt.Printf("\nResult: %s\n", content.Result.GetText())
+					}
+				}
+
+				// ensure the process exits with a non-zero status code after all messages are processed
+				if providerErrorDetected {
+
+				}
+			} else {
+				// interactive environment
+				// Step 5c. Start the stack preview view\
+				stackPreview := stack_preview.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+				_, err = teax.NewProgram(stackPreview).Run()
+			}
+		}
+
+		// Check if the thing is active
+
+		confirmModel := listprompt.NewListPrompt(listprompt.ListPromptArgs{
+			Items:  list.StringsToListItems([]string{"confirm deployment", "cancel"}),
+			Tag:    "deploy",
+			Prompt: "Finished preview. Would you like to perform the deployment?",
 		})
 
-		// Step 5b. Communicate with server to share progress of ...
-		if isNonInteractive() {
-			providerErrorDetected := false
+		selection, err := teax.NewProgram(confirmModel).Run()
+		tui.CheckErr(err)
 
-			fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
-			go func() {
-				for update := range errorChan {
-					fmt.Printf("Error: %s\n", update)
-					providerErrorDetected = true
-				}
-			}()
+		v := view.New()
+		v.Break()
+		fmt.Println("")
 
-			go func() {
-				for outMessage := range providerStdout {
-					fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
-				}
-			}()
-
-			// non-interactive environment
-			for update := range eventChan {
-				switch content := update.Content.(type) {
-				case *deploymentspb.DeploymentUpEvent_Message:
-					fmt.Printf("%s\n", content.Message)
-				case *deploymentspb.DeploymentUpEvent_Update:
-					updateResType := ""
-					updateResName := ""
-					if content.Update.Id != nil {
-						updateResType = content.Update.Id.Type.String()
-						updateResName = content.Update.Id.Name
-					}
-
-					if updateResType == "" {
-						updateResType = "Stack"
-					}
-					if updateResName == "" {
-						updateResName = stackConfig.Name
-					}
-					if content.Update.SubResource != "" {
-						updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
-					}
-
-					fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
-				case *deploymentspb.DeploymentUpEvent_Result:
-					fmt.Printf("\nResult: %s\n", content.Result.GetText())
-				}
-			}
-
-			// ensure the process exits with a non-zero status code after all messages are processed
-			if providerErrorDetected {
-				os.Exit(1)
-			}
-		} else {
-			// interactive environment
-			// Step 5c. Start the stack up view
-			stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
-			_, err = teax.NewProgram(stackUp).Run()
-			tui.CheckErr(err)
+		stackSelection = selection.(listprompt.ListPrompt).Choice()
+		if stackSelection == "cancel" {
+			v.Addln("Cancelling deployment")
+			fmt.Println(v.Render())
+			return
 		}
+
+		v.Addln("Deployed")
+		fmt.Println(v.Render())
+
+		// eventChan, errorChan := deploymentClient.Up(&deploymentspb.DeploymentUpRequest{
+		// 	Spec:        spec,
+		// 	Attributes:  attributesStruct,
+		// 	Interactive: true,
+		// })
+
+		// // Step 5d. Communicate with server to share progress of update
+		// if isNonInteractive() {
+		// 	providerErrorDetected := false
+
+		// 	fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
+		// 	go func() {
+		// 		for update := range errorChan {
+		// 			fmt.Printf("Error: %s\n", update)
+		// 			providerErrorDetected = true
+		// 		}
+		// 	}()
+
+		// 	go func() {
+		// 		for outMessage := range providerStdout {
+		// 			fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
+		// 		}
+		// 	}()
+
+		// 	// non-interactive environment
+		// 	for update := range eventChan {
+		// 		switch content := update.Content.(type) {
+		// 		case *deploymentspb.DeploymentUpEvent_Message:
+		// 			fmt.Printf("%s\n", content.Message)
+		// 		case *deploymentspb.DeploymentUpEvent_Update:
+		// 			updateResType := ""
+		// 			updateResName := ""
+		// 			if content.Update.Id != nil {
+		// 				updateResType = content.Update.Id.Type.String()
+		// 				updateResName = content.Update.Id.Name
+		// 			}
+
+		// 			if updateResType == "" {
+		// 				updateResType = "Stack"
+		// 			}
+		// 			if updateResName == "" {
+		// 				updateResName = stackConfig.Name
+		// 			}
+		// 			if content.Update.SubResource != "" {
+		// 				updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
+		// 			}
+
+		// 			fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
+		// 		case *deploymentspb.DeploymentUpEvent_Result:
+		// 			fmt.Printf("\nResult: %s\n", content.Result.GetText())
+		// 		}
+		// 	}
+
+		// 	// ensure the process exits with a non-zero status code after all messages are processed
+		// 	if providerErrorDetected {
+		// 		os.Exit(1)
+		// 	}
+		// } else {
+		// 	// interactive environment
+		// 	// Step 5e. Start the stack up view
+		// 	stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+		// 	_, err = teax.NewProgram(stackUp).Run()
+		// 	tui.CheckErr(err)
+		// }
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -562,6 +655,268 @@ nitric stack down -s aws -y`,
 	Args: cobra.ExactArgs(0),
 }
 
+var stackPreviewCommand = &cobra.Command{
+	Use:     "preview [-s stack]",
+	Short:   "Preview the updates for a deployed stack",
+	Long:    `Preview the updates a deployed stack`,
+	Example: `nitric stack preview -s aws`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fs := afero.NewOsFs()
+
+		stackFiles, err := stack.GetAllStackFiles(fs)
+		tui.CheckErr(err)
+
+		if len(stackFiles) == 0 {
+			tui.CheckErr(fmt.Errorf("no stacks found in project, to create a new one run `nitric stack new`"))
+		}
+
+		// Step 0. Get the stack file, or prompt if more than 1.
+		stackSelection := stackFlag
+
+		if isNonInteractive() {
+			if len(stackFiles) > 1 && stackSelection == "" {
+				tui.CheckErr(fmt.Errorf("multiple stacks found in project, please specify one with -s"))
+			}
+		}
+
+		if stackSelection == "" {
+			if len(stackFiles) > 1 {
+				stackList := make([]list.ListItem, len(stackFiles))
+
+				for i, stackFile := range stackFiles {
+					stackName, err := stack.GetStackNameFromFileName(stackFile)
+					tui.CheckErr(err)
+					stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackName)
+					tui.CheckErr(err)
+					stackList[i] = stack_select.StackListItem{
+						Name:     stackConfig.Name,
+						Provider: stackConfig.Provider,
+					}
+				}
+
+				promptModel := stack_select.New(stack_select.Args{
+					Prompt:    "Which stack would you like to preview?",
+					StackList: stackList,
+				})
+
+				selection, err := teax.NewProgram(promptModel).Run()
+				tui.CheckErr(err)
+				stackSelection = selection.(stack_select.Model).Choice()
+				if stackSelection == "" {
+					return
+				}
+			} else {
+				stackSelection, err = stack.GetStackNameFromFileName(stackFiles[0])
+				tui.CheckErr(err)
+			}
+		}
+
+		stackConfig, err := stack.ConfigFromName[map[string]any](fs, stackSelection)
+		tui.CheckErr(err)
+
+		if !isNonInteractive() {
+			_ = pulumi.EnsurePulumiPassphrase(fs)
+		}
+
+		// print provider version check
+		update.PrintOutdatedProviderWarning(stackConfig.Provider)
+
+		proj, err := project.FromFile(fs, "")
+		tui.CheckErr(err)
+
+		// Step 0a. Locate/Download provider where applicable.
+		prov, err := provider.NewProvider(stackConfig.Provider, proj, fs)
+		tui.CheckErr(err)
+
+		err = prov.Install()
+		tui.CheckErr(err)
+
+		// Build the Project's Services (Containers)
+		buildUpdates, err := proj.BuildServices(fs, !noBuilder)
+		tui.CheckErr(err)
+
+		batchBuildUpdates, err := proj.BuildBatches(fs, !noBuilder)
+		tui.CheckErr(err)
+
+		allBuildUpdates := lo.FanIn(10, buildUpdates, batchBuildUpdates)
+
+		if isNonInteractive() {
+			fmt.Println("building project services")
+			for _, service := range proj.GetServices() {
+				fmt.Printf("service matched '%s', auto-naming this service '%s'\n", service.GetFilePath(), service.Name)
+			}
+
+			// non-interactive environment
+			for update := range allBuildUpdates {
+				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+				}
+			}
+		} else {
+			prog := teax.NewProgram(build.NewModel(allBuildUpdates, "Building Services"))
+			// blocks but quits once the above updates channel is closed by the build process
+			buildModel, err := prog.Run()
+			tui.CheckErr(err)
+			if buildModel.(build.Model).Err != nil {
+				tui.CheckErr(fmt.Errorf("error building services"))
+			}
+		}
+
+		// Step 2. Start the collectors and containers (respectively in pairs)
+		// Step 3. Merge requirements from collectors into a specification
+		serviceRequirements, err := proj.CollectServicesRequirements()
+		tui.CheckErr(err)
+
+		batchRequirements, err := proj.CollectBatchRequirements()
+		tui.CheckErr(err)
+
+		additionalEnvFiles := []string{}
+
+		if envFile != "" {
+			additionalEnvFiles = append(additionalEnvFiles, envFile)
+		}
+
+		envVariables, err := env.ReadLocalEnv(additionalEnvFiles...)
+		if err != nil && os.IsNotExist(err) {
+			if !os.IsNotExist(err) {
+				tui.CheckErr(err)
+			}
+			// If it doesn't exist set blank
+			envVariables = map[string]string{}
+		}
+
+		// Allow Beta providers to be run if 'beta-providers' is enabled in preview flags
+		if slices.Contains(proj.Preview, preview.Feature_BetaProviders) {
+			envVariables["NITRIC_BETA_PROVIDERS"] = "true"
+		}
+
+		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements)
+		tui.CheckErr(err)
+
+		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, batchRequirements, fs)
+		tui.CheckErr(err)
+		// Build images from contexts and provide updates on the builds
+
+		if len(migrationImageContexts) > 0 {
+			migrationBuildUpdates, err := project.BuildMigrationImages(fs, migrationImageContexts, !noBuilder)
+			tui.CheckErr(err)
+
+			if isNonInteractive() {
+				fmt.Println("building project migration images")
+				// non-interactive environment
+				for update := range migrationBuildUpdates {
+					for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+						fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+					}
+				}
+			} else {
+				prog := teax.NewProgram(build.NewModel(migrationBuildUpdates, "Building Database Migrations"))
+				// blocks but quits once the above updates channel is closed by the build process
+				buildModel, err := prog.Run()
+				tui.CheckErr(err)
+				if buildModel.(build.Model).Err != nil {
+					tui.CheckErr(fmt.Errorf("error building services"))
+				}
+			}
+		}
+
+		providerStdout := make(chan string)
+
+		// Step 4. Start the deployment provider server
+		providerAddress, err := prov.Start(&provider.StartOptions{
+			Env:    envVariables,
+			StdOut: providerStdout,
+			StdErr: providerStdout,
+		})
+		tui.CheckErr(err)
+		defer func() {
+			err := prov.Stop()
+			tui.CheckErr(err)
+		}()
+
+		// Step 5a. Send specification to provider for deployment
+		deploymentClient := provider.NewDeploymentClient(providerAddress, true)
+
+		attributes := map[string]interface{}{}
+
+		attributes["stack"] = stackConfig.Name
+		attributes["project"] = proj.Name
+
+		for k, v := range stackConfig.Config {
+			attributes[k] = v
+		}
+
+		attributesStruct, err := structpb.NewStruct(attributes)
+		tui.CheckErr(err)
+
+		eventChan, errorChan := deploymentClient.Preview(&deploymentspb.DeploymentPreviewRequest{
+			Spec:        spec,
+			Attributes:  attributesStruct,
+			Interactive: true,
+		})
+
+		// Step 5b. Communicate with server to share progress of ...
+		if isNonInteractive() {
+			providerErrorDetected := false
+
+			fmt.Printf("Previewing %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
+			go func() {
+				for update := range errorChan {
+					fmt.Printf("Error: %s\n", update)
+					providerErrorDetected = true
+				}
+			}()
+
+			go func() {
+				for outMessage := range providerStdout {
+					fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
+				}
+			}()
+
+			// non-interactive environment
+			for update := range eventChan {
+				switch content := update.Content.(type) {
+				case *deploymentspb.DeploymentPreviewEvent_Message:
+					fmt.Printf("%s\n", content.Message)
+				case *deploymentspb.DeploymentPreviewEvent_Update:
+					updateResType := ""
+					updateResName := ""
+					if content.Update.Id != nil {
+						updateResType = content.Update.Id.Type.String()
+						updateResName = content.Update.Id.Name
+					}
+
+					if updateResType == "" {
+						updateResType = "Stack"
+					}
+					if updateResName == "" {
+						updateResName = stackConfig.Name
+					}
+					if content.Update.SubResource != "" {
+						updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
+					}
+
+					fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
+				case *deploymentspb.DeploymentPreviewEvent_Result:
+					fmt.Printf("\nResult: %s\n", content.Result.GetText())
+				}
+			}
+
+			// ensure the process exits with a non-zero status code after all messages are processed
+			if providerErrorDetected {
+				os.Exit(1)
+			}
+		} else {
+			// interactive environment
+			// Step 5c. Start the stack preview view
+			stackPreview := stack_preview.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+			_, err = teax.NewProgram(stackPreview).Run()
+		}
+	},
+	Args:    cobra.MinimumNArgs(0),
+	Aliases: []string{"preview"},
+}
+
 var stackListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all stacks in the project",
@@ -635,12 +990,20 @@ func init() {
 	stackUpdateCmd.Flags().BoolVarP(&noBuilder, "no-builder", "", false, "don't create a buildx container")
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
+	stackUpdateCmd.Flags().BoolVarP(&skipPreview, "skip-preview", "", false, "ignore preview")
 	tui.CheckErr(AddOptions(stackUpdateCmd, false))
 
 	// Delete Stack (Down)
 	stackCmd.AddCommand(tui.AddDependencyCheck(stackDeleteCmd))
 	stackDeleteCmd.Flags().BoolVarP(&confirmDown, "yes", "y", false, "confirm the destruction of the stack")
 	tui.CheckErr(AddOptions(stackDeleteCmd, false))
+
+	// Preview Stack (Preview)
+	stackCmd.AddCommand(tui.AddDependencyCheck(stackPreviewCommand, tui.RequireContainerBuilder))
+	stackPreviewCommand.Flags().BoolVarP(&noBuilder, "no-builder", "", false, "don't create a buildx container")
+	stackPreviewCommand.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
+	stackPreviewCommand.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
+	tui.CheckErr(AddOptions(stackPreviewCommand, false))
 
 	// List Stacks
 	stackCmd.AddCommand(stackListCmd)
@@ -650,4 +1013,5 @@ func init() {
 
 	addAlias("stack update", "up", true)
 	addAlias("stack down", "down", true)
+	addAlias("stack preview", "preview", true)
 }

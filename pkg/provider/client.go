@@ -135,6 +135,49 @@ func (p *DeploymentClient) Down(deploymentRequest *deploy.DeploymentDownRequest)
 	return eventChan, errorChan
 }
 
+func (p *DeploymentClient) Preview(deploymentRequest *deploy.DeploymentPreviewRequest) (<-chan *deploy.DeploymentPreviewEvent, <-chan error) {
+	eventChan := make(chan *deploy.DeploymentPreviewEvent)
+	errorChan := make(chan error)
+
+	go func() {
+		defer close(eventChan)
+
+		conn, err := p.dialConnection()
+		if err != nil {
+			errorChan <- fmt.Errorf("failed to connect to provider at %s: %w", p.address, err)
+			return
+		}
+		defer conn.Close()
+
+		client := deploy.NewDeploymentClient(conn)
+
+		op, err := client.Preview(context.Background(), deploymentRequest)
+		if err != nil {
+			errorChan <- err
+			return
+		}
+
+		for {
+			evt, err := op.Recv()
+			if err != nil {
+				if !errors.Is(err, io.EOF) {
+					if st, ok := status.FromError(err); ok {
+						errorChan <- fmt.Errorf("%s", st.Message())
+					} else {
+						errorChan <- err
+					}
+				}
+
+				break
+			}
+
+			eventChan <- evt
+		}
+	}()
+
+	return eventChan, errorChan
+}
+
 func NewDeploymentClient(address string, interactive bool) *DeploymentClient {
 	return &DeploymentClient{
 		address:     address,

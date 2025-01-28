@@ -66,6 +66,8 @@ Documentation for all available commands:
   (alias: nitric down)
 - nitric stack list : List all stacks in the project
 - nitric stack new [stackName] [providerName] : Create a new Nitric stack
+- nitric stack preview [-s stack] : Preview the updates for a deployed stack
+  (alias: nitric preview)
 - nitric stack update [-s stack] : Create or update a deployed stack
   (alias: nitric up)
 - nitric start : Run nitric services locally for development and testing

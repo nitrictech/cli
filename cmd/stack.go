@@ -306,85 +306,30 @@ var stackUpdateCmd = &cobra.Command{
 		attributesStruct, err := structpb.NewStruct(attributes)
 		tui.CheckErr(err)
 
-		if !skipPreview {
+		if !skipPreview && !isNonInteractive() {
 			eventChan, errorChan := deploymentClient.Preview(&deploymentspb.DeploymentPreviewRequest{
 				Spec:        spec,
 				Attributes:  attributesStruct,
 				Interactive: true,
 			})
 
-			// Step 5b. Communicate with server to get preview
-			if isNonInteractive() {
-				providerErrorDetected := false
+			stackPreview := stack_preview.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+			_, err = teax.NewProgram(stackPreview).Run()
 
-				fmt.Printf("Previewing %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
-				go func() {
-					for update := range errorChan {
-						fmt.Printf("Error: %s\n", update)
-						providerErrorDetected = true
-					}
-				}()
+			confirmModel := stack_preview.NewConfirmDeployment(listprompt.ListPromptArgs{
+				Items:  list.StringsToListItems([]string{"confirm deployment", "cancel"}),
+				Tag:    "deploy",
+				Prompt: "Would you like to perform the deployment?",
+			})
 
-				go func() {
-					for outMessage := range providerStdout {
-						fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
-					}
-				}()
+			selection, err := teax.NewProgram(confirmModel).Run()
+			tui.CheckErr(err)
 
-				// non-interactive environment
-				for update := range eventChan {
-					switch content := update.Content.(type) {
-					case *deploymentspb.DeploymentPreviewEvent_Message:
-						fmt.Printf("%s\n", content.Message)
-					case *deploymentspb.DeploymentPreviewEvent_Update:
-						updateResType := ""
-						updateResName := ""
-						if content.Update.Id != nil {
-							updateResType = content.Update.Id.Type.String()
-							updateResName = content.Update.Id.Name
-						}
-
-						if updateResType == "" {
-							updateResType = "Stack"
-						}
-						if updateResName == "" {
-							updateResName = stackConfig.Name
-						}
-						if content.Update.SubResource != "" {
-							updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
-						}
-
-						fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
-					case *deploymentspb.DeploymentPreviewEvent_Result:
-						fmt.Printf("\nResult: %s\n", content.Result.GetText())
-					}
-				}
-
-				// ensure the process exits with a non-zero status code after all messages are processed
-				if providerErrorDetected {
-
-				}
-			} else {
-				// interactive environment
-				// Step 5c. Start the stack preview view\
-				stackPreview := stack_preview.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
-				_, err = teax.NewProgram(stackPreview).Run()
+			stackSelection = selection.(stack_preview.ConfirmDeploymentModel).Choice()
+			if stackSelection == "cancel" {
+				fmt.Println("Cancelled")
+				return
 			}
-		}
-
-		confirmModel := stack_preview.NewConfirmDeployment(listprompt.ListPromptArgs{
-			Items:  list.StringsToListItems([]string{"confirm deployment", "cancel"}),
-			Tag:    "deploy",
-			Prompt: "Finished preview. Would you like to perform the deployment?",
-		})
-
-		selection, err := teax.NewProgram(confirmModel).Run()
-		tui.CheckErr(err)
-
-		stackSelection = selection.(stack_preview.ConfirmDeploymentModel).Choice()
-		if stackSelection == "cancel" {
-			fmt.Println("Cancelled")
-			return
 		}
 
 		eventChan, errorChan := deploymentClient.Up(&deploymentspb.DeploymentUpRequest{

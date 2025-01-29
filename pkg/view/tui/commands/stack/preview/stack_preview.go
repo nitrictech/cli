@@ -180,7 +180,7 @@ func (m Model) View() string {
 
 	v := view.New(view.WithStyle(lipgloss.NewStyle().Width(m.windowSize.Width)))
 	v.Break()
-	v.Add(fragments.Tag("up"))
+	v.Add(fragments.Tag("preview"))
 	v.Addf("  Previewing deployment with %s", m.provider)
 
 	if m.done {
@@ -254,8 +254,8 @@ func (m Model) View() string {
 
 	if m.resultOutput != "" {
 		v.Break()
-		v.Addln(fragments.Tag("result"))
-		v.Addln("\n%s", m.resultOutput)
+		v.Add(fragments.Tag("plan"))
+		v.Addln("  %s", m.resultOutput)
 	}
 
 	return v.Render()

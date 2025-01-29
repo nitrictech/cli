@@ -43,6 +43,7 @@ import (
 	stack_new "github.com/nitrictech/cli/pkg/view/tui/commands/stack/new"
 	stack_preview "github.com/nitrictech/cli/pkg/view/tui/commands/stack/preview"
 	stack_select "github.com/nitrictech/cli/pkg/view/tui/commands/stack/select"
+	stack_up "github.com/nitrictech/cli/pkg/view/tui/commands/stack/up"
 	"github.com/nitrictech/cli/pkg/view/tui/components/list"
 	"github.com/nitrictech/cli/pkg/view/tui/components/listprompt"
 	"github.com/nitrictech/cli/pkg/view/tui/components/view"
@@ -371,9 +372,7 @@ var stackUpdateCmd = &cobra.Command{
 			}
 		}
 
-		// Check if the thing is active
-
-		confirmModel := listprompt.NewListPrompt(listprompt.ListPromptArgs{
+		confirmModel := stack_preview.NewConfirmDeployment(listprompt.ListPromptArgs{
 			Items:  list.StringsToListItems([]string{"confirm deployment", "cancel"}),
 			Tag:    "deploy",
 			Prompt: "Finished preview. Would you like to perform the deployment?",
@@ -382,84 +381,76 @@ var stackUpdateCmd = &cobra.Command{
 		selection, err := teax.NewProgram(confirmModel).Run()
 		tui.CheckErr(err)
 
-		v := view.New()
-		v.Break()
-		fmt.Println("")
-
-		stackSelection = selection.(listprompt.ListPrompt).Choice()
+		stackSelection = selection.(stack_preview.ConfirmDeploymentModel).Choice()
 		if stackSelection == "cancel" {
-			v.Addln("Cancelling deployment")
-			fmt.Println(v.Render())
+			fmt.Println("Cancelled")
 			return
 		}
 
-		v.Addln("Deployed")
-		fmt.Println(v.Render())
+		eventChan, errorChan := deploymentClient.Up(&deploymentspb.DeploymentUpRequest{
+			Spec:        spec,
+			Attributes:  attributesStruct,
+			Interactive: true,
+		})
 
-		// eventChan, errorChan := deploymentClient.Up(&deploymentspb.DeploymentUpRequest{
-		// 	Spec:        spec,
-		// 	Attributes:  attributesStruct,
-		// 	Interactive: true,
-		// })
+		// Step 5d. Communicate with server to share progress of update
+		if isNonInteractive() {
+			providerErrorDetected := false
 
-		// // Step 5d. Communicate with server to share progress of update
-		// if isNonInteractive() {
-		// 	providerErrorDetected := false
+			fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
+			go func() {
+				for update := range errorChan {
+					fmt.Printf("Error: %s\n", update)
+					providerErrorDetected = true
+				}
+			}()
 
-		// 	fmt.Printf("Deploying %s stack with provider %s\n", stackConfig.Name, stackConfig.Provider)
-		// 	go func() {
-		// 		for update := range errorChan {
-		// 			fmt.Printf("Error: %s\n", update)
-		// 			providerErrorDetected = true
-		// 		}
-		// 	}()
+			go func() {
+				for outMessage := range providerStdout {
+					fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
+				}
+			}()
 
-		// 	go func() {
-		// 		for outMessage := range providerStdout {
-		// 			fmt.Printf("%s: %s\n", stackConfig.Provider, outMessage)
-		// 		}
-		// 	}()
+			// non-interactive environment
+			for update := range eventChan {
+				switch content := update.Content.(type) {
+				case *deploymentspb.DeploymentUpEvent_Message:
+					fmt.Printf("%s\n", content.Message)
+				case *deploymentspb.DeploymentUpEvent_Update:
+					updateResType := ""
+					updateResName := ""
+					if content.Update.Id != nil {
+						updateResType = content.Update.Id.Type.String()
+						updateResName = content.Update.Id.Name
+					}
 
-		// 	// non-interactive environment
-		// 	for update := range eventChan {
-		// 		switch content := update.Content.(type) {
-		// 		case *deploymentspb.DeploymentUpEvent_Message:
-		// 			fmt.Printf("%s\n", content.Message)
-		// 		case *deploymentspb.DeploymentUpEvent_Update:
-		// 			updateResType := ""
-		// 			updateResName := ""
-		// 			if content.Update.Id != nil {
-		// 				updateResType = content.Update.Id.Type.String()
-		// 				updateResName = content.Update.Id.Name
-		// 			}
+					if updateResType == "" {
+						updateResType = "Stack"
+					}
+					if updateResName == "" {
+						updateResName = stackConfig.Name
+					}
+					if content.Update.SubResource != "" {
+						updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
+					}
 
-		// 			if updateResType == "" {
-		// 				updateResType = "Stack"
-		// 			}
-		// 			if updateResName == "" {
-		// 				updateResName = stackConfig.Name
-		// 			}
-		// 			if content.Update.SubResource != "" {
-		// 				updateResName = fmt.Sprintf("%s:%s", updateResName, content.Update.SubResource)
-		// 			}
+					fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
+				case *deploymentspb.DeploymentUpEvent_Result:
+					fmt.Printf("\nResult: %s\n", content.Result.GetText())
+				}
+			}
 
-		// 			fmt.Printf("%s:%s [%s]:%s %s\n", updateResType, updateResName, content.Update.Action, content.Update.Status, content.Update.Message)
-		// 		case *deploymentspb.DeploymentUpEvent_Result:
-		// 			fmt.Printf("\nResult: %s\n", content.Result.GetText())
-		// 		}
-		// 	}
-
-		// 	// ensure the process exits with a non-zero status code after all messages are processed
-		// 	if providerErrorDetected {
-		// 		os.Exit(1)
-		// 	}
-		// } else {
-		// 	// interactive environment
-		// 	// Step 5e. Start the stack up view
-		// 	stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
-		// 	_, err = teax.NewProgram(stackUp).Run()
-		// 	tui.CheckErr(err)
-		// }
+			// ensure the process exits with a non-zero status code after all messages are processed
+			if providerErrorDetected {
+				os.Exit(1)
+			}
+		} else {
+			// interactive environment
+			// Step 5e. Start the stack up view
+			stackUp := stack_up.New(stackConfig.Provider, stackConfig.Name, eventChan, providerStdout, errorChan)
+			_, err = teax.NewProgram(stackUp).Run()
+			tui.CheckErr(err)
+		}
 	},
 	Args:    cobra.MinimumNArgs(0),
 	Aliases: []string{"up"},
@@ -990,7 +981,7 @@ func init() {
 	stackUpdateCmd.Flags().BoolVarP(&noBuilder, "no-builder", "", false, "don't create a buildx container")
 	stackUpdateCmd.Flags().StringVarP(&envFile, "env-file", "e", "", "--env-file config/.my-env")
 	stackUpdateCmd.Flags().BoolVarP(&forceStack, "force", "f", false, "force override previous deployment")
-	stackUpdateCmd.Flags().BoolVarP(&skipPreview, "skip-preview", "", false, "ignore preview")
+	stackUpdateCmd.Flags().BoolVarP(&skipPreview, "skip-preview", "", false, "skips the preview step of the deployment")
 	tui.CheckErr(AddOptions(stackUpdateCmd, false))
 
 	// Delete Stack (Down)

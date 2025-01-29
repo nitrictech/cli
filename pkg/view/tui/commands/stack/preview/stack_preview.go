@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack_up
+package stack_preview
 
 import (
 	"fmt"
@@ -207,17 +207,19 @@ func (m Model) View() string {
 			currentNode := statusTree.AddNode(child.Name, "")
 
 			for _, grandchild := range child.Children {
-				resourceTime := lo.Ternary(grandchild.FinishTime.IsZero(), time.Since(grandchild.StartTime).Round(time.Second), grandchild.FinishTime.Sub(grandchild.StartTime))
-
 				statusColor := tui.Colors.Blue
-				if grandchild.Status == deploymentspb.ResourceDeploymentStatus_FAILED {
+				if grandchild.Action == deploymentspb.ResourceDeploymentAction_DELETE {
 					statusColor = tui.Colors.Red
-				} else if grandchild.Status == deploymentspb.ResourceDeploymentStatus_SUCCESS || grandchild.Action == deploymentspb.ResourceDeploymentAction_SAME {
+				} else if grandchild.Action == deploymentspb.ResourceDeploymentAction_CREATE {
 					statusColor = tui.Colors.Green
+				} else if grandchild.Action == deploymentspb.ResourceDeploymentAction_SAME {
+					statusColor = tui.Colors.Gray
 				}
 
-				statusText := fmt.Sprintf("%s (%s)", stack.VerbMap[grandchild.Action][grandchild.Status], resourceTime.Round(time.Second))
-				currentNode.AddNode(grandchild.Name, lipgloss.NewStyle().Foreground(statusColor).Render(statusText))
+				// Always uses the pending verbage to show it will happen, not that it has happened
+				statusVerbage := stack.VerbMap[grandchild.Action][deploymentspb.ResourceDeploymentStatus_PENDING]
+
+				currentNode.AddNode(grandchild.Name, lipgloss.NewStyle().Foreground(statusColor).Render(statusVerbage))
 			}
 		}
 

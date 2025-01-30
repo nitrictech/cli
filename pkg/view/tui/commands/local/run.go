@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -32,6 +33,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/schedules"
 	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
+	"github.com/nitrictech/cli/pkg/cloud/websites"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/validation"
 	"github.com/nitrictech/cli/pkg/view/tui"
@@ -74,6 +76,11 @@ type DatabaseSummary struct {
 	status string
 }
 
+type WebsiteSummary struct {
+	name string
+	url  string
+}
+
 type TuiModel struct {
 	localCloud  *cloud.LocalCloud
 	apis        []ApiSummary
@@ -82,6 +89,7 @@ type TuiModel struct {
 	topics      []TopicSummary
 	schedules   []ScheduleSummary
 	databases   []DatabaseSummary
+	websites    []WebsiteSummary
 
 	resources *resources.LocalResourcesState
 
@@ -103,6 +111,7 @@ func (t *TuiModel) Init() tea.Cmd {
 
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Schedules.SubscribeToState)
 	reactive.ListenFor(t.reactiveSub, t.localCloud.Topics.SubscribeToState)
+	reactive.ListenFor(t.reactiveSub, t.localCloud.Websites.SubscribeToState)
 
 	return t.reactiveSub.AwaitNextMsg()
 }
@@ -222,6 +231,17 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		t.schedules = newSchedulesSummary
+	case websites.State:
+		newWebsitesSummary := []WebsiteSummary{}
+
+		for websiteName, url := range state {
+			newWebsitesSummary = append(newWebsitesSummary, WebsiteSummary{
+				name: strings.TrimPrefix(websiteName, "websites_"),
+				url:  url,
+			})
+		}
+
+		t.websites = newWebsitesSummary
 	}
 
 	return t, t.reactiveSub.AwaitNextMsg()
@@ -287,6 +307,11 @@ func (t *TuiModel) View() string {
 	for _, database := range t.databases {
 		v.Addf("db:%s - ", database.name)
 		v.Addln(database.status).WithStyle(textHighlight)
+	}
+
+	for _, site := range t.websites {
+		v.Addf("site:%s - ", site.name)
+		v.Addln(site.url).WithStyle(textHighlight)
 	}
 
 	if t.resources != nil {

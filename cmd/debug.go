@@ -100,6 +100,9 @@ var specCmd = &cobra.Command{
 		batchRequirements, err := proj.CollectBatchRequirements()
 		tui.CheckErr(err)
 
+		websiteRequirements, err := proj.CollectWebsiteRequirements()
+		tui.CheckErr(err)
+
 		additionalEnvFiles := []string{}
 
 		if debugEnvFile != "" {
@@ -115,7 +118,7 @@ var specCmd = &cobra.Command{
 			envVariables = map[string]string{}
 		}
 
-		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements)
+		spec, err := collector.ServiceRequirementsToSpec(proj.Name, envVariables, serviceRequirements, batchRequirements, websiteRequirements)
 		tui.CheckErr(err)
 
 		migrationImageContexts, err := collector.GetMigrationImageBuildContexts(serviceRequirements, batchRequirements, fs)

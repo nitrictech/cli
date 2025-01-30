@@ -30,14 +30,15 @@ import (
 
 	"github.com/asaskevich/EventBus"
 	"github.com/nitrictech/cli/pkg/netx"
+	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
+type WebsitePb = deploymentspb.Website
+
 type Website struct {
-	Name      string
-	BaseRoute string
-	OutputDir string
-	IndexPage string
-	ErrorPage string
+	WebsitePb
+
+	Name string
 }
 
 type (
@@ -71,7 +72,7 @@ func (l *LocalWebsiteService) register(website Website) {
 	l.websiteRegLock.Lock()
 	defer l.websiteRegLock.Unlock()
 
-	l.state[website.Name] = fmt.Sprintf("http://localhost:%d/%s", l.port, strings.TrimPrefix(website.BaseRoute, "/"))
+	l.state[website.Name] = fmt.Sprintf("http://localhost:%d/%s", l.port, strings.TrimPrefix(website.BasePath, "/"))
 
 	l.publishState()
 }
@@ -93,14 +94,14 @@ type staticSiteHandler struct {
 
 // ServeHTTP - Serve a static website from the local filesystem
 func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := filepath.Join(h.website.OutputDir, r.URL.Path)
+	path := filepath.Join(h.website.OutputDirectory, r.URL.Path)
 
 	// check whether a file exists or is a directory at the given path
 	fi, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// if the file doesn't exist, serve the error page with a 404 status code
-			http.ServeFile(w, r, filepath.Join(h.website.OutputDir, h.website.ErrorPage))
+			http.ServeFile(w, r, filepath.Join(h.website.OutputDirectory, h.website.ErrorDocument))
 			return
 		}
 
@@ -111,12 +112,12 @@ func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if fi.IsDir() {
-		http.ServeFile(w, r, filepath.Join(h.website.OutputDir, h.website.IndexPage))
+		http.ServeFile(w, r, filepath.Join(h.website.OutputDirectory, h.website.IndexDocument))
 		return
 	}
 
 	// otherwise, use http.FileServer to serve the static file
-	http.FileServer(http.Dir(h.website.OutputDir)).ServeHTTP(w, r)
+	http.FileServer(http.Dir(h.website.OutputDirectory)).ServeHTTP(w, r)
 }
 
 // Serve - Serve a website from the local filesystem
@@ -163,10 +164,10 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 	for _, website := range websites {
 		spa := staticSiteHandler{website: website, port: l.port}
 
-		if website.BaseRoute == "/" {
+		if website.BasePath == "/" {
 			mux.Handle("/", spa)
 		} else {
-			mux.Handle(website.BaseRoute+"/", http.StripPrefix(website.BaseRoute+"/", spa))
+			mux.Handle(website.BasePath+"/", http.StripPrefix(website.BasePath+"/", spa))
 		}
 	}
 

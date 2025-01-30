@@ -45,6 +45,7 @@ import (
 	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/nitric/core/pkg/logger"
+	deploymentpb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
 type Project struct {
@@ -451,6 +452,27 @@ func (p *Project) CollectBatchRequirements() ([]*collector.BatchRequirements, er
 	return allBatchRequirements, nil
 }
 
+func (p *Project) CollectWebsiteRequirements() ([]*deploymentpb.Website, error) {
+	allWebsiteRequirements := []*deploymentpb.Website{}
+
+	for _, site := range p.websites {
+		outputDir, err := site.GetAbsoluteOutputPath()
+		if err != nil {
+			return nil, fmt.Errorf("unable to get absolute output path for website %s: %w", site.basedir, err)
+		}
+
+		allWebsiteRequirements = append(allWebsiteRequirements, &deploymentpb.Website{
+			BasePath:        site.path,
+			OutputDirectory: outputDir,
+			IndexDocument:   site.indexPage,
+			ErrorDocument:   site.errorPage,
+		})
+
+	}
+
+	return allWebsiteRequirements, nil
+}
+
 // DefaultMigrationImage - Returns the default migration image name for the project
 // Also returns ok if image is required or not
 func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
@@ -588,6 +610,7 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 }
 
 // RunWebsites - Runs all the websites as http servers
+// TODO this has duplicate code with CollectWebsiteRequirements
 func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
 	sites := []websites.Website{}
 
@@ -599,11 +622,13 @@ func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
 		}
 
 		sites = append(sites, websites.Website{
-			Name:      site.Name,
-			BaseRoute: site.path,
-			OutputDir: outputDir,
-			IndexPage: site.indexPage,
-			ErrorPage: site.errorPage,
+			Name: site.Name,
+			WebsitePb: websites.WebsitePb{
+				BasePath:        site.outputPath,
+				OutputDirectory: outputDir,
+				IndexDocument:   site.indexPage,
+				ErrorDocument:   site.errorPage,
+			},
 		})
 	}
 
@@ -778,8 +803,9 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			return nil, fmt.Errorf("no build output provided for website %s", websiteSpec.GetBasedir())
 		}
 
+		// apply defaults
 		if websiteSpec.Path == "" {
-			websiteSpec.Path = "/" // default to root path
+			websiteSpec.Path = "/"
 		}
 
 		if websiteSpec.IndexPage == "" {

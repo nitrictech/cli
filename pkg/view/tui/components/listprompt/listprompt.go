@@ -17,8 +17,6 @@
 package listprompt
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -105,7 +103,7 @@ func (m ListPrompt) View() string {
 		listView.Addln(m.Choice()).WithStyle(historyTextStyle)
 	}
 
-	return strings.TrimSuffix(listView.Render(), "\n")
+	return listView.Render()
 }
 
 type ListPromptArgs struct {

@@ -88,7 +88,7 @@ func (l *LocalWebsiteService) deregister(websiteName string) {
 }
 
 type staticSiteHandler struct {
-	website Website
+	website *Website
 	port    int
 }
 
@@ -161,7 +161,8 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 	})
 
 	// Register the SPA handler for each website
-	for _, website := range websites {
+	for i := range websites {
+		website := &websites[i]
 		spa := staticSiteHandler{website: website, port: l.port}
 
 		if website.BasePath == "/" {

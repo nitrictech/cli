@@ -4,10 +4,7 @@ go 1.22.1
 
 toolchain go1.23.0
 
-replace (
-	github.com/mattn/go-ieproxy => github.com/darthShadow/go-ieproxy v0.0.0-20220916090656-69928ad83ed6
-	github.com/nitrictech/nitric/core v0.0.0-20241003062412-76ea6275fb0b => ../nitric/core
-)
+replace github.com/mattn/go-ieproxy => github.com/darthShadow/go-ieproxy v0.0.0-20220916090656-69928ad83ed6
 
 require github.com/golangci/golangci-lint v1.61.0
 

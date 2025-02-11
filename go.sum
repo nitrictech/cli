@@ -81,8 +81,8 @@ github.com/OpenPeeDeeP/depguard/v2 v2.2.0 h1:vDfG60vDtIuf0MEOhmLlLLSzqaRM8EMcgJP
 github.com/OpenPeeDeeP/depguard/v2 v2.2.0/go.mod h1:CIzddKRvLBC4Au5aYP/i3nyaWQ+ClszLIuVocRiCYFQ=
 github.com/Sereal/Sereal v0.0.0-20221130110801-16a4f76670cd h1:rP6LH3aVJTIxgTA3q79sSfnt8DvOlt17IRAklRBN+xo=
 github.com/Sereal/Sereal v0.0.0-20221130110801-16a4f76670cd/go.mod h1:D0JMgToj/WdxCgd30Kc1UcA9E+WdZoJqeVOuYW7iTBM=
-github.com/alecthomas/assert/v2 v2.6.0 h1:o3WJwILtexrEUk3cUVal3oiQY2tfgr/FHWiz/v2n4FU=
-github.com/alecthomas/assert/v2 v2.6.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
+github.com/alecthomas/assert/v2 v2.2.2 h1:Z/iVC0xZfWTaFNE6bA3z07T86hd45Xe2eLt6WVy2bbk=
+github.com/alecthomas/assert/v2 v2.2.2/go.mod h1:pXcQ2Asjp247dahGEmsZ6ru0UVwnkhktn7S0bBDLxvQ=
 github.com/alecthomas/go-check-sumtype v0.1.4 h1:WCvlB3l5Vq5dZQTFmodqL2g68uHiSwwlWcT5a2FGK0c=
 github.com/alecthomas/go-check-sumtype v0.1.4/go.mod h1:WyYPfhfkdhyrdaligV6svFopZV8Lqdzn5pyVBaV6jhQ=
 github.com/alecthomas/repr v0.2.0 h1:HAzS41CIzNW5syS8Mf9UwXhNH1J9aix/BvDRf1Ml2Yk=
@@ -585,6 +585,8 @@ github.com/nishanths/predeclared v0.2.2 h1:V2EPdZPliZymNAn79T8RkNApBjMmVKh5XRpLm
 github.com/nishanths/predeclared v0.2.2/go.mod h1:RROzoN6TnGQupbC+lqggsOlcgysk3LMK/HI84Mp280c=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20241003062412-76ea6275fb0b h1:wZeUrnmhYjdhSuL6ov+kVfuFJC9H14sk0kzEpt6aRoo=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20241003062412-76ea6275fb0b/go.mod h1:ZsCdb3xbukhXAp9ZNbV6qWJqRC+eLkxhXy8bhs/cC2A=
+github.com/nitrictech/nitric/core v0.0.0-20241003062412-76ea6275fb0b h1:ImQFk66gRM3v9A6qmPImOiV3HJMDAX93X5rplMKn6ok=
+github.com/nitrictech/nitric/core v0.0.0-20241003062412-76ea6275fb0b/go.mod h1:9bQnYPqLzq8CcPk5MHT3phg19CWJhDlFOfdIv27lwwM=
 github.com/nunnatsa/ginkgolinter v0.16.2 h1:8iLqHIZvN4fTLDC0Ke9tbSZVcyVHoBs0HIbnVSxfHJk=
 github.com/nunnatsa/ginkgolinter v0.16.2/go.mod h1:4tWRinDN1FeJgU+iJANW/kz7xKN5nYRAOfJDQUS9dOQ=
 github.com/nxadm/tail v1.4.11 h1:8feyoE3OzPrcshW5/MJ4sGESc5cqmGkGCWlco4l0bqY=

@@ -624,7 +624,7 @@ func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
 		sites = append(sites, websites.Website{
 			Name: site.Name,
 			WebsitePb: websites.WebsitePb{
-				BasePath:        site.outputPath,
+				BasePath:        site.path,
 				OutputDirectory: outputDir,
 				IndexDocument:   site.indexPage,
 				ErrorDocument:   site.errorPage,

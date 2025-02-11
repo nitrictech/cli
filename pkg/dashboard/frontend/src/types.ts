@@ -126,6 +126,7 @@ export interface WebSocketResponse {
   sqlDatabases: SQLDatabase[]
   httpProxies: HttpProxy[]
   websockets: WebSocket[]
+  websites: Website[]
   queues: Queue[]
   policies: {
     [name: string]: Policy
@@ -236,4 +237,9 @@ export interface LogEntry {
   level: 'info' | 'error' | 'warning'
   time: string
   origin: string
+}
+
+export interface Website {
+  name: string
+  url: string
 }

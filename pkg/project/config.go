@@ -91,7 +91,7 @@ type Build struct {
 
 type Dev struct {
 	Command string `yaml:"command"`
-	Url     string `yaml:"url,omitempty"`
+	URL     string `yaml:"url,omitempty"`
 }
 
 type WebsiteConfiguration struct {

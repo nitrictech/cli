@@ -38,7 +38,8 @@ type WebsitePb = deploymentspb.Website
 type Website struct {
 	WebsitePb
 
-	Name string
+	Name   string
+	DevURL string
 }
 
 type (
@@ -52,6 +53,7 @@ type LocalWebsiteService struct {
 	state          State
 	port           int
 	getApiAddress  GetApiAddress
+	isStartCmd     bool
 
 	bus EventBus.Bus
 }
@@ -88,12 +90,40 @@ func (l *LocalWebsiteService) deregister(websiteName string) {
 }
 
 type staticSiteHandler struct {
-	website *Website
-	port    int
+	website    *Website
+	port       int
+	devURL     string
+	isStartCmd bool
 }
 
 // ServeHTTP - Serve a static website from the local filesystem
 func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// if start command just proxy the request to the dev url
+	if h.isStartCmd {
+		// Target backend API server
+		target, err := url.Parse(h.devURL)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// ignore proxy errors like unsupported protocol
+		if target == nil || target.Scheme == "" {
+			return
+		}
+
+		// Reverse proxy request
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadGateway)
+			}
+		}
+		proxy.ServeHTTP(w, r)
+
+		return
+	}
+
 	path := filepath.Join(h.website.OutputDirectory, r.URL.Path)
 
 	// check whether a file exists or is a directory at the given path
@@ -163,7 +193,7 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 	// Register the SPA handler for each website
 	for i := range websites {
 		website := &websites[i]
-		spa := staticSiteHandler{website: website, port: l.port}
+		spa := staticSiteHandler{website: website, port: l.port, devURL: website.DevURL, isStartCmd: l.isStartCmd}
 
 		if website.BasePath == "/" {
 			mux.Handle("/", spa)
@@ -188,10 +218,11 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 	return nil
 }
 
-func NewLocalWebsitesService(getApiAddress GetApiAddress) *LocalWebsiteService {
+func NewLocalWebsitesService(getApiAddress GetApiAddress, isStartCmd bool) *LocalWebsiteService {
 	return &LocalWebsiteService{
 		state:         State{},
 		bus:           EventBus.New(),
 		getApiAddress: getApiAddress,
+		isStartCmd:    isStartCmd,
 	}
 }

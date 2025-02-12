@@ -622,7 +622,8 @@ func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
 		}
 
 		sites = append(sites, websites.Website{
-			Name: site.Name,
+			Name:   site.Name,
+			DevURL: site.devURL,
 			WebsitePb: websites.WebsitePb{
 				BasePath:        site.path,
 				OutputDirectory: outputDir,
@@ -827,6 +828,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			outputPath: websiteSpec.Build.Output,
 			buildCmd:   websiteSpec.Build.Command,
 			devCmd:     websiteSpec.Dev.Command,
+			devURL:     websiteSpec.Dev.URL,
 			indexPage:  websiteSpec.IndexPage,
 			errorPage:  websiteSpec.ErrorPage,
 		})

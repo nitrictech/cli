@@ -40,6 +40,9 @@ type Website struct {
 	// the dev command to run the website
 	devCmd string
 
+	// the dev url for the website
+	devURL string
+
 	// the path to the website source files
 	outputPath string
 

@@ -61,6 +61,10 @@ func (s *Website) GetAbsoluteOutputPath() (string, error) {
 	return filepath.Abs(s.GetOutputPath())
 }
 
+func (s *Website) GetAbsoluteDirectory() (string, error) {
+	return filepath.Abs(s.basedir)
+}
+
 // Run - runs the website using the provided dev command
 func (s *Website) Run(stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
 	if s.devCmd == "" {

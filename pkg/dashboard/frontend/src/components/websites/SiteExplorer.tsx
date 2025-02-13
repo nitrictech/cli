@@ -16,14 +16,22 @@ import {
 import NotFoundAlert from '../shared/NotFoundAlert'
 import SiteTreeView from './SiteTreeView'
 import { Button } from '../ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu'
+import { EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 
-const LOCAL_STORAGE_KEY = 'nitric-local-dash-storage-history'
+const LOCAL_STORAGE_KEY = 'nitric-local-dash-website-history'
 
 const SiteExplorer = () => {
   const [selectedWebsite, setSelectedWebsite] = useState<Website>()
   const { data, loading } = useWebSocket()
 
-  const { websites } = data || {}
+  const { websites, localCloudMode } = data || {}
 
   useEffect(() => {
     if (websites?.length && !selectedWebsite) {
@@ -82,15 +90,25 @@ const SiteExplorer = () => {
                       {selectedWebsite.name}
                     </h2>
                   </BreadCrumbs>
-                  <Button asChild>
-                    <a
-                      href={selectedWebsite.url}
-                      target="_blank"
-                      rel="noopener noreferrer ml-auto"
-                    >
-                      Open in a new tab
-                    </a>
-                  </Button>
+                  <div className="ml-auto space-x-4">
+                    <Button asChild variant="outline">
+                      <a
+                        data-testid="requesting-service"
+                        href={`vscode://file/${selectedWebsite.directory}`}
+                      >
+                        Open in VSCode
+                      </a>
+                    </Button>
+                    <Button asChild>
+                      <a
+                        href={selectedWebsite.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open in a new tab
+                      </a>
+                    </Button>
+                  </div>
                 </div>
 
                 {!data?.websites.some(
@@ -123,15 +141,40 @@ const SiteExplorer = () => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <Button asChild>
-                  <a
-                    href={selectedWebsite.url}
-                    target="_blank"
-                    rel="noopener noreferrer ml-auto"
-                  >
-                    Open in a new tab
-                  </a>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="ml-auto"
+                      data-testid="website-options-btn"
+                    >
+                      <span className="sr-only">Open website actions</span>
+                      <EllipsisVerticalIcon
+                        className="size-6 text-foreground"
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem asChild>
+                        <a href={`vscode://file/${selectedWebsite.directory}`}>
+                          Open in VSCode
+                        </a>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <a
+                          href={selectedWebsite.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Open in a new tab
+                        </a>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="overflow-hidden rounded-lg border border-gray-300 shadow-md">
                 <div className="bg-gray-50 p-2">
@@ -139,11 +182,23 @@ const SiteExplorer = () => {
                     {selectedWebsite.url}
                   </div>
                 </div>
-                <iframe
-                  src={selectedWebsite.url}
-                  title={selectedWebsite.name}
-                  className="h-screen w-full"
-                />
+                {localCloudMode === 'run' || selectedWebsite.devUrl ? (
+                  <iframe
+                    src={selectedWebsite.url}
+                    title={selectedWebsite.name}
+                    className="h-screen w-full"
+                  />
+                ) : (
+                  <p className="p-4">
+                    A development URL is required when running{' '}
+                    <pre className="inline-block px-0.5 text-xs">
+                      nitric start
+                    </pre>{' '}
+                    to ensure the website operates in development mode.
+                    <br /> Set the URL in your website dev config within your
+                    nitric.yaml file, e.g. http://localhost:4321.
+                  </p>
+                )}
               </div>
             </div>
           </div>

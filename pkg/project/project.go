@@ -621,10 +621,16 @@ func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
 			return fmt.Errorf("unable to get absolute output path for website %s: %w", site.basedir, err)
 		}
 
+		directory, err := site.GetAbsoluteDirectory()
+		if err != nil {
+			return fmt.Errorf("unable to get absolute directory for website %s: %w", site.basedir, err)
+		}
+
 		sites = append(sites, websites.Website{
-			Name:   site.Name,
-			DevURL: site.devURL,
-			WebsitePb: websites.WebsitePb{
+			Name:      site.Name,
+			DevURL:    site.devURL,
+			Directory: directory,
+			WebsitePb: &websites.WebsitePb{
 				BasePath:        site.path,
 				OutputDirectory: outputDir,
 				IndexDocument:   site.indexPage,
@@ -804,17 +810,23 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			return nil, fmt.Errorf("no build output provided for website %s", websiteSpec.GetBasedir())
 		}
 
-		// apply defaults
+		// apply defaults and validate website configuration
 		if websiteSpec.Path == "" {
 			websiteSpec.Path = "/"
+		} else if !strings.HasPrefix(websiteSpec.Path, "/") {
+			return nil, fmt.Errorf("invalid website path %s, must start with a /", websiteSpec.Path)
 		}
 
 		if websiteSpec.IndexPage == "" {
 			websiteSpec.IndexPage = "index.html"
+		} else if !strings.HasSuffix(websiteSpec.IndexPage, ".html") {
+			return nil, fmt.Errorf("invalid index page %s, must end with .html", websiteSpec.IndexPage)
 		}
 
 		if websiteSpec.ErrorPage == "" {
 			websiteSpec.ErrorPage = "index.html"
+		} else if !strings.HasSuffix(websiteSpec.ErrorPage, ".html") {
+			return nil, fmt.Errorf("invalid error page %s, must end with .html", websiteSpec.ErrorPage)
 		}
 
 		projectRelativeWebsiteFolder := filepath.Join(projectConfig.Directory, websiteSpec.GetBasedir())
@@ -845,6 +857,10 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		})
 
 		return nil, fmt.Errorf("duplicate website paths found: %s", strings.Join(duplicatePaths, ", "))
+	}
+
+	if len(websites) > 0 && !slices.Contains(projectConfig.Preview, preview.Feature_Websites) {
+		return nil, fmt.Errorf("project contains websites, but the project does not have the 'websites' preview feature enabled. Please add websites to the preview field of your nitric.yaml file to enable this feature")
 	}
 
 	// create an empty local configuration if none is provided

@@ -234,10 +234,10 @@ func (t *TuiModel) ReactiveUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case websites.State:
 		newWebsitesSummary := []WebsiteSummary{}
 
-		for websiteName, url := range state {
+		for websiteName, site := range state {
 			newWebsitesSummary = append(newWebsitesSummary, WebsiteSummary{
 				name: strings.TrimPrefix(websiteName, "websites_"),
-				url:  url,
+				url:  site.URL,
 			})
 		}
 

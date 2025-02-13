@@ -36,15 +36,17 @@ import (
 type WebsitePb = deploymentspb.Website
 
 type Website struct {
-	WebsitePb
+	*WebsitePb
 
-	Name   string
-	DevURL string
+	Name      string
+	Directory string
+	DevURL    string
+	URL       string
 }
 
 type (
 	WebsiteName   = string
-	State         = map[WebsiteName]string
+	State         = map[WebsiteName]Website
 	GetApiAddress = func(apiName string) string
 )
 
@@ -74,7 +76,14 @@ func (l *LocalWebsiteService) register(website Website) {
 	l.websiteRegLock.Lock()
 	defer l.websiteRegLock.Unlock()
 
-	l.state[website.Name] = fmt.Sprintf("http://localhost:%d/%s", l.port, strings.TrimPrefix(website.BasePath, "/"))
+	// add URL to the website and store it in the state
+	l.state[website.Name] = Website{
+		WebsitePb: website.WebsitePb,
+		Name:      website.Name,
+		DevURL:    website.DevURL,
+		Directory: website.Directory,
+		URL:       fmt.Sprintf("http://localhost:%d/%s", l.port, strings.TrimPrefix(website.BasePath, "/")),
+	}
 
 	l.publishState()
 }
@@ -100,6 +109,12 @@ type staticSiteHandler struct {
 func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// if start command just proxy the request to the dev url
 	if h.isStartCmd {
+		// if the dev url is not set, return a 500 internal server error with a message
+		if h.devURL == "" {
+			http.Error(w, "The dev URL is not set for this website", http.StatusInternalServerError)
+			return
+		}
+
 		// Target backend API server
 		target, err := url.Parse(h.devURL)
 		if err != nil {

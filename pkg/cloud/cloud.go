@@ -53,9 +53,20 @@ type Subscribable[T any, A any] interface {
 
 type ServiceName = string
 
+// LocalCloudMode type run or start
+type LocalCloudMode string
+
+const (
+	// LocalCloudModeRun - run mode
+	LocalCloudModeRun LocalCloudMode = "run"
+	// LocalCloudModeStart - start mode
+	LocalCloudModeStart LocalCloudMode = "start"
+)
+
 type LocalCloud struct {
-	serverLock sync.Mutex
-	servers    map[ServiceName]*server.NitricServer
+	serverLock     sync.Mutex
+	servers        map[ServiceName]*server.NitricServer
+	localCloudMode LocalCloudMode
 
 	Apis       *apis.LocalApiGatewayService
 	Batch      *batch.LocalBatchService
@@ -71,6 +82,10 @@ type LocalCloud struct {
 	Websites   *websites.LocalWebsiteService
 	Queues     *queues.LocalQueuesService
 	Databases  *sql.LocalSqlServer
+}
+
+func (lc *LocalCloud) GetLocalCloudMode() LocalCloudMode {
+	return lc.localCloudMode
 }
 
 // StartLocalNitric - starts the Nitric Server, including plugins and their local dependencies (e.g. local versions of cloud services)
@@ -232,16 +247,6 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	return ports[0], nil
 }
 
-// LocalCloudMode type run or start
-type LocalCloudMode string
-
-const (
-	// LocalCloudModeRun - run mode
-	LocalCloudModeRun LocalCloudMode = "run"
-	// LocalCloudModeStart - start mode
-	LocalCloudModeStart LocalCloudMode = "start"
-)
-
 type LocalCloudOptions struct {
 	TLSCredentials  *gateway.TLSCredentials
 	LogWriter       io.Writer
@@ -320,20 +325,21 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	localWebsites := websites.NewLocalWebsitesService(localGateway.GetApiAddress, opts.LocalCloudMode == LocalCloudModeStart)
 
 	return &LocalCloud{
-		servers:    make(map[string]*server.NitricServer),
-		Apis:       localApis,
-		Batch:      localBatch,
-		Http:       localHttpProxy,
-		Resources:  localResources,
-		Schedules:  localSchedules,
-		Storage:    localStorage,
-		Topics:     localTopics,
-		Websockets: localWebsockets,
-		Websites:   localWebsites,
-		Gateway:    localGateway,
-		Secrets:    localSecrets,
-		KeyValue:   keyvalueService,
-		Queues:     localQueueService,
-		Databases:  localDatabaseService,
+		servers:        make(map[string]*server.NitricServer),
+		localCloudMode: opts.LocalCloudMode,
+		Apis:           localApis,
+		Batch:          localBatch,
+		Http:           localHttpProxy,
+		Resources:      localResources,
+		Schedules:      localSchedules,
+		Storage:        localStorage,
+		Topics:         localTopics,
+		Websockets:     localWebsockets,
+		Websites:       localWebsites,
+		Gateway:        localGateway,
+		Secrets:        localSecrets,
+		KeyValue:       keyvalueService,
+		Queues:         localQueueService,
+		Databases:      localDatabaseService,
 	}, nil
 }

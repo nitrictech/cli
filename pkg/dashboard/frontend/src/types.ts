@@ -139,6 +139,7 @@ export interface WebSocketResponse {
   currentVersion: string
   latestVersion: string
   connected: boolean
+  localCloudMode: 'start' | 'run'
 }
 
 export interface Param {
@@ -242,4 +243,6 @@ export interface LogEntry {
 export interface Website {
   name: string
   url: string
+  devUrl: string
+  directory: string
 }

@@ -108,7 +108,6 @@ type ProjectConfiguration struct {
 	Name      string                          `yaml:"name"`
 	Directory string                          `yaml:"-"`
 	Services  []ServiceConfiguration          `yaml:"services"`
-	Ports     map[string]int                  `yaml:"ports,omitempty"`
 	Batches   []BatchConfiguration            `yaml:"batch-services"`
 	Websites  []WebsiteConfiguration          `yaml:"websites"`
 	Runtimes  map[string]RuntimeConfiguration `yaml:"runtimes,omitempty"`

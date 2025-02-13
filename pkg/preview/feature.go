@@ -23,4 +23,5 @@ const (
 	Feature_BetaProviders   Feature = "beta-providers"
 	Feature_SqlDatabases    Feature = "sql-databases"
 	Feature_BatchServices   Feature = "batch-services"
+	Feature_Websites        Feature = "websites"
 )

@@ -158,12 +158,15 @@ type HttpProxySpec struct {
 }
 
 type WebsiteSpec struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	Name      string `json:"name"`
+	URL       string `json:"url"`
+	DevURL    string `json:"devUrl"`
+	Directory string `json:"directory"`
 }
 
 type Dashboard struct {
 	resourcesLock          sync.Mutex
+	localCloudMode         cloud.LocalCloudMode
 	project                *project.Project
 	storageService         *storage.LocalStorageService
 	gatewayService         *gateway.LocalGatewayService
@@ -229,6 +232,7 @@ type DashboardResponse struct {
 	CurrentVersion      string                `json:"currentVersion"`
 	LatestVersion       string                `json:"latestVersion"`
 	Connected           bool                  `json:"connected"`
+	LocalCloudMode      cloud.LocalCloudMode  `json:"localCloudMode"`
 }
 
 type Bucket struct {
@@ -644,10 +648,12 @@ func (d *Dashboard) handleWebsites(state websites.State) {
 
 	websites := []WebsiteSpec{}
 
-	for name, url := range state {
+	for name, site := range state {
 		websites = append(websites, WebsiteSpec{
-			Name: strings.TrimPrefix(name, "websites_"),
-			URL:  url,
+			Name:      strings.TrimPrefix(name, "websites_"),
+			URL:       site.URL,
+			DevURL:    site.DevURL,
+			Directory: site.Directory,
 		})
 	}
 
@@ -869,6 +875,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		CurrentVersion: currentVersion,
 		LatestVersion:  latestVersion,
 		Connected:      d.isConnected(),
+		LocalCloudMode: d.localCloudMode,
 	}
 
 	// Encode the response as JSON
@@ -921,6 +928,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	wsWebSocket := melody.New()
 
 	dash := &Dashboard{
+		localCloudMode:         localCloud.GetLocalCloudMode(),
 		project:                project,
 		storageService:         localCloud.Storage,
 		gatewayService:         localCloud.Gateway,

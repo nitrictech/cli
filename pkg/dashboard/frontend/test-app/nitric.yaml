@@ -13,10 +13,10 @@ websites:
   - basedir: ./docs-website
     path: /docs
     build:
-      command: yarn install && yarn build --base=/docs
+      command: yarn build --base=/docs
       output: ./dist
     dev:
-      command: yarn install && yarn dev --port 7851 --base=/docs
+      command: yarn dev --port 7851 --base=/docs
       url: http://localhost:7851/docs
 preview:
   - sql-databases

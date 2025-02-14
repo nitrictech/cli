@@ -203,7 +203,6 @@ func (s *Website) Build(updates chan ServiceBuildUpdate, env map[string]string) 
 	}()
 
 	err := <-errChan
-
 	if err != nil {
 		updates <- ServiceBuildUpdate{
 			ServiceName: s.Name,

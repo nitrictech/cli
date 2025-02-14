@@ -209,7 +209,6 @@ func (p *Project) BuildWebsites(env map[string]string) (chan ServiceBuildUpdate,
 					Message:     err.Error(),
 					Status:      ServiceBuildStatus_Error,
 				}
-
 			} else {
 				updatesChan <- ServiceBuildUpdate{
 					ServiceName: site.Name,
@@ -467,7 +466,6 @@ func (p *Project) CollectWebsiteRequirements() ([]*deploymentpb.Website, error) 
 			IndexDocument:   site.indexPage,
 			ErrorDocument:   site.errorPage,
 		})
-
 	}
 
 	return allWebsiteRequirements, nil

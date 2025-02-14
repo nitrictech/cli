@@ -53,6 +53,7 @@ jobs:
           yarn install
           yarn install:websites
           nitric start --ci &
+          sleep 10
 
       - name: Run Tests
         uses: cypress-io/github-action@v5

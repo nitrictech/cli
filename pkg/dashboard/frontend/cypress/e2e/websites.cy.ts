@@ -39,7 +39,7 @@ describe('Websites Spec', () => {
 
       const title = titleMap[id]
 
-      cy.origin('localhost:5000', { args: { title } }, ({ title }) => {
+      cy.origin('http://localhost:5000', { args: { title } }, ({ title }) => {
         cy.get('h1').should('have.text', title)
       })
     })

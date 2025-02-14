@@ -139,3 +139,10 @@
   --nitric-node-to: #334155; /* Slate 700 */
   --nitric-node-icon-color: #475569; /* Slate 600 */
 }
+
+.react-flow__node-websites {
+  --nitric-node-from: #06b6d4; /* Cyan 600 */
+  --nitric-node-via: #22d3ee; /* Cyan 400 */
+  --nitric-node-to: #0891b2; /* Cyan 700 */
+  --nitric-node-icon-color: #06b6d4; /* Cyan 600 */
+}

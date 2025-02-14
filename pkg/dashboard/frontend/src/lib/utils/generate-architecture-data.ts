@@ -19,6 +19,7 @@ import {
   QueueListIcon,
   LockClosedIcon,
   CogIcon,
+  WindowIcon,
 } from '@heroicons/react/24/outline'
 import {
   MarkerType,
@@ -64,6 +65,10 @@ import {
 } from '@/components/architecture/nodes/BatchNode'
 import { PERMISSION_TO_SDK_LABELS } from '../constants'
 import { flattenPaths } from './flatten-paths'
+import {
+  WebsitesNode,
+  type WebsitesNodeData,
+} from '@/components/architecture/nodes/WebsitesNode'
 
 export const nodeTypes = {
   api: APINode,
@@ -79,6 +84,7 @@ export const nodeTypes = {
   httpproxy: HttpProxyNode,
   queue: QueueNode,
   secret: SecretNode,
+  websites: WebsitesNode,
 }
 
 const createNode = <T>(
@@ -568,6 +574,42 @@ export function generateArchitectureData(data: WebSocketResponse): {
       } as Edge
     }),
   )
+
+  if (data.websites.length > 0) {
+    const websitesNode = createNode<WebsitesNodeData>(
+      {
+        name: 'websites',
+        filePath: '',
+        requestingServices: [],
+      },
+      'websites',
+      {
+        title: 'Websites',
+        resource: data.websites,
+        icon: WindowIcon,
+      },
+    )
+
+    nodes.push(websitesNode)
+
+    // create edges from websites to apis
+    data.apis.forEach((api) => {
+      edges.push({
+        id: `e-${api.name}-websites`,
+        source: websitesNode.id,
+        target: `api-${api.name}`,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: `Rewrites to /api/${api.name}`,
+      })
+    })
+  }
 
   data.services.forEach((service) => {
     const node: Node<ServiceNodeData> = {

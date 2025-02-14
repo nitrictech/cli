@@ -22,23 +22,30 @@ const SitesList: React.FC<SitesListProps> = ({ rootSite, subsites }) => {
           </a>
         </div>
       </div>
-      <span className="font-bold">Subsites:</span>
-      <div className="flex flex-col gap-y-2" data-testid="websites-list">
-        {subsites.map((website) => (
-          <div key={website.name} className="grid w-full grid-cols-12 gap-4">
-            <div className="col-span-9 flex justify-start">
-              <a
-                target="_blank noreferrer noopener"
-                className="truncate hover:underline"
-                href={website.url}
-                rel="noreferrer"
+      {subsites.length > 0 ? (
+        <>
+          <span className="font-bold">Subsites:</span>
+          <div className="flex flex-col gap-y-2" data-testid="websites-list">
+            {subsites.map((website) => (
+              <div
+                key={website.name}
+                className="grid w-full grid-cols-12 gap-4"
               >
-                {website.url}
-              </a>
-            </div>
+                <div className="col-span-9 flex justify-start">
+                  <a
+                    target="_blank noreferrer noopener"
+                    className="truncate hover:underline"
+                    href={website.url}
+                    rel="noreferrer"
+                  >
+                    {website.url}
+                  </a>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      ) : null}
     </div>
   )
 }

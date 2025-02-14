@@ -18,7 +18,7 @@ export const WebsitesNode: ComponentType<NodeProps<WebsitesNodeData>> = (
     /localhost:\d+$/.test(website.url.replace(/\/$/, '')),
   )
 
-  const description = `${websites.length} websites stored in a bucket and served via CDN.`
+  const description = `${websites.length === 1 ? 'website' : 'websites'} stored in a bucket and served via CDN.`
 
   return (
     <NodeBase

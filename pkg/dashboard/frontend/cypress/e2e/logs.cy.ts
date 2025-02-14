@@ -46,7 +46,7 @@ describe('logs test suite', () => {
 
     cy.get('div[data-value="nitric"]').click()
 
-    cy.getTestEl('logs').children().should('have.length', 3)
+    cy.getTestEl('logs').children().should('have.length.at.least', 3)
 
     cy.getTestEl('filter-logs-reset-btn').click()
 

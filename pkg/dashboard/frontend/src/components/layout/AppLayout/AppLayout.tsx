@@ -15,6 +15,7 @@ import {
   CircleStackIcon,
   LockClosedIcon,
   CpuChipIcon,
+  WindowIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import { useWebSocket } from '../../../lib/hooks/use-web-socket'
@@ -146,6 +147,11 @@ const AppLayout: React.FC<Props> = ({
       name: 'Websockets',
       href: '/websockets',
       icon: ChatBubbleLeftRightIcon,
+    },
+    {
+      name: 'Websites',
+      href: '/websites',
+      icon: WindowIcon,
     },
     // { name: "Key Value Stores", href: "#", icon: FolderIcon, current: false },
   ]

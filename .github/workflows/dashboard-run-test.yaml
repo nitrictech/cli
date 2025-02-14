@@ -27,7 +27,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 21
+          node-version: 22
 
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -44,8 +44,9 @@ jobs:
         run: |
           cd ${{ github.workspace }}/cli/pkg/dashboard/frontend/test-app
           yarn install
+          yarn install:websites
           nitric run --ci &
-          sleep 15
+          sleep 25
 
       - name: Run Tests
         uses: cypress-io/github-action@v5

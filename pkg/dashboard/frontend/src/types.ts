@@ -126,6 +126,7 @@ export interface WebSocketResponse {
   sqlDatabases: SQLDatabase[]
   httpProxies: HttpProxy[]
   websockets: WebSocket[]
+  websites: Website[]
   queues: Queue[]
   policies: {
     [name: string]: Policy
@@ -138,6 +139,7 @@ export interface WebSocketResponse {
   currentVersion: string
   latestVersion: string
   connected: boolean
+  localCloudMode: 'start' | 'run'
 }
 
 export interface Param {
@@ -236,4 +238,11 @@ export interface LogEntry {
   level: 'info' | 'error' | 'warning'
   time: string
   origin: string
+}
+
+export interface Website {
+  name: string
+  url: string
+  devUrl: string
+  directory: string
 }

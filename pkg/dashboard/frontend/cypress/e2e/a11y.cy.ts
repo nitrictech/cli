@@ -9,6 +9,7 @@ describe('a11y test suite', () => {
     '/topics',
     '/jobs',
     '/websockets',
+    '/websites',
     '/logs',
     '/not-found',
   ]

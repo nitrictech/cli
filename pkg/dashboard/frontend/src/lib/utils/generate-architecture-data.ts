@@ -584,7 +584,7 @@ export function generateArchitectureData(data: WebSocketResponse): {
       },
       'websites',
       {
-        title: 'Websites',
+        title: 'websites',
         resource: data.websites,
         icon: WindowIcon,
       },

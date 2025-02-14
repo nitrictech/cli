@@ -5,10 +5,10 @@ services:
 websites:
   - basedir: ./vite-website
     build:
-      command: yarn install && yarn build
+      command: yarn build
       output: ./dist
     dev:
-      command: yarn install && yarn dev --port 7850
+      command: yarn dev --port 7850
       url: http://localhost:7850
   - basedir: ./docs-website
     path: /docs

@@ -20,6 +20,7 @@
     "typescript": "^4.8.3"
   },
   "scripts": {
-    "dev:functions": "nodemon -r dotenv/config"
+    "dev:functions": "nodemon -r dotenv/config",
+    "install:websites": "yarn --cwd ./vite-website install && yarn --cwd ./docs-website install"
   }
 }

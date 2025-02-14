@@ -27,7 +27,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 21
+          node-version: 22
 
       - name: Lint Dashboard
         working-directory: cli/pkg/dashboard/frontend

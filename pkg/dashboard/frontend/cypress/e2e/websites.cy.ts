@@ -22,7 +22,7 @@ describe('Websites Spec', () => {
 
       const pathMap = {
         'vite-website': '',
-        'docs-website': 'docs/',
+        'docs-website': 'docs',
       }
 
       const url = `http://localhost:5000/${pathMap[id]}`

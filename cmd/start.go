@@ -250,7 +250,6 @@ var startCmd = &cobra.Command{
 
 		go func() {
 			err := proj.RunWebsites(localCloud)
-
 			if err != nil {
 				localCloud.Stop()
 

@@ -29,6 +29,7 @@ import (
 	"sync"
 
 	"github.com/asaskevich/EventBus"
+
 	"github.com/nitrictech/cli/pkg/netx"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
@@ -88,16 +89,6 @@ func (l *LocalWebsiteService) register(website Website) {
 	l.publishState()
 }
 
-// deregister - Deregister a website
-func (l *LocalWebsiteService) deregister(websiteName string) {
-	l.websiteRegLock.Lock()
-	defer l.websiteRegLock.Unlock()
-
-	delete(l.state, websiteName)
-
-	l.publishState()
-}
-
 type staticSiteHandler struct {
 	website    *Website
 	port       int
@@ -153,11 +144,13 @@ func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// if we got an error (that wasn't that the file doesn't exist) stating the
 		// file, return a 500 internal server error and stop
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+
 		return
 	}
 
 	if fi.IsDir() {
 		http.ServeFile(w, r, filepath.Join(h.website.OutputDirectory, h.website.IndexDocument))
+
 		return
 	}
 

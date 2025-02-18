@@ -559,6 +559,7 @@ const WSExplorer = () => {
                       <FieldRows
                         rows={queryParams}
                         readOnly={connected}
+                        addRowLabel="Add Query Param"
                         testId="query"
                         setRows={(rows) => {
                           setQueryParams(rows)
@@ -587,7 +588,6 @@ const WSExplorer = () => {
                           </SelectContent>
                         </Select>
                         <Button
-                          size={'lg'}
                           className="ml-auto"
                           data-testid="send-message-btn"
                           disabled={!currentPayload || !connected}

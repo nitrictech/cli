@@ -94,6 +94,8 @@ describe('Websockets Spec', () => {
     cy.getTestEl('query-0-key').type('firstParam')
     cy.getTestEl('query-0-value').type('myValue')
 
+    cy.getTestEl('add-row-btn').click()
+
     cy.getTestEl('query-1-key').type('secondParam')
     cy.getTestEl('query-1-value').type('mySecondValue')
 

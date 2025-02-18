@@ -122,6 +122,7 @@ const FieldRows: React.FC<Props> = ({
                     newArray.splice(i, 1)
                     setRows(newArray)
                   }}
+                  aria-label="Remove row"
                   className={cn(
                     'absolute right-0 rounded-full bg-gray-600 p-1 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600',
                     'flex items-center opacity-30 transition-all group-hover:opacity-100',

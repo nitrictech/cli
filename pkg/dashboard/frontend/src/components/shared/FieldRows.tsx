@@ -42,11 +42,8 @@ const FieldRows: React.FC<Props> = ({
           const valueHasError = Boolean(valueErrors && valueErrors[i])
 
           return (
-            <li
-              key={i}
-              className="group relative grid grid-cols-2 items-center gap-4 py-4"
-            >
-              <div>
+            <li key={i} className="group flex items-center gap-4 py-4">
+              <div className="w-full">
                 <Label htmlFor={keyId} className="sr-only">
                   Key
                 </Label>
@@ -71,7 +68,7 @@ const FieldRows: React.FC<Props> = ({
                   />
                 </div>
               </div>
-              <div className="pr-8">
+              <div className={cn('w-full', lockKeys && 'mr-11')}>
                 <Label htmlFor={valueId} className="sr-only">
                   {r.value}
                 </Label>
@@ -124,7 +121,7 @@ const FieldRows: React.FC<Props> = ({
                   }}
                   aria-label="Remove row"
                   className={cn(
-                    'absolute right-0 rounded-full bg-gray-600 p-1 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600',
+                    'rounded-full bg-gray-600 p-1 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600',
                     'flex items-center opacity-30 transition-all group-hover:opacity-100',
                   )}
                 >

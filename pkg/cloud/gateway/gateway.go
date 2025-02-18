@@ -650,7 +650,7 @@ func (s *LocalGatewayService) createApiServers() error {
 			ReadTimeout:     time.Second * 1,
 			IdleTimeout:     time.Second * 1,
 			CloseOnShutdown: true,
-			ReadBufferSize:  8192,
+			ReadBufferSize:  64 * 1024, // Set to 64 KB to handle large headers
 			Handler:         s.handleApiHttpRequest(apiName),
 			Logger:          log.New(s.logWriter, fmt.Sprintf("%s: ", lis.Addr().String()), 0),
 		}

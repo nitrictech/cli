@@ -26,6 +26,17 @@ const expectedEndpoints = [
   'my-secret-api-/set-binary-POST',
 ]
 
+function setLongCookie(name: string, value: string) {
+  const maxSize = 4000 // Approximate max cookie size (4KB)
+  const chunks = Math.ceil(value.length / maxSize) // Calculate the number of chunks needed
+
+  // Loop through and set each chunk as a separate cookie
+  for (let i = 0; i < chunks; i++) {
+    const chunkValue = value.substring(i * maxSize, (i + 1) * maxSize) // Get the current chunk of the value
+    cy.setCookie(`${name}-${i}`, chunkValue) // Set the chunk as a cookie with the index in the name
+  }
+}
+
 describe('APIs spec', () => {
   beforeEach(() => {
     cy.viewport('macbook-16')
@@ -334,5 +345,19 @@ describe('APIs spec', () => {
         cy.getAPIResponseCodeEditor().should('have.text', expected)
       }
     })
+  })
+
+  it('should handle big headers', () => {
+    setLongCookie('long-header', 'a'.repeat(10000))
+
+    cy.intercept('/api/call/**').as('apiCall')
+
+    cy.get('[data-rct-item-id="first-api-/all-methods-GET"]').click()
+
+    cy.getTestEl('send-api-btn').click()
+
+    cy.wait('@apiCall')
+
+    cy.getTestEl('response-status', 5000).should('contain.text', 'Status: 200')
   })
 })

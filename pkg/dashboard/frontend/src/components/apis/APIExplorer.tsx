@@ -82,6 +82,10 @@ const requestDefault = {
       key: 'User-Agent',
       value: 'Nitric Client (https://www.nitric.io)',
     },
+    {
+      key: 'Content-Type',
+      value: 'application/json',
+    },
   ],
 }
 
@@ -318,17 +322,19 @@ const APIExplorer = () => {
     const url = `http://${getHost()}/api/call` + path
 
     // Set a default content type if not set
-    if (!headers.find(({ key }) => key.toLowerCase() === 'content-type')) {
-      headers.push({
-        key: 'Content-Type',
-        value: currentBodyTab.contentType,
-      })
-    }
+    const shouldAddContentType = !headers.find(
+      ({ key }) => key.toLowerCase() === 'content-type',
+    )
 
     const requestOptions: RequestInit = {
       method,
       headers: fieldRowArrToHeaders([
-        ...headers,
+        ...(shouldAddContentType
+          ? [
+              ...headers,
+              { key: 'Content-Type', value: currentBodyTab.contentType },
+            ]
+          : headers),
         {
           key: 'X-Nitric-Local-Call-Address',
           value: apiAddress || 'localhost:4001',
@@ -600,6 +606,7 @@ const APIExplorer = () => {
                         <FieldRows
                           rows={request.queryParams}
                           testId="query"
+                          addRowLabel="Add Query Param"
                           setRows={(rows) => {
                             setRequest((prev) => ({
                               ...prev,
@@ -615,6 +622,7 @@ const APIExplorer = () => {
                       <FieldRows
                         rows={request.headers}
                         testId="header"
+                        addRowLabel="Add Header"
                         setRows={(rows) => {
                           setRequest((prev) => ({
                             ...prev,

@@ -99,6 +99,8 @@ describe('APIs spec', () => {
     cy.getTestEl('query-0-key').type('firstParam')
     cy.getTestEl('query-0-value').type('myValue')
 
+    cy.getTestEl('add-row-btn').click()
+
     cy.getTestEl('query-1-key').type('secondParam')
     cy.getTestEl('query-1-value').type('mySecondValue')
 
@@ -148,6 +150,8 @@ describe('APIs spec', () => {
 
     cy.getTestEl('header-2-key').clear().type('X-First-Header')
     cy.getTestEl('header-2-value').clear().type('the value')
+
+    cy.getTestEl('add-row-btn').click()
 
     cy.getTestEl('header-3-key').clear().type('X-Second-Header')
     cy.getTestEl('header-3-value').clear().type('the second value')

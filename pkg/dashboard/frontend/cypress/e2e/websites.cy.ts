@@ -7,7 +7,7 @@ describe('Websites Spec', () => {
 
   it('should retrieve correct websites in list', () => {
     cy.visit('/websites')
-    cy.get('h2').should('contain.text', 'vite-website')
+    cy.get('h2').should('contain.text', 'docs-website')
 
     expectedWebsites.forEach((id) => {
       cy.get(`[data-rct-item-id="${id}"]`).should('exist')

@@ -657,6 +657,12 @@ func (d *Dashboard) handleWebsites(state websites.State) {
 		})
 	}
 
+	if len(websites) > 0 {
+		slices.SortFunc(websites, func(a, b WebsiteSpec) int {
+			return compare(a.Name, b.Name)
+		})
+	}
+
 	d.websites = websites
 
 	d.refresh()

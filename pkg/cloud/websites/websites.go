@@ -17,6 +17,7 @@
 package websites
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"net"
@@ -109,7 +110,7 @@ func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Target backend API server
 		target, err := url.Parse(h.devURL)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Invalid dev URL '%s': %v", h.devURL, err), http.StatusInternalServerError)
 			return
 		}
 
@@ -120,9 +121,16 @@ func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Reverse proxy request
 		proxy := httputil.NewSingleHostReverseProxy(target)
+
 		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadGateway)
+				var opErr *net.OpError
+
+				if errors.As(err, &opErr) && opErr.Op == "dial" {
+					http.Error(w, "Connection to the dev server was refused. Check the URL and server status.", http.StatusServiceUnavailable)
+				} else {
+					http.Error(w, err.Error(), http.StatusBadGateway)
+				}
 			}
 		}
 		proxy.ServeHTTP(w, r)

@@ -40,10 +40,11 @@ type WebsitePb = deploymentspb.Website
 type Website struct {
 	*WebsitePb
 
-	Name      string
-	Directory string
-	DevURL    string
-	URL       string
+	Name            string
+	Directory       string
+	OutputDirectory string
+	DevURL          string
+	URL             string
 }
 
 type (

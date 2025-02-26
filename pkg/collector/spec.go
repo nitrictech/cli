@@ -1183,7 +1183,13 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 	}
 
 	for _, website := range websiteRequirements {
-		cleanedPath := strings.TrimRight(website.OutputDirectory, string(os.PathSeparator))
+		localDir, ok := website.AssetSource.(*deploymentspb.Website_LocalDirectory)
+		if !ok {
+			projectErrors.Add(fmt.Errorf("website asset source must be a local directory"))
+			continue
+		}
+
+		cleanedPath := strings.TrimRight(localDir.LocalDirectory, string(os.PathSeparator))
 		// Get the parent directory
 		parentDir := filepath.Dir(cleanedPath)
 		// Extract the directory name from the parent path

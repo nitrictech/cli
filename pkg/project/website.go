@@ -61,7 +61,7 @@ func (s *Website) GetAbsoluteOutputPath() (string, error) {
 	return filepath.Abs(s.GetOutputPath())
 }
 
-func (s *Website) GetAbsoluteDirectory() (string, error) {
+func (s *Website) GetAbsoluteBaseDirectory() (string, error) {
 	return filepath.Abs(s.basedir)
 }
 

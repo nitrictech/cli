@@ -461,10 +461,12 @@ func (p *Project) CollectWebsiteRequirements() ([]*deploymentpb.Website, error) 
 		}
 
 		allWebsiteRequirements = append(allWebsiteRequirements, &deploymentpb.Website{
-			BasePath:        site.path,
-			OutputDirectory: outputDir,
-			IndexDocument:   site.indexPage,
-			ErrorDocument:   site.errorPage,
+			BasePath:      site.path,
+			IndexDocument: site.indexPage,
+			ErrorDocument: site.errorPage,
+			AssetSource: &deploymentpb.Website_LocalDirectory{
+				LocalDirectory: outputDir,
+			},
 		})
 	}
 
@@ -619,20 +621,23 @@ func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
 			return fmt.Errorf("unable to get absolute output path for website %s: %w", site.basedir, err)
 		}
 
-		directory, err := site.GetAbsoluteDirectory()
+		absBaseDir, err := site.GetAbsoluteBaseDirectory()
 		if err != nil {
 			return fmt.Errorf("unable to get absolute directory for website %s: %w", site.basedir, err)
 		}
 
 		sites = append(sites, websites.Website{
-			Name:      site.Name,
-			DevURL:    site.devURL,
-			Directory: directory,
+			Name:            site.Name,
+			DevURL:          site.devURL,
+			Directory:       absBaseDir,
+			OutputDirectory: outputDir,
 			WebsitePb: &websites.WebsitePb{
-				BasePath:        site.path,
-				OutputDirectory: outputDir,
-				IndexDocument:   site.indexPage,
-				ErrorDocument:   site.errorPage,
+				BasePath:      site.path,
+				IndexDocument: site.indexPage,
+				ErrorDocument: site.errorPage,
+				AssetSource: &deploymentpb.Website_LocalDirectory{
+					LocalDirectory: outputDir,
+				},
 			},
 		})
 	}

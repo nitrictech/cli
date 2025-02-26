@@ -585,12 +585,8 @@ github.com/nishanths/predeclared v0.2.2 h1:V2EPdZPliZymNAn79T8RkNApBjMmVKh5XRpLm
 github.com/nishanths/predeclared v0.2.2/go.mod h1:RROzoN6TnGQupbC+lqggsOlcgysk3LMK/HI84Mp280c=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20241003062412-76ea6275fb0b h1:wZeUrnmhYjdhSuL6ov+kVfuFJC9H14sk0kzEpt6aRoo=
 github.com/nitrictech/nitric/cloud/common v0.0.0-20241003062412-76ea6275fb0b/go.mod h1:ZsCdb3xbukhXAp9ZNbV6qWJqRC+eLkxhXy8bhs/cC2A=
-github.com/nitrictech/nitric/core v0.0.0-20250123065014-599bda2a2582 h1:dKVFR/rquvNB/FNu8GFAZJ5RcW7HrgyE+I8rdmvKwYc=
-github.com/nitrictech/nitric/core v0.0.0-20250123065014-599bda2a2582/go.mod h1:3kPpyO2oZEGfurDVsTh9XTg43b/4JAIbLkaktEvRF58=
-github.com/nitrictech/nitric/core v0.0.0-20250123070044-4b31d7498e96 h1:GdRQEkMYrZehM2SKkUecR2/SPa5TuKpxuuZetShZnAI=
-github.com/nitrictech/nitric/core v0.0.0-20250123070044-4b31d7498e96/go.mod h1:3kPpyO2oZEGfurDVsTh9XTg43b/4JAIbLkaktEvRF58=
-github.com/nitrictech/nitric/core v0.0.0-20250123074029-0306df1e20ae h1:hpSGt8KQ4OPPLqGvf5sFTv7h9isngWQLveVcfW4Z5i4=
-github.com/nitrictech/nitric/core v0.0.0-20250123074029-0306df1e20ae/go.mod h1:3kPpyO2oZEGfurDVsTh9XTg43b/4JAIbLkaktEvRF58=
+github.com/nitrictech/nitric/core v0.0.0-20250226055017-c8d108e2f62f h1:Aujlui7gF5ZiUhg0Z1vZ8tymsf37g/VwDJJI2gL8hpE=
+github.com/nitrictech/nitric/core v0.0.0-20250226055017-c8d108e2f62f/go.mod h1:3kPpyO2oZEGfurDVsTh9XTg43b/4JAIbLkaktEvRF58=
 github.com/nunnatsa/ginkgolinter v0.16.2 h1:8iLqHIZvN4fTLDC0Ke9tbSZVcyVHoBs0HIbnVSxfHJk=
 github.com/nunnatsa/ginkgolinter v0.16.2/go.mod h1:4tWRinDN1FeJgU+iJANW/kz7xKN5nYRAOfJDQUS9dOQ=
 github.com/nxadm/tail v1.4.11 h1:8feyoE3OzPrcshW5/MJ4sGESc5cqmGkGCWlco4l0bqY=

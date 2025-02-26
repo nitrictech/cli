@@ -322,7 +322,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
-	localWebsites := websites.NewLocalWebsitesService(localGateway.GetApiAddress, opts.LocalCloudMode == LocalCloudModeStart)
+	localWebsites := websites.NewLocalWebsitesService(localGateway.GetApiAddress, localGateway.GetWebsocketAddress, opts.LocalCloudMode == LocalCloudModeStart)
 
 	return &LocalCloud{
 		servers:        make(map[string]*server.NitricServer),

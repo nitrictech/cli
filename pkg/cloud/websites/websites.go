@@ -29,6 +29,7 @@ import (
 	"sync"
 
 	"github.com/asaskevich/EventBus"
+	"github.com/gorilla/websocket"
 
 	"github.com/nitrictech/cli/pkg/netx"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
@@ -52,11 +53,12 @@ type (
 )
 
 type LocalWebsiteService struct {
-	websiteRegLock sync.RWMutex
-	state          State
-	port           int
-	getApiAddress  GetApiAddress
-	isStartCmd     bool
+	websiteRegLock      sync.RWMutex
+	state               State
+	port                int
+	getApiAddress       GetApiAddress
+	getWebsocketAddress GetApiAddress
+	isStartCmd          bool
 
 	bus EventBus.Bus
 }
@@ -158,6 +160,21 @@ func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir(h.website.OutputDirectory)).ServeHTTP(w, r)
 }
 
+func proxyWebSocketMessages(src, dst *websocket.Conn, errChan chan error) {
+	for {
+		messageType, message, err := src.ReadMessage()
+		if err != nil {
+			errChan <- err
+			return
+		}
+		err = dst.WriteMessage(messageType, message)
+		if err != nil {
+			errChan <- err
+			return
+		}
+	}
+}
+
 // Serve - Serve a website from the local filesystem
 func (l *LocalWebsiteService) Start(websites []Website) error {
 	newLis, err := netx.GetNextListener(netx.MinPort(5000))
@@ -198,6 +215,48 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 		proxy.ServeHTTP(w, r)
 	})
 
+	// Register the API handler
+	mux.HandleFunc("/ws/{name}/", func(w http.ResponseWriter, r *http.Request) {
+		// Get the WebSocket API name from the request path
+		apiName := r.PathValue("name")
+
+		// Get the address of the WebSocket API
+		apiAddress := l.getWebsocketAddress(apiName)
+		if apiAddress == "" {
+			http.Error(w, fmt.Sprintf("WebSocket API %s not found", apiName), http.StatusNotFound)
+			return
+		}
+
+		// Dial the backend WebSocket server
+		targetURL := fmt.Sprintf("ws://%s%s", apiAddress, r.URL.Path)
+		targetConn, _, err := websocket.DefaultDialer.Dial(targetURL, nil)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to connect to backend WebSocket server: %v", err), http.StatusInternalServerError)
+			return
+		}
+		defer targetConn.Close()
+
+		// Upgrade the HTTP connection to a WebSocket connection
+		upgrader := websocket.Upgrader{}
+		clientConn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to upgrade to WebSocket: %v", err), http.StatusInternalServerError)
+			return
+		}
+		defer clientConn.Close()
+
+		// Proxy messages between the client and the backend WebSocket server
+		errChan := make(chan error, 2)
+		go proxyWebSocketMessages(clientConn, targetConn, errChan)
+		go proxyWebSocketMessages(targetConn, clientConn, errChan)
+
+		// Wait for an error to occur
+		err = <-errChan
+		if err != nil && err != websocket.ErrCloseSent {
+			http.Error(w, fmt.Sprintf("WebSocket proxy error: %v", err), http.StatusInternalServerError)
+		}
+	})
+
 	// Register the SPA handler for each website
 	for i := range websites {
 		website := &websites[i]
@@ -226,11 +285,12 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 	return nil
 }
 
-func NewLocalWebsitesService(getApiAddress GetApiAddress, isStartCmd bool) *LocalWebsiteService {
+func NewLocalWebsitesService(getApiAddress GetApiAddress, getWebsocketAddress GetApiAddress, isStartCmd bool) *LocalWebsiteService {
 	return &LocalWebsiteService{
-		state:         State{},
-		bus:           EventBus.New(),
-		getApiAddress: getApiAddress,
-		isStartCmd:    isStartCmd,
+		state:               State{},
+		bus:                 EventBus.New(),
+		getApiAddress:       getApiAddress,
+		getWebsocketAddress: getWebsocketAddress,
+		isStartCmd:          isStartCmd,
 	}
 }

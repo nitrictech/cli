@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { Sheet, SheetContent, SheetTrigger } from '../../ui/sheet'
 import NavigationBar from './NavigationBar'
 import { ModeToggle } from '@/components/ModeToggle'
+import { ThemeProvider } from 'next-themes'
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
 }) => (
@@ -153,6 +154,7 @@ const AppLayout: React.FC<Props> = ({
   const showAlert = data?.connected === false || state === 'error'
 
   return (
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <TooltipProvider>
       <Toaster position="top-right" />
 
@@ -161,7 +163,7 @@ const AppLayout: React.FC<Props> = ({
       {secondLevelNav && (
         <aside
           className={cn(
-            'fixed inset-y-0 left-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-gray-200 pb-6 pt-20 lg:block',
+            'fixed inset-y-0 left-20 hidden w-80 overflow-y-auto overflow-x-hidden border-r border-border bg-background pb-6 pt-20 lg:block',
             showAlert && 'lg:mt-24',
           )}
         >
@@ -170,7 +172,7 @@ const AppLayout: React.FC<Props> = ({
       )}
 
       <main className="lg:pl-20 min-h-screen bg-background">
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 sm:gap-x-6 sm:px-6 lg:px-8">
+        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border bg-background px-4 sm:gap-x-6 sm:px-6 lg:px-8">
           <Sheet>
             <SheetTrigger asChild>
               <Button size="icon" variant="ghost" className="lg:hidden">
@@ -179,7 +181,7 @@ const AppLayout: React.FC<Props> = ({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs">
-              <div className="flex grow flex-col gap-y-5 bg-white">
+              <div className="flex grow flex-col gap-y-5 bg-background">
                 <div className="flex h-16 shrink-0 items-center gap-x-4">
                   <img
                     className="h-8 w-auto"
@@ -478,6 +480,7 @@ const AppLayout: React.FC<Props> = ({
         </div>
       </main>
     </TooltipProvider>
+    </ThemeProvider>
   )
 }
 

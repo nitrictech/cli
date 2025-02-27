@@ -181,15 +181,15 @@ function ReactFlowLayout() {
               </Panel>
             )}
             <Panel position="bottom-left" className="flex flex-col gap-y-1">
-              <div className="rounded-md border bg-white p-2">
-                <div className="mb-2 text-center text-xs font-semibold">
+              <div className="rounded-md border-border bg-background p-2">
+                <div className="mb-2 text-center text-xs font-semibold text-foreground">
                   Connector Types
                 </div>
                 <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2 text-xs font-semibold">
-                  <span className="h-1 border-b-2 border-dashed border-black" />
-                  <span>Triggers</span>
-                  <span className="h-1 border-b-2 border-black" />
-                  <span>Dependencies</span>
+                  <span className="h-1 border-b-2 border-dashed border-foreground" />
+                  <span className="text-foreground">Triggers</span>
+                  <span className="h-1 border-b-2 border-dashed border-foreground" />
+                  <span className="text-foreground">Dependencies</span>
                 </div>
               </div>
             </Panel>

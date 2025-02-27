@@ -111,7 +111,7 @@ export const DetailsDrawer = ({
 
   return (
     <Drawer modal={false} direction="right" open={open}>
-      <DrawerContent className="fixed inset-auto bottom-0 right-0 mt-24 flex h-full w-[380px] flex-col rounded-l-[10px] rounded-r-none bg-white">
+      <DrawerContent className="fixed inset-auto bottom-0 right-0 mt-24 flex h-full w-[380px] flex-col rounded-l-[10px] rounded-r-none bg-background border border-border">
         <div className="mx-auto w-full max-w-sm p-4">
           <DrawerHeader
             className={`flex items-center react-flow__node-${nodeType}`}
@@ -130,11 +130,11 @@ export const DetailsDrawer = ({
             {children}
             {address && (
               <div className="flex flex-col">
-                <span className="font-bold">Address:</span>
+                <span className="font-bold text-foreground">Address:</span>
                 {address.startsWith('http') ? (
                   <a
                     target="_blank"
-                    className="hover:underline"
+                    className="hover:underline text-foreground"
                     href={address}
                     rel="noreferrer"
                   >
@@ -147,13 +147,13 @@ export const DetailsDrawer = ({
             )}
             {services?.length ? (
               <div className="flex flex-col">
-                <span className="font-bold">Requested by:</span>
+                <span className="font-bold text-foreground">Requested by:</span>
                 <div className="flex flex-col items-start gap-y-1">
                   {services.map((s) => (
                     <button
                       key={s}
                       type="button"
-                      className="hover:underline"
+                      className="hover:underline text-foreground"
                       onClick={() => selectServiceNode(s)}
                     >
                       {s}

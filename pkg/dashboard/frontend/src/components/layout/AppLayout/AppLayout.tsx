@@ -27,7 +27,7 @@ import { Spinner } from '../../shared'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { Sheet, SheetContent, SheetTrigger } from '../../ui/sheet'
 import NavigationBar from './NavigationBar'
-
+import { ModeToggle } from '@/components/ModeToggle'
 const DiscordLogo: React.FC<React.SVGProps<SVGSVGElement>> = ({
   className,
 }) => (
@@ -169,7 +169,7 @@ const AppLayout: React.FC<Props> = ({
         </aside>
       )}
 
-      <main className="lg:pl-20">
+      <main className="lg:pl-20 min-h-screen bg-background">
         <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 sm:gap-x-6 sm:px-6 lg:px-8">
           <Sheet>
             <SheetTrigger asChild>
@@ -186,7 +186,7 @@ const AppLayout: React.FC<Props> = ({
                     src="/nitric-no-text.svg"
                     alt="Nitric Logo"
                   />
-                  <span className="max-w-96 truncate font-semibold">
+                  <span className="max-w-96 truncate font-semibold text-foreground">
                     {data?.projectName}
                   </span>
                 </div>
@@ -207,16 +207,16 @@ const AppLayout: React.FC<Props> = ({
                               href={item.href}
                               className={cn(
                                 item.href === routePath
-                                  ? 'bg-gray-50 text-primary'
-                                  : 'text-gray-700 hover:bg-gray-50 hover:text-primary',
+                                  ? 'bg-accent text-accent-foreground'
+                                  : 'text-foreground hover:bg-accent hover:text-accent-foreground',
                                 'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
                               )}
                             >
                               <item.icon
                                 className={cn(
                                   item.href === routePath
-                                    ? 'text-primary'
-                                    : 'text-gray-400 group-hover:text-primary',
+                                    ? 'text-accent-foreground'
+                                    : 'text-foreground group-hover:text-accent-foreground',
                                   'h-6 w-6 shrink-0',
                                 )}
                                 aria-hidden="true"
@@ -239,7 +239,7 @@ const AppLayout: React.FC<Props> = ({
                               target="_blank"
                               rel="noreferrer"
                               className={cn(
-                                'items-center text-gray-700 hover:bg-gray-50 hover:text-primary',
+                                'items-center text-foreground hover:bg-accent hover:text-accent-foreground',
                                 'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6',
                               )}
                             >
@@ -261,11 +261,11 @@ const AppLayout: React.FC<Props> = ({
             aria-hidden="true"
           />
           {data?.projectName && (
-            <div className="flex items-center gap-6 font-semibold leading-6 text-gray-900 md:text-lg">
+            <div className="flex items-center gap-6 font-semibold leading-6 text-foreground md:text-lg">
               <span className="hidden max-w-[300px] truncate lg:block">
                 {data.projectName}
               </span>{' '}
-              <span className="hidden text-gray-300 lg:block">/</span>{' '}
+              <span className="hidden text-muted-foreground lg:block">/</span>{' '}
               <Button
                 className={cn(
                   '/architecture' === routePath && 'bg-accent',
@@ -275,7 +275,7 @@ const AppLayout: React.FC<Props> = ({
                 asChild
               >
                 <a href="/architecture">
-                  <MapIcon className="mr-2 h-5 w-5 text-gray-500" />{' '}
+                  <MapIcon className="mr-2 h-5 w-5 text-muted-foreground" />{' '}
                   Architecture
                 </a>
               </Button>
@@ -310,10 +310,10 @@ const AppLayout: React.FC<Props> = ({
                       <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-gray-500">
                         A new version of Nitric is available
                       </h3>
-                      <div className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50">
-                        <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
+                      <div className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-accent">
+                        <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-accent group-hover:bg-white">
                           <DocumentDuplicateIcon
-                            className="h-6 w-6 text-gray-600 group-hover:text-primary"
+                            className="h-6 w-6 text-foreground group-hover:text-primary"
                             aria-hidden="true"
                           />
                         </div>
@@ -322,14 +322,14 @@ const AppLayout: React.FC<Props> = ({
                             href={'https://nitric.io/docs/installation'}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-semibold text-gray-900"
+                            className="font-semibold text-foreground"
                           >
                             Upgrade from version &apos;
                             {data.currentVersion}&apos; to &apos;
                             {data.latestVersion}&apos;
                             <span className="absolute inset-0" />
                           </a>
-                          <p className="mt-1 text-gray-600">
+                          <p className="mt-1 text-muted-foreground">
                             To upgrade, visit the installation docs for
                             instructions and release notes
                           </p>
@@ -337,12 +337,12 @@ const AppLayout: React.FC<Props> = ({
                       </div>
                     </div>
 
-                    <div className="bg-gray-50">
+                    <div className="bg-background border-t border-border">
                       <div className="flex flex-col justify-between">
-                        <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-gray-500">
+                        <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-muted-foreground">
                           Reach out to the community
                         </h3>
-                        <div className="grid grid-cols-2 divide-x divide-gray-900/5">
+                        <div className="grid grid-cols-2 divide-x divide-border">
                           {communityLinks
                             .filter((item) => item.name !== 'Sponsor')
                             .map((item) => (
@@ -351,10 +351,10 @@ const AppLayout: React.FC<Props> = ({
                                 href={item.href}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
+                                className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-foreground hover:bg-accent"
                               >
                                 <item.icon
-                                  className="h-5 w-5 flex-none text-gray-400"
+                                  className="h-5 w-5 flex-none text-muted-foreground"
                                   aria-hidden="true"
                                 />
                                 {item.name}
@@ -366,6 +366,7 @@ const AppLayout: React.FC<Props> = ({
                   </PopoverContent>
                 </Popover>
               ) : null}
+              <ModeToggle />
               <span className="hidden font-semibold lg:block">
                 Local Dashboard
               </span>
@@ -374,9 +375,10 @@ const AppLayout: React.FC<Props> = ({
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="group font-semibold">
                       <QuestionMarkCircleIcon
-                        className={
-                          'mr-2 h-5 w-5 text-gray-500 transition duration-150 ease-in-out group-hover:text-opacity-80 group-data-[state="open"]:text-opacity-90'
-                        }
+                        className={cn(
+                          'mr-2 h-5 w-5 transition duration-150 ease-in-out',
+                          'text-muted-foreground group-hover:text-foreground'
+                        )}
                         aria-hidden="true"
                       />
                       <span>Help</span>
@@ -384,7 +386,7 @@ const AppLayout: React.FC<Props> = ({
                   </PopoverTrigger>
                   <PopoverContent className="mr-2 w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white p-0 text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
                     <div className="p-4">
-                      <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-gray-500">
+                      <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-foreground">
                         Need help with your project?
                       </h3>
                       {resourceLinks.map((item) => (
@@ -403,12 +405,12 @@ const AppLayout: React.FC<Props> = ({
                               href={item.href}
                               target="_blank"
                               rel="noreferrer"
-                              className="font-semibold text-gray-900"
+                              className="font-semibold text-foreground"
                             >
                               {item.name}
                               <span className="absolute inset-0" />
                             </a>
-                            <p className="mt-1 text-gray-600">
+                            <p className="mt-1 text-muted-foreground">
                               {item.description}
                             </p>
                           </div>
@@ -416,12 +418,12 @@ const AppLayout: React.FC<Props> = ({
                       ))}
                     </div>
 
-                    <div className="bg-gray-50">
+                    <div className="bg-background border-t border-border">
                       <div className="flex flex-col justify-between">
-                        <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-gray-500">
+                        <h3 className="font p-4 text-center text-sm font-semibold leading-6 text-muted-foreground">
                           Reach out to the community
                         </h3>
-                        <div className="grid grid-cols-2 divide-x divide-gray-900/5">
+                        <div className="grid grid-cols-2 divide-x divide-border">
                           {communityLinks
                             .filter((item) => item.name !== 'Sponsor')
                             .map((item) => (
@@ -430,17 +432,17 @@ const AppLayout: React.FC<Props> = ({
                                 href={item.href}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
+                                className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-foreground hover:bg-accent"
                               >
                                 <item.icon
-                                  className="h-5 w-5 flex-none text-gray-400"
+                                  className="h-5 w-5 flex-none text-muted-foreground"
                                   aria-hidden="true"
                                 />
                                 {item.name}
                               </a>
                             ))}
                         </div>
-                        <p className="ml-auto w-full truncate border-t px-4 py-2 text-center text-gray-400">
+                        <p className="ml-auto w-full truncate border-t px-4 py-2 text-center text-muted-foreground">
                           CLI Version: v{data?.currentVersion}
                         </p>
                       </div>
@@ -465,9 +467,9 @@ const AppLayout: React.FC<Props> = ({
           </Alert>
         )}
         <div className={secondLevelNav ? 'lg:pl-80' : undefined}>
-          <div className={cn('px-4 py-8 sm:px-6 lg:px-8', mainClassName)}>
+          <div className={cn('px-4 py-8 sm:px-6 lg:px-8 bg-background', mainClassName)}>
             <h1
-              className={cn('mb-12 text-4xl font-bold', hideTitle && 'sr-only')}
+              className={cn('mb-12 text-4xl font-bold text-foreground', hideTitle && 'sr-only')}
             >
               {title}
             </h1>

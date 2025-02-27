@@ -90,8 +90,8 @@ export default function NitricEdge({
           <div
             data-testid={`edge-label-${id}`}
             className={cn(
-              'nodrag absolute rounded-sm border bg-white p-1 text-[9px] font-semibold tracking-normal transition-all',
-              selected ? 'border-primary' : 'border-gray-500',
+              'nodrag absolute rounded-sm border bg-background text-foreground p-1 text-[9px] font-semibold tracking-normal transition-all',
+              selected ? 'border-primary' : 'border-border',
             )}
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,

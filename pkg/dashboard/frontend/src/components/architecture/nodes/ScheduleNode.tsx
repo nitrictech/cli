@@ -27,12 +27,12 @@ export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
             {data.resource.expression ? (
               <>
                 <div className="flex flex-col">
-                  <span className="font-bold">Cron:</span>
-                  <span>{data.resource.expression}</span>
+                  <span className="font-bold text-foreground">Cron:</span>
+                  <span className="text-foreground">{data.resource.expression}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold">Description:</span>
-                  <span>
+                  <span className="font-bold text-foreground">Description:</span>
+                  <span className="text-foreground">
                     {cronstrue.toString(data.resource.expression, {
                       verbose: true,
                     })}
@@ -41,8 +41,8 @@ export const ScheduleNode: ComponentType<NodeProps<ScheduleNodeData>> = (
               </>
             ) : (
               <div className="flex flex-col">
-                <span className="font-bold">Rate:</span>
-                <span>Every {data.resource.rate}</span>
+                <span className="font-bold text-foreground">Rate:</span>
+                <span className="text-foreground">Every {data.resource.rate}</span>
               </div>
             )}
           </>

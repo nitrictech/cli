@@ -57,7 +57,7 @@ const APIHistory: React.FC<Props> = ({
     })
 
   if (!requestHistory.length) {
-    return <p className="px-2">There is no history.</p>
+    return <p className="px-2 text-foreground">There is no history.</p>
   }
 
   return (

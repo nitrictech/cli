@@ -166,7 +166,7 @@ type WebsiteSpec struct {
 
 type Dashboard struct {
 	resourcesLock          sync.Mutex
-	localCloudMode         cloud.LocalCloudMode
+	localCloudMode         cloud.Mode
 	project                *project.Project
 	storageService         *storage.LocalStorageService
 	gatewayService         *gateway.LocalGatewayService
@@ -232,7 +232,7 @@ type DashboardResponse struct {
 	CurrentVersion      string                `json:"currentVersion"`
 	LatestVersion       string                `json:"latestVersion"`
 	Connected           bool                  `json:"connected"`
-	LocalCloudMode      cloud.LocalCloudMode  `json:"localCloudMode"`
+	LocalCloudMode      cloud.Mode            `json:"localCloudMode"`
 }
 
 type Bucket struct {
@@ -934,7 +934,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	wsWebSocket := melody.New()
 
 	dash := &Dashboard{
-		localCloudMode:         localCloud.GetLocalCloudMode(),
+		localCloudMode:         localCloud.GetMode(),
 		project:                project,
 		storageService:         localCloud.Storage,
 		gatewayService:         localCloud.Gateway,

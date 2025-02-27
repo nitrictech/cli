@@ -79,13 +79,15 @@ func (l *LocalWebsiteService) register(website Website) {
 	l.websiteRegLock.Lock()
 	defer l.websiteRegLock.Unlock()
 
-	// add URL to the website and store it in the state
+	// Emulates the CDN URL used in a deployed environment
+	publicUrl := fmt.Sprintf("http://localhost:%d/%s", l.port, strings.TrimPrefix(website.BasePath, "/"))
+
 	l.state[website.Name] = Website{
 		WebsitePb: website.WebsitePb,
 		Name:      website.Name,
 		DevURL:    website.DevURL,
 		Directory: website.Directory,
-		URL:       fmt.Sprintf("http://localhost:%d/%s", l.port, strings.TrimPrefix(website.BasePath, "/")),
+		URL:       publicUrl,
 	}
 
 	l.publishState()
@@ -98,76 +100,78 @@ type staticSiteHandler struct {
 	isStartCmd bool
 }
 
-// ServeHTTP - Serve a static website from the local filesystem
-func (h staticSiteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// if start command just proxy the request to the dev url
-	if h.isStartCmd {
-		// if the dev url is not set, return a 500 internal server error with a message
-		if h.devURL == "" {
-			http.Error(w, "The dev URL is not set for this website", http.StatusInternalServerError)
-			return
-		}
-
-		// Target backend API server
-		target, err := url.Parse(h.devURL)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid dev URL '%s': %v", h.devURL, err), http.StatusInternalServerError)
-			return
-		}
-
-		// ignore proxy errors like unsupported protocol
-		if target == nil || target.Scheme == "" {
-			return
-		}
-
-		// Reverse proxy request
-		proxy := httputil.NewSingleHostReverseProxy(target)
-
-		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-			if err != nil {
-				var opErr *net.OpError
-
-				if errors.As(err, &opErr) && opErr.Op == "dial" {
-					http.Error(w, "Connection to the dev server was refused. Check the URL and server status.", http.StatusServiceUnavailable)
-				} else {
-					http.Error(w, err.Error(), http.StatusBadGateway)
-				}
-			}
-		}
-		proxy.ServeHTTP(w, r)
-
+func (h staticSiteHandler) serveProxy(res http.ResponseWriter, req *http.Request) {
+	if h.devURL == "" {
+		http.Error(res, "The dev URL is not set for this website", http.StatusInternalServerError)
 		return
 	}
 
-	path := filepath.Join(h.website.OutputDirectory, r.URL.Path)
+	targetUrl, err := url.Parse(h.devURL)
+	if err != nil {
+		http.Error(res, fmt.Sprintf("Invalid dev URL '%s': %v", h.devURL, err), http.StatusInternalServerError)
+		return
+	}
 
-	// check whether a file exists or is a directory at the given path
+	// ignore proxy errors like unsupported protocol
+	if targetUrl == nil || targetUrl.Scheme == "" {
+		return
+	}
+
+	// Reverse proxy request
+	proxy := httputil.NewSingleHostReverseProxy(targetUrl)
+
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		if err != nil {
+			var opErr *net.OpError
+
+			if errors.As(err, &opErr) && opErr.Op == "dial" {
+				http.Error(w, "Connection to the dev server was refused. Check the URL and server status.", http.StatusServiceUnavailable)
+			} else {
+				http.Error(w, err.Error(), http.StatusBadGateway)
+			}
+		}
+	}
+	proxy.ServeHTTP(res, req)
+}
+
+func (h staticSiteHandler) serveStatic(res http.ResponseWriter, req *http.Request) {
+	path := filepath.Join(h.website.OutputDirectory, req.URL.Path)
+
 	fi, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// if the file doesn't exist, serve the error page with a 404 status code
-			http.ServeFile(w, r, filepath.Join(h.website.OutputDirectory, h.website.ErrorDocument))
+			http.ServeFile(res, req, filepath.Join(h.website.OutputDirectory, h.website.ErrorDocument))
+
 			return
 		}
 
-		// if we got an error (that wasn't that the file doesn't exist) stating the
-		// file, return a 500 internal server error and stop
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(res, err.Error(), http.StatusInternalServerError)
 
 		return
 	}
 
 	if fi.IsDir() {
-		http.ServeFile(w, r, filepath.Join(h.website.OutputDirectory, h.website.IndexDocument))
+		http.ServeFile(res, req, filepath.Join(h.website.OutputDirectory, h.website.IndexDocument))
 
 		return
 	}
 
-	// otherwise, use http.FileServer to serve the static file
-	http.FileServer(http.Dir(h.website.OutputDirectory)).ServeHTTP(w, r)
+	http.FileServer(http.Dir(h.website.OutputDirectory)).ServeHTTP(res, req)
 }
 
-// Serve - Serve a website from the local filesystem
+// ServeHTTP - Serve a static website from the local filesystem
+func (h staticSiteHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	// If the website is running (i.e. start mode), proxy the request to the dev server
+	if h.isStartCmd {
+		h.serveProxy(res, req)
+		return
+	}
+
+	h.serveStatic(res, req)
+}
+
+// Start - Start the local website service
 func (l *LocalWebsiteService) Start(websites []Website) error {
 	newLis, err := netx.GetNextListener(netx.MinPort(5000))
 	if err != nil {
@@ -178,33 +182,25 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 
 	_ = newLis.Close()
 
-	// Initialize the multiplexer only if websites will be served
 	mux := http.NewServeMux()
 
-	// Register the API handler
-	mux.HandleFunc("/api/{name}/", func(w http.ResponseWriter, r *http.Request) {
-		// get the api name from the request path
-		apiName := r.PathValue("name")
+	// Register the API proxy handler
+	mux.HandleFunc("/api/{name}/", func(res http.ResponseWriter, req *http.Request) {
+		apiName := req.PathValue("name")
 
-		// get the address of the api
 		apiAddress := l.getApiAddress(apiName)
 		if apiAddress == "" {
-			http.Error(w, fmt.Sprintf("api %s not found", apiName), http.StatusNotFound)
+			http.Error(res, fmt.Sprintf("api %s not found", apiName), http.StatusNotFound)
 			return
 		}
 
-		// Strip /api/{name}/ from the URL path
-		newPath := strings.TrimPrefix(r.URL.Path, fmt.Sprintf("/api/%s", apiName))
+		targetPath := strings.TrimPrefix(req.URL.Path, fmt.Sprintf("/api/%s", apiName))
+		targetUrl, _ := url.Parse(apiAddress)
 
-		// Target backend API server
-		target, _ := url.Parse(apiAddress)
+		proxy := httputil.NewSingleHostReverseProxy(targetUrl)
+		req.URL.Path = targetPath
 
-		// Reverse proxy request
-		proxy := httputil.NewSingleHostReverseProxy(target)
-		r.URL.Path = newPath
-
-		// Forward the modified request to the backend
-		proxy.ServeHTTP(w, r)
+		proxy.ServeHTTP(res, req)
 	})
 
 	// Register the SPA handler for each website

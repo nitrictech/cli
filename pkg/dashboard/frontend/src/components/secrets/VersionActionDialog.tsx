@@ -78,7 +78,7 @@ export function VersionActionDialog({
               ? `Add new version to ${secretName}`
               : `Are you sure that you want to delete the selected ${selectedVersions?.length} versions of ${secretName}?`}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-muted-foreground">
             {action === 'add'
               ? `Input the new secret value.`
               : `Once deleted the versions cannot be recovered.`}

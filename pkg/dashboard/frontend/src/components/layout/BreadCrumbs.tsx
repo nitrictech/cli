@@ -18,10 +18,10 @@ const BreadCrumbs = ({ children, className }: Props) => {
         {childArray.map((child, index) => (
           <li key={index} className={'flex items-center justify-center gap-4'}>
             {index === childArray.length - 1 ? (
-              <span>{child}</span>
+              <span className="text-foreground">{child}</span>
             ) : (
               <>
-                <span>{child}</span>
+                <span className="text-muted-foreground hover:text-foreground">{child}</span>
                 <Separator orientation="vertical" />
               </>
             )}

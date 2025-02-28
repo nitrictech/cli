@@ -118,11 +118,11 @@ export const DetailsDrawer = ({
           >
             <Icon className="resource-icon mr-2 size-8" />
             <div>
-              <DrawerTitle>
+              <DrawerTitle className="text-foreground">
                 <span className="flex items-center">{title}</span>
               </DrawerTitle>
               {description && (
-                <DrawerDescription>{description}</DrawerDescription>
+                <DrawerDescription className="text-muted-foreground">{description}</DrawerDescription>
               )}
             </div>
           </DrawerHeader>

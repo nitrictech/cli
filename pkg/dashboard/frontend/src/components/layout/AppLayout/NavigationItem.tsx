@@ -46,6 +46,7 @@ const NavigationItem: React.FC<NavigationItemProps> = ({
             'absolute left-7 group-data-[state=expanded]:left-12',
             'opacity-0 group-data-[state=expanded]:opacity-100',
             'transition-all',
+            'text-foreground'
           )}
         >
           {name}

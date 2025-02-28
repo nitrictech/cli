@@ -177,7 +177,7 @@ const CodeEditor: React.FC<Props> = ({
         <button
           aria-label="Copy Code"
           data-testid="copy-code"
-          className="absolute right-0 top-0 z-50 m-4 h-4 w-4 text-white"
+          className="absolute right-0 top-0 z-50 m-4 h-4 w-4 text-foreground hover:text-accent-foreground"
           onClick={handleCopyCode}
         >
           {copied ? <ClipboardDocumentCheckIcon /> : <ClipboardIcon />}
@@ -188,7 +188,7 @@ const CodeEditor: React.FC<Props> = ({
           <button
             onClick={handleFormat}
             type="button"
-            className="ml-auto rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            className="ml-auto rounded bg-background px-2 py-1 text-xs font-semibold text-foreground shadow-sm ring-1 ring-inset ring-border hover:bg-accent"
           >
             Format
           </button>
@@ -210,16 +210,16 @@ const CodeEditor: React.FC<Props> = ({
           {...props}
         />
         {errors.length > 0 && (
-          <div className="absolute bottom-0 right-0 m-2 rounded-md bg-red-50 p-2.5">
+          <div className="absolute bottom-0 right-0 m-2 rounded-md bg-destructive/10 p-2.5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <XCircleIcon
-                  className="h-5 w-5 text-red-400"
+                  className="h-5 w-5 text-destructive"
                   aria-hidden="true"
                 />
               </div>
               <div className="ml-1">
-                <div className="text-sm text-red-700">
+                <div className="text-sm text-destructive">
                   Error Invalid JSON at line{' '}
                   {getLineNumber(
                     editor.current?.view?.state.doc.toString() || '',

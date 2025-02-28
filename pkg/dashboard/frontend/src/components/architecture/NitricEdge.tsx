@@ -81,7 +81,9 @@ export default function NitricEdge({
         path={edgePath}
         style={{
           ...style,
-          stroke: highlightEdge ? 'rgb(var(--primary))' : style.stroke,
+          stroke: highlightEdge ? 'rgb(var(--primary))' : 'rgb(var(--foreground))',
+          strokeWidth: highlightEdge ? 2 : 1,
+          opacity: highlightEdge ? 1 : 0.6,
         }}
         markerEnd={markerEnd}
       />

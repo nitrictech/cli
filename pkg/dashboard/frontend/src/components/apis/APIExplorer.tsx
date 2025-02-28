@@ -491,7 +491,7 @@ const APIExplorer = () => {
                               }}
                             >
                               <span className="sr-only">Copy Route URL</span>
-                              <ClipboardIcon className="h-5 w-5 text-gray-500" />
+                              <ClipboardIcon className="h-5 w-5 text-muted-foreground" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -556,7 +556,7 @@ const APIExplorer = () => {
                             href="https://nitric.io/docs/apis#api-security"
                             target="_blank"
                             rel="noreferrer"
-                            className="underline"
+                            className="underline text-foreground hover:text-accent-foreground"
                           >
                             API Docs
                           </a>
@@ -600,7 +600,7 @@ const APIExplorer = () => {
                         </li>
                       )}
                       <li className="flex flex-col py-4">
-                        <h4 className="text-lg font-medium text-gray-900">
+                        <h4 className="text-lg font-medium text-foreground">
                           Query Params
                         </h4>
                         <FieldRows
@@ -664,14 +664,14 @@ const APIExplorer = () => {
                       )}
                       {currentBodyTab.name === 'Binary' && (
                         <div className="mb-2 flex flex-col">
-                          <h4 className="mb-2 text-lg font-medium text-gray-900">
+                          <h4 className="mb-2 text-lg font-medium text-foreground">
                             Binary File
                           </h4>
                           <FileUpload multiple={false} onDrop={onDrop} />
                           {fileToUpload && (
                             <span
                               data-testid="file-upload-info"
-                              className="flex items-center px-4 py-4 sm:px-0"
+                              className="flex items-center px-4 py-4 sm:px-0 text-muted-foreground"
                             >
                               {fileToUpload.name} -{' '}
                               {formatFileSize(fileToUpload.size)}
@@ -741,31 +741,31 @@ const APIExplorer = () => {
                       {responseTabIndex === 1 && (
                         <div className="overflow-x-auto">
                           <div className="inline-block min-w-full py-2 align-middle">
-                            <table className="min-w-full divide-y divide-gray-300">
+                            <table className="min-w-full divide-y divide-border">
                               <thead>
                                 <tr>
                                   <th
                                     scope="col"
-                                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
+                                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-6 lg:pl-8"
                                   >
                                     Header
                                   </th>
                                   <th
                                     scope="col"
-                                    className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                    className="px-3 py-3.5 text-left text-sm font-semibold text-foreground"
                                   >
                                     Value
                                   </th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-gray-200 bg-white">
+                              <tbody className="divide-y divide-border">
                                 {Object.entries(response.headers || {}).map(
                                   ([key, value]) => (
                                     <tr key={key}>
-                                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
+                                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6 lg:pl-8">
                                         {key}
                                       </td>
-                                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                      <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                                         {value}
                                       </td>
                                     </tr>
@@ -778,11 +778,11 @@ const APIExplorer = () => {
                       )}
                     </div>
                   ) : response ? (
-                    <span className="text-lg text-gray-500">
+                    <span className="text-lg text-muted-foreground">
                       No response data available for this request.
                     </span>
                   ) : (
-                    <span className="text-lg text-gray-500">
+                    <span className="text-lg text-muted-foreground">
                       Send a request to get a response.
                     </span>
                   )}
@@ -791,7 +791,7 @@ const APIExplorer = () => {
             </div>
             <SectionCard
               title="Request History"
-              className="m-0 mb-20 border-none px-0 shadow-none sm:px-0"
+              className="m-0 mb-20 border-none px-0 shadow-none sm:px-0 bg-background"
               headerClassName="px-4 sm:px-2"
             >
               <APIHistory
@@ -809,7 +809,7 @@ const APIExplorer = () => {
           <div>
             Please refer to our documentation on{' '}
             <a
-              className="underline"
+              className="underline text-foreground hover:text-accent-foreground"
               target="_blank"
               href="https://nitric.io/docs/apis"
               rel="noreferrer"
@@ -819,7 +819,7 @@ const APIExplorer = () => {
             as we are unable to find any existing APIs. <br />
             APIs built using{' '}
             <a
-              className="underline"
+              className="underline text-foreground hover:text-accent-foreground"
               target="_blank"
               href="https://nitric.io/docs/reference/nodejs/http/http"
               rel="noopener noreferrer"

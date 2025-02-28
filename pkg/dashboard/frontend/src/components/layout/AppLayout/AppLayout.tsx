@@ -386,7 +386,7 @@ const AppLayout: React.FC<Props> = ({
                       <span>Help</span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="mr-2 w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white p-0 text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
+                  <PopoverContent className="mr-2 w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-background p-0 text-sm leading-6 shadow-lg ring-1 ring-border">
                     <div className="p-4">
                       <h3 className="font mb-2 text-center text-sm font-semibold leading-6 text-foreground">
                         Need help with your project?
@@ -394,11 +394,11 @@ const AppLayout: React.FC<Props> = ({
                       {resourceLinks.map((item) => (
                         <div
                           key={item.name}
-                          className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50"
+                          className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-accent/50"
                         >
-                          <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
+                          <div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-muted group-hover:bg-background">
                             <item.icon
-                              className="h-6 w-6 text-gray-600 group-hover:text-primary"
+                              className="h-6 w-6 text-muted-foreground group-hover:text-primary"
                               aria-hidden="true"
                             />
                           </div>
@@ -444,7 +444,7 @@ const AppLayout: React.FC<Props> = ({
                               </a>
                             ))}
                         </div>
-                        <p className="ml-auto w-full truncate border-t px-4 py-2 text-center text-muted-foreground">
+                        <p className="ml-auto w-full truncate border-t border-border px-4 py-2 text-center text-muted-foreground">
                           CLI Version: v{data?.currentVersion}
                         </p>
                       </div>

@@ -107,7 +107,7 @@ const ApiHistoryAccordionContent: React.FC<ApiHistoryItem> = ({
         {tabIndex === 0 && (
           <TableGroup
             headers={['Key', 'Value']}
-            rowDataClassName="max-w-[100px]"
+            rowDataClassName="max-w-[100px] text-foreground"
             groups={[
               {
                 name: 'Request Headers',
@@ -137,7 +137,7 @@ const ApiHistoryAccordionContent: React.FC<ApiHistoryItem> = ({
         {tabIndex === 2 && (
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-2">
-              <p className="text-md font-semibold">Request Body</p>
+              <p className="text-md font-semibold text-foreground">Request Body</p>
               <CodeEditor
                 contentType="application/json"
                 readOnly={true}

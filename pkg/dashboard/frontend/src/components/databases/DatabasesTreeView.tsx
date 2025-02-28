@@ -60,7 +60,7 @@ const DatabasesTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
       renderItemTitle={({ item }) => {
         return (
           <div className="flex w-full items-center justify-between">
-            <span className="truncate">{item.data.label}</span>
+            <span className="truncate text-foreground">{item.data.label}</span>
             {item.data.data?.status !== 'active' && (
               <span>
                 <Badge className={'ml-2 bg-blue-600'}>

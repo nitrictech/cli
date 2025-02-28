@@ -24,7 +24,7 @@ const EventsHistory: React.FC<Props> = ({
     .filter((h) => h.event.name === selectedWorker.name)
 
   if (!requestHistory.length) {
-    return <p>There is no history.</p>
+    return <p className="text-foreground">There is no history.</p>
   }
 
   return (
@@ -46,7 +46,7 @@ const EventsHistory: React.FC<Props> = ({
             content: formattedPayload ? (
               <div className="flex flex-col gap-8">
                 <div className="flex flex-col gap-2">
-                  <p className="text-md font-semibold">Payload</p>
+                  <p className="text-md font-semibold text-foreground">Payload</p>
                   <CodeEditor
                     contentType="application/json"
                     readOnly={true}

@@ -154,7 +154,9 @@ function ReactFlowLayout() {
             onEdgesChange={onEdgesChange}
             defaultEdgeOptions={{
               type: 'nitric',
+              className: 'text-foreground',
             }}
+            className="bg-background"
             onConnect={onConnect}
             fitView
             fitViewOptions={{
@@ -162,8 +164,17 @@ function ReactFlowLayout() {
               minZoom: 1,
             }}
           >
-            <MiniMap pannable zoomable className="!bg-blue-300" />
-            <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+            <MiniMap 
+              pannable 
+              zoomable 
+              className="!bg-background border border-border" 
+            />
+            <Background 
+              variant={BackgroundVariant.Dots} 
+              gap={12} 
+              size={1}
+              className="!text-border" 
+            />
             {data?.projectName && (
               <Panel position="top-right">
                 <div className="flex items-center gap-x-6">

@@ -34,7 +34,7 @@ const NodeBase: FC<PropsWithChildren<Props>> = ({
         <DetailsDrawer {...drawerOptions} open={selected && !dragging} />
       )}
       <div className="wrapper gradient relative flex flex-grow overflow-hidden rounded-md p-0.5">
-        <div className="relative flex grow items-center justify-center gap-4 rounded bg-background text-foreground border border-border">
+        <div className="relative flex grow items-center justify-center gap-4 rounded bg-background text-foreground border border-border pr-4">
           <div className="flex h-full w-14 items-center justify-center">
             <div className="gradient relative flex size-10 items-center justify-center overflow-hidden rounded-full">
               <div className="z-10 flex size-9 items-center justify-center rounded-full bg-background">
@@ -44,11 +44,17 @@ const NodeBase: FC<PropsWithChildren<Props>> = ({
           </div>
           <div className="text-sm font-semibold text-foreground">{title}</div>
 
-          <Handle type="target" isConnectable={false} position={Position.Top} />
+          <Handle 
+            type="target" 
+            isConnectable={false} 
+            position={Position.Top}
+            className="!bg-foreground" 
+          />
           <Handle
             type="source"
             isConnectable={false}
             position={Position.Bottom}
+            className="!bg-foreground"
           />
         </div>
       </div>

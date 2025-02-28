@@ -70,7 +70,7 @@ const StorageTreeView: FC<Props> = ({
           : 0
 
         return (
-          <span className="truncate">
+          <span className="truncate text-foreground">
             {count ? (
               <>
                 {item.data.label}
@@ -80,14 +80,14 @@ const StorageTreeView: FC<Props> = ({
                       <Badge
                         className={cn(
                           'ml-2',
-                          count > 0 ? 'bg-blue-600' : 'bg-orange-400',
+                          count > 0 ? 'bg-primary text-primary-foreground' : 'bg-warning text-warning-foreground',
                         )}
                       >
                         {count}
                       </Badge>
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent side="right">
+                  <TooltipContent side="right" className="bg-popover text-popover-foreground border-border">
                     <p>{count} notifications to this bucket</p>
                   </TooltipContent>
                 </Tooltip>

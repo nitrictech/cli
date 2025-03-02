@@ -1059,11 +1059,6 @@ safe-buffer@5.2.1:
   resolved "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz"
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
 
-scoop@^0.0.2:
-  version "0.0.2"
-  resolved "https://registry.npmjs.org/scoop/-/scoop-0.0.2.tgz"
-  integrity sha512-epgEC/vmIad9sT20iSq5Lb4/OhncrlLNm2cjJzUKtCey68wYfjiNFE3bUNjAQwzragU8zyhQDaKRcQJMA/wClg==
-
 semver@^7.5.3:
   version "7.6.3"
   resolved "https://registry.npmjs.org/semver/-/semver-7.6.3.tgz"

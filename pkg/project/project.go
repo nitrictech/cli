@@ -854,37 +854,40 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		})
 	}
 
-	// check for duplicate paths in websites and error
-	siteDuplicates := lo.FindDuplicatesBy(websites, func(website Website) string {
-		return website.path
-	})
+	// website validation
+	if len(websites) > 0 {
+		if !slices.Contains(projectConfig.Preview, preview.Feature_Websites) {
+			return nil, fmt.Errorf("project contains websites, but the project does not have the 'websites' preview feature enabled. Please add websites to the preview field of your nitric.yaml file to enable this feature")
+		}
 
-	// check that there is a root website
-	_, found := lo.Find(websites, func(website Website) bool {
-		return website.path == "/"
-	})
-	if !found {
-		return nil, fmt.Errorf("no root website found, please add a website with path /")
-	}
-
-	// ensure there /api path is not used
-	_, found = lo.Find(websites, func(website Website) bool {
-		return strings.TrimSuffix(website.path, "/") == "/api"
-	})
-	if found {
-		return nil, fmt.Errorf("path /api is reserved for API rewrites to APIs, please use a different path")
-	}
-
-	if len(siteDuplicates) > 0 {
-		duplicatePaths := lo.Map(siteDuplicates, func(website Website, i int) string {
+		// check for duplicate paths in websites and error
+		siteDuplicates := lo.FindDuplicatesBy(websites, func(website Website) string {
 			return website.path
 		})
 
-		return nil, fmt.Errorf("duplicate website paths found: %s", strings.Join(duplicatePaths, ", "))
-	}
+		if len(siteDuplicates) > 0 {
+			duplicatePaths := lo.Map(siteDuplicates, func(website Website, i int) string {
+				return website.path
+			})
 
-	if len(websites) > 0 && !slices.Contains(projectConfig.Preview, preview.Feature_Websites) {
-		return nil, fmt.Errorf("project contains websites, but the project does not have the 'websites' preview feature enabled. Please add websites to the preview field of your nitric.yaml file to enable this feature")
+			return nil, fmt.Errorf("duplicate website paths found: %s", strings.Join(duplicatePaths, ", "))
+		}
+
+		// check that there is a root website
+		_, found := lo.Find(websites, func(website Website) bool {
+			return website.path == "/"
+		})
+		if !found {
+			return nil, fmt.Errorf("no root website found, please add a website with path /")
+		}
+
+		// ensure there /api path is not used
+		_, found = lo.Find(websites, func(website Website) bool {
+			return strings.TrimSuffix(website.path, "/") == "/api"
+		})
+		if found {
+			return nil, fmt.Errorf("path /api is reserved for API rewrites to APIs, please use a different path")
+		}
 	}
 
 	// create an empty local configuration if none is provided

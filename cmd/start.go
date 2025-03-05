@@ -122,6 +122,21 @@ func createTlsCredentialsIfNotPresent(fs afero.Fs, projectDir string) {
 	}
 }
 
+func runInGoroutine(
+	fn func(*cloud.LocalCloud, <-chan bool, chan<- project.ServiceRunUpdate, map[string]string) error,
+	localCloud *cloud.LocalCloud,
+	stopChan chan bool,
+	updatesChan chan project.ServiceRunUpdate,
+	localEnv map[string]string,
+) {
+	go func() {
+		if err := fn(localCloud, stopChan, updatesChan, localEnv); err != nil {
+			localCloud.Stop()
+			tui.CheckErr(err)
+		}
+	}()
+}
+
 var startCmd = &cobra.Command{
 	Use:         "start",
 	Short:       "Run nitric services locally for development and testing",
@@ -221,32 +236,11 @@ var startCmd = &cobra.Command{
 			}
 		}()
 
-		go func() {
-			err := proj.RunServicesWithCommand(localCloud, stopChan, updatesChan, localEnv)
-			if err != nil {
-				localCloud.Stop()
-				tui.CheckErr(err)
-			}
-		}()
-		// FIXME: Duplicate code
-		go func() {
-			err := proj.RunBatchesWithCommand(localCloud, stopChan, updatesChan, localEnv)
-			if err != nil {
-				localCloud.Stop()
+		runInGoroutine(proj.RunServicesWithCommand, localCloud, stopChan, updatesChan, localEnv)
 
-				tui.CheckErr(err)
-			}
-		}()
+		runInGoroutine(proj.RunBatchesWithCommand, localCloud, stopChan, updatesChan, localEnv)
 
-		// FIXME: Duplicate code
-		go func() {
-			err := proj.RunWebsitesWithCommand(localCloud, stopChan, updatesChan, localEnv)
-			if err != nil {
-				localCloud.Stop()
-
-				tui.CheckErr(err)
-			}
-		}()
+		runInGoroutine(proj.RunWebsitesWithCommand, localCloud, stopChan, updatesChan, localEnv)
 
 		go func() {
 			err := proj.RunWebsites(localCloud)

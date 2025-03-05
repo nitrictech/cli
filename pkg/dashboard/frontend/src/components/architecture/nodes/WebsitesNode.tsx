@@ -24,7 +24,7 @@ export const WebsitesNode: ComponentType<NodeProps<WebsitesNodeData>> = (
     <NodeBase
       {...props}
       drawerOptions={{
-        title: `Websites`,
+        title: 'CDN',
         description,
         icon: data.icon,
         nodeType: 'websites',

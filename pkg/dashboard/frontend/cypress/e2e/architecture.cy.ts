@@ -19,7 +19,7 @@ const expectedNodes = [
   'services/my-test-secret.ts',
   'my-first-secret',
   'my-second-secret',
-  'websites',
+  'CDN',
 ]
 
 describe('Architecture Spec', () => {

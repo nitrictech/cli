@@ -28,12 +28,12 @@ const DatabasesMenu: React.FC<Props> = ({
 
   return (
     <ResourceDropdownMenu>
-      <DropdownMenuLabel className="capitalize">
+      <DropdownMenuLabel className="capitalize text-foreground">
         Database Menu
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
-        <DropdownMenuItem onClick={clearHistory}>
+        <DropdownMenuItem onClick={clearHistory} className="text-foreground">
           <TrashIcon className="mr-2 h-4 w-4" />
           <span>Clear Saved Query</span>
         </DropdownMenuItem>

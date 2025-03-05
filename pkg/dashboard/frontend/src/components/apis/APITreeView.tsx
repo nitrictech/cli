@@ -82,11 +82,11 @@ const APITreeView: FC<Props> = ({ endpoints, onSelect, defaultTreeIndex }) => {
                 <APIMethodBadge method={item.data.method} />
               </div>
               <div className="col-span-7 flex justify-start">
-                <span className="truncate">{item.data.data?.path}</span>
+                <span className="truncate text-foreground">{item.data.data?.path}</span>
               </div>
             </div>
           ) : (
-            <span>
+            <span className="text-foreground">
               {item.children?.length
                 ? `${title} (${item.children.length})`
                 : title}

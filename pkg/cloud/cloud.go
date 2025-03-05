@@ -36,6 +36,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/storage"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
+	"github.com/nitrictech/cli/pkg/cloud/websites"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/grpcx"
 	"github.com/nitrictech/cli/pkg/netx"
@@ -52,9 +53,19 @@ type Subscribable[T any, A any] interface {
 
 type ServiceName = string
 
+type Mode string
+
+const (
+	// RunMode - services run directly on the host machine
+	RunMode Mode = "run"
+	// StartMode - services run in containers
+	StartMode Mode = "start"
+)
+
 type LocalCloud struct {
 	serverLock sync.Mutex
 	servers    map[ServiceName]*server.NitricServer
+	mode       Mode
 
 	Apis       *apis.LocalApiGatewayService
 	Batch      *batch.LocalBatchService
@@ -67,8 +78,13 @@ type LocalCloud struct {
 	Storage    *storage.LocalStorageService
 	Topics     *topics.LocalTopicsAndSubscribersService
 	Websockets *websockets.LocalWebsocketService
+	Websites   *websites.LocalWebsiteService
 	Queues     *queues.LocalQueuesService
 	Databases  *sql.LocalSqlServer
+}
+
+func (lc *LocalCloud) GetMode() Mode {
+	return lc.mode
 }
 
 // StartLocalNitric - starts the Nitric Server, including plugins and their local dependencies (e.g. local versions of cloud services)
@@ -230,22 +246,12 @@ func (lc *LocalCloud) AddService(serviceName string) (int, error) {
 	return ports[0], nil
 }
 
-// LocalCloudMode type run or start
-type LocalCloudMode string
-
-const (
-	// LocalCloudModeRun - run mode
-	LocalCloudModeRun LocalCloudMode = "run"
-	// LocalCloudModeStart - start mode
-	LocalCloudModeStart LocalCloudMode = "start"
-)
-
 type LocalCloudOptions struct {
 	TLSCredentials  *gateway.TLSCredentials
 	LogWriter       io.Writer
 	LocalConfig     localconfig.LocalConfiguration
 	MigrationRunner sql.MigrationRunner
-	LocalCloudMode  LocalCloudMode
+	LocalCloudMode  Mode
 }
 
 func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
@@ -306,7 +312,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 	connectionStringHost := "localhost"
 
 	// Use the host.docker.internal address for connection strings with local cloud run mode
-	if opts.LocalCloudMode == LocalCloudModeRun {
+	if opts.LocalCloudMode == RunMode {
 		connectionStringHost = dockerhost.GetInternalDockerHost()
 	}
 
@@ -315,8 +321,11 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		return nil, err
 	}
 
+	localWebsites := websites.NewLocalWebsitesService(localGateway.GetApiAddress, opts.LocalCloudMode == StartMode)
+
 	return &LocalCloud{
 		servers:    make(map[string]*server.NitricServer),
+		mode:       opts.LocalCloudMode,
 		Apis:       localApis,
 		Batch:      localBatch,
 		Http:       localHttpProxy,
@@ -325,6 +334,7 @@ func New(projectName string, opts LocalCloudOptions) (*LocalCloud, error) {
 		Storage:    localStorage,
 		Topics:     localTopics,
 		Websockets: localWebsockets,
+		Websites:   localWebsites,
 		Gateway:    localGateway,
 		Secrets:    localSecrets,
 		KeyValue:   keyvalueService,

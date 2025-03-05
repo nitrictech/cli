@@ -52,6 +52,7 @@ import (
 	"github.com/nitrictech/cli/pkg/cloud/sql"
 	"github.com/nitrictech/cli/pkg/cloud/storage"
 	"github.com/nitrictech/cli/pkg/cloud/topics"
+	"github.com/nitrictech/cli/pkg/cloud/websites"
 	"github.com/nitrictech/cli/pkg/cloud/websockets"
 	"github.com/nitrictech/cli/pkg/project"
 	"github.com/nitrictech/cli/pkg/update"
@@ -156,8 +157,16 @@ type HttpProxySpec struct {
 	Target string `json:"target"`
 }
 
+type WebsiteSpec struct {
+	Name      string `json:"name"`
+	URL       string `json:"url"`
+	DevURL    string `json:"devUrl"`
+	Directory string `json:"directory"`
+}
+
 type Dashboard struct {
 	resourcesLock          sync.Mutex
+	localCloudMode         cloud.Mode
 	project                *project.Project
 	storageService         *storage.LocalStorageService
 	gatewayService         *gateway.LocalGatewayService
@@ -174,6 +183,7 @@ type Dashboard struct {
 	secrets                []*SecretSpec
 	sqlDatabases           []*SQLDatabaseSpec
 	websockets             []WebsocketSpec
+	websites               []WebsiteSpec
 	subscriptions          []*SubscriberSpec
 	notifications          []*NotifierSpec
 	httpProxies            []*HttpProxySpec
@@ -201,6 +211,7 @@ type DashboardResponse struct {
 	Schedules     []ScheduleSpec     `json:"schedules"`
 	Topics        []*TopicSpec       `json:"topics"`
 	Websockets    []WebsocketSpec    `json:"websockets"`
+	Websites      []WebsiteSpec      `json:"websites"`
 	Subscriptions []*SubscriberSpec  `json:"subscriptions"`
 	Notifications []*NotifierSpec    `json:"notifications"`
 	Stores        []*KeyValueSpec    `json:"stores"`
@@ -221,6 +232,7 @@ type DashboardResponse struct {
 	CurrentVersion      string                `json:"currentVersion"`
 	LatestVersion       string                `json:"latestVersion"`
 	Connected           bool                  `json:"connected"`
+	LocalCloudMode      cloud.Mode            `json:"localCloudMode"`
 }
 
 type Bucket struct {
@@ -630,6 +642,32 @@ func (d *Dashboard) updateSqlDatabases(state sql.State) {
 	d.refresh()
 }
 
+func (d *Dashboard) handleWebsites(state websites.State) {
+	d.resourcesLock.Lock()
+	defer d.resourcesLock.Unlock()
+
+	websites := []WebsiteSpec{}
+
+	for name, site := range state {
+		websites = append(websites, WebsiteSpec{
+			Name:      strings.TrimPrefix(name, "websites_"),
+			URL:       site.URL,
+			DevURL:    site.DevURL,
+			Directory: site.Directory,
+		})
+	}
+
+	if len(websites) > 0 {
+		slices.SortFunc(websites, func(a, b WebsiteSpec) int {
+			return compare(a.Name, b.Name)
+		})
+	}
+
+	d.websites = websites
+
+	d.refresh()
+}
+
 func (d *Dashboard) refresh() {
 	if !d.noBrowser && !d.browserHasOpened {
 		d.openBrowser()
@@ -826,6 +864,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		SQLDatabases:        d.sqlDatabases,
 		Schedules:           d.schedules,
 		Websockets:          d.websockets,
+		Websites:            d.websites,
 		Policies:            d.policies,
 		Queues:              d.queues,
 		Secrets:             d.secrets,
@@ -842,6 +881,7 @@ func (d *Dashboard) sendStackUpdate() error {
 		CurrentVersion: currentVersion,
 		LatestVersion:  latestVersion,
 		Connected:      d.isConnected(),
+		LocalCloudMode: d.localCloudMode,
 	}
 
 	// Encode the response as JSON
@@ -894,6 +934,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	wsWebSocket := melody.New()
 
 	dash := &Dashboard{
+		localCloudMode:         localCloud.GetMode(),
 		project:                project,
 		storageService:         localCloud.Storage,
 		gatewayService:         localCloud.Gateway,
@@ -913,6 +954,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 		subscriptions:          []*SubscriberSpec{},
 		notifications:          []*NotifierSpec{},
 		websockets:             []WebsocketSpec{},
+		websites:               []WebsiteSpec{},
 		stores:                 []*KeyValueSpec{},
 		sqlDatabases:           []*SQLDatabaseSpec{},
 		secrets:                []*SecretSpec{},
@@ -943,6 +985,7 @@ func New(noBrowser bool, localCloud *cloud.LocalCloud, project *project.Project)
 	localCloud.Storage.SubscribeToState(dash.updateBucketNotifications)
 	localCloud.Http.SubscribeToState(dash.updateHttpProxies)
 	localCloud.Databases.SubscribeToState(dash.updateSqlDatabases)
+	localCloud.Websites.SubscribeToState(dash.handleWebsites)
 
 	// subscribe to history events from gateway
 	localCloud.Apis.SubscribeToAction(dash.handleApiHistory)

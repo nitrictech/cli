@@ -39,11 +39,13 @@ import (
 	goruntime "runtime"
 
 	"github.com/nitrictech/cli/pkg/cloud"
+	"github.com/nitrictech/cli/pkg/cloud/websites"
 	"github.com/nitrictech/cli/pkg/collector"
 	"github.com/nitrictech/cli/pkg/preview"
 	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/cli/pkg/project/runtime"
 	"github.com/nitrictech/nitric/core/pkg/logger"
+	deploymentpb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
 type Project struct {
@@ -54,6 +56,7 @@ type Project struct {
 
 	services []Service
 	batches  []Batch
+	websites []Website
 }
 
 func (p *Project) GetServices() []Service {
@@ -62,6 +65,10 @@ func (p *Project) GetServices() []Service {
 
 func (p *Project) GetBatchServices() []Batch {
 	return p.batches
+}
+
+func (p *Project) GetWebsites() []Website {
+	return p.websites
 }
 
 // TODO: Reduce duplicate code
@@ -161,6 +168,60 @@ func (p *Project) BuildServices(fs afero.Fs, useBuilder bool) (chan ServiceBuild
 
 			waitGroup.Done()
 		}(service, serviceBuildUpdateWriter)
+	}
+
+	go func() {
+		waitGroup.Wait()
+		// Drain the semaphore to make sure all goroutines have finished
+		for i := 0; i < cap(maxConcurrentBuilds); i++ {
+			maxConcurrentBuilds <- struct{}{}
+		}
+
+		close(updatesChan)
+	}()
+
+	return updatesChan, nil
+}
+
+// BuildWebsites - Builds all the websites in the project via build command
+func (p *Project) BuildWebsites(env map[string]string) (chan ServiceBuildUpdate, error) {
+	updatesChan := make(chan ServiceBuildUpdate)
+
+	maxConcurrentBuilds := make(chan struct{}, min(goruntime.NumCPU(), goruntime.GOMAXPROCS(0)))
+
+	waitGroup := sync.WaitGroup{}
+
+	for _, website := range p.websites {
+		waitGroup.Add(1)
+		// Create writer
+		serviceBuildUpdateWriter := NewBuildUpdateWriter(website.Name, updatesChan)
+
+		go func(site Website, writer io.Writer) {
+			// Acquire a token by filling the maxConcurrentBuilds channel
+			// this will block once the buffer is full
+			maxConcurrentBuilds <- struct{}{}
+
+			// Start goroutine
+			if err := site.Build(updatesChan, env); err != nil {
+				updatesChan <- ServiceBuildUpdate{
+					ServiceName: site.Name,
+					Err:         err,
+					Message:     err.Error(),
+					Status:      ServiceBuildStatus_Error,
+				}
+			} else {
+				updatesChan <- ServiceBuildUpdate{
+					ServiceName: site.Name,
+					Message:     "Build Complete",
+					Status:      ServiceBuildStatus_Complete,
+				}
+			}
+
+			// release our lock
+			<-maxConcurrentBuilds
+
+			waitGroup.Done()
+		}(website, serviceBuildUpdateWriter)
 	}
 
 	go func() {
@@ -390,6 +451,28 @@ func (p *Project) CollectBatchRequirements() ([]*collector.BatchRequirements, er
 	return allBatchRequirements, nil
 }
 
+func (p *Project) CollectWebsiteRequirements() ([]*deploymentpb.Website, error) {
+	allWebsiteRequirements := []*deploymentpb.Website{}
+
+	for _, site := range p.websites {
+		outputDir, err := site.GetAbsoluteOutputPath()
+		if err != nil {
+			return nil, fmt.Errorf("unable to get absolute output path for website %s: %w", site.basedir, err)
+		}
+
+		allWebsiteRequirements = append(allWebsiteRequirements, &deploymentpb.Website{
+			BasePath:      site.path,
+			IndexDocument: site.indexPage,
+			ErrorDocument: site.errorPage,
+			AssetSource: &deploymentpb.Website_LocalDirectory{
+				LocalDirectory: outputDir,
+			},
+		})
+	}
+
+	return allWebsiteRequirements, nil
+}
+
 // DefaultMigrationImage - Returns the default migration image name for the project
 // Also returns ok if image is required or not
 func (p *Project) DefaultMigrationImage(fs afero.Fs) (string, bool) {
@@ -526,6 +609,76 @@ func (p *Project) RunServices(localCloud *cloud.LocalCloud, stop <-chan bool, up
 	return group.Wait()
 }
 
+// RunWebsites - Runs all the websites as http servers
+// TODO this has duplicate code with CollectWebsiteRequirements
+func (p *Project) RunWebsites(localCloud *cloud.LocalCloud) error {
+	sites := []websites.Website{}
+
+	// register websites with the local cloud
+	for _, site := range p.websites {
+		outputDir, err := site.GetAbsoluteOutputPath()
+		if err != nil {
+			return fmt.Errorf("unable to get absolute output path for website %s: %w", site.basedir, err)
+		}
+
+		absBaseDir, err := site.GetAbsoluteBaseDirectory()
+		if err != nil {
+			return fmt.Errorf("unable to get absolute directory for website %s: %w", site.basedir, err)
+		}
+
+		sites = append(sites, websites.Website{
+			Name:            site.Name,
+			DevURL:          site.devURL,
+			Directory:       absBaseDir,
+			OutputDirectory: outputDir,
+			WebsitePb: &websites.WebsitePb{
+				BasePath:      site.path,
+				IndexDocument: site.indexPage,
+				ErrorDocument: site.errorPage,
+				AssetSource: &deploymentpb.Website_LocalDirectory{
+					LocalDirectory: outputDir,
+				},
+			},
+		})
+	}
+
+	return localCloud.Websites.Start(sites)
+}
+
+// RunWebsitesWithCommand - Runs all the websites using a startup command
+// use the stop channel to stop all running websites
+func (p *Project) RunWebsitesWithCommand(localCloud *cloud.LocalCloud, stop <-chan bool, updates chan<- ServiceRunUpdate, env map[string]string) error {
+	stopChannels := lo.FanOut[bool](len(p.websites), 1, stop)
+
+	group, _ := errgroup.WithContext(context.TODO())
+
+	for i, site := range p.websites {
+		idx := i
+		s := site
+
+		// start the service with the given file reference from its projects CWD
+		group.Go(func() error {
+			envVariables := map[string]string{
+				"PYTHONUNBUFFERED":   "TRUE", // ensure all print statements print immediately for python
+				"NITRIC_ENVIRONMENT": "run",
+			}
+
+			for key, value := range env {
+				envVariables[key] = value
+			}
+
+			err := s.Run(stopChannels[idx], updates, envVariables)
+			if err != nil {
+				return fmt.Errorf("%s: %w", s.Name, err)
+			}
+
+			return nil
+		})
+	}
+
+	return group.Wait()
+}
+
 func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) string {
 	// Add the project name as a prefix to group service images
 	servicePath = fmt.Sprintf("%s_%s", pc.Name, servicePath)
@@ -545,6 +698,7 @@ func (pc *ProjectConfiguration) pathToNormalizedServiceName(servicePath string) 
 func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *localconfig.LocalConfiguration, fs afero.Fs) (*Project, error) {
 	services := []Service{}
 	batches := []Batch{}
+	websites := []Website{}
 
 	matches := map[string]string{}
 
@@ -654,6 +808,85 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		}
 	}
 
+	for _, websiteSpec := range projectConfig.Websites {
+		if websiteSpec.Build.Output == "" {
+			return nil, fmt.Errorf("no build output provided for website %s", websiteSpec.GetBasedir())
+		}
+
+		// apply defaults and validate website configuration
+		if websiteSpec.Path == "" {
+			websiteSpec.Path = "/"
+		} else if !strings.HasPrefix(websiteSpec.Path, "/") {
+			return nil, fmt.Errorf("invalid website path %s, must start with a /", websiteSpec.Path)
+		}
+
+		if websiteSpec.IndexPage == "" {
+			websiteSpec.IndexPage = "index.html"
+		} else if !strings.HasSuffix(websiteSpec.IndexPage, ".html") {
+			return nil, fmt.Errorf("invalid index page %s, must end with .html", websiteSpec.IndexPage)
+		}
+
+		if websiteSpec.ErrorPage == "" {
+			websiteSpec.ErrorPage = "index.html"
+		} else if !strings.HasSuffix(websiteSpec.ErrorPage, ".html") {
+			return nil, fmt.Errorf("invalid error page %s, must end with .html", websiteSpec.ErrorPage)
+		}
+
+		// Get the absolute path directly
+		absBaseDir, err := filepath.Abs(filepath.Join(projectConfig.Directory, websiteSpec.GetBasedir()))
+		if err != nil {
+			return nil, fmt.Errorf("unable to get absolute path for website %s: %w", websiteSpec.GetBasedir(), err)
+		}
+
+		// Generate the website name from the base directory
+		websiteName := fmt.Sprintf("websites_%s", strings.ToLower(filepath.Base(absBaseDir)))
+
+		websites = append(websites, Website{
+			Name:       websiteName,
+			basedir:    websiteSpec.GetBasedir(),
+			path:       websiteSpec.Path,
+			outputPath: websiteSpec.Build.Output,
+			buildCmd:   websiteSpec.Build.Command,
+			devCmd:     websiteSpec.Dev.Command,
+			devURL:     websiteSpec.Dev.URL,
+			indexPage:  websiteSpec.IndexPage,
+			errorPage:  websiteSpec.ErrorPage,
+		})
+	}
+
+	// check for duplicate paths in websites and error
+	siteDuplicates := lo.FindDuplicatesBy(websites, func(website Website) string {
+		return website.path
+	})
+
+	// check that there is a root website
+	_, found := lo.Find(websites, func(website Website) bool {
+		return website.path == "/"
+	})
+	if !found {
+		return nil, fmt.Errorf("no root website found, please add a website with path /")
+	}
+
+	// ensure there /api path is not used
+	_, found = lo.Find(websites, func(website Website) bool {
+		return strings.TrimSuffix(website.path, "/") == "/api"
+	})
+	if found {
+		return nil, fmt.Errorf("path /api is reserved for API rewrites to APIs, please use a different path")
+	}
+
+	if len(siteDuplicates) > 0 {
+		duplicatePaths := lo.Map(siteDuplicates, func(website Website, i int) string {
+			return website.path
+		})
+
+		return nil, fmt.Errorf("duplicate website paths found: %s", strings.Join(duplicatePaths, ", "))
+	}
+
+	if len(websites) > 0 && !slices.Contains(projectConfig.Preview, preview.Feature_Websites) {
+		return nil, fmt.Errorf("project contains websites, but the project does not have the 'websites' preview feature enabled. Please add websites to the preview field of your nitric.yaml file to enable this feature")
+	}
+
 	// create an empty local configuration if none is provided
 	if localConfig == nil {
 		localConfig = &localconfig.LocalConfiguration{}
@@ -666,6 +899,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		LocalConfig: *localConfig,
 		services:    services,
 		batches:     batches,
+		websites:    websites,
 	}
 
 	if len(project.batches) > 0 && !slices.Contains(project.Preview, preview.Feature_BatchServices) {

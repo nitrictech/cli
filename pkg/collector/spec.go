@@ -24,6 +24,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -1042,7 +1044,7 @@ func checkServiceRequirementErrors(allServiceRequirements []*ServiceRequirements
 }
 
 // convert service requirements to a cloud bill of materials
-func ServiceRequirementsToSpec(projectName string, environmentVariables map[string]string, allServiceRequirements []*ServiceRequirements, allBatchRequirements []*BatchRequirements) (*deploymentspb.Spec, error) {
+func ServiceRequirementsToSpec(projectName string, environmentVariables map[string]string, allServiceRequirements []*ServiceRequirements, allBatchRequirements []*BatchRequirements, websiteRequirements []*deploymentspb.Website) (*deploymentspb.Spec, error) {
 	if err := checkServiceRequirementErrors(allServiceRequirements, allBatchRequirements); err != nil {
 		return nil, err
 	}
@@ -1176,6 +1178,30 @@ func ServiceRequirementsToSpec(projectName string, environmentVariables map[stri
 						}
 					}),
 				},
+			},
+		})
+	}
+
+	for _, website := range websiteRequirements {
+		localDir, ok := website.AssetSource.(*deploymentspb.Website_LocalDirectory)
+		if !ok {
+			projectErrors.Add(fmt.Errorf("website asset source must be a local directory"))
+			continue
+		}
+
+		cleanedPath := strings.TrimRight(localDir.LocalDirectory, string(os.PathSeparator))
+		// Get the parent directory
+		parentDir := filepath.Dir(cleanedPath)
+		// Extract the directory name from the parent path
+		_, name := filepath.Split(parentDir)
+
+		newSpec.Resources = append(newSpec.Resources, &deploymentspb.Resource{
+			Id: &resourcespb.ResourceIdentifier{
+				Name: name,
+				Type: resourcespb.ResourceType_Website,
+			},
+			Config: &deploymentspb.Resource_Website{
+				Website: website,
 			},
 		})
 	}

@@ -832,9 +832,14 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 			return nil, fmt.Errorf("invalid error page %s, must end with .html", websiteSpec.ErrorPage)
 		}
 
-		projectRelativeWebsiteFolder := filepath.Join(projectConfig.Directory, websiteSpec.GetBasedir())
+		// Get the absolute path directly
+		absBaseDir, err := filepath.Abs(filepath.Join(projectConfig.Directory, websiteSpec.GetBasedir()))
+		if err != nil {
+			return nil, fmt.Errorf("unable to get absolute path for website %s: %w", websiteSpec.GetBasedir(), err)
+		}
 
-		websiteName := fmt.Sprintf("websites_%s", strings.ToLower(projectRelativeWebsiteFolder))
+		// Generate the website name from the base directory
+		websiteName := fmt.Sprintf("websites_%s", strings.ToLower(filepath.Base(absBaseDir)))
 
 		websites = append(websites, Website{
 			Name:       websiteName,

@@ -854,6 +854,14 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		return website.path
 	})
 
+	// check that there is a root website
+	_, found := lo.Find(websites, func(website Website) bool {
+		return website.path == "/"
+	})
+	if !found {
+		return nil, fmt.Errorf("no root website found, please add a website with path /")
+	}
+
 	if len(siteDuplicates) > 0 {
 		duplicatePaths := lo.Map(siteDuplicates, func(website Website, i int) string {
 			return website.path

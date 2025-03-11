@@ -152,18 +152,20 @@ var runCmd = &cobra.Command{
 		websiteBuildUpdates, err := proj.BuildWebsites(loadEnv)
 		tui.CheckErr(err)
 
-		if isNonInteractive() {
-			fmt.Println("building project websites")
-			for update := range websiteBuildUpdates {
-				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
-					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+		if len(proj.GetWebsites()) > 0 {
+			if isNonInteractive() {
+				fmt.Println("building project websites")
+				for update := range websiteBuildUpdates {
+					for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
+						fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
+					}
 				}
+			} else {
+				prog := teax.NewProgram(build.NewModel(websiteBuildUpdates, "Building Websites"))
+				// blocks but quits once the above updates channel is closed by the build process
+				_, err = prog.Run()
+				tui.CheckErr(err)
 			}
-		} else {
-			prog := teax.NewProgram(build.NewModel(websiteBuildUpdates, "Building Websites"))
-			// blocks but quits once the above updates channel is closed by the build process
-			_, err = prog.Run()
-			tui.CheckErr(err)
 		}
 
 		// Run the app code (project services)

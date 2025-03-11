@@ -46,7 +46,19 @@
 }
 
 .react-flow__edge-path {
-  @apply stroke-black/80;
+  @apply stroke-foreground/80 dark:stroke-foreground/60;
+}
+
+.react-flow__edge {
+  @apply !z-[5];
+}
+
+.react-flow__edge.selected {
+  @apply !z-[6];
+}
+
+.react-flow__edge-path {
+  stroke-width: 1.5;
 }
 
 .react-flow__node-api {

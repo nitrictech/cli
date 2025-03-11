@@ -335,7 +335,7 @@ const DatabasesExplorer: React.FC = () => {
                 <div className="mb-4 flex max-w-full gap-x-2 text-sm">
                   <span
                     data-testid="connection-string"
-                    className="truncate font-mono"
+                    className="truncate font-mono text-foreground"
                   >
                     {selectedDb.connectionString}
                   </span>
@@ -349,7 +349,7 @@ const DatabasesExplorer: React.FC = () => {
                         }}
                       >
                         <span className="sr-only">Copy connection string</span>
-                        <ClipboardIcon className="h-5 w-5 text-gray-500" />
+                        <ClipboardIcon className="h-5 w-5 text-muted-foreground hover:text-foreground" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -377,7 +377,7 @@ const DatabasesExplorer: React.FC = () => {
 
                   <div className="mt-4 flex w-full items-center justify-between">
                     <div className="flex items-center gap-x-2">
-                      <h3 className="text-xl font-semibold leading-6 text-gray-900">
+                      <h3 className="text-xl font-semibold leading-6 text-foreground">
                         Results
                       </h3>
                     </div>
@@ -400,7 +400,7 @@ const DatabasesExplorer: React.FC = () => {
           <div>
             Please refer to our documentation on{' '}
             <a
-              className="underline"
+              className="underline text-foreground hover:text-accent-foreground"
               target="_blank"
               href="https://nitric.io/docs/sql"
               rel="noreferrer"

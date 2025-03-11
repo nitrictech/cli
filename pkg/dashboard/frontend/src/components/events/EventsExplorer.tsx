@@ -379,31 +379,31 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                       {responseTabIndex === 1 && (
                         <div className="overflow-x-auto">
                           <div className="inline-block min-w-full py-2 align-middle">
-                            <table className="min-w-full divide-y divide-gray-300">
-                              <thead>
+                            <table className="min-w-full divide-y divide-border">
+                              <thead className="bg-muted">
                                 <tr>
                                   <th
                                     scope="col"
-                                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
+                                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-6 lg:pl-8"
                                   >
                                     Header
                                   </th>
                                   <th
                                     scope="col"
-                                    className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                    className="px-3 py-3.5 text-left text-sm font-semibold text-foreground"
                                   >
                                     Value
                                   </th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-gray-200 bg-white">
+                              <tbody className="divide-y divide-border">
                                 {Object.entries(response.headers || {}).map(
                                   ([key, value]) => (
                                     <tr key={key}>
-                                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
+                                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6 lg:pl-8">
                                         {key}
                                       </td>
-                                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                      <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                                         {value}
                                       </td>
                                     </tr>
@@ -416,11 +416,11 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
                       )}
                     </div>
                   ) : response ? (
-                    <span className="text-lg text-gray-500">
+                    <span className="text-lg text-muted-foreground">
                       No response data available for this request.
                     </span>
                   ) : (
-                    <span className="text-lg text-gray-500">
+                    <span className="text-lg text-muted-foreground">
                       Send a request to get a response.
                     </span>
                   )}
@@ -443,7 +443,7 @@ const EventsExplorer: React.FC<Props> = ({ workerType }) => {
           <div>
             Please refer to our documentation on{' '}
             <a
-              className="underline"
+              className="underline text-foreground hover:text-accent-foreground"
               target="_blank"
               href={`https://nitric.io/docs/${docsPathMap[workerType]}`}
               rel="noreferrer"

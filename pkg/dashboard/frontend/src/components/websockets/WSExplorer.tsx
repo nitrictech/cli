@@ -374,7 +374,7 @@ const WSExplorer = () => {
                               }}
                             >
                               <span className="sr-only">Copy Route URL</span>
-                              <ClipboardIcon className="h-5 w-5 text-gray-500" />
+                              <ClipboardIcon className="h-5 w-5 text-muted-foreground hover:text-foreground" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -423,7 +423,7 @@ const WSExplorer = () => {
                 </TabsList>
                 <TabsContent value="monitor">
                   <SectionCard
-                    className="mt-4"
+                    className="mt-4 bg-background border-border"
                     title="Messages"
                     headerSiblings={
                       <div className="flex gap-2 ">
@@ -444,7 +444,7 @@ const WSExplorer = () => {
                     <div className="flex gap-2">
                       <Input
                         placeholder="Search"
-                        className="w-4/12"
+                        className="w-4/12 bg-background text-foreground border-border"
                         value={monitorMessageFilter}
                         onChange={(evt) =>
                           setMonitorMessageFilter(evt.target.value)
@@ -456,14 +456,14 @@ const WSExplorer = () => {
                         variant="outline"
                         onClick={clearMessages}
                       >
-                        <TrashIcon className="mr-2 h-4 w-4" />
+                        <TrashIcon className="mr-2 h-4 w-4 text-muted-foreground group-hover:text-foreground" />
                         Clear Messages
                       </Button>
                     </div>
                     <div className="my-4 max-w-full text-sm">
                       {wsInfo?.messages?.length ? (
                         <ScrollArea
-                          className="h-[50vh] w-full px-6"
+                          className="h-[50vh] w-full px-6 bg-background"
                           type="always"
                         >
                           {wsInfo.messages
@@ -489,7 +489,7 @@ const WSExplorer = () => {
                               return (
                                 <Accordion type="multiple" key={i}>
                                   <AccordionItem value={message.time}>
-                                    <AccordionTrigger className="flex justify-between">
+                                    <AccordionTrigger className="flex justify-between text-foreground hover:text-accent-foreground">
                                       <div>
                                         <MessageIcon
                                           type={
@@ -502,21 +502,21 @@ const WSExplorer = () => {
                                       </div>
                                       <span
                                         data-testid={`accordion-message-${i}`}
-                                        className="max-w-3xl truncate px-2"
+                                        className="max-w-3xl truncate px-2 text-foreground"
                                       >
                                         {message.data}
                                       </span>
-                                      <span className="ml-auto px-2">
+                                      <span className="ml-auto px-2 text-muted-foreground">
                                         {format(
                                           new Date(message.time),
                                           'HH:mm:ss',
                                         )}
                                       </span>
                                     </AccordionTrigger>
-                                    <AccordionContent>
+                                    <AccordionContent className="bg-background text-foreground">
                                       {message.data ===
                                       'Binary messages are not currently supported by AWS' ? (
-                                        <p>
+                                        <p className="text-sm text-muted-foreground">
                                           Binary messages are not currently
                                           supported by AWS. Util this is
                                           supported, use a text-based payload.
@@ -554,7 +554,7 @@ const WSExplorer = () => {
                   </SectionCard>
                 </TabsContent>
                 <TabsContent value="send-messages" className="space-y-10">
-                  <SectionCard className="mt-4" title="Query Params">
+                  <SectionCard className="mt-4 bg-background border-border" title="Query Params">
                     <div className="w-full">
                       <FieldRows
                         rows={queryParams}
@@ -569,7 +569,7 @@ const WSExplorer = () => {
                   </SectionCard>
 
                   <SectionCard
-                    className="mt-4"
+                    className="mt-4 bg-background border-border"
                     title="Message"
                     footer={
                       <>
@@ -588,7 +588,7 @@ const WSExplorer = () => {
                           </SelectContent>
                         </Select>
                         <Button
-                          className="ml-auto"
+                          className="ml-auto text-foreground hover:text-accent-foreground border-border"
                           data-testid="send-message-btn"
                           disabled={!currentPayload || !connected}
                           onClick={sendMessage}
@@ -632,7 +632,7 @@ const WSExplorer = () => {
                   </SectionCard>
 
                   <SectionCard
-                    className="mt-4"
+                    className="mt-4 bg-background border-border"
                     title="Messages"
                     headerSiblings={
                       <div className="flex gap-2">
@@ -649,7 +649,7 @@ const WSExplorer = () => {
                     <div className="my-4 flex gap-2 pt-4">
                       <Input
                         placeholder="Search"
-                        className="w-4/12"
+                        className="w-4/12 bg-background text-foreground border-border"
                         onChange={(evt) => setMessageFilter(evt.target.value)}
                       />
                       <Select
@@ -665,14 +665,18 @@ const WSExplorer = () => {
                           <SelectItem value="in">Recieved</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button variant="outline" onClick={() => setMessages([])}>
-                        <TrashIcon className="mr-2 h-4 w-4" />
+                      <Button
+                        variant="outline"
+                        className="text-foreground hover:text-accent-foreground border-border"
+                        onClick={() => setMessages([])}
+                      >
+                        <TrashIcon className="mr-2 h-4 w-4 text-muted-foreground group-hover:text-foreground" />
                         Clear Messages
                       </Button>
                     </div>
                     <div className="-mx-4 my-4 max-w-full text-sm">
                       {messages.length ? (
-                        <ScrollArea className="h-[30vh] px-6" type="always">
+                        <ScrollArea className="h-[30vh] px-6 bg-background" type="always">
                           {messages
                             .filter((message) => {
                               let pass = false
@@ -704,24 +708,24 @@ const WSExplorer = () => {
                               return (
                                 <Accordion type="multiple" key={i}>
                                   <AccordionItem value={message.ts.toString()}>
-                                    <AccordionTrigger className="flex justify-between">
+                                    <AccordionTrigger className="flex justify-between text-foreground hover:text-accent-foreground">
                                       <div>
                                         <MessageIcon type={message.type} />
                                       </div>
                                       <span
                                         data-testid={`accordion-message-${i}`}
-                                        className="truncate px-2"
+                                        className="truncate px-2 text-foreground"
                                       >
                                         {message.data}
                                       </span>
-                                      <span className="ml-auto px-2">
+                                      <span className="ml-auto px-2 text-muted-foreground">
                                         {format(
                                           new Date(message.ts),
                                           'HH:mm:ss',
                                         )}
                                       </span>
                                     </AccordionTrigger>
-                                    <AccordionContent>
+                                    <AccordionContent className="bg-background text-foreground">
                                       <CodeEditor
                                         id="message-viewer"
                                         contentType={

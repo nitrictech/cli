@@ -70,7 +70,7 @@ const WSTreeView: FC<Props> = ({ websockets, onSelect, initialItem }) => {
         })
         return (
           <div className="flex w-full items-center justify-between">
-            <span className="truncate">{item.data.label}</span>
+            <span className="truncate text-foreground">{item.data.label}</span>
             {eventsNotRegistered.length ? (
               <Tooltip>
                 <TooltipTrigger asChild>

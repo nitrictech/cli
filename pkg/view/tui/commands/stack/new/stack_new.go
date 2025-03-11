@@ -295,14 +295,15 @@ func stackNameExistsValidator(projectDir string) validation.StringValidator {
 }
 
 const (
-	Aws   = "Pulumi AWS"
-	Azure = "Pulumi Azure"
-	Gcp   = "Pulumi Google Cloud"
-	AwsTf = "Terraform AWS (Preview)"
-	GcpTf = "Terraform Google Cloud (Preview)"
+	Aws     = "Pulumi AWS"
+	Azure   = "Pulumi Azure"
+	Gcp     = "Pulumi Google Cloud"
+	AwsTf   = "Terraform AWS (Preview)"
+	AzureTf = "Terraform Azure (Preview)"
+	GcpTf   = "Terraform Google Cloud (Preview)"
 )
 
-var availableProviders = []string{Aws, Gcp, Azure, AwsTf, GcpTf}
+var availableProviders = []string{Aws, Gcp, Azure, AwsTf, GcpTf, AzureTf}
 
 func New(fs afero.Fs, args Args) Model {
 	// Load and update the project name in the template's nitric.yaml
@@ -347,9 +348,13 @@ func New(fs afero.Fs, args Args) Model {
 	}
 
 	if args.ProviderName != "" {
-		if !lo.Contains([]string{"aws", "azure", "gcp", "aws-tf"}, args.ProviderName) {
+		validProviders := lo.Map(availableProviders, func(p string, _ int) string {
+			return providerLabelToValue(p)
+		})
+
+		if !lo.Contains(validProviders, args.ProviderName) {
 			return Model{
-				err: fmt.Errorf("cloud name is not valid, must be aws, azure, gcp, or aws-tf"),
+				err: fmt.Errorf("cloud name is not valid, must be one of: %v", strings.Join(validProviders, ", ")),
 			}
 		}
 
@@ -394,6 +399,8 @@ func providerLabelToValue(provider string) string {
 		return "aws-tf"
 	case GcpTf:
 		return "gcp-tf"
+	case AzureTf:
+		return "azure-tf"
 	}
 
 	return strings.ToLower(provider)

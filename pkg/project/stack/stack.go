@@ -52,6 +52,9 @@ var gcpConfigTemplate string
 //go:embed gcptf.config.yaml
 var gcpTfConfigTemplate string
 
+//go:embed azuretf.config.yaml
+var azureTfConfigTemplate string
+
 var fileNameRegex = regexp.MustCompile(`(?i)^nitric\.(\S+)\.ya?ml$`)
 
 func IsValidFileName(stackName string) bool {
@@ -78,6 +81,8 @@ func NewStackFile(fs afero.Fs, providerName string, stackName string, dir string
 		templateStr = awsTfConfigTemplate
 	case "gcp-tf":
 		templateStr = gcpTfConfigTemplate
+	case "azure-tf":
+		templateStr = azureTfConfigTemplate
 	}
 
 	// Parse and execute the template with the version injected

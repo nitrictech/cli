@@ -222,7 +222,7 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 	})
 
 	// Register the API handler
-	mux.HandleFunc("/ws/{name}/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/ws/{name}", func(w http.ResponseWriter, r *http.Request) {
 		// Get the WebSocket API name from the request path
 		apiName := r.PathValue("name")
 
@@ -235,6 +235,10 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 
 		// Dial the backend WebSocket server
 		targetURL := fmt.Sprintf("ws://%s%s", apiAddress, r.URL.Path)
+		if r.URL.RawQuery != "" {
+			targetURL = fmt.Sprintf("%s?%s", targetURL, r.URL.RawQuery)
+		}
+
 		targetConn, _, err := websocket.DefaultDialer.Dial(targetURL, nil)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to connect to backend WebSocket server: %v", err), http.StatusInternalServerError)

@@ -157,6 +157,19 @@ func (s *LocalGatewayService) GetApiAddress(apiName string) string {
 	return ""
 }
 
+func (s *LocalGatewayService) GetWebsocketAddress(socketName string) string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	addresses := s.GetWebsocketAddresses()
+
+	if address, ok := addresses[socketName]; ok {
+		return address
+	}
+
+	return ""
+}
+
 func (s *LocalGatewayService) GetHttpWorkerAddresses() map[string]string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()

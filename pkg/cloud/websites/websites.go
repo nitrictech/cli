@@ -181,6 +181,7 @@ func proxyWebSocketMessages(src, dst *websocket.Conn, errChan chan error) {
 			errChan <- err
 			return
 		}
+
 		err = dst.WriteMessage(messageType, message)
 		if err != nil {
 			errChan <- err
@@ -248,11 +249,13 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 
 		// Upgrade the HTTP connection to a WebSocket connection
 		upgrader := websocket.Upgrader{}
+
 		clientConn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to upgrade to WebSocket: %v", err), http.StatusInternalServerError)
 			return
 		}
+
 		defer clientConn.Close()
 
 		// Proxy messages between the client and the backend WebSocket server
@@ -262,7 +265,7 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 
 		// Wait for an error to occur
 		err = <-errChan
-		if err != nil && err != websocket.ErrCloseSent {
+		if err != nil && !errors.Is(err, websocket.ErrCloseSent) {
 			http.Error(w, fmt.Sprintf("WebSocket proxy error: %v", err), http.StatusInternalServerError)
 		}
 	})

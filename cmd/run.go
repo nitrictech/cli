@@ -138,6 +138,11 @@ var runCmd = &cobra.Command{
 
 			// non-interactive environment
 			for update := range allBuildUpdates {
+				if update.Status == project.ServiceBuildStatus_Error {
+					localCloud.Stop()
+					tui.CheckErr(fmt.Errorf("error building services"))
+				}
+
 				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
 					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 				}
@@ -145,8 +150,12 @@ var runCmd = &cobra.Command{
 		} else {
 			prog := teax.NewProgram(build.NewModel(allBuildUpdates, "Building Services"))
 			// blocks but quits once the above updates channel is closed by the build process
-			_, err = prog.Run()
+			buildModel, err := prog.Run()
 			tui.CheckErr(err)
+			if buildModel.(build.Model).Err != nil {
+				localCloud.Stop()
+				tui.CheckErr(fmt.Errorf("error building services"))
+			}
 		}
 
 		websiteBuildUpdates, err := proj.BuildWebsites(loadEnv)
@@ -156,6 +165,11 @@ var runCmd = &cobra.Command{
 			if isNonInteractive() {
 				fmt.Println("building project websites")
 				for update := range websiteBuildUpdates {
+					if update.Status == project.ServiceBuildStatus_Error {
+						localCloud.Stop()
+						tui.CheckErr(fmt.Errorf("error building websites"))
+					}
+
 					for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
 						fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 					}
@@ -163,8 +177,13 @@ var runCmd = &cobra.Command{
 			} else {
 				prog := teax.NewProgram(build.NewModel(websiteBuildUpdates, "Building Websites"))
 				// blocks but quits once the above updates channel is closed by the build process
-				_, err = prog.Run()
+				buildModel, err := prog.Run()
 				tui.CheckErr(err)
+
+				if buildModel.(build.Model).Err != nil {
+					localCloud.Stop()
+					tui.CheckErr(fmt.Errorf("error building websites"))
+				}
 			}
 		}
 

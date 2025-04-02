@@ -147,7 +147,7 @@ var specCmd = &cobra.Command{
 				buildModel, err := prog.Run()
 				tui.CheckErr(err)
 				if buildModel.(build.Model).Err != nil {
-					tui.CheckErr(fmt.Errorf("error building services"))
+					tui.CheckErr(fmt.Errorf("error building migration images"))
 				}
 			}
 		}

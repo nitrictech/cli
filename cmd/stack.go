@@ -198,6 +198,10 @@ var stackUpdateCmd = &cobra.Command{
 
 			// non-interactive environment
 			for update := range allBuildUpdates {
+				if update.Status == project.ServiceBuildStatus_Error {
+					tui.CheckErr(fmt.Errorf("error building services"))
+				}
+
 				for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
 					fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 				}
@@ -272,7 +276,7 @@ var stackUpdateCmd = &cobra.Command{
 				buildModel, err := prog.Run()
 				tui.CheckErr(err)
 				if buildModel.(build.Model).Err != nil {
-					tui.CheckErr(fmt.Errorf("error building services"))
+					tui.CheckErr(fmt.Errorf("error building migration images"))
 				}
 			}
 		}
@@ -284,6 +288,10 @@ var stackUpdateCmd = &cobra.Command{
 			if isNonInteractive() {
 				fmt.Println("building project websites")
 				for update := range websiteBuildUpdates {
+					if update.Status == project.ServiceBuildStatus_Error {
+						tui.CheckErr(fmt.Errorf("error building websites"))
+					}
+
 					for _, line := range strings.Split(strings.TrimSuffix(update.Message, "\n"), "\n") {
 						fmt.Printf("%s [%s]: %s\n", update.ServiceName, update.Status, line)
 					}
@@ -291,8 +299,12 @@ var stackUpdateCmd = &cobra.Command{
 			} else {
 				prog := teax.NewProgram(build.NewModel(websiteBuildUpdates, "Building Websites"))
 				// blocks but quits once the above updates channel is closed by the build process
-				_, err = prog.Run()
+				buildModel, err := prog.Run()
 				tui.CheckErr(err)
+
+				if buildModel.(build.Model).Err != nil {
+					tui.CheckErr(fmt.Errorf("error building websites"))
+				}
 			}
 		}
 

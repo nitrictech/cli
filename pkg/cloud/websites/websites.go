@@ -33,6 +33,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/nitrictech/cli/pkg/netx"
+	"github.com/nitrictech/cli/pkg/system"
 	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
 )
 
@@ -266,7 +267,8 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 		// Wait for an error to occur
 		err = <-errChan
 		if err != nil && !errors.Is(err, websocket.ErrCloseSent) {
-			http.Error(w, fmt.Sprintf("WebSocket proxy error: %v", err), http.StatusInternalServerError)
+			// Because the error is already proxied through by the connection we can just log the error here
+			system.Logf("received error on websocket %s: %v", apiName, err)
 		}
 	})
 

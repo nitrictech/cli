@@ -609,7 +609,26 @@ export function generateArchitectureData(data: WebSocketResponse): {
         label: `Rewrites to /api/${api.name}`,
       })
     })
+
+    data.websockets.forEach((websocket) => {
+      edges.push({
+        id: `e-${websocket.name}-websites`,
+        source: websitesNode.id,
+        target: `websocket-${websocket.name}`,
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        markerStart: {
+          type: MarkerType.ArrowClosed,
+          orient: 'auto-start-reverse',
+        },
+        label: `Rewrites to /ws/${websocket.name}`,
+      })
+    })
   }
+
+  
 
   data.services.forEach((service) => {
     const node: Node<ServiceNodeData> = {

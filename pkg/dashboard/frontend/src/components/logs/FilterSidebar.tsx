@@ -41,7 +41,7 @@ const CollapsibleGroup = ({
       <SidebarGroup className="p-0">
         <SidebarGroupLabel
           asChild
-          className="flex h-full w-full items-center p-2 text-base font-semibold text-foreground text-gray-600 hover:bg-gray-100 group-data-[state=open]/collapsible:text-foreground"
+          className="flex h-full w-full items-center p-2 text-base font-semibold text-muted-foreground hover:bg-accent/50 group-data-[state=open]/collapsible:text-foreground"
         >
           <CollapsibleTrigger
             data-testid={`filter-${title.toLowerCase().replace(' ', '-')}-collapsible`}
@@ -122,7 +122,7 @@ export function FilterSidebar() {
               data-testid="filter-logs-reset-btn"
               size="sm"
               onClick={handleResetFilters}
-              className="absolute right-2 top-2 h-8 w-16 font-semibold text-foreground"
+              className="absolute right-2 top-2 h-8 w-16 font-semibold text-muted-foreground hover:text-foreground"
             >
               Reset
             </Button>

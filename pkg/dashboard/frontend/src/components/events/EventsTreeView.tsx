@@ -82,7 +82,7 @@ const EventsTreeView: FC<Props> = ({
             : null
 
         return (
-          <span className="truncate">
+          <span className="truncate text-foreground">
             {topicSubscriberCount ? (
               <>
                 {item.data.label}
@@ -102,7 +102,7 @@ const EventsTreeView: FC<Props> = ({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    <p>{topicSubscriberCount} subscribers to this topic</p>
+                    <p className="text-foreground">{topicSubscriberCount} subscribers to this topic</p>
                   </TooltipContent>
                 </Tooltip>
               </>

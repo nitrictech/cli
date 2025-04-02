@@ -51,14 +51,14 @@ const APIMenu: React.FC<Props> = ({ selected, onAfterClear }) => {
 
   return (
     <ResourceDropdownMenu>
-      <DropdownMenuLabel>API Menu</DropdownMenuLabel>
+      <DropdownMenuLabel className="text-foreground">API Menu</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
-        <DropdownMenuItem onClick={downloadSpec}>
+        <DropdownMenuItem onClick={downloadSpec} className="text-foreground">
           <ArrowDownOnSquareIcon className="mr-2 h-4 w-4" />
           <span>Export Spec</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={clearHistory}>
+        <DropdownMenuItem onClick={clearHistory} className="text-foreground">
           <TrashIcon className="mr-2 h-4 w-4" />
           <span>Clear History</span>
         </DropdownMenuItem>

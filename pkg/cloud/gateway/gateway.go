@@ -46,7 +46,6 @@ import (
 	"github.com/nitrictech/cli/pkg/netx"
 	"github.com/nitrictech/cli/pkg/project/localconfig"
 	"github.com/nitrictech/cli/pkg/system"
-	"github.com/nitrictech/cli/pkg/view/tui"
 
 	base_http "github.com/nitrictech/nitric/cloud/common/runtime/gateway"
 
@@ -151,6 +150,19 @@ func (s *LocalGatewayService) GetApiAddress(apiName string) string {
 	addresses := s.GetApiAddresses()
 
 	if address, ok := addresses[apiName]; ok {
+		return address
+	}
+
+	return ""
+}
+
+func (s *LocalGatewayService) GetWebsocketAddress(socketName string) string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	addresses := s.GetWebsocketAddresses()
+
+	if address, ok := addresses[socketName]; ok {
 		return address
 	}
 
@@ -349,14 +361,14 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 					SocketName:   socketName,
 				})
 				if err != nil {
-					tui.Error.Println(err.Error())
+					system.Logf("Websocket error: %s", err.Error())
 					return
 				}
 			}()
 
 			err = s.websocketPlugin.RegisterConnection(socketName, connectionId, ws)
 			if err != nil {
-				tui.Error.Println(err.Error())
+				system.Logf("Websocket error: %s", err.Error())
 				return
 			}
 
@@ -372,7 +384,7 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 				if err != nil && websocket.IsCloseError(err, 1001, 1005) {
 					break
 				} else if err != nil {
-					log.Println("read:", err)
+					system.Logf("websocket read error: %v", err)
 					break
 				}
 
@@ -390,7 +402,7 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 					},
 				})
 				if err != nil {
-					tui.Error.Println(err.Error())
+					system.Logf("Websocket error: %s", err.Error())
 					return
 				}
 			}
@@ -407,13 +419,13 @@ func (s *LocalGatewayService) handleWebsocketRequest(socketName string) func(ctx
 				},
 			})
 			if err != nil {
-				tui.Error.Println(err.Error())
+				system.Logf("Websocket error: %s", err.Error())
 				return
 			}
 		})
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); ok {
-				tui.Error.Println(err.Error())
+				system.Logf("Websocket error: %s", err.Error())
 			}
 
 			return

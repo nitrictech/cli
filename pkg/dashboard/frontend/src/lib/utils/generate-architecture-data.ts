@@ -628,8 +628,6 @@ export function generateArchitectureData(data: WebSocketResponse): {
     })
   }
 
-  
-
   data.services.forEach((service) => {
     const node: Node<ServiceNodeData> = {
       id: service.name,

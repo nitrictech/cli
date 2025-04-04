@@ -95,13 +95,16 @@ type Dev struct {
 }
 
 type WebsiteConfiguration struct {
-	BaseServiceConfiguration `yaml:",inline"`
-
+	Basedir   string `yaml:"basedir"`
 	Build     Build  `yaml:"build"`
 	Dev       Dev    `yaml:"dev"`
-	Path      string `yaml:"path"`
+	Path      string `yaml:"path,omitempty"`
 	IndexPage string `yaml:"index,omitempty"`
 	ErrorPage string `yaml:"error,omitempty"`
+}
+
+func (w WebsiteConfiguration) GetBasedir() string {
+	return w.Basedir
 }
 
 type ProjectConfiguration struct {

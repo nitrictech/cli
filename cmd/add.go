@@ -107,5 +107,4 @@ func init() {
 
 	// Add flag for --path, the base url path for the website
 	addWebsiteCmd.Flags().StringP("path", "p", "", "base url path for the website, e.g. /my-site")
-
 }

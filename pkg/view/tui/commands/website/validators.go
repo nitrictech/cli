@@ -28,19 +28,29 @@ import (
 var (
 	pathPrefixRegex = regexp.MustCompile(`^/`)
 	pathRegex       = regexp.MustCompile(`^/[a-zA-Z0-9-]*$`)
+	// WebsiteNameRegex matches valid characters for a website name
+	WebsiteNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	// WebsiteNameStartRegex ensures the name starts with a letter or number
+	WebsiteNameStartRegex = regexp.MustCompile(`^[a-zA-Z0-9]`)
+	// WebsiteNameEndRegex ensures the name doesn't end with a hyphen
+	WebsiteNameEndRegex = regexp.MustCompile(`[a-zA-Z0-9]$`)
 )
 
 func WebsiteNameInFlightValidators() []validation.StringValidator {
 	return []validation.StringValidator{
 		validation.NotBlankValidator("Website name is required"),
-		validation.RegexValidator(regexp.MustCompile(`^[a-zA-Z0-9_-]*$`), "Website name can only contain letters, numbers, underscores and hyphens"),
+		validation.RegexValidator(WebsiteNameRegex, "Website name can only contain letters, numbers, underscores and hyphens"),
+		validation.RegexValidator(WebsiteNameStartRegex, "Website name must start with a letter or number"),
+		validation.RegexValidator(WebsiteNameEndRegex, "Website name cannot end with a hyphen"),
 	}
 }
 
 func WebsiteNameValidators(existingNames []string) []validation.StringValidator {
 	return append([]validation.StringValidator{
 		validation.NotBlankValidator("Website name is required"),
-		validation.RegexValidator(regexp.MustCompile(`^[a-zA-Z0-9_-]+$`), "Website name can only contain letters, numbers, underscores and hyphens"),
+		validation.RegexValidator(WebsiteNameRegex, "Website name can only contain letters, numbers, underscores and hyphens"),
+		validation.RegexValidator(WebsiteNameStartRegex, "Website name must start with a letter or number"),
+		validation.RegexValidator(WebsiteNameEndRegex, "Website name cannot end with a hyphen"),
 	}, func(existingNames []string) validation.StringValidator {
 		return func(value string) error {
 			// Normalize the new value

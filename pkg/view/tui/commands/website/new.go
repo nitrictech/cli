@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -108,8 +107,18 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		}
 
 		// Validate the format
-		if !regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(normalizedName) {
+		if !WebsiteNameRegex.MatchString(normalizedName) {
 			return Model{}, fmt.Errorf("website name can only contain letters, numbers, underscores and hyphens")
+		}
+
+		// Check if name starts with a valid character
+		if !WebsiteNameStartRegex.MatchString(normalizedName) {
+			return Model{}, fmt.Errorf("website name must start with a letter or number")
+		}
+
+		// Check if name ends with a valid character
+		if !WebsiteNameEndRegex.MatchString(normalizedName) {
+			return Model{}, fmt.Errorf("website name cannot end with a hyphen")
 		}
 
 		// Check if directory already exists

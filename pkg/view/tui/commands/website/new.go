@@ -45,6 +45,7 @@ const (
 	StepPath
 	StepTool
 	StepPackageManager
+	StepPort
 	StepRunningToolCommand
 	StepDone
 )
@@ -76,6 +77,7 @@ type Model struct {
 	err           error
 	namePrompt    textprompt.TextPrompt
 	pathPrompt    textprompt.TextPrompt
+	portPrompt    textprompt.TextPrompt
 
 	config        *project.ProjectConfiguration
 	existingPaths []string
@@ -226,6 +228,17 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		}
 	}
 
+	portValidator := validation.ComposeValidators(PortValidators()...)
+	portInFlightValidator := validation.ComposeValidators(PortInFlightValidators()...)
+
+	portPrompt := textprompt.NewTextPrompt("port", textprompt.TextPromptArgs{
+		Prompt:            "What port would you like to use for development?",
+		Tag:               "port",
+		Validator:         portValidator,
+		Placeholder:       "3000",
+		InFlightValidator: portInFlightValidator,
+	})
+
 	return Model{
 		step:       step,
 		namePrompt: namePrompt,
@@ -236,6 +249,7 @@ func New(fs afero.Fs, args Args) (Model, error) {
 			Items:  list.StringsToListItems(getAvailablePackageManagers()),
 		}),
 		pathPrompt:    pathPrompt,
+		portPrompt:    portPrompt,
 		config:        config,
 		fs:            fs,
 		existingPaths: existingPaths,
@@ -254,6 +268,7 @@ func (m Model) Init() tea.Cmd {
 		m.pathPrompt.Init(),
 		m.toolPrompt.Init(),
 		m.packagePrompt.Init(),
+		m.portPrompt.Init(),
 	)
 }
 
@@ -296,6 +311,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if msg.ID == m.pathPrompt.ID {
 			m.pathPrompt.Blur()
 			m.step = StepTool
+		} else if msg.ID == m.portPrompt.ID {
+			m.portPrompt.Blur()
+			m.step = StepRunningToolCommand
+
+			// Run the command directly
+			return m, m.runCommand()
 		}
 
 		return m, nil
@@ -340,24 +361,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// if the tool is not package manager based, we need to run the command
 			if tool.SkipPackageManagerPrompt {
-				m.step = StepRunningToolCommand
 				m.packagePrompt.SetChoice(tool.Value)
-
-				// Run the command directly
-				return m, m.runCommand()
+				m.step = StepPort
+				m.portPrompt.Focus()
+			} else {
+				m.step = StepPackageManager
 			}
-
-			m.step = StepPackageManager
 		}
 	case StepPackageManager:
 		m.packagePrompt, cmd = m.packagePrompt.UpdateListPrompt(msg)
 
 		if m.packagePrompt.Choice() != "" {
-			m.step = StepRunningToolCommand
-
-			// Run the command directly
-			return m, m.runCommand()
+			m.step = StepPort
+			m.portPrompt.Focus()
 		}
+	case StepPort:
+		m.portPrompt, cmd = m.portPrompt.UpdateTextPrompt(msg)
 	}
 
 	return m, cmd
@@ -408,6 +427,10 @@ func (m Model) View() string {
 			v.Addln(m.packagePrompt.View())
 			v.Break()
 		}
+	}
+
+	if m.step >= StepPort {
+		v.Addln(m.portPrompt.View())
 	}
 
 	if m.step == StepRunningToolCommand {
@@ -517,6 +540,7 @@ func (m Model) updateConfig() tea.Cmd {
 		}
 
 		path := m.pathPrompt.Value()
+		port := m.portPrompt.Value()
 
 		website := project.WebsiteConfiguration{
 			Basedir: fmt.Sprintf("./%s", m.namePrompt.Value()),
@@ -525,8 +549,8 @@ func (m Model) updateConfig() tea.Cmd {
 				Output:  tool.OutputDir,
 			},
 			Dev: project.Dev{
-				Command: tool.GetDevCommand(m.packagePrompt.Choice(), path),
-				URL:     tool.GetDevURL(),
+				Command: tool.GetDevCommand(m.packagePrompt.Choice(), path, port),
+				URL:     tool.GetDevURL(port, path),
 			},
 			Path: path,
 		}

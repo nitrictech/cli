@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/nitrictech/cli/pkg/view/tui/components/validation"
@@ -91,4 +92,44 @@ func WebsiteURLPathValidators(disallowedPaths []string) []validation.StringValid
 	return append([]validation.StringValidator{
 		validation.NotBlankValidator("path can't be blank"),
 	}, WebsiteURLPathInFlightValidators(disallowedPaths)...)
+}
+
+// PortValidators returns a list of validators for the port field
+func PortValidators() []validation.StringValidator {
+	return []validation.StringValidator{
+		func(value string) error {
+			if value == "" {
+				return fmt.Errorf("port cannot be empty")
+			}
+
+			port, err := strconv.Atoi(value)
+			if err != nil {
+				return fmt.Errorf("port must be a number")
+			}
+
+			if port < 1 || port > 65535 {
+				return fmt.Errorf("port must be between 1 and 65535")
+			}
+
+			return nil
+		},
+	}
+}
+
+// PortInFlightValidators returns a list of in-flight validators for the port field
+func PortInFlightValidators() []validation.StringValidator {
+	return []validation.StringValidator{
+		func(value string) error {
+			if value == "" {
+				return nil // Allow empty during typing
+			}
+
+			// Check if it's a number
+			if _, err := strconv.Atoi(value); err != nil {
+				return fmt.Errorf("port must be a number")
+			}
+
+			return nil
+		},
+	}
 }

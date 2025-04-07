@@ -17,7 +17,6 @@
 package add_website
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -48,11 +47,11 @@ func (f Tool) GetItemDescription() string {
 type CommandVars struct {
 	PackageManager string
 	Path           string
-	Port           int
+	Port           string
 	BaseURL        string
 }
 
-func (f Tool) GetDevCommand(packageManager string, path string) string {
+func (f Tool) GetDevCommand(packageManager string, path string, port string) string {
 	// if packageManager is npm, we need to add run to the command
 	if packageManager == "npm" {
 		packageManager = "npm run"
@@ -61,7 +60,7 @@ func (f Tool) GetDevCommand(packageManager string, path string) string {
 	vars := CommandVars{
 		PackageManager: packageManager,
 		Path:           path,
-		Port:           3000,
+		Port:           port,
 		BaseURL:        path,
 	}
 
@@ -104,12 +103,19 @@ func (f Tool) GetCreateCommand(packageManager string, path string) string {
 	return f.createCommand.Format(vars)
 }
 
-func (f Tool) GetDevURL() string {
+func (f Tool) GetDevURL(port string, path string) string {
 	vars := CommandVars{
-		Port: 3000,
+		Port: port,
 	}
 
-	return f.devURL.Format(vars)
+	url := f.devURL.Format(vars)
+
+	// append the subsite path if it exists
+	if path != "" && path != "/" {
+		url = url + path
+	}
+
+	return url
 }
 
 type CommandTemplate string
@@ -118,7 +124,7 @@ func (t CommandTemplate) Format(vars CommandVars) string {
 	cmd := string(t)
 	cmd = strings.ReplaceAll(cmd, "{packageManager}", vars.PackageManager)
 	cmd = strings.ReplaceAll(cmd, "{path}", vars.Path)
-	cmd = strings.ReplaceAll(cmd, "{port}", fmt.Sprintf("%d", vars.Port))
+	cmd = strings.ReplaceAll(cmd, "{port}", vars.Port)
 	cmd = strings.ReplaceAll(cmd, "{baseURL}", vars.BaseURL)
 
 	// if the package manager is npm and using a run command,

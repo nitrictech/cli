@@ -27,7 +27,6 @@ type Tool struct {
 	buildCommand             CommandTemplate
 	buildCommandSubSite      CommandTemplate
 	devCommand               CommandTemplate
-	devCommandSubSite        CommandTemplate
 	devURL                   CommandTemplate
 	OutputDir                string
 	createCommand            CommandTemplate
@@ -51,7 +50,7 @@ type CommandVars struct {
 	BaseURL        string
 }
 
-func (f Tool) GetDevCommand(packageManager string, path string, port string) string {
+func (f Tool) GetDevCommand(packageManager string, port string) string {
 	// if packageManager is npm, we need to add run to the command
 	if packageManager == "npm" {
 		packageManager = "npm run"
@@ -59,13 +58,7 @@ func (f Tool) GetDevCommand(packageManager string, path string, port string) str
 
 	vars := CommandVars{
 		PackageManager: packageManager,
-		Path:           path,
 		Port:           port,
-		BaseURL:        path,
-	}
-
-	if path != "" && f.devCommandSubSite != "" {
-		return f.devCommandSubSite.Format(vars)
 	}
 
 	return f.devCommand.Format(vars)
@@ -103,17 +96,12 @@ func (f Tool) GetCreateCommand(packageManager string, path string) string {
 	return f.createCommand.Format(vars)
 }
 
-func (f Tool) GetDevURL(port string, path string) string {
+func (f Tool) GetDevURL(port string) string {
 	vars := CommandVars{
 		Port: port,
 	}
 
 	url := f.devURL.Format(vars)
-
-	// append the subsite path if it exists
-	if path != "" && path != "/" {
-		url = url + path
-	}
 
 	return url
 }
@@ -158,7 +146,6 @@ var tools = []Tool{
 		buildCommand:        "{packageManager} build",
 		buildCommandSubSite: "{packageManager} build --base {baseURL}",
 		devCommand:          "{packageManager} dev --port {port} --strictPort",
-		devCommandSubSite:   "{packageManager} dev --base {baseURL} --port {port} --strictPort",
 		devURL:              "http://localhost:{port}",
 		createCommand:       "{packageManager} create astro {path} --no-git",
 		npmCreateCommand:    "npm create astro@latest {path} -- --no-git",
@@ -171,7 +158,6 @@ var tools = []Tool{
 		buildCommand:        "{packageManager} build",
 		buildCommandSubSite: "{packageManager} build --base {baseURL}",
 		devCommand:          "{packageManager} dev --port {port} --strictPort",
-		devCommandSubSite:   "{packageManager} dev --base {baseURL} --port {port} --strictPort",
 		devURL:              "http://localhost:{port}",
 		OutputDir:           "dist",
 		createCommand:       "{packageManager} create vite {path}",
@@ -184,7 +170,6 @@ var tools = []Tool{
 		buildCommand:             "hugo",
 		buildCommandSubSite:      "hugo --baseURL {baseURL}",
 		devCommand:               "hugo server --port {port}",
-		devCommandSubSite:        "hugo server --baseURL {baseURL} --port {port}",
 		devURL:                   "http://localhost:{port}",
 		OutputDir:                "public",
 		createCommand:            "{packageManager} new site {path}",

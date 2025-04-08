@@ -549,8 +549,8 @@ func (m Model) updateConfig() tea.Cmd {
 				Output:  tool.OutputDir,
 			},
 			Dev: project.Dev{
-				Command: tool.GetDevCommand(m.packagePrompt.Choice(), path, port),
-				URL:     tool.GetDevURL(port, path),
+				Command: tool.GetDevCommand(m.packagePrompt.Choice(), port),
+				URL:     tool.GetDevURL(port),
 			},
 			Path: path,
 		}

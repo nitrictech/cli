@@ -20,17 +20,20 @@ describe('Websites Spec', () => {
       cy.get(`[data-rct-item-id="${id}"]`).click()
       cy.get('h2').should('contain.text', id)
 
-      const pathMap = {
-        'vite-website': '',
-        'docs-website': 'docs',
+      const originMap = {
+        'vite-website': 'http://localhost:5000',
+        'docs-website': 'http://localhost:5001',
       }
 
-      const url = `http://localhost:5000/${pathMap[id]}`
+      const pathMap = {
+        'vite-website': '/',
+        'docs-website': '/docs',
+      }
 
       // check iframe url
-      cy.get('iframe').should('have.attr', 'src', url)
+      cy.get('iframe').should('have.attr', 'src', originMap[id] + pathMap[id])
 
-      cy.visit(url)
+      cy.visit(originMap[id] + pathMap[id])
 
       const titleMap = {
         'vite-website': 'Hello Nitric!',
@@ -39,7 +42,7 @@ describe('Websites Spec', () => {
 
       const title = titleMap[id]
 
-      cy.origin('http://localhost:5000', { args: { title } }, ({ title }) => {
+      cy.origin(originMap[id], { args: { title } }, ({ title }) => {
         cy.get('h1').should('have.text', title)
       })
     })

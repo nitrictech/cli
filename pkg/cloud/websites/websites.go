@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -224,9 +225,13 @@ func (l *LocalWebsiteService) startServer(server *http.Server, errChan chan erro
 
 // Start - Start the local website service
 func (l *LocalWebsiteService) Start(websites []Website) error {
-	var errChan = make(chan error, 1)
+	errChan := make(chan error, 1)
 
-	var startPort = 5000
+	startPort := 5000
+
+	slices.SortFunc(websites, func(a, b Website) int {
+		return strings.Compare(a.BasePath, b.BasePath)
+	})
 
 	if l.isStartCmd {
 		// In start mode, create individual servers for each website

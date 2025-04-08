@@ -827,7 +827,7 @@ func fromProjectConfiguration(projectConfig *ProjectConfiguration, localConfig *
 		}
 
 		if websiteSpec.ErrorPage == "" {
-			websiteSpec.ErrorPage = "index.html"
+			websiteSpec.ErrorPage = "404.html"
 		} else if !strings.HasSuffix(websiteSpec.ErrorPage, ".html") {
 			return nil, fmt.Errorf("invalid error page %s, must end with .html", websiteSpec.ErrorPage)
 		}

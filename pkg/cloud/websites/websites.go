@@ -75,12 +75,12 @@ func (l *LocalWebsiteService) SubscribeToState(fn func(State)) {
 }
 
 // register - Register a new website
-func (l *LocalWebsiteService) register(website Website) {
+func (l *LocalWebsiteService) register(website Website, port int) {
 	l.websiteRegLock.Lock()
 	defer l.websiteRegLock.Unlock()
 
 	// Emulates the CDN URL used in a deployed environment
-	publicUrl := fmt.Sprintf("http://localhost:%d/%s", l.port, strings.TrimPrefix(website.BasePath, "/"))
+	publicUrl := fmt.Sprintf("http://localhost:%d/%s", port, strings.TrimPrefix(website.BasePath, "/"))
 
 	l.state[website.Name] = Website{
 		WebsitePb: website.WebsitePb,
@@ -98,6 +98,7 @@ type staticSiteHandler struct {
 	port       int
 	devURL     string
 	isStartCmd bool
+	server     *http.Server
 }
 
 func (h staticSiteHandler) serveProxy(res http.ResponseWriter, req *http.Request) {
@@ -115,6 +116,17 @@ func (h staticSiteHandler) serveProxy(res http.ResponseWriter, req *http.Request
 	// ignore proxy errors like unsupported protocol
 	if targetUrl == nil || targetUrl.Scheme == "" {
 		return
+	}
+
+	// Strip the base path from the request path before proxying
+	if h.website.BasePath != "/" {
+		// redirect to base if path is / and there is no query string
+		if req.RequestURI == "/" {
+			http.Redirect(res, req, h.website.BasePath, http.StatusFound)
+			return
+		}
+
+		req.URL.Path = strings.TrimPrefix(req.URL.Path, h.website.BasePath)
 	}
 
 	// Reverse proxy request
@@ -152,7 +164,7 @@ func (h staticSiteHandler) serveStatic(res http.ResponseWriter, req *http.Reques
 	}
 
 	if fi.IsDir() {
-		http.ServeFile(res, req, filepath.Join(h.website.OutputDirectory, h.website.IndexDocument))
+		http.ServeFile(res, req, filepath.Join(path, h.website.IndexDocument))
 
 		return
 	}
@@ -171,21 +183,9 @@ func (h staticSiteHandler) ServeHTTP(res http.ResponseWriter, req *http.Request)
 	h.serveStatic(res, req)
 }
 
-// Start - Start the local website service
-func (l *LocalWebsiteService) Start(websites []Website) error {
-	newLis, err := netx.GetNextListener(netx.MinPort(5000))
-	if err != nil {
-		return err
-	}
-
-	l.port = newLis.Addr().(*net.TCPAddr).Port
-
-	_ = newLis.Close()
-
-	mux := http.NewServeMux()
-
-	// Register the API proxy handler
-	mux.HandleFunc("/api/{name}/", func(res http.ResponseWriter, req *http.Request) {
+// createAPIPathHandler creates a handler for API proxy requests
+func (l *LocalWebsiteService) createAPIPathHandler() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
 		apiName := req.PathValue("name")
 
 		apiAddress := l.getApiAddress(apiName)
@@ -201,31 +201,123 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 		req.URL.Path = targetPath
 
 		proxy.ServeHTTP(res, req)
-	})
-
-	// Register the SPA handler for each website
-	for i := range websites {
-		website := &websites[i]
-		spa := staticSiteHandler{website: website, port: l.port, devURL: website.DevURL, isStartCmd: l.isStartCmd}
-
-		if website.BasePath == "/" {
-			mux.Handle("/", spa)
-		} else {
-			mux.Handle(website.BasePath+"/", http.StripPrefix(website.BasePath+"/", spa))
-		}
 	}
+}
 
-	// Start the server with the multiplexer
+// createServer creates and configures an HTTP server with the given mux
+func (l *LocalWebsiteService) createServer(mux *http.ServeMux, port int) *http.Server {
+	return &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: mux,
+	}
+}
+
+// startServer starts the given server in a goroutine and handles errors
+func (l *LocalWebsiteService) startServer(server *http.Server, errChan chan error, errMsg string) {
 	go func() {
-		addr := fmt.Sprintf(":%d", l.port)
-		if err := http.ListenAndServe(addr, mux); err != nil {
-			fmt.Printf("Failed to start server: %s\n", err)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			select {
+			case errChan <- fmt.Errorf(errMsg, err):
+			default:
+			}
 		}
 	}()
+}
 
-	// Register the websites
-	for _, website := range websites {
-		l.register(website)
+// Start - Start the local website service
+func (l *LocalWebsiteService) Start(websites []Website) error {
+	var errChan = make(chan error, 1)
+	var startPort = 5000
+
+	if l.isStartCmd {
+		// In start mode, create individual servers for each website
+		for i := range websites {
+			website := &websites[i]
+
+			// Get a new listener for each website, incrementing the port each time
+			newLis, err := netx.GetNextListener(netx.MinPort(startPort + i))
+			if err != nil {
+				return err
+			}
+
+			port := newLis.Addr().(*net.TCPAddr).Port
+			_ = newLis.Close()
+
+			mux := http.NewServeMux()
+
+			// Register the API proxy handler for this website
+			mux.HandleFunc("/api/{name}/", l.createAPIPathHandler())
+
+			// Create the SPA handler for this website
+			spa := staticSiteHandler{
+				website:    website,
+				port:       port,
+				devURL:     website.DevURL,
+				isStartCmd: l.isStartCmd,
+			}
+
+			// Register the SPA handler
+			mux.Handle("/", spa)
+
+			// Create and start the server
+			server := l.createServer(mux, port)
+
+			// Store the server in the handler for potential cleanup
+			spa.server = server
+
+			// Register the website with its port
+			l.register(*website, port)
+
+			// Start the server in a goroutine
+			l.startServer(server, errChan, "failed to start server for website %s: %w")
+		}
+	} else {
+		// For static serving, use a single server
+		newLis, err := netx.GetNextListener(netx.MinPort(startPort))
+		if err != nil {
+			return err
+		}
+
+		port := newLis.Addr().(*net.TCPAddr).Port
+		_ = newLis.Close()
+
+		mux := http.NewServeMux()
+
+		// Register the API proxy handler
+		mux.HandleFunc("/api/{name}/", l.createAPIPathHandler())
+
+		// Register the SPA handler for each website
+		for i := range websites {
+			website := &websites[i]
+			spa := staticSiteHandler{
+				website:    website,
+				port:       port,
+				devURL:     website.DevURL,
+				isStartCmd: l.isStartCmd,
+			}
+
+			if website.BasePath == "/" {
+				mux.Handle("/", spa)
+			} else {
+				mux.Handle(website.BasePath+"/", http.StripPrefix(website.BasePath+"/", spa))
+			}
+		}
+
+		// Register all websites with the same port
+		for _, website := range websites {
+			l.register(website, port)
+		}
+
+		// Create and start the server
+		server := l.createServer(mux, port)
+
+		// Start the server in a goroutine
+		l.startServer(server, errChan, "failed to start static server: %w")
+	}
+
+	// Return the first error that occurred, if any
+	if err := <-errChan; err != nil {
+		return err
 	}
 
 	return nil

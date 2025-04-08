@@ -56,7 +56,6 @@ type (
 type LocalWebsiteService struct {
 	websiteRegLock sync.RWMutex
 	state          State
-	port           int
 	getApiAddress  GetApiAddress
 	isStartCmd     bool
 
@@ -95,7 +94,6 @@ func (l *LocalWebsiteService) register(website Website, port int) {
 
 type staticSiteHandler struct {
 	website    *Website
-	port       int
 	devURL     string
 	isStartCmd bool
 	server     *http.Server
@@ -227,6 +225,7 @@ func (l *LocalWebsiteService) startServer(server *http.Server, errChan chan erro
 // Start - Start the local website service
 func (l *LocalWebsiteService) Start(websites []Website) error {
 	var errChan = make(chan error, 1)
+
 	var startPort = 5000
 
 	if l.isStartCmd {
@@ -251,7 +250,6 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 			// Create the SPA handler for this website
 			spa := staticSiteHandler{
 				website:    website,
-				port:       port,
 				devURL:     website.DevURL,
 				isStartCmd: l.isStartCmd,
 			}
@@ -291,7 +289,6 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 			website := &websites[i]
 			spa := staticSiteHandler{
 				website:    website,
-				port:       port,
 				devURL:     website.DevURL,
 				isStartCmd: l.isStartCmd,
 			}

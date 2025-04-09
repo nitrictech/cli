@@ -20,9 +20,18 @@ describe('Websites Spec', () => {
       cy.get(`[data-rct-item-id="${id}"]`).click()
       cy.get('h2').should('contain.text', id)
 
-      const originMap = {
-        'vite-website': 'http://localhost:5000',
-        'docs-website': 'http://localhost:5001',
+      let originMap = {}
+
+      if (Cypress.env('NITRIC_TEST_TYPE') === 'run') {
+        originMap = {
+          'vite-website': 'http://localhost:5000',
+          'docs-website': 'http://localhost:5000',
+        }
+      } else {
+        originMap = {
+          'vite-website': 'http://localhost:5000',
+          'docs-website': 'http://localhost:5001',
+        }
       }
 
       const pathMap = {

@@ -50,6 +50,8 @@ jobs:
 
       - name: Run Tests
         uses: cypress-io/github-action@v5
+        env:
+          CYPRESS_NITRIC_TEST_TYPE: "run"
         with:
           install: false
           wait-on: "http://localhost:49152"

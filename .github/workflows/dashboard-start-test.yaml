@@ -64,6 +64,8 @@ jobs:
           wait-on-timeout: 180
           working-directory: cli/pkg/dashboard/frontend
           browser: chrome
+        env:
+          CYPRESS_NITRIC_TEST_TYPE: "start"
 
       - uses: actions/upload-artifact@v4
         if: failure()

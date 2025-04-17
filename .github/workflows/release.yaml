@@ -13,7 +13,7 @@ env:
 jobs:
   release:
     name: semantic-release
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     outputs:
       new-release-published: ${{ steps.semantic-release.outputs.new_release_published }}
       new-release-version: ${{ steps.semantic-release.outputs.new_release_version }}

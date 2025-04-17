@@ -5,7 +5,7 @@ on:
   push:
     # run only against tags
     tags:
-      - '*'
+      - "*"
 
 env:
   FATHOM_SITE: ${{ vars.FATHOM_SITE }}
@@ -13,7 +13,7 @@ env:
 jobs:
   publish:
     name: GoReleaser
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:

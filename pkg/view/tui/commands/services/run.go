@@ -60,10 +60,10 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.MouseMsg:
-		if msg.Type == tea.MouseWheelUp {
+	case tea.MouseButton:
+		if msg == tea.MouseButtonWheelUp {
 			m.viewOffset++
-		} else if msg.Type == tea.MouseWheelDown {
+		} else if msg == tea.MouseButtonWheelDown {
 			m.viewOffset = max(0, m.viewOffset-1)
 		}
 	case tea.WindowSizeMsg:
@@ -196,7 +196,7 @@ func (m Model) View() string {
 	rightWidth := availableWidth - leftWidth
 
 	// TODO: lipgloss width wrapping breaks with long text using dashes.
-	lv := view.New(view.WithStyle(heightStyle.Copy().Width(leftWidth)))
+	lv := view.New(view.WithStyle(heightStyle.Width(leftWidth)))
 	rv := view.New(view.WithStyle(lipgloss.NewStyle().Width(rightWidth)))
 
 	if len(m.serviceStatus) == 0 {

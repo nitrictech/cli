@@ -96,7 +96,7 @@ func DebugColors() string {
 	colorView.Addln("Color Palette Debug").WithStyle(lipgloss.NewStyle().Bold(true))
 	colorView.Break()
 
-	headerStyle := standardWidth.Copy().Bold(true)
+	headerStyle := standardWidth.Bold(true)
 
 	colorView.Add("Color").WithStyle(headerStyle)
 	colorView.Add("True").WithStyle(headerStyle)
@@ -113,14 +113,14 @@ func DebugColors() string {
 
 		switch c := value.(type) {
 		case lipgloss.CompleteColor:
-			back := standardWidth.Copy().Align(lipgloss.Center).Background(c)
-			fore := standardWidth.Copy().Width(8).Foreground(c)
+			back := standardWidth.Align(lipgloss.Center).Background(c)
+			fore := standardWidth.Width(8).Foreground(c)
 
-			lightOnBack := back.Copy().Foreground(Colors.White)
-			darkOnBack := back.Copy().Foreground(Colors.Black)
+			lightOnBack := back.Foreground(Colors.White)
+			darkOnBack := back.Foreground(Colors.Black)
 
-			ANSI256 := standardWidth.Copy().Align(lipgloss.Center).Background(lipgloss.Color(c.ANSI256))
-			ANSI := standardWidth.Copy().Align(lipgloss.Center).Background(lipgloss.Color(c.ANSI))
+			ANSI256 := standardWidth.Align(lipgloss.Center).Background(lipgloss.Color(c.ANSI256))
+			ANSI := standardWidth.Align(lipgloss.Center).Background(lipgloss.Color(c.ANSI))
 
 			colorView.Add(field.Name).WithStyle(fore)
 			colorView.Add(field.Name).WithStyle(back)

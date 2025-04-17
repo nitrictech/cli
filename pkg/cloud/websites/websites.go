@@ -250,25 +250,23 @@ func (l *LocalWebsiteService) websocketPathHandler(w http.ResponseWriter, r *htt
 	}
 }
 
-// createAPIPathHandler creates a handler for API proxy requests
-func (l *LocalWebsiteService) createAPIPathHandler() http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
-		apiName := req.PathValue("name")
+// apiPathHandler creates a handler for API proxy requests
+func (l *LocalWebsiteService) apiPathHandler(res http.ResponseWriter, req *http.Request) {
+	apiName := req.PathValue("name")
 
-		apiAddress := l.getApiAddress(apiName)
-		if apiAddress == "" {
-			http.Error(res, fmt.Sprintf("api %s not found", apiName), http.StatusNotFound)
-			return
-		}
-
-		targetPath := strings.TrimPrefix(req.URL.Path, fmt.Sprintf("/api/%s", apiName))
-		targetUrl, _ := url.Parse(apiAddress)
-
-		proxy := httputil.NewSingleHostReverseProxy(targetUrl)
-		req.URL.Path = targetPath
-
-		proxy.ServeHTTP(res, req)
+	apiAddress := l.getApiAddress(apiName)
+	if apiAddress == "" {
+		http.Error(res, fmt.Sprintf("api %s not found", apiName), http.StatusNotFound)
+		return
 	}
+
+	targetPath := strings.TrimPrefix(req.URL.Path, fmt.Sprintf("/api/%s", apiName))
+	targetUrl, _ := url.Parse(apiAddress)
+
+	proxy := httputil.NewSingleHostReverseProxy(targetUrl)
+	req.URL.Path = targetPath
+
+	proxy.ServeHTTP(res, req)
 }
 
 // createServer creates and configures an HTTP server with the given mux
@@ -318,7 +316,7 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 			mux := http.NewServeMux()
 
 			// Register the API proxy handler for this website
-			mux.HandleFunc("/api/{name}/", l.createAPIPathHandler())
+			mux.HandleFunc("/api/{name}/", l.apiPathHandler)
 
 			// Register the WebSocket proxy handler for this website
 			mux.HandleFunc("/ws/{name}", l.websocketPathHandler)
@@ -358,7 +356,7 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 		mux := http.NewServeMux()
 
 		// Register the API proxy handler
-		mux.HandleFunc("/api/{name}/", l.createAPIPathHandler())
+		mux.HandleFunc("/api/{name}/", l.apiPathHandler)
 
 		// Register the WebSocket proxy handler for this website
 		mux.HandleFunc("/ws/{name}", l.websocketPathHandler)

@@ -118,7 +118,7 @@ func (n StatusNode) render(omitSelf bool, width int, depth int) string {
 
 			if i == 0 {
 				v.Add(" ").WithStyle(nameStyle)
-				v.Addln(n.status).WithStyle(nameStyle.Copy().Width(statusWidth))
+				v.Addln(n.status).WithStyle(nameStyle.Width(statusWidth))
 			} else {
 				v.Break()
 			}

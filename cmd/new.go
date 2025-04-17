@@ -19,7 +19,6 @@ package cmd
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -62,7 +61,7 @@ nitric new hello-world "official/TypeScript - Starter" `,
 		tui.CheckErr(err)
 
 		// TODO add --force
-		if _, err := teax.NewProgram(projectModel, tea.WithANSICompressor()).Run(); err != nil {
+		if _, err := teax.NewProgram(projectModel).Run(); err != nil {
 			return err
 		}
 

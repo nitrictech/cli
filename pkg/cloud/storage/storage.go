@@ -41,6 +41,7 @@ import (
 	"github.com/nitrictech/cli/pkg/eventbus"
 	"github.com/nitrictech/cli/pkg/grpcx"
 
+	content "github.com/nitrictech/nitric/cloud/common/runtime/storage"
 	grpc_errors "github.com/nitrictech/nitric/core/pkg/grpc/errors"
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	storagepb "github.com/nitrictech/nitric/core/pkg/proto/storage/v1"
@@ -552,7 +553,7 @@ func NewLocalStorageService(opts StorageOptions) (*LocalStorageService, error) {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Type", content.DetectContentType(req.Key, resp.Body))
 		w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(req.Key))
 		w.WriteHeader(http.StatusOK)
 

@@ -201,8 +201,8 @@ func (h staticSiteHandler) ServeHTTP(res http.ResponseWriter, req *http.Request)
 	h.serveStatic(res, req)
 }
 
-// createWebsocketPathHandler creates a handler for WebSocket proxy requests
-func (l *LocalWebsiteService) createWebsocketPathHandler(w http.ResponseWriter, r *http.Request) {
+// websocketPathHandler creates a handler for WebSocket proxy requests
+func (l *LocalWebsiteService) websocketPathHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the WebSocket API name from the request path
 	apiName := r.PathValue("name")
 
@@ -321,7 +321,7 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 			mux.HandleFunc("/api/{name}/", l.createAPIPathHandler())
 
 			// Register the WebSocket proxy handler for this website
-			mux.HandleFunc("/ws/{name}", l.createWebsocketPathHandler)
+			mux.HandleFunc("/ws/{name}", l.websocketPathHandler)
 
 			// Create the SPA handler for this website
 			spa := staticSiteHandler{
@@ -361,7 +361,7 @@ func (l *LocalWebsiteService) Start(websites []Website) error {
 		mux.HandleFunc("/api/{name}/", l.createAPIPathHandler())
 
 		// Register the WebSocket proxy handler for this website
-		mux.HandleFunc("/ws/{name}", l.createWebsocketPathHandler)
+		mux.HandleFunc("/ws/{name}", l.websocketPathHandler)
 
 		// Register the SPA handler for each website
 		for i := range websites {

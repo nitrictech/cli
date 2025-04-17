@@ -28,6 +28,8 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
       className={cn(
         'group hidden flex-col overflow-hidden border-r lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-20 lg:overflow-y-auto lg:bg-white lg:pb-4 lg:data-[state=expanded]:w-52',
         'transition-[width] duration-200 data-[state=expanded]:shadow-lg',
+        'bg-background border-border', 
+        'dark:bg-background dark:border-border' 
       )}
     >
       <div className="relative flex h-16 w-20 shrink-0 items-center justify-center">

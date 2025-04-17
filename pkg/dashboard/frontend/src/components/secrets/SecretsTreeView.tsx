@@ -57,7 +57,7 @@ const SecretsTreeView: FC<Props> = ({ resources, onSelect, initialItem }) => {
         }
       }}
       renderItemTitle={({ item }) => {
-        return <span className="truncate">{item.data.label}</span>
+        return <span className="truncate text-foreground">{item.data.label}</span>
       }}
     />
   )

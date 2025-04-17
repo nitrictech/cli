@@ -177,9 +177,9 @@ const Logs: React.FC = () => {
                           <div
                             key={i}
                             className={cn(
-                              'mt-0.5 grid cursor-pointer grid-cols-[200px_150px_1fr] items-start gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] hover:bg-gray-100 dark:hover:bg-gray-700',
+                              'mt-0.5 grid cursor-pointer grid-cols-[200px_150px_1fr] items-start gap-x-2 whitespace-pre-wrap rounded-sm px-1 py-[2px] text-foreground hover:bg-accent/50',
                               {
-                                'bg-red-100 hover:bg-red-200 dark:bg-red-800/70 dark:hover:bg-red-800/90':
+                                'bg-red-500/20 hover:bg-red-500/30':
                                   level === 'error',
                                 'bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/60 dark:hover:bg-orange-500/70':
                                   level === 'warning',
@@ -234,7 +234,7 @@ const Logs: React.FC = () => {
                         )
                       })
                     ) : (
-                      <div className="mt-4 p-1 text-center font-body text-lg font-semibold tracking-wide text-gray-500 dark:text-gray-400">
+                      <div className="mt-4 p-1 text-center font-body text-lg font-semibold tracking-wide text-muted-foreground">
                         No logs available
                       </div>
                     )}

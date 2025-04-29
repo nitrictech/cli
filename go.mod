@@ -47,7 +47,7 @@ require (
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-isatty v0.0.20
-	github.com/nitrictech/nitric/cloud/common v0.0.0-20250416075450-959094cfd18a
+	github.com/nitrictech/nitric/cloud/common v0.0.0-20250429003516-b04ec1953227
 	github.com/olahol/melody v1.1.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/samber/lo v1.38.1

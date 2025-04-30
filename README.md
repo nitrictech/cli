@@ -55,6 +55,9 @@ nitric new --help
 
 Documentation for all available commands:
 
+- nitric add : Add new resources to your Nitric project
+- nitric add stack [stackName] [providerName] : Create a new Nitric stack
+- nitric add website [websiteName] [toolName] : Add a new website to your Nitric project
 - nitric build : Build a Nitric project
 - nitric debug : Debug Operations (utilities for debugging nitric applications)
 - nitric debug spec : Output the nitric application cloud spec.

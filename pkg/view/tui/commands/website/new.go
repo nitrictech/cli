@@ -183,8 +183,8 @@ func New(fs afero.Fs, args Args) (Model, error) {
 	}
 
 	if args.WebsitePath != "" {
-		// check if the path is already in use
-		if lo.Contains(existingPaths, args.WebsitePath) {
+		pathInUse := lo.Contains(existingPaths, args.WebsitePath)
+		if pathInUse {
 			return Model{}, fmt.Errorf("path %s is already in use", args.WebsitePath)
 		}
 		// check if the path is valid

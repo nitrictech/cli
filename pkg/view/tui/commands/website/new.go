@@ -50,14 +50,13 @@ const (
 	StepDone
 )
 
-// Args holds the arguments required for the website project creation
 type Args struct {
 	WebsiteName string
 	WebsitePath string
 	ToolName    string
 }
 
-var packageManagers = []string{"npm", "yarn", "pnpm"} // We will filter this based on what's installed
+var packageManagers = []string{"npm", "yarn", "pnpm"}
 
 type configUpdatedResultMsg struct {
 	err error
@@ -89,18 +88,14 @@ func New(fs afero.Fs, args Args) (Model, error) {
 	config, err := project.ConfigurationFromFile(fs, "")
 	tui.CheckErr(err)
 
-	// collect existing website names
 	existingNames := []string{}
 	for _, website := range config.Websites {
 		existingNames = append(existingNames, website.Basedir)
 	}
 
-	// If website name is provided in args, validate it first
 	if args.WebsiteName != "" {
-		// Normalize the provided name
 		normalizedName := strings.TrimPrefix(args.WebsiteName, "./")
 
-		// Check if it's a duplicate
 		for _, name := range existingNames {
 			existingName := strings.TrimPrefix(name, "./")
 			if existingName == normalizedName {
@@ -108,22 +103,18 @@ func New(fs afero.Fs, args Args) (Model, error) {
 			}
 		}
 
-		// Validate the format
 		if !WebsiteNameRegex.MatchString(normalizedName) {
 			return Model{}, fmt.Errorf("website name can only contain letters, numbers, underscores and hyphens")
 		}
 
-		// Check if name starts with a valid character
 		if !WebsiteNameStartRegex.MatchString(normalizedName) {
 			return Model{}, fmt.Errorf("website name must start with a letter or number")
 		}
 
-		// Check if name ends with a valid character
 		if !WebsiteNameEndRegex.MatchString(normalizedName) {
 			return Model{}, fmt.Errorf("website name cannot end with a hyphen")
 		}
 
-		// Check if directory already exists
 		if _, err := fs.Stat(normalizedName); err == nil {
 			return Model{}, fmt.Errorf("website directory '%s' already exists", normalizedName)
 		} else if !os.IsNotExist(err) {
@@ -142,7 +133,6 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		InFlightValidator: nameInFlightValidator,
 	})
 
-	// collect existing paths
 	existingPaths := []string{}
 
 	for _, website := range config.Websites {
@@ -187,7 +177,6 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		if pathInUse {
 			return Model{}, fmt.Errorf("path %s is already in use", args.WebsitePath)
 		}
-		// check if the path is valid
 		if err := pathValidator(args.WebsitePath); err != nil {
 			return Model{}, fmt.Errorf("path %s is invalid: %w", args.WebsitePath, err)
 		}
@@ -286,7 +275,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.packagePrompt.SetMaxDisplayedItems(m.windowSize.Height - 1)
 		} else {
 			m.toolPrompt.SetMinimized(false)
-			maxItems := ((m.windowSize.Height - 3) / 3) // make room for the exit message
+			maxItems := ((m.windowSize.Height - 3) / 3)
 			m.toolPrompt.SetMaxDisplayedItems(maxItems)
 			m.packagePrompt.SetMinimized(false)
 			m.packagePrompt.SetMaxDisplayedItems(maxItems)
@@ -315,7 +304,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.portPrompt.Blur()
 			m.step = StepRunningToolCommand
 
-			// Run the command directly
 			return m, m.runCommand()
 		}
 
@@ -339,7 +327,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, teax.Quit
 		}
 
-		// Command completed successfully, update config
 		return m, m.updateConfig()
 	}
 
@@ -359,7 +346,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, teax.Quit
 			}
 
-			// if the tool is not package manager based, we need to run the command
 			if tool.SkipPackageManagerPrompt {
 				m.packagePrompt.SetChoice(tool.Value)
 				m.step = StepPort
@@ -467,7 +453,6 @@ func (m Model) View() string {
 	return v.Render()
 }
 
-// help to get the selected tool
 func (m Model) getSelectedTool() (Tool, error) {
 	tool, ok := lo.Find(tools, func(f Tool) bool {
 		return f.Name == m.toolPrompt.Choice()
@@ -486,7 +471,6 @@ func (m Model) runCommand() tea.Cmd {
 		return teax.Quit
 	}
 
-	// if the tool has skip package manager prompt, check the tool exists and print the install guide
 	if tool.SkipPackageManagerPrompt {
 		if _, err := exec.LookPath(tool.Value); err != nil {
 			return func() tea.Msg {
@@ -505,14 +489,11 @@ func (m Model) runCommand() tea.Cmd {
 
 	c := exec.Command(command, args...)
 
-	// Return a command that will execute the process
 	return tea.ExecProcess(c, func(err error) tea.Msg {
-		// If there was an error running the command
 		if err != nil {
 			return commandResultMsg{err: fmt.Errorf("failed to run website command: %w", err), msg: "Failed to create website"}
 		}
 
-		// Check if the website directory was created
 		websiteDir := m.namePrompt.Value()
 		if _, err := m.fs.Stat(websiteDir); err != nil {
 			if os.IsNotExist(err) {
@@ -522,12 +503,10 @@ func (m Model) runCommand() tea.Cmd {
 			return commandResultMsg{err: fmt.Errorf("failed to check website directory: %w", err), msg: "Failed to verify website creation"}
 		}
 
-		// If we get here, the website was created successfully
 		return commandResultMsg{msg: "Website created successfully"}
 	})
 }
 
-// update the nitric.yaml config file with website
 func (m Model) updateConfig() tea.Cmd {
 	return func() tea.Msg {
 		var tool Tool
@@ -563,7 +542,6 @@ func (m Model) updateConfig() tea.Cmd {
 	}
 }
 
-// getAvailablePackageManagers filters package managers that exist on the system
 func getAvailablePackageManagers() []string {
 	available := []string{}
 

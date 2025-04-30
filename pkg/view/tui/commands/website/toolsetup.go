@@ -51,7 +51,6 @@ type CommandVars struct {
 }
 
 func (f Tool) GetDevCommand(packageManager string, port string) string {
-	// if packageManager is npm, we need to add run to the command
 	if packageManager == "npm" {
 		packageManager = "npm run"
 	}
@@ -65,7 +64,6 @@ func (f Tool) GetDevCommand(packageManager string, port string) string {
 }
 
 func (f Tool) GetBuildCommand(packageManager string, path string) string {
-	// if packageManager is npm, we need to add run to the command
 	if packageManager == "npm" {
 		packageManager = "npm run"
 	}
@@ -115,18 +113,14 @@ func (t CommandTemplate) Format(vars CommandVars) string {
 	cmd = strings.ReplaceAll(cmd, "{port}", vars.Port)
 	cmd = strings.ReplaceAll(cmd, "{baseURL}", vars.BaseURL)
 
-	// if the package manager is npm and using a run command,
-	// we need to add a " -- " before the flags if it does not already exist
 	if vars.PackageManager == "npm run" {
-		// Find the first flag (starts with --)
 		parts := strings.Split(cmd, " ")
 		for i, part := range parts {
 			if part == "--" {
-				break // already has --
+				break
 			}
 
 			if strings.HasPrefix(part, "--") {
-				// Insert " -- " before the first flag
 				parts = append(parts[:i], append([]string{"--"}, parts[i:]...)...)
 				cmd = strings.Join(parts, " ")
 

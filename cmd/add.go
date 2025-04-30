@@ -65,7 +65,6 @@ nitric add website my-site astro`,
 			return fmt.Errorf("non-interactive mode is not supported by this command")
 		}
 
-		// get base url path for the website
 		websitePath, err := cmd.Flags().GetString("path")
 		if err != nil {
 			return fmt.Errorf("failed to get path flag: %w", err)
@@ -87,14 +86,11 @@ nitric add website my-site astro`,
 	Args: cobra.MaximumNArgs(2),
 }
 
-// init registers the 'add' command with the root command
 func init() {
 	rootCmd.AddCommand(addCmd)
 
-	// Add subcommands under 'add'
 	addCmd.AddCommand(addWebsiteCmd)
 
-	// Copy and add the stack new command under 'add'
 	addStackCmd := &cobra.Command{
 		Use:   "stack [stackName] [providerName]",
 		Short: newStackCmd.Short,
@@ -105,6 +101,5 @@ func init() {
 	addStackCmd.Flags().AddFlagSet(newStackCmd.Flags())
 	addCmd.AddCommand(addStackCmd)
 
-	// Add flag for --path, the base url path for the website
 	addWebsiteCmd.Flags().StringP("path", "p", "", "base url path for the website, e.g. /my-site")
 }

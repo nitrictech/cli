@@ -177,6 +177,7 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		if pathInUse {
 			return Model{}, fmt.Errorf("path %s is already in use", args.WebsitePath)
 		}
+
 		if err := pathValidator(args.WebsitePath); err != nil {
 			return Model{}, fmt.Errorf("path %s is invalid: %w", args.WebsitePath, err)
 		}
@@ -184,7 +185,9 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		pathPrompt.SetValue(args.WebsitePath)
 		pathPrompt.Blur()
 
-		step = StepTool
+		if args.WebsiteName != "" {
+			step = StepTool
+		}
 	}
 
 	toolItems := []list.ListItem{}
@@ -205,16 +208,6 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		}
 
 		toolPrompt.SetChoice(tool.Name)
-
-		if args.WebsitePath != "" {
-			if !tool.SkipPackageManagerPrompt {
-				step = StepPackageManager
-			} else {
-				step = StepTool
-			}
-		} else {
-			step = StepPath
-		}
 	}
 
 	portValidator := validation.ComposeValidators(PortValidators()...)

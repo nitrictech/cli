@@ -177,6 +177,7 @@ func New(fs afero.Fs, args Args) (Model, error) {
 		if pathInUse {
 			return Model{}, fmt.Errorf("path %s is already in use", args.WebsitePath)
 		}
+
 		if err := pathValidator(args.WebsitePath); err != nil {
 			return Model{}, fmt.Errorf("path %s is invalid: %w", args.WebsitePath, err)
 		}

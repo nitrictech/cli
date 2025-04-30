@@ -19,7 +19,6 @@ package cmd
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -77,7 +76,7 @@ nitric add website my-site astro`,
 		})
 		tui.CheckErr(err)
 
-		if _, err := teax.NewProgram(websiteModel, tea.WithANSICompressor()).Run(); err != nil {
+		if _, err := teax.NewProgram(websiteModel).Run(); err != nil {
 			return err
 		}
 

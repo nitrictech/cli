@@ -75,12 +75,12 @@ export const columns: ColumnDef<SecretVersion>[] = [
         <div className="text-left">
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="max-w-md truncate font-mono text-gray-500">
+              <div className="max-w-md truncate font-mono text-muted-foreground">
                 {secretVersion.value}
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <ScrollArea className="max-w-96 whitespace-pre font-mono text-gray-500">
+              <ScrollArea className="max-w-96 whitespace-pre font-mono text-muted-foreground">
                 <div className="max-h-72">{secretVersion.value}</div>
               </ScrollArea>
             </TooltipContent>
@@ -95,10 +95,11 @@ export const columns: ColumnDef<SecretVersion>[] = [
       return (
         <Button
           variant="ghost"
+          className="text-foreground hover:text-accent-foreground hover:bg-accent"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Created At
-          <ArrowsUpDownIcon className="ml-2 h-4 w-4" />
+          <ArrowsUpDownIcon className="ml-2 h-4 w-4 text-muted-foreground group-hover:text-foreground" />
         </Button>
       )
     },
@@ -114,13 +115,13 @@ export const columns: ColumnDef<SecretVersion>[] = [
         <>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-accent">
                 <span className="sr-only">Open menu</span>
-                <EllipsisHorizontalIcon className="h-4 w-4" />
+                <EllipsisHorizontalIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="bg-popover border-border">
+              <DropdownMenuLabel className="text-foreground">Actions</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => copyToClipboard(secretVersion.value)}
               >

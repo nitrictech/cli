@@ -43,7 +43,7 @@ export const SQLNode: ComponentType<NodeProps<SQLNodeData>> = (props) => {
                   }}
                 >
                   <span className="sr-only">Copy connection string</span>
-                  <ClipboardIcon className="h-5 w-5 text-gray-500" />
+                  <ClipboardIcon className="h-5 w-5 text-muted-foreground hover:text-foreground" />
                 </button>
               </span>
             </div>

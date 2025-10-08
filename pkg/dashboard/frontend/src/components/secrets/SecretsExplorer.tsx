@@ -41,7 +41,7 @@ const SecretsExplorer: React.FC = () => {
         selectedSecret && (
           <>
             <div className="flex min-h-12 items-center justify-between px-2 py-1">
-              <span className="text-lg">Secrets</span>
+              <span className="text-lg text-foreground">Secrets</span>
             </div>
             <SecretsTreeView
               initialItem={selectedSecret}
@@ -105,7 +105,7 @@ const SecretsExplorer: React.FC = () => {
           <div>
             Please refer to our documentation on{' '}
             <a
-              className="underline"
+              className="underline text-foreground hover:text-accent-foreground"
               target="_blank"
               href="https://nitric.io/docs/secrets#create-secrets"
               rel="noreferrer"

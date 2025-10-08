@@ -38,6 +38,7 @@ export const SecretVersionsTable = () => {
               <Button
                 size="sm"
                 variant="outline"
+                className="text-foreground hover:text-accent-foreground border-border"
                 data-testid="delete-selected-versions"
                 disabled={versions.length === 0}
                 onClick={() => {
@@ -46,35 +47,37 @@ export const SecretVersionsTable = () => {
                   setDialogOpen(true)
                 }}
               >
-                <MinusIcon className="mr-1 h-5 w-5" />
+                <MinusIcon className="mr-1 h-5 w-5 text-muted-foreground group-hover:text-foreground" />
                 Delete Selected
               </Button>
 
               <Button
                 size="sm"
+                className="text-primary-foreground hover:bg-primary/90"
                 data-testid="create-new-version"
                 onClick={() => {
                   setDialogAction('add')
                   setDialogOpen(true)
                 }}
               >
-                <PlusIcon className="mr-1 h-5 w-5" />
+                <PlusIcon className="mr-1 h-5 w-5 text-primary-foreground" />
                 Create New Version
               </Button>
             </div>
           )
         }}
         noResultsChildren={
-          <div className="flex flex-col items-center justify-center gap-6">
-            <span className="text-lg">No versions found.</span>{' '}
+          <div className="flex flex-col items-center justify-center gap-6 text-muted-foreground">
+            <span className="text-lg text-foreground">No versions found.</span>{' '}
             <Button
               size="sm"
+              className="text-primary-foreground hover:bg-primary/90"
               onClick={() => {
                 setDialogAction('add')
                 setDialogOpen(true)
               }}
             >
-              <PlusIcon className="mr-1 h-5 w-5" />
+              <PlusIcon className="mr-1 h-5 w-5 text-primary-foreground" />
               Create New Version
             </Button>
           </div>

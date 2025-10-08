@@ -35,7 +35,7 @@ const FieldRows: React.FC<Props> = ({
 
   return (
     <div>
-      <ul className="divide-y divide-gray-200">
+      <ul className="divide-y divide-border">
         {rows.map((r, i) => {
           const keyId = `${id}-${i}-key`
           const valueId = `${id}-${i}-value`

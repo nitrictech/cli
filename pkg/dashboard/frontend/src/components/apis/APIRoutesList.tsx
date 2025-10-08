@@ -21,7 +21,7 @@ const APIRoutesList: React.FC<APIRoutesListProps> = ({
           <div className="col-span-9 flex justify-start">
             <a
               target="_blank noreferrer noopener"
-              className="truncate hover:underline"
+              className="truncate text-foreground hover:text-accent-foreground hover:underline"
               href={`${apiAddress}${endpoint.path}`}
               rel="noreferrer"
             >

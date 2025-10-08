@@ -30,7 +30,7 @@ const parse = (value: string): Result[] | string => {
 
 const Container: React.FC<React.PropsWithChildren> = ({ children }) => {
   return (
-    <div className="rounded-lg bg-code font-mono text-code-foreground shadow-md">
+    <div className="rounded-lg bg-background font-mono text-foreground border border-border shadow-md">
       {children}
     </div>
   )
@@ -52,7 +52,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({ response, loading }) => {
       <Container>
         <p className="m-0 flex items-center border-0 px-6 py-4 text-sm">
           <Spinner color="info" size={'sm'} className="mb-0.5 mr-2" />
-          <span>Running...</span>
+          <span className="text-foreground">Running...</span>
         </p>
       </Container>
     )
@@ -62,7 +62,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({ response, loading }) => {
     return (
       <Container>
         <p className="m-0 border-0 px-6 py-4 text-sm">
-          Click <span className="font-bold">Run</span> to execute your query.
+          Click <span className="font-bold text-foreground">Run</span> to execute your query.
         </p>
       </Container>
     )
@@ -112,7 +112,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({ response, loading }) => {
               dataType === 'boolean' ||
               isBinary ||
               isEmpty,
-            'text-gray-400/90': row[column] === null || isEmpty,
+            'text-muted-foreground': row[column] === null || isEmpty,
           })}
         >
           {displayValue}

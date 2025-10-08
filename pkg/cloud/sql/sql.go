@@ -136,7 +136,7 @@ func (l *LocalSqlServer) start() error {
 		return err
 	}
 
-	err = dockerClient.ImagePull("postgres:latest", types.ImagePullOptions{
+	err = dockerClient.ImagePull("postgres:17.6", types.ImagePullOptions{
 		All: false,
 	})
 	if err != nil {
@@ -164,7 +164,7 @@ func (l *LocalSqlServer) start() error {
 	_ = newLis.Close()
 
 	l.containerId, err = dockerClient.ContainerCreate(&container.Config{
-		Image: "postgres",
+		Image: "postgres:17.6",
 		Env: []string{
 			"POSTGRES_PASSWORD=localsecret",
 			"PGDATA=/var/lib/postgresql/data/pgdata",
